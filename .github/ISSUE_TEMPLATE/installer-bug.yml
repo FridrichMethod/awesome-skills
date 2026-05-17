@@ -1,0 +1,48 @@
+name: 🔧 Installer / workflow bug
+description: install.sh, scripts/sync_skills.py, or .github/workflows/sync-skills.yml misbehaves.
+title: "[installer] <one-line description>"
+labels: ["installer"]
+body:
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - install.sh
+        - scripts/sync_skills.py
+        - .github/workflows/sync-skills.yml
+        - other / unsure
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Command you ran
+      render: bash
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Output / error
+      render: shell
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: OS / shell
+      placeholder: macOS 15.4 / zsh 5.9
+    validations:
+      required: true
+
+  - type: input
+    id: tools
+    attributes:
+      label: Tool versions
+      placeholder: bash --version, rsync --version, curl --version
+    validations:
+      required: false

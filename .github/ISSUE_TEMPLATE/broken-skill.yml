@@ -1,0 +1,53 @@
+name: 🐛 Report a broken or problematic skill
+description: A specific skill in skills/ fails to install, contains a problematic file, or otherwise misbehaves.
+title: "[skill] <skill-name>: <one-line description>"
+labels: ["broken-skill"]
+body:
+  - type: input
+    id: skill_path
+    attributes:
+      label: Skill path
+      placeholder: skills/some-skill-name
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's broken
+      description: Be specific. "SKILL.md references a Python package that no longer exists" beats "doesn't work".
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: How can a maintainer reproduce or verify the issue?
+      placeholder: |
+        1. Run `curl -fsSL .../install.sh | bash`
+        2. Open a Claude Code session
+        3. Invoke skill X with prompt Y
+        4. Observe error Z
+    validations:
+      required: false
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - "Blocks install (push fails / curl pipe errors)"
+        - "Skill broken at runtime (Claude/Codex can't use it)"
+        - "Cosmetic (wrong description, typo, etc.)"
+        - "Security / privacy concern"
+    validations:
+      required: true
+
+  - type: textarea
+    id: fix
+    attributes:
+      label: Suggested fix
+      description: e.g. "Add a filter to scripts/sync_skills.py" or "File upstream at <link>".
+    validations:
+      required: false

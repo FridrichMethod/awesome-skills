@@ -1,0 +1,30 @@
+version: 2
+
+updates:
+  # Track GitHub Actions versions in our own workflows.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "03:00"
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - github-actions
+
+  # Track Python deps for the sync script (kept minimal: only stdlib today).
+  - package-ecosystem: pip
+    directory: /scripts
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    labels:
+      - dependencies
+      - python
+
+  # NOTE: we deliberately do NOT configure ecosystems for skills/.
+  # The dependency files inside skills/<name>/ are bundled documentation
+  # inherited from upstream repos. Fixing them here is overwritten by the
+  # weekly sync. Report issues to the upstream source instead.

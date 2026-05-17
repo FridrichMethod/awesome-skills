@@ -1,0 +1,63 @@
+name: 🌱 Suggest a new upstream skill source
+description: Propose adding a new repo of Claude Code / Codex skills to the weekly sync.
+title: "[source] Add <repo-name>"
+labels: ["source-suggestion"]
+body:
+  - type: input
+    id: repo
+    attributes:
+      label: Source repo URL
+      placeholder: https://github.com/owner/repo
+    validations:
+      required: true
+
+  - type: input
+    id: stars
+    attributes:
+      label: Approximate star count
+      placeholder: e.g. 1.2k
+    validations:
+      required: true
+
+  - type: input
+    id: license
+    attributes:
+      label: License
+      placeholder: MIT / Apache-2.0 / etc.
+    validations:
+      required: true
+
+  - type: input
+    id: skill_count
+    attributes:
+      label: Approximate skill count (count of SKILL.md files)
+    validations:
+      required: true
+
+  - type: textarea
+    id: focus
+    attributes:
+      label: Focus / scope
+      description: One or two sentences. What does this source cover that the existing 9 don't?
+    validations:
+      required: true
+
+  - type: textarea
+    id: overlap
+    attributes:
+      label: Overlap with existing sources
+      description: Which existing source(s) most overlap? Should this go before or after them in the install order (later wins on conflict)?
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-flight checks
+      options:
+        - label: Source repo is publicly readable on GitHub
+          required: true
+        - label: License permits redistribution
+          required: true
+        - label: I have looked at the existing source list in the README and confirmed this isn't a duplicate
+          required: true

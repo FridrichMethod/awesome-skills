@@ -17,3 +17,9 @@ __pycache__/
 # Local install artifacts
 .local/
 node_modules/
+
+# Tooling caches
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.tox/

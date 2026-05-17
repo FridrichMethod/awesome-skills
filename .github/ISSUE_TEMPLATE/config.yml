@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Discussion / Question
+    url: https://github.com/FridrichMethod/awesome-skills/discussions
+    about: Open-ended questions or feedback — start a Discussion instead of an issue.
+  - name: Upstream skill bug
+    url: https://github.com/FridrichMethod/awesome-skills#sources
+    about: Skills are mirrored from upstream repos. File bugs in the original source — see the source list in the README.
