@@ -2,15 +2,6 @@
 name: systematic-debugging
 description: Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes
 ---
-<!--
-Adapted from obra/superpowers systematic-debugging skill (v5.0.7), MIT-licensed,
-copyright 2025 Jesse Vincent. Modifications copyright 2026 Joe Amditis.
-v0.3.0 adds a research phase between Phase 1 (Root Cause Investigation)
-and Phase 2 (Pattern Analysis) per the v0.2.0 architecture's
-research-at-entry-point rule (debugging is an entry-point stage —
-the work begins from a bug report, not an upstream artifact).
-See CREDITS.md.
--->
 
 # Systematic Debugging
 
@@ -54,7 +45,7 @@ Use for ANY technical issue:
 
 ## The Four Phases
 
-Move through the phases in order. Phase 1 is mandatory; if it produces a clear root cause and a confident fix, you may go directly to Phase 4 (Implementation). Otherwise complete Phase 2 (Pattern Analysis) and Phase 3 (Hypotheses) in order before Phase 4. Between Phase 1 and Phase 2 — when you've decided pattern analysis is needed — run the research phase (default-on, see below) so pattern analysis has external context to build on.
+You MUST complete each phase before proceeding to the next.
 
 ### Phase 1: Root Cause Investigation
 
@@ -128,58 +119,6 @@ Move through the phases in order. Phase 1 is mandatory; if it produces a clear r
    - Keep tracing up until you find the source
    - Fix at source, not at symptom
 
-### Research phase
-
-After Phase 1 (Root Cause Investigation) and before Phase 2 (Pattern Analysis), gather outside context. Phase 1 produced internal evidence (error messages, repro steps, recent diffs); the research phase adds external information that pattern analysis can build on.
-
-**Default-on.** Skip only with explicit, justified statement per the skip protocol below.
-
-**This phase only fires when entering Phase 2.** If Phase 1 yielded the root cause directly and you're going Phase 1 → Phase 4 (Implementation), you don't reach the research phase. The skip protocol governs the case where you've decided pattern analysis is needed but want to skip the research that would inform it.
-
-#### 1. Default research kinds (all four)
-
-| Kind | Purpose | Tool |
-|---|---|---|
-| Web | Search the literal error string and the framework/library's open GitHub issues for prior reports | WebSearch + WebFetch (via subagent) |
-| Codebase prior-bugs | `git log --grep` for related historical fixes; spots regressions and prior work in the same area | Bash + Grep (via subagent) |
-| Authoritative | Fetch current live docs/spec for the API or library involved; catches "am I using this wrong" cases | WebFetch (via subagent) |
-| User-context | Check `MEMORY.md` for related debugging history | Read (inline, no subagent) |
-
-#### 2. Dispatch
-
-Three subagents in parallel (web via `general-purpose`, codebase prior-bugs via `Explore`, authoritative via `general-purpose`) plus the inline memory check running concurrently in the main thread. The subagent prompts each carry the bug context from Phase 1 (error message, repro, current diff) so they don't have to rediscover it.
-
-#### 3. Findings location
-
-Findings land in `.superpowers/debug-log-<slug>.md` where `<slug>` is `YYYY-MM-DD-<short-bug-description>`. Examples:
-
-```
-.superpowers/debug-log-2026-05-05-test-failure-auth-handler.md
-.superpowers/debug-log-2026-05-12-build-fails-on-arm64.md
-.superpowers/debug-log-2026-06-03-flaky-redis-pubsub.md
-```
-
-The skill creates the file on first invocation if it doesn't exist; subsequent invocations on the same bug append. Each entry includes:
-
-- Date/time of the research run
-- Which research kinds fired (or were skipped, with the locked skip-justification line)
-- Findings: 3-5 bullets per kind that fired, including load-bearing links/refs
-- "Considered but ruled out" notes so future-you knows what was checked
-
-Add `.superpowers/` to your project's `.gitignore` so debug logs don't get accidentally committed. The upstream `superpowers` plugin uses this convention; superjawn follows the same pattern.
-
-#### 4. Skip protocol
-
-If skipping, write one line to `.superpowers/debug-log-<slug>.md`: `Skipped research because <reason>. <Verifiable pointer if applicable>.`
-
-**Valid reasons:**
-- Trivial scope (typo, comment edit, single-line config)
-- Fresh prior research — same topic in current session OR within last 7 days with verifiable spec/plan pointer. **If the pointer doesn't resolve, the skip is invalid.** (Beyond 7 days, repeat the research even if you remember the prior findings — the landscape drifts.)
-- User explicit — **must quote the phrase** that authorized the skip.
-- Repeat of identical task — **must include a pointer** to the prior successful run.
-
-**Invalid reasons:** "I think I know", "seems straightforward", "moving fast", "user wants this done quickly", "already familiar with this codebase". If those are tempting, do the research.
-
 ### Phase 2: Pattern Analysis
 
 **Find the pattern before fixing:**
@@ -237,7 +176,7 @@ If skipping, write one line to `.superpowers/debug-log-<slug>.md`: `Skipped rese
    - Automated test if possible
    - One-off test script if no framework
    - MUST have before fixing
-   - Use the `superjawn:test-driven-development` skill for writing proper failing tests
+   - Use the `superpowers:test-driven-development` skill for writing proper failing tests
 
 2. **Implement Single Fix**
    - Address the root cause identified
@@ -345,8 +284,8 @@ These techniques are part of systematic debugging and available in this director
 - **`condition-based-waiting.md`** - Replace arbitrary timeouts with condition polling
 
 **Related skills:**
-- **superjawn:test-driven-development** - For creating failing test case (Phase 4, Step 1)
-- **superjawn:verification-before-completion** - Verify fix worked before claiming success
+- **superpowers:test-driven-development** - For creating failing test case (Phase 4, Step 1)
+- **superpowers:verification-before-completion** - Verify fix worked before claiming success
 
 ## Real-World Impact
 

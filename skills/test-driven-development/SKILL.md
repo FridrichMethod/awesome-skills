@@ -2,14 +2,6 @@
 name: test-driven-development
 description: Use when implementing any feature or bugfix, before writing implementation code
 ---
-<!--
-Adapted from obra/superpowers test-driven-development skill (v5.0.7),
-MIT-licensed, copyright 2025 Jesse Vincent. Modifications copyright 2026 Joe Amditis. v0.3.0 ports as a consumer category — no research
-phase per the v0.2.0 architecture, since TDD is a sub-skill called
-within other workflows whose specs/plans already encode the research
-conclusions. The artifact handoff carries those conclusions.
-See CREDITS.md.
--->
 
 # Test-Driven Development (TDD)
 

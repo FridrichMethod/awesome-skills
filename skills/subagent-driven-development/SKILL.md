@@ -2,17 +2,6 @@
 name: subagent-driven-development
 description: Use when executing implementation plans with independent tasks in the current session
 ---
-<!--
-Adapted from obra/superpowers subagent-driven-development skill (v5.0.7),
-MIT-licensed, copyright 2025 Jesse Vincent. Modifications copyright 2026 Joe Amditis.
-v0.5.0 ports as a consumer category — no research phase per the v0.2.0
-architecture, since subagent-driven-development is an in-session execution mode
-whose plan handoff already carries the research conclusions. skill_md_parity is
-false in the manifest because the dual-namespace cross-ref check requires
-migrating five superpowers:<x> references to superjawn:<x> for skills already
-ported, which breaks byte-parity with upstream by definition.
-See CREDITS.md.
--->
 
 # Subagent-Driven Development
 
@@ -21,6 +10,8 @@ Execute plan by dispatching fresh subagent per task, with two-stage review after
 **Why subagents:** You delegate tasks to specialized agents with isolated context. By precisely crafting their instructions and context, you ensure they stay focused and succeed at their task. They should never inherit your session's context or history — you construct exactly what they need. This also preserves your own context for coordination work.
 
 **Core principle:** Fresh subagent per task + two-stage review (spec then quality) = high quality, fast iteration
+
+**Continuous execution:** Do not pause to check in with your human partner between tasks. Execute all tasks from the plan without stopping. The only reasons to stop are: BLOCKED status you cannot resolve, ambiguity that genuinely prevents progress, or all tasks complete. "Should I continue?" prompts and progress summaries waste their time — they asked you to execute the plan, so execute it.
 
 ## When to Use
 
@@ -72,7 +63,7 @@ digraph process {
     "Read plan, extract all tasks with full text, note context, create TodoWrite" [shape=box];
     "More tasks remain?" [shape=diamond];
     "Dispatch final code reviewer subagent for entire implementation" [shape=box];
-    "Use superjawn:finishing-a-development-branch" [shape=box style=filled fillcolor=lightgreen];
+    "Use superpowers:finishing-a-development-branch" [shape=box style=filled fillcolor=lightgreen];
 
     "Read plan, extract all tasks with full text, note context, create TodoWrite" -> "Dispatch implementer subagent (./implementer-prompt.md)";
     "Dispatch implementer subagent (./implementer-prompt.md)" -> "Implementer subagent asks questions?";
@@ -91,7 +82,7 @@ digraph process {
     "Mark task complete in TodoWrite" -> "More tasks remain?";
     "More tasks remain?" -> "Dispatch implementer subagent (./implementer-prompt.md)" [label="yes"];
     "More tasks remain?" -> "Dispatch final code reviewer subagent for entire implementation" [label="no"];
-    "Dispatch final code reviewer subagent for entire implementation" -> "Use superjawn:finishing-a-development-branch";
+    "Dispatch final code reviewer subagent for entire implementation" -> "Use superpowers:finishing-a-development-branch";
 }
 ```
 
@@ -276,13 +267,13 @@ Done!
 ## Integration
 
 **Required workflow skills:**
-- **superjawn:using-git-worktrees** - REQUIRED: Set up isolated workspace before starting
-- **superjawn:writing-plans** - Creates the plan this skill executes
-- **superjawn:requesting-code-review** - Code review template for reviewer subagents
-- **superjawn:finishing-a-development-branch** - Complete development after all tasks
+- **superpowers:using-git-worktrees** - Ensures isolated workspace (creates one or verifies existing)
+- **superpowers:writing-plans** - Creates the plan this skill executes
+- **superpowers:requesting-code-review** - Code review template for reviewer subagents
+- **superpowers:finishing-a-development-branch** - Complete development after all tasks
 
 **Subagents should use:**
-- **superjawn:test-driven-development** - Subagents follow TDD for each task
+- **superpowers:test-driven-development** - Subagents follow TDD for each task
 
 **Alternative workflow:**
-- **superjawn:executing-plans** - Use for parallel session instead of same-session execution
+- **superpowers:executing-plans** - Use for parallel session instead of same-session execution

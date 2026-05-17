@@ -2,15 +2,6 @@
 name: dispatching-parallel-agents
 description: Use when facing 2+ independent tasks that can be worked on without shared state or sequential dependencies
 ---
-<!--
-Adapted from obra/superpowers dispatching-parallel-agents skill (v5.0.7),
-MIT-licensed, copyright 2025 Jesse Vincent. Modifications copyright 2026 Joe Amditis.
-v0.5.0 ports as a consumer category — no research phase per the v0.2.0
-architecture, since dispatching parallel agents is a fan-out utility called by
-other skills whose research conclusions already determined that parallelism
-applies.
-See CREDITS.md.
--->
 
 # Dispatching Parallel Agents
 

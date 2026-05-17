@@ -1,88 +1,75 @@
 # Batch Correction - Usage Guide
 
 ## Overview
-Batch effects in CRISPR screens arise from technical variation between screening rounds, different plasmid preps, or varying experimental conditions. Correction is essential for combining data across batches.
+
+Batch effects are technical variations between experimental batches that can confound biological signals. Different correction methods suit different analysis goals.
 
 ## Prerequisites
-```bash
-pip install pandas numpy scipy
-pip install combat  # or pycombat
-# R packages
-# BiocManager::install(c('sva', 'limma'))
+
+```r
+BiocManager::install(c('sva', 'limma', 'DESeq2'))
+install.packages('harmony')  # for single-cell
 ```
 
 ## Quick Start
+
 Tell your AI agent what you want to do:
-- "Correct batch effects between my screening rounds"
-- "Normalize counts across different batches before analysis"
-- "Check if my batches need correction using PCA"
+- "Remove batch effects from my RNA-seq data using ComBat-Seq"
+- "Add batch as a covariate in DESeq2 analysis"
+- "Estimate surrogate variables for unknown batch effects"
 
 ## Example Prompts
 
-### Batch Assessment
-> "Run PCA on my CRISPR screen data colored by batch to see if there are batch effects."
+### Design-Based Correction
+> "Include batch in my DESeq2 design formula"
 
-> "Calculate the correlation between replicates within and across batches. Is batch correction needed?"
+> "Model batch effects as a covariate in edgeR"
 
-> "Visualize the distribution of control guides across batches to assess technical variation."
+### Count Correction
+> "Apply ComBat-Seq to my raw count matrix"
 
-### Correction Methods
-> "Apply ComBat batch correction to my count matrix before running MAGeCK."
+> "Correct counts for batch before clustering"
 
-> "Use median normalization to correct for sequencing depth differences between batches."
+### Unknown Batches
+> "Use SVA to find hidden batch effects in my data"
 
-> "Normalize my screen data using non-targeting controls as reference."
+> "Estimate surrogate variables and include in DE analysis"
 
-### Multi-Batch Analysis
-> "I have screens from 3 different weeks. Correct batch effects and combine for joint analysis."
+### Visualization
+> "Make a PCA plot colored by batch before and after correction"
 
-> "Integrate data from two different screening facilities accounting for site-specific effects."
-
-### Validation
-> "After batch correction, check that essential gene dropout is preserved."
-
-> "Verify batch correction worked by re-running PCA. Batches should now overlap."
+> "Assess batch effect severity in my samples"
 
 ## What the Agent Will Do
-1. Assess batch effects using PCA and correlation
-2. Select appropriate correction method
-3. Apply normalization or batch correction
-4. Verify correction preserved biological signal
-5. Generate before/after comparison plots
-6. Output corrected count matrix
 
-## Tips
-- Always visualize batch effects before correction (PCA, correlation)
-- Include same controls in all batches for validation
-- Median normalization is simplest, ComBat is most powerful
-- Check that essential gene dropout is preserved after correction
-- Over-correction can remove biological signal - validate carefully
+1. Visualize batch effects with PCA colored by batch
+2. Choose appropriate correction method based on downstream analysis
+3. Apply correction (design formula for DE, ComBat-Seq for visualization)
+4. Validate correction with post-correction PCA
 
 ## Method Selection
 
-| Situation | Recommended Method |
-|-----------|-------------------|
-| Minor depth variation | Median normalization |
-| Moderate batch effects | Size factor normalization |
-| Strong batch effects | ComBat |
-| Biological signal priority | Control-based normalization |
+| Method | Input | Use For |
+|--------|-------|---------|
+| DESeq2 design formula | Raw counts | DE analysis (preferred) |
+| ComBat-Seq | Raw counts | Visualization, clustering |
+| ComBat | Normalized | Visualization, ML |
+| limma removeBatchEffect | Normalized | Visualization only |
+| SVA | Normalized | Unknown batch sources |
+| Harmony | Embeddings | Single-cell integration |
 
-## QC Metrics
+## Tips
 
-| Metric | Excellent | Good | Investigate |
-|--------|-----------|------|-------------|
-| Within-batch correlation | > 0.95 | 0.9-0.95 | < 0.9 |
-| Cross-batch correlation | > 0.90 | 0.8-0.90 | < 0.8 |
-| Batch effect (PCA) | Not visible | Minor | Dominant |
+- For differential expression: always include batch in the design formula, never use corrected counts
+- For visualization/clustering: Use corrected values (ComBat-Seq for counts, removeBatchEffect for normalized)
+- Known vs unknown batches: Use SVA when batch sources are unknown
+- Confounding: Batch perfectly correlated with condition is unfixable — no statistical method can separate them
+- Over-correction: Can remove biological signal; compare results with and without correction
+- Balanced design: Best results when conditions are evenly spread across batches
 
-## Validation Checklist
-- PCA no longer separates by batch
-- Replicate correlations improved
-- Control guide distributions aligned
-- Essential gene depletion preserved
-- Non-targeting controls stable
+## Related Skills
 
-## References
-- MAGeCK batch correction: doi:10.1186/s13059-015-0843-6
-- ComBat: doi:10.1093/biostatistics/kxj037
-- Screen normalization: doi:10.1038/nmeth.3935
+- differential-expression/deseq2-basics - DE with batch in design formula
+- differential-expression/de-visualization - PCA plots for batch assessment
+- single-cell/clustering - Harmony and other integration methods
+- expression-matrix/normalization - Data normalization and transformation

@@ -2,21 +2,6 @@
 name: writing-skills
 description: Use when creating new skills, editing existing skills, or verifying skills work before deployment
 ---
-<!--
-Adapted from obra/superpowers writing-skills skill (v5.0.7), MIT-licensed,
-copyright 2025 Jesse Vincent. Modifications copyright 2026 Joe Amditis.
-v0.6.0 ports as a research-category skill: a default-on Research phase is
-inserted between "When to Create a Skill" and "Skill Types" so skill design
-is grounded in real prior art and current best practice before TDD begins.
-Findings land at .superpowers/skill-design-<skill-slug>.md. Skip protocol
-text byte-identical to brainstorming/systematic-debugging.
-Four cross-references migrated from the upstream namespace prefix to the
-local one — three refs to test-driven-development and one to systematic-
-debugging; both targets are ported skills so the dual-namespace cross-ref
-check requires the local prefix.
-SKILL.md is parity:false in the manifest by design.
-See CREDITS.md.
--->
 
 # Writing Skills
 
@@ -30,7 +15,7 @@ You write test cases (pressure scenarios with subagents), watch them fail (basel
 
 **Core principle:** If you didn't watch an agent fail without the skill, you don't know if the skill teaches the right thing.
 
-**REQUIRED BACKGROUND:** You MUST understand superjawn:test-driven-development before using this skill. That skill defines the fundamental RED-GREEN-REFACTOR cycle. This skill adapts TDD to documentation.
+**REQUIRED BACKGROUND:** You MUST understand superpowers:test-driven-development before using this skill. That skill defines the fundamental RED-GREEN-REFACTOR cycle. This skill adapts TDD to documentation.
 
 **Official guidance:** For Anthropic's official skill authoring best practices, see anthropic-best-practices.md. This document provides additional patterns and guidelines that complement the TDD-focused approach in this skill.
 
@@ -72,43 +57,6 @@ The entire skill creation process follows RED-GREEN-REFACTOR.
 - Standard practices well-documented elsewhere
 - Project-specific conventions (put in CLAUDE.md)
 - Mechanical constraints (if it's enforceable with regex/validation, automate it—save documentation for judgment calls)
-
-## Research phase
-
-Before writing tests for a new skill, gather outside context. This is **default-on**: skip only with explicit, justified statement.
-
-The aim is to ground the skill design in real prior art and current best practice, not just your own recall of patterns.
-
-### 1. Pick research kinds
-
-From the menu — patterns + best practices, prior art, authoritative guidance, user-context.
-
-For writing-skills, the **defaults are: web (skill authoring patterns + recent discourse) and codebase (prior art — does this overlap with an existing skill in this repo or a sibling plugin?)**. Add others when warranted — authoritative when the skill encodes a specific external standard (W3C, RFC, vendor docs), or user-context when prior decisions in memory shape the right shape for the skill.
-
-### 2. Dispatch
-
-Subagent by default:
-- `Explore` for codebase / prior-art questions ("does this repo or any installed plugin already have a skill for X?", "what naming convention do existing skills use here?")
-- `general-purpose` for web / authoring patterns ("what shape do effective Claude Code skills take?", "common pitfalls for skills in this domain?")
-- Run multiple in parallel when the kinds are independent
-
-Inline only for light-touch research (single grep across `~/.claude/skills/`, memory check).
-
-### 3. Record findings
-
-Findings land at `.superpowers/skill-design-<skill-slug>.md` where `<skill-slug>` is the kebab-case name of the skill you are designing. Write 3–5 tight bullets — load-bearing links/refs, prior-art notes, anything considered-but-ruled-out so future-you knows it was checked. The directory `.superpowers/` is git-ignored by upstream convention.
-
-### 4. Skip protocol
-
-If skipping, write one line to `.superpowers/skill-design-<skill-slug>.md`: `Skipped research because <reason>. <Verifiable pointer if applicable>.`
-
-**Valid reasons:**
-- Trivial scope (typo, comment edit, single-line config)
-- Fresh prior research — same topic in current session OR within last 7 days with verifiable spec/plan pointer. **If the pointer doesn't resolve, the skip is invalid.** (Beyond 7 days, repeat the research even if you remember the prior findings — the landscape drifts.)
-- User explicit — **must quote the phrase** that authorized the skip.
-- Repeat of identical task — **must include a pointer** to the prior successful run.
-
-**Invalid reasons:** "I think I know", "seems straightforward", "moving fast", "user wants this done quickly", "already familiar with this codebase". If those are tempting, do the research.
 
 ## Skill Types
 
@@ -332,8 +280,8 @@ wc -w skills/path/SKILL.md
 **When writing documentation that references other skills:**
 
 Use skill name only, with explicit requirement markers:
-- ✅ Good: `**REQUIRED SUB-SKILL:** Use superjawn:test-driven-development`
-- ✅ Good: `**REQUIRED BACKGROUND:** You MUST understand superjawn:systematic-debugging`
+- ✅ Good: `**REQUIRED SUB-SKILL:** Use superpowers:test-driven-development`
+- ✅ Good: `**REQUIRED BACKGROUND:** You MUST understand superpowers:systematic-debugging`
 - ❌ Bad: `See skills/testing/test-driven-development` (unclear if required)
 - ❌ Bad: `@skills/testing/test-driven-development/SKILL.md` (force-loads, burns context)
 
@@ -442,7 +390,7 @@ Edit skill without testing? Same violation.
 - Don't "adapt" while running tests
 - Delete means delete
 
-**REQUIRED BACKGROUND:** The superjawn:test-driven-development skill explains why this matters. Same principles apply to documentation.
+**REQUIRED BACKGROUND:** The superpowers:test-driven-development skill explains why this matters. Same principles apply to documentation.
 
 ## Testing All Skill Types
 

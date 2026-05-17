@@ -1,626 +1,412 @@
 ---
 name: accessibility-compliance
-description: Web accessibility patterns for news sites, journalism tools, and academic platforms. Use when building accessible interfaces, auditing existing sites for WCAG compliance, writing alt text for news images, creating accessible data visualizations, or ensuring content reaches all readers including those using assistive technologies. Essential for newsroom developers and anyone publishing web content.
+description: Implement WCAG 2.2 compliant interfaces with mobile accessibility, inclusive design patterns, and assistive technology support. Use when auditing accessibility, implementing ARIA patterns, building for screen readers, or ensuring inclusive user experiences.
 ---
 
-# Accessibility compliance
+# Accessibility Compliance
 
-Practical accessibility patterns for journalism and academic web publishing.
+Master accessibility implementation to create inclusive experiences that work for everyone, including users with disabilities.
 
-## When to activate
+## When to Use This Skill
 
-- Building or auditing news websites
-- Writing alt text for article images
-- Creating accessible data visualizations
-- Developing tools that journalists use
-- Ensuring multimedia content is accessible
-- Meeting legal accessibility requirements
-- Publishing academic content online
+- Implementing WCAG 2.2 Level AA or AAA compliance
+- Building screen reader accessible interfaces
+- Adding keyboard navigation to interactive components
+- Implementing focus management and focus trapping
+- Creating accessible forms with proper labeling
+- Supporting reduced motion and high contrast preferences
+- Building mobile accessibility features (iOS VoiceOver, Android TalkBack)
+- Conducting accessibility audits and fixing violations
 
-## WCAG essentials for news sites
+## Core Capabilities
 
-WCAG 2.2 became a W3C Recommendation in October 2023 and is backwards-compatible with 2.1. Targeting 2.2 AA is the right default for new work; 2.1 AA remains the floor in most legal regimes (see "Legal requirements" below).
+### 1. WCAG 2.2 Guidelines
 
-WCAG 2.2 added nine criteria over 2.1. Most relevant for news sites: **2.5.8 Target Size (Minimum) AA** — interactive targets at least 24×24 CSS pixels; **2.4.11 Focus Not Obscured (Minimum) AA** — focused element not fully hidden by sticky headers / chat widgets; **3.3.8 Accessible Authentication AA** — no cognitive function tests (e.g., transcribing distorted text) without an alternative; **3.3.7 Redundant Entry A** — don't ask users to re-enter the same data within a session.
+- Perceivable: Content must be presentable in different ways
+- Operable: Interface must be navigable with keyboard and assistive tech
+- Understandable: Content and operation must be clear
+- Robust: Content must work with current and future assistive technologies
 
-### The four principles (POUR)
+### 2. ARIA Patterns
 
-```markdown
-## WCAG 2.2 AA checklist (journalism focus)
+- Roles: Define element purpose (button, dialog, navigation)
+- States: Indicate current condition (expanded, selected, disabled)
+- Properties: Describe relationships and additional info (labelledby, describedby)
+- Live regions: Announce dynamic content changes
 
-### Perceivable
-- [ ] Images have meaningful alt text
-- [ ] Videos have captions
-- [ ] Audio has transcripts
-- [ ] Color isn't the only way to convey info
-- [ ] Text can be resized to 200% without breaking
+### 3. Keyboard Navigation
 
-### Operable
-- [ ] All functions work with keyboard only
-- [ ] No keyboard traps
-- [ ] Skip links to main content
-- [ ] Page titles describe content
-- [ ] Focus visible on all interactive elements
+- Focus order and tab sequence
+- Focus indicators and visible focus states
+- Keyboard shortcuts and hotkeys
+- Focus trapping for modals and dialogs
 
-### Understandable
-- [ ] Language is declared in HTML
-- [ ] Navigation is consistent
-- [ ] Error messages are clear
-- [ ] Labels describe form fields
+### 4. Screen Reader Support
 
-### Robust
-- [ ] Valid HTML
-- [ ] ARIA used correctly (or not at all)
-- [ ] Works with screen readers
-- [ ] Doesn't break with zoom/text resize
-```
+- Semantic HTML structure
+- Alternative text for images
+- Proper heading hierarchy
+- Skip links and landmarks
 
-## Image accessibility
+### 5. Mobile Accessibility
 
-### Alt text for journalism
+- Touch target sizing (44x44dp minimum)
+- VoiceOver and TalkBack compatibility
+- Gesture alternatives
+- Dynamic Type support
 
-```markdown
-## Alt text decision tree
+## Quick Reference
 
-### News photos
-- **WHO** is in the image (if identifiable and relevant)
-- **WHAT** is happening (the action or situation)
-- **WHERE** (if location matters to story)
-- **Don't**: Repeat caption text verbatim
+### WCAG 2.2 Success Criteria Checklist
 
-### Examples
+| Level | Criterion | Description                                          |
+| ----- | --------- | ---------------------------------------------------- |
+| A     | 1.1.1     | Non-text content has text alternatives               |
+| A     | 1.3.1     | Info and relationships programmatically determinable |
+| A     | 2.1.1     | All functionality keyboard accessible                |
+| A     | 2.4.1     | Skip to main content mechanism                       |
+| AA    | 1.4.3     | Contrast ratio 4.5:1 (text), 3:1 (large text)        |
+| AA    | 1.4.11    | Non-text contrast 3:1                                |
+| AA    | 2.4.7     | Focus visible                                        |
+| AA    | 2.5.8     | Target size minimum 24x24px (NEW in 2.2)             |
+| AAA   | 1.4.6     | Enhanced contrast 7:1                                |
+| AAA   | 2.5.5     | Target size minimum 44x44px                          |
 
-PHOTO: Protesters holding signs outside courthouse
+## Key Patterns
 
-BAD: "Protesters"
-BAD: "Image of protest" (redundant "image of")
-GOOD: "Approximately 50 protesters hold signs reading 'Justice Now' outside the federal courthouse in downtown Seattle"
+### Pattern 1: Accessible Button
 
-PHOTO: Headshot of interview subject
-
-BAD: "Photo"
-GOOD: "Dr. Sarah Chen, epidemiologist at Johns Hopkins"
-
-PHOTO: Chart embedded as image
-
-BAD: "Chart showing data"
-GOOD: "Bar chart showing unemployment rising from 3.5% to 8.2% between March and June 2020. Full data in table below."
-```
-
-### Alt text for AI-generated images
-
-Newsroom transparency policies generally require disclosing that an image is AI-generated; that disclosure belongs in the caption AND the alt text, because screen-reader users see only the alt text. Describe the visual content first, then note the provenance. Don't lead with "AI-generated image of..." — describe the subject the way you would for any photo, then add the AI source.
-
-GOOD: "Illustration of a flooded downtown street with abandoned cars, water reaching first-floor windows. AI-generated by [tool] for editorial use."
-
-GOOD (decorative AI illustration): "Decorative AI-generated abstract pattern in blue and orange." — but consider whether the image should have empty alt (`alt=""`) since it carries no information.
-
-For AI-generated images of real people or events, AP and most newsroom guidelines treat the image as a manipulation, not a photograph — disclosure in alt text is required, not optional.
-
-
-### Alt text Python helper
-
-```python
-def generate_alt_text_prompt(context: dict) -> str:
-    """Generate prompt for AI alt text assistance."""
-    return f"""
-    Write alt text for a news image.
-
-    Story context: {context.get('headline', 'Unknown')}
-    Image type: {context.get('image_type', 'photo')}
-    Caption (if any): {context.get('caption', 'None')}
-
-    Guidelines:
-    - Be concise (under 125 characters if possible)
-    - Don't start with "Image of" or "Photo of"
-    - Include relevant details for story context
-    - Don't duplicate caption exactly
-    - Describe what's visually important
-
-    If this is decorative only, respond: ""
-    """
-
-def is_decorative(image_context: str) -> bool:
-    """Check if image is purely decorative (empty alt appropriate)."""
-    decorative_indicators = [
-        'decorative',
-        'separator',
-        'background',
-        'spacer',
-        'border'
-    ]
-    return any(ind in image_context.lower() for ind in decorative_indicators)
-```
-
-## Accessible data visualization
-
-### Chart accessibility checklist
-
-```markdown
-## Making charts accessible
-
-### Essential elements
-- [ ] Text alternative describing the key insight
-- [ ] Data table available (visible or linked)
-- [ ] Colors have sufficient contrast
-- [ ] Patterns/textures supplement color coding
-- [ ] Labels directly on chart (not legend-only)
-- [ ] Title describes what chart shows
-
-### Interactive charts
-- [ ] Keyboard navigable
-- [ ] Focus indicators visible
-- [ ] Screen reader announces data points
-- [ ] Tooltips accessible via keyboard
-- [ ] Zooming doesn't break layout
-```
-
-### Accessible chart component
-
-```html
-<!-- Accessible chart pattern -->
-<figure role="figure" aria-labelledby="chart-title" aria-describedby="chart-desc">
-  <figcaption>
-    <h3 id="chart-title">Unemployment Rate 2020-2024</h3>
-    <p id="chart-desc">
-      Line chart showing unemployment starting at 3.5% in January 2020,
-      spiking to 14.7% in April 2020, and gradually declining to 3.9% by 2024.
-    </p>
-  </figcaption>
-
-  <!-- The chart itself -->
-  <div id="chart" role="img" aria-label="Interactive line chart. Data table available below.">
-    <!-- Chart renders here -->
-  </div>
-
-  <!-- Always provide data table -->
-  <details>
-    <summary>View data table</summary>
-    <table>
-      <caption>Monthly unemployment rate data</caption>
-      <thead>
-        <tr>
-          <th scope="col">Month</th>
-          <th scope="col">Unemployment Rate (%)</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td>Jan 2020</td><td>3.5</td></tr>
-        <tr><td>Apr 2020</td><td>14.7</td></tr>
-        <!-- etc -->
-      </tbody>
-    </table>
-  </details>
-</figure>
-```
-
-### Color-blind safe palettes
-
-```python
-# Safe color palettes for data visualization
-COLOR_PALETTES = {
-    # Paul Tol's color schemes - widely tested for accessibility
-    'bright': [
-        '#4477AA',  # Blue
-        '#EE6677',  # Red
-        '#228833',  # Green
-        '#CCBB44',  # Yellow
-        '#66CCEE',  # Cyan
-        '#AA3377',  # Purple
-        '#BBBBBB',  # Grey
-    ],
-
-    # Categorical (safe for most color blindness)
-    'categorical': [
-        '#332288',  # Indigo
-        '#88CCEE',  # Cyan
-        '#44AA99',  # Teal
-        '#117733',  # Green
-        '#999933',  # Olive
-        '#DDCC77',  # Sand
-        '#CC6677',  # Rose
-        '#882255',  # Wine
-    ],
-
-    # Sequential (single hue)
-    'sequential_blue': [
-        '#f7fbff',
-        '#deebf7',
-        '#c6dbef',
-        '#9ecae1',
-        '#6baed6',
-        '#4292c6',
-        '#2171b5',
-        '#084594',
-    ],
-
-    # Diverging (for data with meaningful midpoint)
-    'diverging': [
-        '#d73027',  # Red (negative)
-        '#f46d43',
-        '#fdae61',
-        '#fee08b',
-        '#ffffbf',  # Neutral
-        '#d9ef8b',
-        '#a6d96a',
-        '#66bd63',
-        '#1a9850',  # Green (positive)
-    ]
+```tsx
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: "primary" | "secondary";
+  isLoading?: boolean;
 }
 
-def validate_contrast(color1: str, color2: str) -> float:
-    """Calculate WCAG contrast ratio between two colors."""
-    def hex_to_rgb(hex_color):
-        hex_color = hex_color.lstrip('#')
-        return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
-
-    def relative_luminance(rgb):
-        r, g, b = [x / 255.0 for x in rgb]
-        r = r / 12.92 if r <= 0.03928 else ((r + 0.055) / 1.055) ** 2.4
-        g = g / 12.92 if g <= 0.03928 else ((g + 0.055) / 1.055) ** 2.4
-        b = b / 12.92 if b <= 0.03928 else ((b + 0.055) / 1.055) ** 2.4
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b
-
-    l1 = relative_luminance(hex_to_rgb(color1))
-    l2 = relative_luminance(hex_to_rgb(color2))
-
-    lighter = max(l1, l2)
-    darker = min(l1, l2)
-
-    return (lighter + 0.05) / (darker + 0.05)
-
-# WCAG requirements:
-# Normal text: 4.5:1 minimum (AA), 7:1 enhanced (AAA)
-# Large text (18pt+): 3:1 minimum (AA), 4.5:1 enhanced (AAA)
-# UI components: 3:1 minimum
-```
-
-## Video and audio accessibility
-
-### Caption requirements
-
-```markdown
-## Video caption checklist
-
-### Quality standards
-- [ ] 99%+ accuracy
-- [ ] Synchronized with audio (within 1 second)
-- [ ] Speaker identification for multiple speakers
-- [ ] Sound effects described [applause] [music]
-- [ ] Non-speech audio described when relevant
-
-### Technical requirements
-- [ ] Captions available in player controls
-- [ ] Can be toggled on/off
-- [ ] Styling doesn't overlap video content
-- [ ] Readable font size and contrast
-
-### Caption format (SRT example)
-1
-00:00:01,000 --> 00:00:04,500
-[NEWS ANCHOR] Good evening. Breaking news tonight
-from downtown where protesters have gathered.
-
-2
-00:00:04,600 --> 00:00:08,200
-We're going live to reporter Jane Smith
-at the scene. Jane?
-```
-
-### Audio description for video
-
-```markdown
-## When audio description is needed
-
-### Required
-- [ ] Key visual information not in dialogue
-- [ ] Actions crucial to understanding story
-- [ ] Text on screen not read aloud
-- [ ] Identifying information for speakers
-
-### Example script
-
-ORIGINAL VIDEO: [Reporter stands in front of burning building]
-DIALOGUE: "The fire started around 3am..."
-
-AUDIO DESCRIPTION VERSION:
-[A reporter in a red jacket stands before a five-story
-apartment building engulfed in flames. Fire trucks
-visible in background]
-DIALOGUE: "The fire started around 3am..."
-```
-
-## Keyboard accessibility
-
-### Focus management patterns
-
-```javascript
-// Skip link implementation
-document.addEventListener('DOMContentLoaded', () => {
-  const skipLink = document.querySelector('.skip-link');
-  const mainContent = document.querySelector('main');
-
-  skipLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    mainContent.setAttribute('tabindex', '-1');
-    mainContent.focus();
-  });
-});
-
-// Keyboard trap prevention in modals
-function createAccessibleModal(modalElement) {
-  const focusableElements = modalElement.querySelectorAll(
-    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+function AccessibleButton({
+  children,
+  variant = "primary",
+  isLoading = false,
+  disabled,
+  ...props
+}: ButtonProps) {
+  return (
+    <button
+      // Disable when loading
+      disabled={disabled || isLoading}
+      // Announce loading state to screen readers
+      aria-busy={isLoading}
+      // Describe the button's current state
+      aria-disabled={disabled || isLoading}
+      className={cn(
+        // Visible focus ring
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+        // Minimum touch target size (44x44px)
+        "min-h-[44px] min-w-[44px]",
+        variant === "primary" && "bg-primary text-primary-foreground",
+        (disabled || isLoading) && "opacity-50 cursor-not-allowed",
+      )}
+      {...props}
+    >
+      {isLoading ? (
+        <>
+          <span className="sr-only">Loading</span>
+          <Spinner aria-hidden="true" />
+        </>
+      ) : (
+        children
+      )}
+    </button>
   );
-  const firstFocusable = focusableElements[0];
-  const lastFocusable = focusableElements[focusableElements.length - 1];
+}
+```
 
-  modalElement.addEventListener('keydown', (e) => {
-    if (e.key === 'Tab') {
-      if (e.shiftKey && document.activeElement === firstFocusable) {
-        e.preventDefault();
-        lastFocusable.focus();
-      } else if (!e.shiftKey && document.activeElement === lastFocusable) {
-        e.preventDefault();
-        firstFocusable.focus();
+### Pattern 2: Accessible Modal Dialog
+
+```tsx
+import * as React from "react";
+import { FocusTrap } from "@headlessui/react";
+
+interface DialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+}
+
+function AccessibleDialog({ isOpen, onClose, title, children }: DialogProps) {
+  const titleId = React.useId();
+  const descriptionId = React.useId();
+
+  // Close on Escape key
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen) {
+        onClose();
       }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
+  // Prevent body scroll when open
+  React.useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
     }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
 
-    if (e.key === 'Escape') {
-      closeModal();
-    }
-  });
-}
+  if (!isOpen) return null;
 
-// Focus indicator styles (never remove outlines without replacement)
-/*
-:focus {
-  outline: 2px solid #005fcc;
-  outline-offset: 2px;
-}
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      aria-describedby={descriptionId}
+    >
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/50"
+        aria-hidden="true"
+        onClick={onClose}
+      />
 
-:focus:not(:focus-visible) {
-  outline: none;  // Remove for mouse users
-}
-
-:focus-visible {
-  outline: 2px solid #005fcc;  // Keep for keyboard users
-  outline-offset: 2px;
-}
-*/
-```
-
-### Respect motion preferences
-
-Users with vestibular disorders, attention conditions, or migraines can disable system-level animation. Honor that signal — don't ship CSS or JS animations that ignore it.
-
-```css
-/* Reduce or remove non-essential motion when the OS asks */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-```
-
-```javascript
-// Gate JS-driven animations on the same signal
-const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-if (!prefersReducedMotion) {
-  // Run your scroll-driven story animations, parallax, autoplay carousels, etc.
+      {/* Focus trap container */}
+      <FocusTrap>
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <div className="bg-background rounded-lg shadow-lg max-w-md w-full p-6">
+            <h2 id={titleId} className="text-lg font-semibold">
+              {title}
+            </h2>
+            <div id={descriptionId}>{children}</div>
+            <button
+              onClick={onClose}
+              className="absolute top-4 right-4"
+              aria-label="Close dialog"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </FocusTrap>
+    </div>
+  );
 }
 ```
 
-Essential motion that conveys information (loading spinners, progress bars) can stay. Decorative motion (parallax scroll, animated heroes, autoplay video) must obey the preference.
+### Pattern 3: Accessible Form
 
-## Forms and error handling
+```tsx
+function AccessibleForm() {
+  const [errors, setErrors] = React.useState<Record<string, string>>({});
 
-### Accessible form patterns
+  return (
+    <form aria-describedby="form-errors" noValidate>
+      {/* Error summary for screen readers */}
+      {Object.keys(errors).length > 0 && (
+        <div
+          id="form-errors"
+          role="alert"
+          aria-live="assertive"
+          className="bg-destructive/10 border border-destructive p-4 rounded-md mb-4"
+        >
+          <h2 className="font-semibold text-destructive">
+            Please fix the following errors:
+          </h2>
+          <ul className="list-disc list-inside mt-2">
+            {Object.entries(errors).map(([field, message]) => (
+              <li key={field}>
+                <a href={`#${field}`} className="underline">
+                  {message}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
-```html
-<!-- Accessible form field -->
-<div class="form-group">
-  <label for="email">
-    Email address
-    <span class="required" aria-hidden="true">*</span>
-    <span class="visually-hidden">(required)</span>
-  </label>
-  <input
-    type="email"
-    id="email"
-    name="email"
-    required
-    aria-describedby="email-hint email-error"
-    aria-invalid="false"
-  >
-  <p id="email-hint" class="hint">
-    We'll use this to send you the newsletter.
-  </p>
-  <p id="email-error" class="error" role="alert" hidden>
-    Please enter a valid email address.
-  </p>
-</div>
+      {/* Required field with error */}
+      <div className="space-y-2">
+        <label htmlFor="email" className="block font-medium">
+          Email address
+          <span aria-hidden="true" className="text-destructive ml-1">
+            *
+          </span>
+          <span className="sr-only">(required)</span>
+        </label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          required
+          aria-required="true"
+          aria-invalid={!!errors.email}
+          aria-describedby={errors.email ? "email-error" : "email-hint"}
+          className={cn(
+            "w-full px-3 py-2 border rounded-md",
+            errors.email && "border-destructive",
+          )}
+        />
+        {errors.email ? (
+          <p id="email-error" className="text-sm text-destructive" role="alert">
+            {errors.email}
+          </p>
+        ) : (
+          <p id="email-hint" className="text-sm text-muted-foreground">
+            We'll never share your email.
+          </p>
+        )}
+      </div>
 
-<style>
-  /* Visually hidden but accessible to screen readers */
-  .visually-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-</style>
+      <button type="submit" className="mt-4">
+        Submit
+      </button>
+    </form>
+  );
+}
 ```
 
-### Error message patterns
+### Pattern 4: Skip Navigation Link
 
-```javascript
-function showError(inputElement, message) {
-  const errorElement = document.getElementById(
-    inputElement.getAttribute('aria-describedby').split(' ').find(id =>
-      id.includes('error')
-    )
+```tsx
+function SkipLink() {
+  return (
+    <a
+      href="#main-content"
+      className={cn(
+        // Hidden by default, visible on focus
+        "sr-only focus:not-sr-only",
+        "focus:absolute focus:top-4 focus:left-4 focus:z-50",
+        "focus:bg-background focus:px-4 focus:py-2 focus:rounded-md",
+        "focus:ring-2 focus:ring-primary",
+      )}
+    >
+      Skip to main content
+    </a>
+  );
+}
+
+// In layout
+function Layout({ children }) {
+  return (
+    <>
+      <SkipLink />
+      <header>...</header>
+      <nav aria-label="Main navigation">...</nav>
+      <main id="main-content" tabIndex={-1}>
+        {children}
+      </main>
+      <footer>...</footer>
+    </>
+  );
+}
+```
+
+### Pattern 5: Live Region for Announcements
+
+```tsx
+function useAnnounce() {
+  const [message, setMessage] = React.useState("");
+
+  const announce = React.useCallback(
+    (text: string, priority: "polite" | "assertive" = "polite") => {
+      setMessage(""); // Clear first to ensure re-announcement
+      setTimeout(() => setMessage(text), 100);
+    },
+    [],
   );
 
-  inputElement.setAttribute('aria-invalid', 'true');
-  errorElement.textContent = message;
-  errorElement.hidden = false;
+  const Announcer = () => (
+    <div
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      className="sr-only"
+    >
+      {message}
+    </div>
+  );
 
-  // Announce error to screen readers
-  errorElement.setAttribute('role', 'alert');
+  return { announce, Announcer };
 }
 
-function clearError(inputElement) {
-  const errorId = inputElement.getAttribute('aria-describedby')
-    .split(' ')
-    .find(id => id.includes('error'));
-  const errorElement = document.getElementById(errorId);
+// Usage
+function SearchResults({ results, isLoading }) {
+  const { announce, Announcer } = useAnnounce();
 
-  inputElement.setAttribute('aria-invalid', 'false');
-  errorElement.hidden = true;
-  errorElement.removeAttribute('role');
+  React.useEffect(() => {
+    if (!isLoading && results) {
+      announce(`${results.length} results found`);
+    }
+  }, [results, isLoading, announce]);
+
+  return (
+    <>
+      <Announcer />
+      <ul>{/* results */}</ul>
+    </>
+  );
 }
 ```
 
-## Testing tools
+## Color Contrast Requirements
 
-### Automated testing
+```typescript
+// Contrast ratio utilities
+function getContrastRatio(foreground: string, background: string): number {
+  const fgLuminance = getLuminance(foreground);
+  const bgLuminance = getLuminance(background);
+  const lighter = Math.max(fgLuminance, bgLuminance);
+  const darker = Math.min(fgLuminance, bgLuminance);
+  return (lighter + 0.05) / (darker + 0.05);
+}
 
-```python
-# Accessibility audit with axe-core (via Playwright)
-from playwright.sync_api import sync_playwright
-
-def run_accessibility_audit(url: str) -> dict:
-    """Run automated accessibility tests."""
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
-        page = browser.new_page()
-        page.goto(url)
-
-        # Inject axe-core (4.10.x covers WCAG 2.0/2.1/2.2 at A, AA, AAA)
-        page.add_script_tag(
-            url='https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.3/axe.min.js'
-        )
-
-        # Run audit
-        results = page.evaluate('''
-            async () => {
-                return await axe.run();
-            }
-        ''')
-
-        browser.close()
-
-        return {
-            'violations': results['violations'],
-            'passes': len(results['passes']),
-            'incomplete': results['incomplete'],
-            'url': url
-        }
-
-def format_violations(results: dict) -> str:
-    """Format violations for review."""
-    output = []
-    for v in results['violations']:
-        output.append(f"\n## {v['id']}: {v['description']}")
-        output.append(f"Impact: {v['impact']}")
-        output.append(f"WCAG: {', '.join(v.get('tags', []))}")
-        for node in v['nodes'][:3]:  # First 3 examples
-            output.append(f"  - {node['html'][:100]}")
-    return '\n'.join(output)
+// WCAG requirements
+const CONTRAST_REQUIREMENTS = {
+  // Normal text (<18pt or <14pt bold)
+  normalText: {
+    AA: 4.5,
+    AAA: 7,
+  },
+  // Large text (>=18pt or >=14pt bold)
+  largeText: {
+    AA: 3,
+    AAA: 4.5,
+  },
+  // UI components and graphics
+  uiComponents: {
+    AA: 3,
+  },
+};
 ```
 
-### Manual testing checklist
+## Best Practices
 
-```markdown
-## Manual accessibility tests
+1. **Use Semantic HTML**: Prefer native elements over ARIA when possible
+2. **Test with Real Users**: Include people with disabilities in user testing
+3. **Keyboard First**: Design interactions to work without a mouse
+4. **Don't Disable Focus Styles**: Style them, don't remove them
+5. **Provide Text Alternatives**: All non-text content needs descriptions
+6. **Support Zoom**: Content should work at 200% zoom
+7. **Announce Changes**: Use live regions for dynamic content
+8. **Respect Preferences**: Honor prefers-reduced-motion and prefers-contrast
 
-### Keyboard navigation
-- [ ] Tab through entire page
-- [ ] Can reach all interactive elements
-- [ ] Focus order makes sense
-- [ ] No keyboard traps
-- [ ] Skip link works
+## Common Issues
 
-### Screen reader testing
-- [ ] Headings announce in logical order
-- [ ] Images have meaningful descriptions
-- [ ] Form labels announce correctly
-- [ ] Error messages announced
-- [ ] Dynamic content updates announced
+- **Missing alt text**: Images without descriptions
+- **Poor color contrast**: Text hard to read against background
+- **Keyboard traps**: Focus stuck in component
+- **Missing labels**: Form inputs without associated labels
+- **Auto-playing media**: Content that plays without user initiation
+- **Inaccessible custom controls**: Recreating native functionality poorly
+- **Missing skip links**: No way to bypass repetitive content
+- **Focus order issues**: Tab order doesn't match visual order
 
-### Zoom testing
-- [ ] 200% zoom, no horizontal scrolling
-- [ ] 400% zoom, content still usable
-- [ ] Text spacing adjustments don't break layout
+## Testing Tools
 
-### Color and contrast
-- [ ] Works in grayscale
-- [ ] Links distinguishable from text
-- [ ] Error states not color-only
-- [ ] Contrast checker passes (4.5:1 minimum)
-```
-
-## Legal requirements
-
-```markdown
-## Accessibility law summary (current as of 2026-05)
-
-### United States
-- **Section 508**: Federal agencies and federal contractors must meet
-  WCAG 2.0 AA (Revised 508 Standards, 2017). Update to a newer WCAG
-  baseline is anticipated but not finalized.
-- **ADA Title II (DOJ final rule, April 2024)**: State and local
-  government websites and mobile apps must conform to WCAG 2.1 AA.
-  Compliance dates were extended in the April 2026 Interim Final Rule:
-  - Population 50,000+: April 26, 2027 (was April 24, 2026)
-  - Population under 50,000 / special districts: April 26, 2028
-    (was April 26, 2027)
-- **HHS Section 504 rule (2024)**: Recipients of HHS funding must meet
-  WCAG 2.1 AA on web/mobile. Large recipients: May 11, 2026; small
-  recipients: May 10, 2027. Independent of the DOJ extension above.
-- **ADA Title III**: Public accommodations (private-sector sites)
-  remain a litigation target. No federal technical standard, but
-  WCAG 2.1 AA is the de facto floor courts have applied.
-
-### European Union
-- **European Accessibility Act (EAA)**: In force June 28, 2025 for
-  new products and services. Covers e-commerce, banking, e-readers,
-  ticketing, and a broader range of digital services than prior rules.
-- **EN 301 549**: Technical standard referenced by member-state
-  implementations; aligns with WCAG 2.1 AA (2.2 alignment in progress).
-
-### Best practice
-WCAG 2.2 AA for new work; WCAG 2.1 AA for legal-floor compliance with
-DOJ Title II, HHS, and most EU implementations. Meeting 2.2 implies 2.1
-(backwards compatible).
-```
-
-## Related skills
-
-- **zero-build-frontend** - Build accessible static sites
-- **data-journalism** - Create accessible visualizations
-- **web-scraping** - Ensure scraped content preserves accessibility
-
----
-
-## Skill metadata
-
-| Field | Value |
-|-------|-------|
-| Version | 1.1.0 |
-| Created | 2025-12-26 |
-| Last currency sweep | 2026-05-08 (WCAG 2.2, DOJ Title II IFR, EAA, axe-core 4.10.3) |
-| Domain | Development, Publishing |
-| Complexity | Intermediate |
+- **Automated**: axe DevTools, WAVE, Lighthouse
+- **Manual**: VoiceOver (macOS/iOS), NVDA/JAWS (Windows), TalkBack (Android)
+- **Simulators**: NoCoffee (vision), Silktide (various disabilities)
