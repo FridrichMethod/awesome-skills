@@ -20,24 +20,35 @@ The `skills/` directory holds one folder per skill, each containing a `SKILL.md`
 
 On name collision, later sources in the install order overwrite earlier ones; the priority order places specialized protein-design and academic skills last so they win conflicts.
 
-## Quick install
+## Quick install (no clone needed)
 
 ```bash
-git clone https://github.com/FridrichMethod/awesome-skills.git
-cd awesome-skills
-./install.sh
+curl -fsSL https://raw.githubusercontent.com/FridrichMethod/awesome-skills/main/install.sh | bash
 ```
 
-The installer rsyncs `skills/` into both `~/.claude/skills/` and `~/.codex/skills/`.
+The installer downloads a tarball of the repo, then rsyncs `skills/` into both `~/.claude/skills/` and `~/.codex/skills/`. Nothing is left behind on disk.
 
 ### Flags
 
 ```bash
-./install.sh --claude-only    # only install to ~/.claude/skills/
-./install.sh --codex-only     # only install to ~/.codex/skills/
-./install.sh --dry-run        # preview changes without writing
-./install.sh --delete         # remove skills no longer present in repo (sync, not merge)
+# Pass flags via `bash -s --`:
+curl -fsSL https://raw.githubusercontent.com/FridrichMethod/awesome-skills/main/install.sh | bash -s -- --claude-only
+curl -fsSL https://raw.githubusercontent.com/FridrichMethod/awesome-skills/main/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/FridrichMethod/awesome-skills/main/install.sh | bash -s -- --delete
 ```
+
+| Flag | Effect |
+|---|---|
+| `--claude-only` | install only into `~/.claude/skills` |
+| `--codex-only`  | install only into `~/.codex/skills` |
+| `--dry-run`     | show what would change without writing |
+| `--delete`      | mirror exactly — remove skills not in repo |
+
+Env overrides: `SKILLS_BRANCH`, `SKILLS_CLAUDE_DEST`, `SKILLS_CODEX_DEST`.
+
+### From a local clone
+
+If you already have the repo cloned, `./install.sh` uses the local `skills/` directly and skips the download.
 
 ## Highlights for AI4Protein
 
