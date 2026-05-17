@@ -2,13 +2,13 @@
 
 # 🧬 awesome-skills
 
-**A curated, auto-synced collection of 1,668+ agent skills for Claude Code and Codex CLI** — focused on AI4Protein, bioinformatics, AI development, and academic paper writing.
+**A curated, auto-synced collection of 1,800+ agent skills for Claude Code and Codex CLI** — covering AI4Protein, bioinformatics, academic writing, and general dev/productivity workflows.
 
 [![Awesome](https://awesome.re/badge.svg)](https://awesome.re)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![sync-skills](https://github.com/FridrichMethod/awesome-skills/actions/workflows/sync-skills.yml/badge.svg)](https://github.com/FridrichMethod/awesome-skills/actions/workflows/sync-skills.yml)
-[![Skills](https://img.shields.io/badge/skills-1668-brightgreen)](#sources)
-[![Sources](https://img.shields.io/badge/upstream%20sources-9-blue)](#sources)
+[![Skills](https://img.shields.io/badge/skills-1800%2B-brightgreen)](#sources)
+[![Sources](https://img.shields.io/badge/upstream%20sources-14-blue)](#sources)
 [![Last Commit](https://img.shields.io/github/last-commit/FridrichMethod/awesome-skills)](https://github.com/FridrichMethod/awesome-skills/commits/main)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
@@ -26,11 +26,11 @@ Agent skills are how you give Claude Code or Codex CLI deep, reusable expertise 
 
 **awesome-skills** does three things:
 
-1. **Aggregates** the best Claude Code / Codex skills from 9 upstream curated collections.
+1. **Aggregates** the best Claude Code / Codex skills from 14 upstream curated collections — bio/scientific, academic writing, official Anthropic, Superpowers, Karpathy, and major community libraries.
 2. **Filters** out things that break installs (Git LFS pointers, files >40 MB, bundled vector DBs, stale `.gitattributes`).
 3. **Auto-syncs** every Sunday so your skill library stays current without manual work.
 
-The result is one URL + one curl command that bootstraps a fresh laptop with **1,668 vetted skills** ready for use in Claude Code or Codex.
+The result is one URL + one curl command that bootstraps a fresh laptop with **1,800+ vetted skills** ready for use in Claude Code or Codex.
 
 ---
 
@@ -133,7 +133,9 @@ If you already have the repo cloned, `./install.sh` detects the adjacent `skills
 
 ## Sources
 
-Skills are aggregated from these upstream repositories — credit and gratitude to the original authors:
+Skills are aggregated from these upstream repositories — credit and gratitude to the original authors. Sources are grouped by scope; within `scripts/sync_skills.py` they are listed in install order (later = wins on name collision).
+
+### Bio / scientific / medical
 
 | Source | Stars | Skills | Focus |
 |---|---:|---:|---|
@@ -143,9 +145,24 @@ Skills are aggregated from these upstream repositories — credit and gratitude 
 | [GPTomics/bioSkills](https://github.com/GPTomics/bioSkills) | 667 | ~475 | Bioinformatics (variant, CRISPR, single-cell, spatial) |
 | [jaechang-hits/SciAgent-Skills](https://github.com/jaechang-hits/SciAgent-Skills) | 158 | 199 | Life-science workflows (BixBench 92%) |
 | [adaptyvbio/protein-design-skills](https://github.com/adaptyvbio/protein-design-skills) | 127 | 21 | **Protein design pipeline**: BoltzGen, Chai, RFdiffusion, ProteinMPNN |
+
+### Academic / writing
+
+| Source | Stars | Skills | Focus |
+|---|---:|---:|---|
 | [Imbad0202/academic-research-skills](https://github.com/Imbad0202/academic-research-skills) | 8.6k | 4 | Academic research→write→review pipeline |
 | [lishix520/academic-paper-skills](https://github.com/lishix520/academic-paper-skills) | 624 | 2 | Paper strategist + composer |
 | [jamditis/claude-skills-journalism](https://github.com/jamditis/claude-skills-journalism) | 209 | 53 | Journalism, FOIA, fact-checking, academic writing |
+
+### General-purpose & foundational
+
+| Source | Stars | Skills | Focus |
+|---|---:|---:|---|
+| [wshobson/agents](https://github.com/wshobson/agents) | 35.5k | 155 | Production dev workflows — accessibility, code review, deployment, testing across many plugin domains |
+| [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official) | 19.5k | 28 | **Official Anthropic** plugin skills — Discord, iMessage, Slack, Telegram, GitHub messaging & access |
+| [forrestchang/andrej-karpathy-skills](https://github.com/forrestchang/andrej-karpathy-skills) | 133.3k | 1 | Andrej Karpathy's CLAUDE.md packaged — guidance for fixing common LLM coding pitfalls |
+| [anthropics/skills](https://github.com/anthropics/skills) | 136.1k | 18 | **Official Anthropic** skills — algorithmic-art, brand-guidelines, canvas-design, claude-api, doc-coauthoring, mcp-builder, pdf, pptx, xlsx, etc. |
+| [obra/superpowers](https://github.com/obra/superpowers) | 194.6k | 14 | Anthropic-blessed methodology framework — brainstorming, TDD, debugging, planning, code review, subagent-driven dev |
 
 > On name collision, **later sources in the install order overwrite earlier ones**. The order in `scripts/sync_skills.py` places specialized protein-design and academic-writing skills last so they win conflicts.
 
@@ -277,13 +294,25 @@ The curation, installer, and workflows in this repo are released under the [MIT 
 
 This project would not exist without the work of:
 
+**Bio / scientific / medical**
+
 - [K-Dense AI](https://github.com/K-Dense-AI) for the scientific-skills + scientific-writer collections
 - [FreedomIntelligence](https://github.com/FreedomIntelligence) for OpenClaw Medical Skills
 - [GPTomics](https://github.com/GPTomics) for bioSkills
 - [Jaechang Hits](https://github.com/jaechang-hits) for SciAgent-Skills
 - [Adaptyv Bio](https://github.com/adaptyvbio) for the protein-design pipeline skills
+
+**Academic / writing**
+
 - [Imbad0202](https://github.com/Imbad0202) and [lishix520](https://github.com/lishix520) for the academic paper pipelines
 - [Joe Amditis](https://github.com/jamditis) for the journalism skills
+
+**General-purpose / foundational**
+
+- [Jesse Vincent (obra)](https://github.com/obra) for [Superpowers](https://github.com/obra/superpowers) — the methodology framework that anchors how skills get built
+- [Anthropic](https://github.com/anthropics) for the [official skills](https://github.com/anthropics/skills) and [plugins-official](https://github.com/anthropics/claude-plugins-official) directories
+- [Andrej Karpathy](https://karpathy.ai/) (via [forrestchang](https://github.com/forrestchang/andrej-karpathy-skills)) for the famous CLAUDE.md
+- [wshobson](https://github.com/wshobson) for the [agents](https://github.com/wshobson/agents) multi-plugin collection
 - The [Anthropic Claude Code](https://docs.claude.com/en/docs/claude-code) team for designing the SKILL.md format
 
 If you use this repo and find it useful, ⭐ the upstream sources, not just this one.

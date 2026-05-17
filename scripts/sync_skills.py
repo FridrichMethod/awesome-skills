@@ -25,16 +25,31 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 SKILLS_DEST = REPO_ROOT / "skills"
 
 # (url, local_name, description). Order matters — later entries win on conflict.
+# Order rationale:
+#   1) Broad bio/scientific/medical libraries first (provide volume baseline).
+#   2) Specialized bio/academic curations next (refine on top).
+#   3) General-purpose dev-workflow collections after (override generic
+#      names like `brainstorming` with their higher-quality versions).
+#   4) Official Anthropic + Superpowers + Karpathy last (highest authority).
 UPSTREAMS = [
+    # --- bio / scientific / medical libraries (volume baseline) ---
     ("https://github.com/K-Dense-AI/claude-scientific-skills.git", "kdense-sci", "K-Dense scientific-skills"),
     ("https://github.com/K-Dense-AI/claude-scientific-writer.git", "kdense-writer", "K-Dense scientific-writer"),
     ("https://github.com/GPTomics/bioSkills.git", "bioskills", "GPTomics bioSkills"),
     ("https://github.com/FreedomIntelligence/OpenClaw-Medical-Skills.git", "openclaw", "OpenClaw Medical"),
     ("https://github.com/jaechang-hits/SciAgent-Skills.git", "sciagent", "SciAgent-Skills"),
     ("https://github.com/jamditis/claude-skills-journalism.git", "journalism", "Journalism / academia"),
+    # --- specialized bio / academic curations ---
     ("https://github.com/lishix520/academic-paper-skills.git", "lishix-paper", "lishix academic-paper"),
     ("https://github.com/Imbad0202/academic-research-skills.git", "imbad-academic", "Imbad academic-research"),
     ("https://github.com/adaptyvbio/protein-design-skills.git", "adaptyv-protein", "Adaptyv protein-design [P0]"),
+    # --- general-purpose dev/productivity collections ---
+    ("https://github.com/wshobson/agents.git", "wshobson-agents", "wshobson agents (155 dev skills, 35.5k ⭐)"),
+    ("https://github.com/anthropics/claude-plugins-official.git", "anthropics-plugins", "Anthropic official plugins (19.5k ⭐)"),
+    # --- foundational / highest-authority (win last on conflict) ---
+    ("https://github.com/forrestchang/andrej-karpathy-skills.git", "karpathy-skills", "Andrej Karpathy CLAUDE.md skill (133.3k ⭐)"),
+    ("https://github.com/anthropics/skills.git", "anthropics-skills", "Anthropic official skills (136.1k ⭐)"),
+    ("https://github.com/obra/superpowers.git", "obra-superpowers", "Superpowers methodology framework (194.6k ⭐)"),
 ]
 
 MAX_FILE_BYTES = 40 * 1024 * 1024  # 40 MB — under GitHub's 50 MB warning threshold

@@ -4,6 +4,19 @@ All notable changes to this project are documented here. The format is based on 
 
 ## [Unreleased]
 
+### Added
+- 5 general-purpose / foundational upstream sources added to `scripts/sync_skills.py`:
+  - [obra/superpowers](https://github.com/obra/superpowers) (194.6k ⭐, 14 skills — methodology framework)
+  - [anthropics/skills](https://github.com/anthropics/skills) (136.1k ⭐, 18 skills — official Anthropic)
+  - [forrestchang/andrej-karpathy-skills](https://github.com/forrestchang/andrej-karpathy-skills) (133.3k ⭐, 1 skill — Karpathy CLAUDE.md)
+  - [wshobson/agents](https://github.com/wshobson/agents) (35.5k ⭐, 155 skills — dev workflows)
+  - [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official) (19.5k ⭐, 28 skills — official plugins)
+- README source table now grouped by scope (bio/scientific, academic, general-purpose).
+- Acknowledgements section expanded with the new authors.
+
+### Changed
+- Install order in `scripts/sync_skills.py` reorganized into three tiers: bio/medical → academic → general-purpose/foundational. Higher-authority sources (Superpowers, official Anthropic, Karpathy) are now last so they win generic name collisions.
+
 ## [0.2.0] — 2026-05-17
 
 ### Added
