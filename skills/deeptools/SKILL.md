@@ -1,6 +1,9 @@
 ---
 name: deeptools
-description: "NGS analysis toolkit. BAM to bigWig conversion, QC (correlation, PCA, fingerprints), heatmaps/profiles (TSS, peaks), for ChIP-seq, RNA-seq, ATAC-seq visualization."
+description: NGS analysis toolkit. BAM to bigWig conversion, QC (correlation, PCA, fingerprints), heatmaps/profiles (TSS, peaks), for ChIP-seq, RNA-seq, ATAC-seq visualization.
+license: BSD license
+metadata:
+    skill-author: K-Dense Inc.
 ---
 
 # deepTools: NGS Data Analysis Toolkit
@@ -523,3 +526,4 @@ Response approach:
 - **Check QC first**: Run quality control before detailed analysis
 - **Document everything**: Save commands for reproducibility
 - **Reference documentation**: Use comprehensive references for detailed guidance
+

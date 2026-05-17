@@ -1,6 +1,9 @@
 ---
 name: pydeseq2
-description: "Differential gene expression analysis (Python DESeq2). Identify DE genes from bulk RNA-seq counts, Wald tests, FDR correction, volcano/MA plots, for RNA-seq analysis."
+description: Differential gene expression analysis (Python DESeq2). Identify DE genes from bulk RNA-seq counts, Wald tests, FDR correction, volcano/MA plots, for RNA-seq analysis.
+license: MIT license
+metadata:
+    skill-author: K-Dense Inc.
 ---
 
 # PyDESeq2
@@ -551,3 +554,4 @@ uv pip install pydeseq2
 - **GitHub Repository:** https://github.com/owkin/PyDESeq2
 - **Publication:** Muzellec et al. (2023) Bioinformatics, DOI: 10.1093/bioinformatics/btad547
 - **Original DESeq2 (R):** Love et al. (2014) Genome Biology, DOI: 10.1186/s13059-014-0550-8
+

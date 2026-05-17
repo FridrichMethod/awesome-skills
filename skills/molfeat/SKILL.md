@@ -1,6 +1,9 @@
 ---
 name: molfeat
-description: "Molecular featurization for ML (100+ featurizers). ECFP, MACCS, descriptors, pretrained models (ChemBERTa), convert SMILES to features, for QSAR and molecular ML."
+description: Molecular featurization for ML (100+ featurizers). ECFP, MACCS, descriptors, pretrained models (ChemBERTa), convert SMILES to features, for QSAR and molecular ML.
+license: Apache-2.0 license
+metadata:
+    skill-author: K-Dense Inc.
 ---
 
 # Molfeat - Molecular Featurization Hub
@@ -503,3 +506,4 @@ print(f"molfeat version: {molfeat.__version__}")
 - **GitHub Repository**: https://github.com/datamol-io/molfeat
 - **PyPI Package**: https://pypi.org/project/molfeat/
 - **Tutorial**: https://portal.valencelabs.com/datamol/post/types-of-featurizers-b1e8HHrbFMkbun6
+

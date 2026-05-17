@@ -1,6 +1,10 @@
 ---
 name: transformers
 description: This skill should be used when working with pre-trained transformer models for natural language processing, computer vision, audio, or multimodal tasks. Use for text generation, classification, question answering, translation, summarization, image classification, object detection, speech recognition, and fine-tuning models on custom datasets.
+license: Apache-2.0 license
+compatibility: Some features require an Huggingface token
+metadata:
+    skill-author: K-Dense Inc.
 ---
 
 # Transformers
@@ -155,3 +159,4 @@ For detailed information on specific components:
 - **Generation**: `references/generation.md` - Text generation strategies and parameters
 - **Training**: `references/training.md` - Fine-tuning with Trainer API
 - **Tokenizers**: `references/tokenizers.md` - Tokenization and preprocessing
+

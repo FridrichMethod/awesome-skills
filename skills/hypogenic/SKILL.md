@@ -1,6 +1,9 @@
 ---
 name: hypogenic
-description: Automated hypothesis generation and testing using large language models. Use this skill when generating scientific hypotheses from datasets, combining literature insights with empirical data, testing hypotheses against observational data, or conducting systematic hypothesis exploration for research discovery in domains like deception detection, AI content detection, mental health analysis, or other empirical research tasks.
+description: Automated LLM-driven hypothesis generation and testing on tabular datasets. Use when you want to systematically explore hypotheses about patterns in empirical data (e.g., deception detection, content analysis). Combines literature insights with data-driven hypothesis testing. For manual hypothesis formulation use hypothesis-generation; for creative ideation use scientific-brainstorming.
+license: MIT license
+metadata:
+    skill-author: K-Dense Inc.
 ---
 
 # Hypogenic
@@ -224,7 +227,9 @@ Refer to `references/config_template.yaml` for a complete example configuration.
 
 ## Literature Processing (HypoRefine/Union Methods)
 
-To use literature-based hypothesis generation, you must preprocess PDF papers:
+To use literature-based hypothesis generation, you must preprocess PDF papers.
+
+> **Note:** The commands below run inside the cloned [HypoGenic repository](https://github.com/ChicagoHAI/hypothesis-generation), not from this skill directory.
 
 **Step 1: Setup GROBID** (first time only)
 ```bash
@@ -433,7 +438,7 @@ Research using hypogenic has demonstrated:
 **Solution:** Implement custom `extract_label()` function for domain-specific output parsing
 
 **Issue:** GROBID PDF processing fails
-**Solution:** Ensure GROBID service is running (`bash ./modules/run_grobid.sh`) and PDFs are valid research papers
+**Solution:** Ensure GROBID service is running (`bash ./modules/run_grobid.sh` from the cloned repo) and PDFs are valid research papers
 
 ## Creating Custom Tasks
 
@@ -647,3 +652,4 @@ Assets directory is available for:
 - Sample hypothesis banks
 - Visualization outputs
 - Documentation supplements
+

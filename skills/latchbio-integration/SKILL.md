@@ -1,6 +1,9 @@
 ---
 name: latchbio-integration
-description: "Latch platform for bioinformatics workflows. Build pipelines with Latch SDK, @workflow/@task decorators, deploy serverless workflows, LatchFile/LatchDir, Nextflow/Snakemake integration."
+description: Latch platform for bioinformatics workflows. Build pipelines with Latch SDK, @workflow/@task decorators, deploy serverless workflows, LatchFile/LatchDir, Nextflow/Snakemake integration.
+license: Unknown
+metadata:
+    skill-author: K-Dense Inc.
 ---
 
 # LatchBio Integration
@@ -47,7 +50,7 @@ The Latch platform provides four main areas of functionality:
 
 ```bash
 # Install Latch SDK
-python3 -m uv pip install latch
+uv pip install latch
 
 # Login to Latch
 latch login
@@ -345,3 +348,4 @@ For issues or questions:
 2. Search GitHub issues
 3. Ask in Slack community
 4. Contact support@latch.bio
+

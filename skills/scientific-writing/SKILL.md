@@ -30,21 +30,80 @@ This skill should be used when:
 
 ## Visual Enhancement with Scientific Schematics
 
-**⚠️ MANDATORY: Every scientific paper MUST include at least 1-2 AI-generated figures using the scientific-schematics skill.**
+**⚠️ MANDATORY: Every scientific paper MUST include a graphical abstract plus 1-2 additional AI-generated figures using the scientific-schematics skill.**
 
 This is not optional. Scientific papers without visual elements are incomplete. Before finalizing any document:
-1. Generate at minimum ONE schematic or diagram using scientific-schematics
-2. Prefer 2-3 figures for comprehensive papers (methods flowchart, results visualization, conceptual diagram)
+1. **ALWAYS generate a graphical abstract** as the first visual element
+2. Generate at minimum ONE additional schematic or diagram using scientific-schematics
+3. Prefer 3-4 total figures for comprehensive papers (graphical abstract + methods flowchart + results visualization + conceptual diagram)
 
-**How to generate figures:**
-- Use the **scientific-schematics** skill to generate AI-powered publication-quality diagrams
-- Simply describe your desired diagram in natural language
-- Nano Banana Pro will automatically generate, review, and refine the schematic
+### Graphical Abstract (REQUIRED)
 
-**How to generate schematics:**
+**Every scientific writeup MUST include a graphical abstract.** This is a visual summary of your paper that:
+- Appears before or immediately after the text abstract
+- Captures the entire paper's key message in one image
+- Is suitable for journal table of contents display
+- Uses landscape orientation (typically 1200x600px)
+
+**Generate the graphical abstract FIRST:**
+```bash
+python scripts/generate_schematic.py "Graphical abstract for [paper title]: [brief description showing workflow from input → methods → key findings → conclusions]" -o figures/graphical_abstract.png
+```
+
+**Graphical Abstract Requirements:**
+- **Content**: Visual summary showing workflow, key methods, main findings, and conclusions
+- **Style**: Clean, professional, suitable for journal TOC
+- **Elements**: Include 3-5 key steps/concepts with connecting arrows or flow
+- **Text**: Minimal labels, large readable fonts
+- Log: `[HH:MM:SS] GENERATED: Graphical abstract for paper summary`
+
+### Additional Figures (GENERATE EXTENSIVELY)
+
+**⚠️ CRITICAL: Use BOTH scientific-schematics AND generate-image EXTENSIVELY throughout all documents.**
+
+Every document should be richly illustrated. Generate figures liberally - when in doubt, add a visual.
+
+**MINIMUM Figure Requirements:**
+
+| Document Type | Minimum | Recommended |
+|--------------|---------|-------------|
+| Research Papers | 5 | 6-8 |
+| Literature Reviews | 4 | 5-7 |
+| Market Research | 20 | 25-30 |
+| Presentations | 1/slide | 1-2/slide |
+| Posters | 6 | 8-10 |
+| Grants | 4 | 5-7 |
+| Clinical Reports | 3 | 4-6 |
+
+**Use scientific-schematics EXTENSIVELY for technical diagrams:**
 ```bash
 python scripts/generate_schematic.py "your diagram description" -o figures/output.png
 ```
+
+- Study design and methodology flowcharts (CONSORT, PRISMA, STROBE)
+- Conceptual framework diagrams
+- Experimental workflow illustrations
+- Data analysis pipeline diagrams
+- Biological pathway or mechanism diagrams
+- System architecture visualizations
+- Neural network architectures
+- Decision trees, algorithm flowcharts
+- Comparison matrices, timeline diagrams
+- Any technical concept that benefits from schematic visualization
+
+**Use generate-image EXTENSIVELY for visual content:**
+```bash
+python scripts/generate_image.py "your image description" -o figures/output.png
+```
+
+- Photorealistic illustrations of concepts
+- Medical/anatomical illustrations
+- Environmental/ecological scenes
+- Equipment and lab setup visualizations
+- Artistic visualizations, infographics
+- Cover images, header graphics
+- Product mockups, prototype visualizations
+- Any visual that enhances understanding or engagement
 
 The AI will automatically:
 - Create publication-quality images with proper formatting
@@ -52,16 +111,14 @@ The AI will automatically:
 - Ensure accessibility (colorblind-friendly, high contrast)
 - Save outputs in the figures/ directory
 
-**When to add schematics:**
-- Study design and methodology flowcharts (CONSORT, PRISMA, STROBE)
-- Conceptual framework diagrams
-- Experimental workflow illustrations
-- Data analysis pipeline diagrams
-- Biological pathway or mechanism diagrams
-- System architecture visualizations
-- Any complex concept that benefits from visualization
+**When in Doubt, Generate a Figure:**
+- Complex concept → generate a schematic
+- Data discussion → generate a visualization
+- Process description → generate a flowchart
+- Comparison → generate a comparison diagram
+- Reader benefit → generate a visual
 
-For detailed guidance on creating schematics, refer to the scientific-schematics skill documentation.
+For detailed guidance, refer to the scientific-schematics and generate-image skill documentation.
 
 ---
 
@@ -86,7 +143,7 @@ For detailed guidance on IMRAD structure, refer to `references/imrad_structure.m
 
 ### 2. Section-Specific Writing Guidance
 
-**Abstract Composition**: Craft concise, standalone summaries (100-250 words) that capture the paper's purpose, methods, results, and conclusions. Support both structured abstracts (with labeled sections) and unstructured single-paragraph formats.
+**Abstract Composition**: Craft concise, standalone summaries (150-300 words) written as **flowing paragraphs**—never with labeled sections like "Background:", "Methods:", "Results:", "Conclusions:". The abstract should read as cohesive prose covering: (1) context and problem, (2) what was done, (3) key findings with specific numbers, and (4) significance and implications. Only use structured abstracts with labels if the journal explicitly requires them in their author guidelines.
 
 **Introduction Development**: Build compelling introductions that:
 - Establish the research problem's importance
@@ -132,6 +189,17 @@ Apply citation styles correctly across disciplines. For comprehensive style guid
 - Balance citation distribution across introduction and discussion
 - Verify all citations against original sources
 - Use reference management software (Zotero, Mendeley, EndNote)
+
+**MANDATORY: Post-Writing Citation Metadata Check**
+
+After completing each section, scan `references.bib` for any entries missing `volume`, `pages`, or `doi` fields. For every incomplete entry, perform a web search to find the missing metadata:
+
+1. Search using `parallel_web.py search "AUTHOR TITLE JOURNAL volume pages DOI"`
+2. If DOI exists, extract metadata from `https://doi.org/DOI` using `parallel_web.py extract`
+3. Update the BibTeX entry with found metadata
+4. Log: `[HH:MM:SS] METADATA ENRICHED: [CitationKey] - added [fields] ✅`
+
+This check must happen BEFORE final PDF compilation. See the citation-management skill (Phase 2.5) for detailed instructions.
 
 ### 4. Figures and Tables
 
@@ -291,6 +359,11 @@ Lists may appear in scientific papers only in specific contexts:
 - **Supplementary Materials**: Extended protocols, equipment lists, detailed parameters
 - **Never in**: Abstract, Introduction, Results, Discussion, Conclusions
 
+**Abstract Format Rule:**
+- ❌ **NEVER** use labeled sections (Background:, Methods:, Results:, Conclusions:)
+- ✅ **ALWAYS** write as flowing paragraph(s) with natural transitions
+- Exception: Only use structured format if journal explicitly requires it in author guidelines
+
 **Integration with Research Lookup:**
 
 The research-lookup skill is essential for Stage 1 (creating outlines):
@@ -441,7 +514,7 @@ Adapt language, terminology, and conventions to match the specific scientific di
 4. Draft Results (describing figures/tables objectively)
 5. Compose Discussion (interpreting findings)
 6. Write Introduction (setting up the research question)
-7. Craft Abstract (synthesizing the complete story)
+7. Craft Abstract (synthesizing the complete story as **flowing paragraph(s)**, not labeled sections)
 8. Create Title (concise and descriptive)
 
 **Remember**: Bullet points are for planning only—the final manuscript must be in complete paragraphs.
@@ -469,6 +542,26 @@ This skill works effectively with:
 - **Statistical analysis**: For determining appropriate statistical presentations
 - **Literature review skills**: For contextualizing research
 - **Figure creation tools**: For developing publication-quality visualizations
+- **Venue-templates skill**: For venue-specific writing styles and formatting
+
+### Venue-Specific Writing Styles
+
+**Before writing for a specific venue, consult the venue-templates skill for writing style guides:**
+
+Different venues have dramatically different writing expectations:
+- **Nature/Science**: Accessible, story-driven, broad significance
+- **Cell Press**: Mechanistic depth, graphical abstracts, Highlights
+- **Medical journals (NEJM, Lancet)**: Structured abstracts, evidence language
+- **ML conferences (NeurIPS, ICML)**: Contribution bullets, ablation studies
+- **CS conferences (CHI, ACL)**: Field-specific conventions
+
+The venue-templates skill provides:
+- `venue_writing_styles.md`: Master style comparison
+- Venue-specific guides: `nature_science_style.md`, `cell_press_style.md`, `medical_journal_styles.md`, `ml_conference_style.md`, `cs_conference_style.md`
+- `reviewer_expectations.md`: What reviewers look for at each venue
+- Writing examples in `assets/examples/`
+
+**Workflow**: First use this skill for general scientific writing principles (IMRAD, clarity, citations), then consult venue-templates for venue-specific style adaptation.
 
 ## References
 
@@ -479,5 +572,7 @@ This skill includes comprehensive reference files covering specific aspects of s
 - `references/figures_tables.md`: Best practices for creating effective data visualizations
 - `references/reporting_guidelines.md`: Study-specific reporting standards and checklists
 - `references/writing_principles.md`: Core principles of effective scientific communication
+
+**For venue-specific writing styles** (tone, voice, abstract format, reviewer expectations), see the **venue-templates** skill which provides comprehensive style guides for Nature/Science, Cell Press, medical journals, ML conferences, and CS conferences.
 
 Load these references as needed when working on specific aspects of scientific writing.

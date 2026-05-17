@@ -1,6 +1,9 @@
 ---
 name: anndata
-description: This skill should be used when working with annotated data matrices in Python, particularly for single-cell genomics analysis, managing experimental measurements with metadata, or handling large-scale biological datasets. Use when tasks involve AnnData objects, h5ad files, single-cell RNA-seq data, or integration with scanpy/scverse tools.
+description: Data structure for annotated matrices in single-cell analysis. Use when working with .h5ad files or integrating with the scverse ecosystem. This is the data format skill—for analysis workflows use scanpy; for probabilistic models use scvi-tools; for population-scale queries use cellxgene-census.
+license: BSD-3-Clause license
+metadata:
+    skill-author: K-Dense Inc.
 ---
 
 # AnnData
@@ -392,3 +395,4 @@ adata.obs['new_col'] = external_data.set_index('cell_id').loc[adata.obs_names, '
 - **Scanpy tutorials**: https://scanpy.readthedocs.io/
 - **Scverse ecosystem**: https://scverse.org/
 - **GitHub repository**: https://github.com/scverse/anndata
+
