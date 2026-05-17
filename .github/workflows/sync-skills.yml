@@ -1,0 +1,69 @@
+name: sync-skills
+
+on:
+  schedule:
+    # Sunday 03:00 UTC — weekly refresh
+    - cron: "0 3 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-skills
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run sync script
+        id: sync
+        run: python scripts/sync_skills.py
+
+      - name: Detect changes
+        id: changes
+        run: |
+          if [[ -z "$(git status --porcelain skills/)" ]]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No skill changes detected."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            added=$(git status --porcelain skills/ | grep -c '^??' || true)
+            modified=$(git status --porcelain skills/ | grep -c '^ M' || true)
+            deleted=$(git status --porcelain skills/ | grep -c '^ D' || true)
+            echo "added=$added" >> "$GITHUB_OUTPUT"
+            echo "modified=$modified" >> "$GITHUB_OUTPUT"
+            echo "deleted=$deleted" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit and push
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          ADDED: ${{ steps.changes.outputs.added }}
+          MODIFIED: ${{ steps.changes.outputs.modified }}
+          DELETED: ${{ steps.changes.outputs.deleted }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add skills/
+          today=$(date -u +%Y-%m-%d)
+          git commit -m "chore: weekly upstream skill sync (${today})
+
+          added: ${ADDED}
+          modified: ${MODIFIED}
+          deleted: ${DELETED}"
+          git push

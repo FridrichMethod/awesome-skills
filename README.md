@@ -62,8 +62,16 @@ Each upstream repo retains its own license. Review individual `SKILL.md` files a
 
 ## Update workflow
 
-To pull latest from upstream sources, re-run the staged install (see the original aggregation script — not bundled here). For day-to-day sync between machines:
+**Automated:** A GitHub Actions workflow (`.github/workflows/sync-skills.yml`) runs every Sunday 03:00 UTC. It re-clones each upstream repo, copies skill roots into `skills/` (last-source-wins on conflict), filters out LFS pointers / large binaries, and pushes a commit if anything changed. Trigger manually via the **Actions** tab → *sync-skills* → *Run workflow*.
+
+**Local sync between machines:**
 
 ```bash
 git pull && ./install.sh
+```
+
+**Manual aggregation locally** (same logic as the workflow):
+
+```bash
+python scripts/sync_skills.py
 ```
