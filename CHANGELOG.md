@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format is based on 
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-05-17
+
 ### Added
 - 5 general-purpose / foundational upstream sources added to `scripts/sync_skills.py`:
   - [obra/superpowers](https://github.com/obra/superpowers) (194.6k ⭐, 14 skills — methodology framework)
@@ -11,11 +13,13 @@ All notable changes to this project are documented here. The format is based on 
   - [forrestchang/andrej-karpathy-skills](https://github.com/forrestchang/andrej-karpathy-skills) (133.3k ⭐, 1 skill — Karpathy CLAUDE.md)
   - [wshobson/agents](https://github.com/wshobson/agents) (35.5k ⭐, 155 skills — dev workflows)
   - [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official) (19.5k ⭐, 28 skills — official plugins)
-- README source table now grouped by scope (bio/scientific, academic, general-purpose).
+- Net 188 new skills land via the sync workflow (213 added, 52 modified, 107 deleted by higher-priority replacements). Skill count: **1,668 → 1,856**.
+- README source table grouped by scope (bio/scientific, academic, general-purpose).
 - Acknowledgements section expanded with the new authors.
 
 ### Changed
 - Install order in `scripts/sync_skills.py` reorganized into three tiers: bio/medical → academic → general-purpose/foundational. Higher-authority sources (Superpowers, official Anthropic, Karpathy) are now last so they win generic name collisions.
+- README "Skills" badge bumped to **1800+**; "Sources" badge to **14**.
 
 ## [0.2.0] — 2026-05-17
 
@@ -36,6 +40,7 @@ All notable changes to this project are documented here. The format is based on 
 - Sources: K-Dense scientific-skills (137), K-Dense scientific-writer (81), GPTomics bioSkills (475), OpenClaw Medical (~868), SciAgent (199), journalism (53), Imbad academic-research (4), lishix academic-paper (2), adaptyv protein-design (21).
 - `install.sh` for syncing `skills/` into `~/.claude/skills/` and `~/.codex/skills/`.
 
-[Unreleased]: https://github.com/FridrichMethod/awesome-skills/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/FridrichMethod/awesome-skills/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/FridrichMethod/awesome-skills/releases/tag/v0.3.0
 [0.2.0]: https://github.com/FridrichMethod/awesome-skills/releases/tag/v0.2.0
 [0.1.0]: https://github.com/FridrichMethod/awesome-skills/releases/tag/v0.1.0
