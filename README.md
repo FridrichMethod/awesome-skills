@@ -20,35 +20,88 @@ The `skills/` directory holds one folder per skill, each containing a `SKILL.md`
 
 On name collision, later sources in the install order overwrite earlier ones; the priority order places specialized protein-design and academic skills last so they win conflicts.
 
-## Quick install (no clone needed)
+## Quick install — one-line, no clone needed
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/FridrichMethod/awesome-skills/main/install.sh | bash
 ```
 
-The installer downloads a tarball of the repo, then rsyncs `skills/` into both `~/.claude/skills/` and `~/.codex/skills/`. Nothing is left behind on disk.
+The installer downloads a tarball of the repo to a tempdir, rsyncs `skills/` into both `~/.claude/skills/` and `~/.codex/skills/`, then cleans up. Nothing is left behind on disk.
+
+**Requirements on the target machine:** `bash`, `curl`, `tar`, `rsync`. All four are standard on macOS and most Linux distros. On a fresh Debian/Ubuntu, install with `sudo apt-get install -y rsync` if rsync is missing.
 
 ### Flags
 
 ```bash
 # Pass flags via `bash -s --`:
-curl -fsSL https://raw.githubusercontent.com/FridrichMethod/awesome-skills/main/install.sh | bash -s -- --claude-only
-curl -fsSL https://raw.githubusercontent.com/FridrichMethod/awesome-skills/main/install.sh | bash -s -- --dry-run
-curl -fsSL https://raw.githubusercontent.com/FridrichMethod/awesome-skills/main/install.sh | bash -s -- --delete
+curl -fsSL https://raw.githubusercontent.com/FridrichMethod/awesome-skills/main/install.sh \
+  | bash -s -- --claude-only
 ```
 
 | Flag | Effect |
 |---|---|
 | `--claude-only` | install only into `~/.claude/skills` |
 | `--codex-only`  | install only into `~/.codex/skills` |
-| `--dry-run`     | show what would change without writing |
-| `--delete`      | mirror exactly — remove skills not in repo |
+| `--dry-run`     | preview what would change without writing |
+| `--delete`      | mirror exactly — remove local skills not in the repo |
+| `-h`, `--help`  | print usage |
 
-Env overrides: `SKILLS_BRANCH`, `SKILLS_CLAUDE_DEST`, `SKILLS_CODEX_DEST`.
+### Env overrides
 
-### From a local clone
+| Variable | Default | Effect |
+|---|---|---|
+| `SKILLS_BRANCH` | `main` | install from a different branch |
+| `SKILLS_CLAUDE_DEST` | `$HOME/.claude/skills` | override Claude install path |
+| `SKILLS_CODEX_DEST` | `$HOME/.codex/skills` | override Codex install path |
 
-If you already have the repo cloned, `./install.sh` uses the local `skills/` directly and skips the download.
+**Important:** when using `curl … | bash`, env vars must be set on `bash`, not on `curl`. Either export first or place them on the pipe's right side:
+
+```bash
+# ✓ works
+export SKILLS_CLAUDE_DEST=/custom/claude
+curl -fsSL .../install.sh | bash
+
+# ✓ also works
+curl -fsSL .../install.sh | SKILLS_CLAUDE_DEST=/custom/claude bash
+
+# ✗ silently ignored — only curl sees the var
+SKILLS_CLAUDE_DEST=/custom/claude curl -fsSL .../install.sh | bash
+```
+
+### Common recipes
+
+```bash
+# Preview only — no files written
+curl -fsSL https://raw.githubusercontent.com/FridrichMethod/awesome-skills/main/install.sh \
+  | bash -s -- --dry-run
+
+# Mirror exactly (remove local skills that aren't in the repo)
+curl -fsSL https://raw.githubusercontent.com/FridrichMethod/awesome-skills/main/install.sh \
+  | bash -s -- --delete
+
+# Install only Codex skills, into a custom dir
+export SKILLS_CODEX_DEST=/opt/agents/codex/skills
+curl -fsSL https://raw.githubusercontent.com/FridrichMethod/awesome-skills/main/install.sh \
+  | bash -s -- --codex-only
+
+# Pin to a specific branch (or tag)
+export SKILLS_BRANCH=main
+curl -fsSL "https://raw.githubusercontent.com/FridrichMethod/awesome-skills/${SKILLS_BRANCH}/install.sh" \
+  | bash
+```
+
+### Re-syncing later
+
+The same one-liner is idempotent — re-run it any time to refresh your local skills from the latest `main`. Add `--delete` if you want exact mirror semantics.
+
+```bash
+# Drop into a cron or a shell alias for periodic sync
+alias sync-skills='curl -fsSL https://raw.githubusercontent.com/FridrichMethod/awesome-skills/main/install.sh | bash'
+```
+
+### From a local clone (rare)
+
+If you happen to have the repo cloned, `./install.sh` detects the adjacent `skills/` directory and uses it directly without re-downloading.
 
 ## Highlights for AI4Protein
 
