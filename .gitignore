@@ -1,0 +1,19 @@
+.DS_Store
+__pycache__/
+*.pyc
+*.pyo
+*.bin
+
+# Vector DB / large bundled datasets some skills ship
+**/repo/src/db/
+**/repo/dataset/
+
+# Editor cruft
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local install artifacts
+.local/
+node_modules/

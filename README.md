@@ -1,0 +1,69 @@
+# awesome-skills
+
+Personal sync repo of **1668 agent skills** for Claude Code and Codex CLI, curated for AI4Protein, bioinformatics, AI development, academic writing, and adjacent scientific workflows.
+
+## What's inside
+
+The `skills/` directory holds one folder per skill, each containing a `SKILL.md` file (plus any references/scripts). Skills are aggregated from these sources — credit to the original authors:
+
+| Source | Stars | Skills | Focus |
+|---|---:|---:|---|
+| [K-Dense-AI/claude-scientific-skills](https://github.com/K-Dense-AI/claude-scientific-skills) | 23.4k | ~137 | Scientific computing, bioinformatics, cheminformatics |
+| [K-Dense-AI/claude-scientific-writer](https://github.com/K-Dense-AI/claude-scientific-writer) | 1.8k | ~81 | Scientific writing, citations, posters |
+| [FreedomIntelligence/OpenClaw-Medical-Skills](https://github.com/FreedomIntelligence/OpenClaw-Medical-Skills) | 2.5k | ~868 | Medical AI, clinical genomics, drug discovery |
+| [GPTomics/bioSkills](https://github.com/GPTomics/bioSkills) | 667 | ~475 | Bioinformatics (variant, CRISPR, single-cell, spatial) |
+| [jaechang-hits/SciAgent-Skills](https://github.com/jaechang-hits/SciAgent-Skills) | 158 | 199 | Life-science workflows (BixBench 92%) |
+| [adaptyvbio/protein-design-skills](https://github.com/adaptyvbio/protein-design-skills) | 127 | 21 | **Protein design pipeline**: BoltzGen, Chai, RFdiffusion, ProteinMPNN |
+| [Imbad0202/academic-research-skills](https://github.com/Imbad0202/academic-research-skills) | 8.6k | 4 | Academic research→write→review pipeline |
+| [lishix520/academic-paper-skills](https://github.com/lishix520/academic-paper-skills) | 624 | 2 | Paper strategist + composer |
+| [jamditis/claude-skills-journalism](https://github.com/jamditis/claude-skills-journalism) | 209 | 53 | Journalism, FOIA, fact-checking, academic writing |
+
+On name collision, later sources in the install order overwrite earlier ones; the priority order places specialized protein-design and academic skills last so they win conflicts.
+
+## Quick install
+
+```bash
+git clone https://github.com/FridrichMethod/awesome-skills.git
+cd awesome-skills
+./install.sh
+```
+
+The installer rsyncs `skills/` into both `~/.claude/skills/` and `~/.codex/skills/`.
+
+### Flags
+
+```bash
+./install.sh --claude-only    # only install to ~/.claude/skills/
+./install.sh --codex-only     # only install to ~/.codex/skills/
+./install.sh --dry-run        # preview changes without writing
+./install.sh --delete         # remove skills no longer present in repo (sync, not merge)
+```
+
+## Highlights for AI4Protein
+
+- **Generation/design**: `boltzgen`, `rfdiffusion`, `proteinmpnn`, `ligandmpnn`, `solublempnn`, `bindcraft`, `binder-design`, `generative-design`
+- **Structure prediction**: `alphafold`, `alphafold-predictions`, `chai`, `boltz`, `foldseek`, `modern-structure-prediction`, `protein-structure-prediction`
+- **Language models**: `esm`, `esm-protein-language-model`
+- **QC / validation**: `protein-qc`, `pose-validation`, `protein-design-workflow`, `binding-characterization`
+- **Antibody / therapeutics**: `antibody-design-agent`, `mage-antibody-generator`, `tooluniverse-antibody-engineering`, `tooluniverse-protein-therapeutic-design`
+- **Databases**: `uniprot-database`, `alphafold-database`, `pdb-database`, `chembl-database`, `drugbank-database`, `interpro-database`, `pubchem-database`
+
+## Highlights for journal / paper writing
+
+- **Pipelines**: `academic-paper`, `academic-paper-reviewer`, `academic-pipeline`, `deep-research-swarm`, `composer`, `strategist`
+- **Drafting**: `scientific-writing`, `scientific-manuscript-writing`, `academic-writing`, `article-writing`, `peer-review-methodology`
+- **Citation / lit search**: `pubmed-database`, `biorxiv-database`, `medrxiv-search`, `literature-review`, `citation-management`, `paperzilla`
+- **Figures**: `latex-posters`, `latex-research-posters`, `scientific-schematics`, `scientific-visualization`, `markdown-mermaid-writing`, `pptx-posters`
+- **Venue figure guides**: `nature-figure-guide`, `cell-figure-guide`, `science-figure-guide`, `lancet-figure-guide`, `nejm-figure-guide`, `pnas-figure-guide`, `elife-figure-guide`, `cancer-research-figure-guide`
+
+## Licensing
+
+Each upstream repo retains its own license. Review individual `SKILL.md` files and source repos before using a skill commercially.
+
+## Update workflow
+
+To pull latest from upstream sources, re-run the staged install (see the original aggregation script — not bundled here). For day-to-day sync between machines:
+
+```bash
+git pull && ./install.sh
+```

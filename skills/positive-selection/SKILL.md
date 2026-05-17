@@ -1,0 +1,412 @@
+---
+name: bio-comparative-genomics-positive-selection
+description: Detect positive selection using dN/dS (omega) tests with PAML codeml and HyPhy. Identify sites and branches under adaptive evolution through codon models and branch-site tests. Use when testing for adaptive evolution in gene families or identifying positively selected sites.
+tool_type: mixed
+primary_tool: PAML
+---
+
+## Version Compatibility
+
+Reference examples tested with: BioPython 1.83+, HyPhy 2.5+, PAML 4.10+, PRANK 170427+, scipy 1.12+
+
+Before using code patterns, verify installed versions match. If versions differ:
+- Python: `pip show <package>` then `help(module.function)` to check signatures
+
+If code throws ImportError, AttributeError, or TypeError, introspect the installed
+package and adapt the example to match the actual API rather than retrying.
+
+# Positive Selection Analysis
+
+**"Test my gene for positive selection"** → Detect adaptive evolution using dN/dS (omega) codon models including site models, branch models, and branch-site tests to identify positively selected sites.
+- Python: PAML `codeml` for site and branch-site dN/dS tests
+- CLI: `hyphy busted`, `hyphy meme` for HyPhy selection tests
+
+## Critical Prerequisites
+
+### Alignment Quality
+
+PRANK is the recommended aligner for selection studies -- it correctly models insertions rather than forcing excess deletions (which create alignment artifacts that inflate dN/dS). Alternative: MACSE handles frameshifts and pseudogenes natively.
+
+After alignment:
+- Verify sequences are in-frame (length divisible by 3, no internal stop codons)
+- Remove sequences with frameshifts or >50% gaps
+- Use GUIDANCE or HoT to assess per-column alignment confidence
+- Avoid block-filtering tools (Gblocks, trimAl) -- these frequently remove informative sites and can worsen downstream inference
+
+### Recombination Screening
+
+Run GARD (HyPhy) BEFORE any selection test. Recombinant sequences cannot be described by a single tree, and ignoring recombination inflates false positive rates for both PAML and HyPhy.
+
+```bash
+hyphy gard --alignment codon_alignment.fasta --output gard_results.json
+```
+
+If GARD detects breakpoints, partition the alignment at breakpoints and analyze segments independently, or exclude recombinant sequences.
+
+## dN/dS Overview
+
+```python
+'''
+dN/dS (omega, ω) interpretation:
+- ω < 1: Purifying (negative) selection - deleterious mutations removed
+- ω = 1: Neutral evolution - no selective pressure
+- ω > 1: Positive (diversifying) selection - advantageous mutations favored
+
+Most genes: ω << 1 (strong purifying selection)
+Immune genes, reproduction: Often show ω > 1 at specific sites
+'''
+```
+
+### When dN/dS > 1 Does NOT Indicate Positive Selection
+
+| False Signal | Mechanism | Detection |
+|---|---|---|
+| GC-biased gene conversion (gBGC) | Fixes AT->GC mutations regardless of fitness; causes ~20% of apparent positive selection in primates | W->S substitution bias, correlation with recombination rate, subtelomeric enrichment |
+| Synonymous site selection | Codon usage bias deflates dS, inflating omega | High codon bias (ENC < 35), highly expressed genes |
+| Saturation | Multiple substitutions erase signal when dS >> 1 | dS > 3 unreliable; dS > 1 treat with caution |
+| Alignment errors | Misaligned codons create artificial nonsynonymous changes | Inspect alignment at BEB-flagged sites; check GUIDANCE scores |
+| Non-allelic gene conversion | Concerted evolution between paralogs creates substitution bursts | Check for copy number variation; exclude recent duplicates |
+| Small sample size | Stochastic variation in short genes or closely related species | Need minimum ~8 sequences with sufficient tree depth |
+
+### Recommended Analysis Pipeline
+
+1. **Codon-aware alignment**: PRANK (preferred) or MACSE
+2. **Recombination screening**: GARD -- partition if breakpoints found
+3. **Gene-level screen**: BUSTED -- any positive selection anywhere in the gene?
+4. **Branch-level**: aBSREL -- which lineages show selection? (a priori hypothesis preferred)
+5. **Site-level**: MEME for episodic, FEL/FUBAR for pervasive selection
+6. **Validate**: Multiple methods agreeing at same sites increases confidence
+7. **Multiple testing correction**: FDR (Benjamini-Hochberg) when testing across many genes
+
+## PAML Codeml Analysis
+
+**Goal:** Test for positive selection across a gene using codon-based site models.
+
+**Approach:** Prepare a codon alignment in PHYLIP format, create codeml control files for nested models (M7 vs M8 or M1a vs M2a), run codeml, extract log-likelihoods, perform a likelihood ratio test, and identify positively selected sites from the BEB analysis.
+
+```python
+'''Run PAML codeml for selection analysis'''
+
+import subprocess
+import os
+from Bio import SeqIO
+from Bio.Seq import Seq
+
+
+def prepare_codon_alignment(cds_fasta, output_phy):
+    '''Prepare codon alignment in PHYLIP format
+
+    Requirements:
+    - CDS sequences (in-frame, no stop codons except terminal)
+    - Multiple sequence alignment already performed
+    - Sequence length divisible by 3
+    '''
+    records = list(SeqIO.parse(cds_fasta, 'fasta'))
+
+    # Validate codon alignment
+    for rec in records:
+        if len(rec.seq) % 3 != 0:
+            print(f'Warning: {rec.id} length not divisible by 3')
+
+    # Write PHYLIP format
+    n_seq = len(records)
+    seq_len = len(records[0].seq)
+
+    with open(output_phy, 'w') as f:
+        f.write(f' {n_seq} {seq_len}\n')
+        for rec in records:
+            # PHYLIP names: 10 characters, padded
+            name = rec.id[:10].ljust(10)
+            f.write(f'{name}{str(rec.seq)}\n')
+
+    return output_phy
+
+
+def create_codeml_control(alignment_file, tree_file, output_dir, model='M8'):
+    '''Create codeml control file
+
+    Site models for detecting positive selection:
+    - M0: One ratio (single ω for all sites)
+    - M1a: Nearly neutral (ω0 < 1, ω1 = 1)
+    - M2a: Positive selection (ω0 < 1, ω1 = 1, ω2 > 1)
+    - M7: Beta (ω from beta distribution, 0 < ω < 1)
+    - M8: Beta + ω > 1 (allows positive selection)
+    - M8a: Beta + ω = 1 (null for M8 comparison)
+
+    Standard comparisons:
+    - M7 vs M8: More power but can give false positives from relaxed constraint
+    - M8 vs M8a: More stringent, recommended as primary test
+    - M1a vs M2a: Conservative, fewer false positives
+    '''
+    model_params = {
+        'M0': {'NSsites': 0, 'model': 0},
+        'M1a': {'NSsites': 1, 'model': 0},
+        'M2a': {'NSsites': 2, 'model': 0},
+        'M7': {'NSsites': 7, 'model': 0},
+        'M8': {'NSsites': 8, 'model': 0},
+        'M8a': {'NSsites': 8, 'model': 0, 'fix_omega': 1, 'omega': 1},
+    }
+
+    params = model_params.get(model, model_params['M8'])
+
+    ctl_content = f'''
+      seqfile = {alignment_file}
+     treefile = {tree_file}
+      outfile = {output_dir}/mlc
+
+        noisy = 9
+      verbose = 1
+      runmode = 0
+      seqtype = 1
+    CodonFreq = 2
+      * CodonFreq: 2=F3x4 (default), 7=FMutSel (recommended, accounts for mutation-selection balance) *
+        model = {params.get('model', 0)}
+      NSsites = {params.get('NSsites', 8)}
+        icode = 0
+    fix_kappa = 0
+        kappa = 2
+    fix_omega = {params.get('fix_omega', 0)}
+        omega = {params.get('omega', 1)}
+    '''
+
+    ctl_file = f'{output_dir}/codeml_{model}.ctl'
+    with open(ctl_file, 'w') as f:
+        f.write(ctl_content)
+
+    return ctl_file
+
+
+def run_codeml(ctl_file):
+    '''Run PAML codeml'''
+    cmd = f'codeml {ctl_file}'
+    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+
+    if result.returncode != 0:
+        print(f'Codeml error: {result.stderr}')
+
+    return result
+
+
+def parse_codeml_output(mlc_file):
+    '''Parse codeml output for likelihood and parameters'''
+    results = {'lnL': None, 'omega': None, 'kappa': None, 'sites': []}
+
+    with open(mlc_file) as f:
+        content = f.read()
+
+    # Extract log-likelihood
+    for line in content.split('\n'):
+        if 'lnL' in line and 'np' in line:
+            parts = line.split()
+            for i, p in enumerate(parts):
+                if p == 'lnL':
+                    results['lnL'] = float(parts[i + 2])
+                    break
+
+        # Extract omega values
+        if 'omega' in line.lower() and '=' in line:
+            parts = line.split('=')
+            if len(parts) >= 2:
+                try:
+                    results['omega'] = float(parts[-1].strip().split()[0])
+                except ValueError:
+                    pass
+
+    # Extract positively selected sites (BEB analysis)
+    if 'Bayes Empirical Bayes' in content:
+        beb_section = content.split('Bayes Empirical Bayes')[1]
+        for line in beb_section.split('\n'):
+            parts = line.split()
+            if len(parts) >= 5:
+                try:
+                    site = int(parts[0])
+                    aa = parts[1]
+                    prob = float(parts[2])
+                    # Sites with P > 0.95 considered significant
+                    # Sites with P > 0.99 highly significant
+                    if prob > 0.95:
+                        results['sites'].append({
+                            'position': site,
+                            'amino_acid': aa,
+                            'probability': prob,
+                            'significance': '**' if prob > 0.99 else '*'
+                        })
+                except (ValueError, IndexError):
+                    continue
+
+    return results
+
+
+def likelihood_ratio_test(lnL_null, lnL_alt, df=2, branch_site_test=False):
+    '''Perform likelihood ratio test
+
+    For M8 vs M7: df = 2
+    For M2a vs M1a: df = 2
+    For M8 vs M8a: df = 1
+    For branch-site test: df = 1 (use 50:50 chi2(0):chi2(1) mixture;
+        critical value 2.71 at 5%, NOT the standard 3.84)
+
+    Significance thresholds (chi-square):
+    - df=1: 3.84 (p<0.05), 6.63 (p<0.01)
+    - df=2: 5.99 (p<0.05), 9.21 (p<0.01)
+    '''
+    from scipy import stats
+
+    lrt = 2 * (lnL_alt - lnL_null)
+
+    if branch_site_test:
+        # 50:50 mixture of chi2(0) and chi2(1) for branch-site null
+        p_value = 0.5 * (1 - stats.chi2.cdf(lrt, 1)) if lrt > 0 else 0.5
+    else:
+        p_value = 1 - stats.chi2.cdf(lrt, df)
+
+    return {
+        'LRT_statistic': lrt,
+        'degrees_freedom': df,
+        'p_value': p_value,
+        'significant': p_value < 0.05
+    }
+```
+
+## Branch-Site Models
+
+**Goal:** Test for positive selection on a specific lineage (foreground branch) while allowing variable rates across the tree.
+
+**Approach:** Mark the foreground lineage with #1 in the tree file, create branch-site model A control files for both alternative and null hypotheses, run codeml, and perform an LRT with df=1.
+
+```python
+def create_branch_site_control(alignment, tree, foreground_branch, output_dir):
+    '''Create control file for branch-site test
+
+    Branch-site model A tests for positive selection on
+    specific branches (foreground) while allowing variation
+    across the tree.
+
+    Foreground branch: Mark with #1 in tree file
+    Example: ((A,B),(C #1,D));
+
+    Comparison: Model A vs null (fix_omega = 1)
+    '''
+    ctl_content = f'''
+      seqfile = {alignment}
+     treefile = {tree}
+      outfile = {output_dir}/branch_site.mlc
+
+      runmode = 0
+      seqtype = 1
+    CodonFreq = 2
+        model = 2
+      NSsites = 2
+    fix_kappa = 0
+        kappa = 2
+    fix_omega = 0
+        omega = 1
+    '''
+
+    ctl_file = f'{output_dir}/branch_site.ctl'
+    with open(ctl_file, 'w') as f:
+        f.write(ctl_content)
+
+    return ctl_file
+
+
+def mark_foreground_branch(tree_file, foreground_taxa, output_file):
+    '''Mark foreground lineage in Newick tree
+
+    For testing selection on specific lineage:
+    - Add #1 after the clade of interest
+    - Can mark multiple branches with different tags
+    '''
+    with open(tree_file) as f:
+        tree = f.read().strip()
+
+    # Simple marking - for complex trees use ete3
+    for taxon in foreground_taxa:
+        tree = tree.replace(taxon, f'{taxon} #1')
+
+    with open(output_file, 'w') as f:
+        f.write(tree)
+
+    return output_file
+```
+
+## HyPhy Methods
+
+**Goal:** Detect positive selection using HyPhy's suite of methods for gene-wide and site-specific tests.
+
+**Approach:** Follow the recommended pipeline: BUSTED for gene-wide screening, aBSREL for branch identification, MEME/FEL/FUBAR for site-level inference. Each method answers a different question.
+
+### Method Selection Guide
+
+| Method | Question Answered | Significance | Best For |
+|---|---|---|---|
+| BUSTED | Any positive selection anywhere in gene? | p <= 0.05 | Initial screening |
+| aBSREL | Which branches show selection? | p <= 0.05 (a priori) | Lineage-specific hypotheses |
+| MEME | Which sites show episodic selection? | p <= 0.1 | Selection varying across branches |
+| FEL | Which sites show pervasive selection? | p <= 0.1 | Constant selection across tree |
+| FUBAR | Which sites show pervasive selection? | posterior > 0.9 | Large datasets (faster than FEL) |
+| RELAX | Is selection relaxed or intensified? | p <= 0.05 (k<1 relaxed, k>1 intensified) | Comparing selection regimes |
+
+Note: MEME is the ONLY method detecting episodic selection at individual sites. FEL/FUBAR assume constant selection pressure across all branches. RELAX tests selection intensity, NOT positive selection.
+
+```python
+def run_hyphy_method(alignment_file, tree_file, method, output_json, foreground=None):
+    '''Run HyPhy selection analysis
+
+    Methods: busted, meme, fel, fubar, absrel, relax
+    foreground: label foreground branches for BUSTED, aBSREL, RELAX
+    '''
+    cmd = f'hyphy {method} --alignment {alignment_file} --tree {tree_file} --output {output_json}'
+
+    # For branch-aware methods, specify test branches
+    if foreground and method in ('busted', 'absrel', 'relax'):
+        cmd += f' --branches {foreground}'
+
+    subprocess.run(cmd, shell=True)
+    return output_json
+
+
+def parse_hyphy_json(json_file):
+    '''Parse HyPhy JSON output for p-values and selected sites'''
+    import json
+
+    with open(json_file) as f:
+        results = json.load(f)
+
+    test_results = results.get('test results', {})
+    p_value = test_results.get('p-value')
+
+    # Extract per-site results (MEME/FEL/FUBAR)
+    site_results = []
+    mle = results.get('MLE', {}).get('content', {})
+    headers = results.get('MLE', {}).get('headers', [[]])
+    if headers and isinstance(headers[0], list):
+        col_names = [h[0] if isinstance(h, list) else h for h in headers[0]]
+    else:
+        col_names = []
+
+    for key, values in mle.get('0', {}).items():
+        if isinstance(values, list):
+            site_data = dict(zip(col_names, values)) if col_names else {'values': values}
+            site_data['site'] = int(key)
+            site_results.append(site_data)
+
+    return {'p_value': p_value, 'LRT': test_results.get('LRT'), 'sites': site_results}
+```
+
+## Multiple Testing Correction
+
+When running selection tests across many genes:
+- Use FDR (Benjamini-Hochberg) rather than Bonferroni (genes in syntenic blocks are non-independent)
+- For PAML branch-site tests across gene families: Holm-Bonferroni or FDR
+- For HyPhy aBSREL in exploratory mode (testing all branches): power drops dramatically after correction; prefer a priori hypothesis testing
+- HyPhy site-level methods (FEL, MEME) already use conservative thresholds (p <= 0.1); additional correction is typically not applied within a single gene
+
+## Related Skills
+
+- comparative-genomics/synteny-analysis - Find syntenic genes for selection tests
+- comparative-genomics/ortholog-inference - Identify orthologs for analysis
+- comparative-genomics/ancestral-reconstruction - Reconstruct ancestral sequences at selected branches
+- alignment/msa-parsing - Parse and manipulate codon alignments
+- alignment/multiple-alignment - PRANK codon-aware alignment for selection studies
+- phylogenetics/modern-tree-inference - Generate trees for codeml
