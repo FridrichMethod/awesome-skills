@@ -4,6 +4,26 @@ All notable changes to this project are documented here. The format is based on 
 
 ## [Unreleased]
 
+## [0.3.1] — 2026-05-20
+
+### Fixed
+- `scripts/sync_skills.py` now sanitizes SKILL.md frontmatter so the strict Codex skill loader accepts every file:
+  - **Length cap.** `description` > 1024 chars is smart-trimmed at a sentence or word boundary (4 upstream skills fixed: `tooluniverse-variant-analysis`, `tooluniverse-single-cell`, `hugging-science`, `strategist`).
+  - **Mid-value colon quoting.** `key: value: with colon` is double-quoted to avoid being parsed as a nested mapping.
+  - **Broken folded-scalar collapse.** Upstream typos like `description: ">"` followed by indented body lines are collapsed into a single quoted scalar honoring `>` / `>-` / `>+` / `|` / `|-` / `|+` fold semantics (~38 files: `alphafold`, `pdb`, `chai`, `boltz`, `blueprint`, …).
+  - **Flow-collection passthrough.** `tags: [a, b]` and `metadata: {x: 1}` are no longer corrupted into strings; their parsed `list` / `dict` types are preserved.
+  - **Multi-line quoted scalar passthrough.** A `description: "first half\n\nsecond half"` block is left intact instead of being double-wrapped.
+- Sanitizer is idempotent: a second `--sanitize-only` pass touches 0 files.
+
+### Added
+- `scripts/sync_skills.py --sanitize-only` CLI flag to normalize the existing `skills/` tree without running an upstream sync.
+- `tests/test_sanitize.py` — 54 pytest cases across smart-trim, YAML quoting helpers, end-to-end sanitization, idempotency (including a live-tree scan), and post-sanitize invariants.
+- `.github/workflows/ci.yml` — runs `ruff check` + `pytest` on every push, PR, and manual dispatch.
+- `pyproject.toml` — pytest and ruff configuration, dev dependency group.
+
+### Changed
+- Skill count after re-sync: 1,856 → **1,907** (+51 from upstream growth; 33 added, 121 modified, 2 deleted in the 2026-05-20 sync).
+
 ## [0.3.0] — 2026-05-17
 
 ### Added
@@ -40,7 +60,8 @@ All notable changes to this project are documented here. The format is based on 
 - Sources: K-Dense scientific-skills (137), K-Dense scientific-writer (81), GPTomics bioSkills (475), OpenClaw Medical (~868), SciAgent (199), journalism (53), Imbad academic-research (4), lishix academic-paper (2), adaptyv protein-design (21).
 - `install.sh` for syncing `skills/` into `~/.claude/skills/` and `~/.codex/skills/`.
 
-[Unreleased]: https://github.com/FridrichMethod/awesome-skills/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/FridrichMethod/awesome-skills/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/FridrichMethod/awesome-skills/releases/tag/v0.3.1
 [0.3.0]: https://github.com/FridrichMethod/awesome-skills/releases/tag/v0.3.0
 [0.2.0]: https://github.com/FridrichMethod/awesome-skills/releases/tag/v0.2.0
 [0.1.0]: https://github.com/FridrichMethod/awesome-skills/releases/tag/v0.1.0
