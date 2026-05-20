@@ -359,18 +359,27 @@ class TestIdempotency:
         assert result == "valid"
         assert f.read_text() == snapshot
 
-    def test_full_tree_idempotency(self) -> None:
+    def test_full_tree_idempotency(self, tmp_path: Path) -> None:
         """If a skills/ directory exists, a second --sanitize-only pass must
         rewrite zero files. This guards against regressions where the
-        sanitizer keeps re-touching the same file forever."""
-        skills = ss.REPO_ROOT / "skills"
-        if not skills.exists():
+        sanitizer keeps re-touching the same file forever.
+
+        Operates on a copy in tmp_path so the test never mutates the
+        committed skills/ tree.
+        """
+        import shutil
+
+        src = ss.REPO_ROOT / "skills"
+        if not src.exists():
             pytest.skip("no skills/ tree to scan in this checkout")
+        dst = tmp_path / "skills"
+        shutil.copytree(src, dst, symlinks=True)
+
         # First pass — may rewrite up to a handful of files.
-        ss.sanitize_only(skills)
+        ss.sanitize_only(dst)
         # Second pass — must touch nothing.
         rewrote_second = 0
-        for skill_md in skills.rglob("SKILL.md"):
+        for skill_md in dst.rglob("SKILL.md"):
             before = skill_md.read_text(encoding="utf-8", errors="ignore")
             ss.sanitize_skill_frontmatter(skill_md)
             after = skill_md.read_text(encoding="utf-8", errors="ignore")
