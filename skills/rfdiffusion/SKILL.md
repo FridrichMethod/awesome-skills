@@ -5,7 +5,7 @@ description: "Generate protein backbones using RFdiffusion, a diffusion-based ge
 For sequence design after backbone generation, use proteinmpnn. For structure validation, use alphafold or chai. For QC thresholds, use protein-qc."
 license: MIT
 category: design-tools
-tags: "[structure-design, diffusion, backbone, binder]"
+tags: [structure-design, diffusion, backbone, binder]
 proteinbase_slug: rfdiffusion
 proteinbase_url: https://proteinbase.com/design-methods/rfdiffusion
 biomodals_script: modal_rfdiffusion.py

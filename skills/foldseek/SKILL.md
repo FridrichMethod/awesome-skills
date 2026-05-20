@@ -5,7 +5,7 @@ description: "Structure similarity search with Foldseek. Use this skill when: (1
 For sequence similarity, use uniprot BLAST. For structure prediction, use chai or boltz."
 license: MIT
 category: utilities
-tags: "[search, structure, database, similarity]"
+tags: [search, structure, database, similarity]
 ---
 
 # Foldseek Structure Search

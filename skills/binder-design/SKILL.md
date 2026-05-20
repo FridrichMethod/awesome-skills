@@ -5,7 +5,7 @@ description: "Guidance for choosing the right protein binder design tool. Use th
 For specific tool parameters, use the individual tool skills (boltzgen, bindcraft, rfdiffusion, etc.)."
 license: MIT
 category: orchestration
-tags: "[guidance, tool-selection, workflow]"
+tags: [guidance, tool-selection, workflow]
 ---
 
 # Binder Design Tool Selection

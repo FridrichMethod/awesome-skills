@@ -4,7 +4,7 @@ description: Local Scanpy pipeline for single-cell RNA-seq QC, clustering, marke
 version: 0.1.0
 author: Yonghao Zhao
 license: MIT
-tags: "[scrna, single-cell, scanpy, clustering, differential-expression]"
+tags: [scrna, single-cell, scanpy, clustering, differential-expression]
 metadata:
   openclaw:
     requires:

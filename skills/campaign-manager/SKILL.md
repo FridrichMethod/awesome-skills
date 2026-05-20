@@ -5,7 +5,7 @@ description: "Goal-oriented binder design campaign planning and health assessmen
 This skill orchestrates the other protein design tools. For individual tool parameters, use the specific tool skills."
 license: MIT
 category: orchestration
-tags: "[planning, campaign, coordination]"
+tags: [planning, campaign, coordination]
 ---
 
 # Campaign Manager

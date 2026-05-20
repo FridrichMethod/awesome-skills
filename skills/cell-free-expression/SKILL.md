@@ -3,7 +3,7 @@ name: cell-free-expression
 description: "Guidance for cell-free protein synthesis (CFPS) optimization. Use when: (1) Planning CFPS experiments, (2) Troubleshooting low yield or aggregation, (3) Optimizing DNA template design for CFPS, (4) Expressing difficult proteins (disulfide-rich, toxic, membrane)."
 license: MIT
 category: experimental
-tags: "[expression, cfps, validation]"
+tags: [expression, cfps, validation]
 ---
 
 # Cell-Free Protein Synthesis (CFPS)

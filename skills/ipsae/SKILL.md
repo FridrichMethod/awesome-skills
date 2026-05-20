@@ -5,7 +5,7 @@ description: "Binder design ranking using ipSAE (interprotein Score from Aligned
 For structure prediction, use chai or alphafold. For QC thresholds, use protein-qc."
 license: MIT
 category: evaluation
-tags: "[ranking, scoring, binding]"
+tags: [ranking, scoring, binding]
 ---
 
 # ipSAE Binder Ranking

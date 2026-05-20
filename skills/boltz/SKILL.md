@@ -5,7 +5,7 @@ description: "Structure prediction using Boltz-1/Boltz-2, an open biomolecular s
 For QC thresholds, use protein-qc. For AlphaFold2 prediction, use alphafold. For Chai prediction, use chai."
 license: MIT
 category: design-tools
-tags: "[structure-prediction, validation, open-source]"
+tags: [structure-prediction, validation, open-source]
 biomodals_script: modal_boltz.py
 ---
 

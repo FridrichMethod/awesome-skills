@@ -5,7 +5,7 @@ description: "Access UniProt for protein sequence and annotation retrieval. Use 
 For structure retrieval, use pdb. For sequence design, use proteinmpnn."
 license: MIT
 category: utilities
-tags: "[database, sequence, annotation]"
+tags: [database, sequence, annotation]
 ---
 
 # UniProt Database Access

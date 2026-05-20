@@ -5,7 +5,7 @@ description: "Validate protein designs using AlphaFold2 structure prediction. Us
 For faster single-chain prediction, use esm. For QC thresholds, use protein-qc."
 license: MIT
 category: design-tools
-tags: "[structure-prediction, validation, reference]"
+tags: [structure-prediction, validation, reference]
 biomodals_script: modal_alphafold.py
 ---
 

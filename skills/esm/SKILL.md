@@ -5,7 +5,7 @@ description: "ESM2 protein language model for embeddings and sequence scoring. U
 For structure prediction, use chai or boltz. For QC thresholds, use protein-qc."
 license: MIT
 category: design-tools
-tags: "[sequence-design, embeddings, scoring]"
+tags: [sequence-design, embeddings, scoring]
 proteinbase_slug: esm2-optimization
 proteinbase_url: https://proteinbase.com/design-methods/esm2-optimization
 biomodals_script: modal_esm2_predict_masked.py

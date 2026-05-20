@@ -4,7 +4,7 @@ description: Compare your genome to George Church (PGP-1) and estimate ancestry 
 version: 0.1.0
 author: Manuel Corpas
 license: MIT
-tags: "[genome-comparison, IBS, ancestry, PGP, admixture]"
+tags: [genome-comparison, IBS, ancestry, PGP, admixture]
 metadata:
   openclaw:
     requires:

@@ -5,7 +5,7 @@ description: "Quality control metrics and filtering thresholds for protein desig
 This skill provides research-backed thresholds from binder design competitions and published benchmarks."
 license: MIT
 category: evaluation
-tags: "[qc, filtering, metrics, thresholds]"
+tags: [qc, filtering, metrics, thresholds]
 ---
 
 # Protein Design Quality Control

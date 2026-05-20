@@ -5,7 +5,7 @@ description: "End-to-end guidance for protein design pipelines. Use this skill w
 For tool selection, use binder-design. For QC thresholds, use protein-qc."
 license: MIT
 category: orchestration
-tags: "[guidance, pipeline, workflow]"
+tags: [guidance, pipeline, workflow]
 ---
 
 # Protein Design Workflow Guide

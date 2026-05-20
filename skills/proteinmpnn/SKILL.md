@@ -5,7 +5,7 @@ description: "Design protein sequences using ProteinMPNN inverse folding. Use th
 For backbone generation, use rfdiffusion or bindcraft. For ligand-aware design, use ligandmpnn. For solubility optimization, use solublempnn."
 license: MIT
 category: design-tools
-tags: "[sequence-design, inverse-folding]"
+tags: [sequence-design, inverse-folding]
 biomodals_script: modal_ligandmpnn.py
 ---
 

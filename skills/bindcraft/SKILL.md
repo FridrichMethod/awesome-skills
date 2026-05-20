@@ -5,7 +5,7 @@ description: "End-to-end binder design using BindCraft hallucination. Use this s
 For backbone-only generation, use rfdiffusion. For QC thresholds, use protein-qc. For tool selection guidance, use binder-design."
 license: MIT
 category: design-tools
-tags: "[structure-design, sequence-design, binder, pipeline]"
+tags: [structure-design, sequence-design, binder, pipeline]
 proteinbase_slug: bindcraft
 proteinbase_url: https://proteinbase.com/design-methods/bindcraft
 biomodals_script: modal_bindcraft.py

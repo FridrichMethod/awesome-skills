@@ -5,7 +5,7 @@ description: "Structure prediction using Chai-1, a foundation model for molecula
 For QC thresholds, use protein-qc. For AlphaFold2 prediction, use alphafold. For ESM-based analysis, use esm."
 license: MIT
 category: design-tools
-tags: "[structure-prediction, validation, foundation-model]"
+tags: [structure-prediction, validation, foundation-model]
 biomodals_script: modal_chai1.py
 ---
 

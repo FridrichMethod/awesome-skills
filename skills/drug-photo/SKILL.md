@@ -4,7 +4,7 @@ description: Medication photo to personalised PGx dosage card via Claude vision 
 version: 0.1.0
 author: Manuel Corpas
 license: MIT
-tags: "[pharmacogenomics, computer-vision, drug-identification, dosage-guidance]"
+tags: [pharmacogenomics, computer-vision, drug-identification, dosage-guidance]
 metadata:
   openclaw:
     requires:

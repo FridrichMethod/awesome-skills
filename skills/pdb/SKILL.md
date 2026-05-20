@@ -5,7 +5,7 @@ description: "Fetch and analyze protein structures from RCSB PDB. Use this skill
 For sequence lookup, use uniprot. For binder design workflow, use binder-design."
 license: MIT
 category: utilities
-tags: "[database, structure, fetch]"
+tags: [database, structure, fetch]
 ---
 
 # PDB Database Access

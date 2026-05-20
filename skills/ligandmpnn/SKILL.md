@@ -5,7 +5,7 @@ description: "Ligand-aware protein sequence design using LigandMPNN. Use this sk
 For standard protein design, use proteinmpnn. For solubility optimization, use solublempnn."
 license: MIT
 category: design-tools
-tags: "[sequence-design, inverse-folding, ligand-aware]"
+tags: [sequence-design, inverse-folding, ligand-aware]
 biomodals_script: modal_ligandmpnn.py
 ---
 

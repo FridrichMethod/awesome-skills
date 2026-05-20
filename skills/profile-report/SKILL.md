@@ -4,7 +4,7 @@ description: "Unified personal genomic profile report — reads a PatientProfile
 version: 0.1.0
 author: Manuel Corpas
 license: MIT
-tags: "[profile, report-synthesis, personal-genomics]"
+tags: [profile, report-synthesis, personal-genomics]
 metadata:
   openclaw:
     requires:

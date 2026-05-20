@@ -178,6 +178,54 @@ def _is_yaml_quoted(value: str) -> bool:
     return False
 
 
+def _is_balanced_flow_collection(value: str) -> bool:
+    """True if value is a YAML flow sequence `[...]` or mapping `{...}`.
+
+    Used to keep `tags: [a, b, c]` and `metadata: {x: 1}` intact — without this
+    guard, `_needs_yaml_quoting` would flag the leading `[`/`{` and convert
+    the collection into a quoted string, changing its parsed type.
+    """
+    stripped = value.strip()
+    return (stripped.startswith("[") and stripped.endswith("]") and len(stripped) >= 2) or (
+        stripped.startswith("{") and stripped.endswith("}") and len(stripped) >= 2
+    )
+
+
+def _opens_multiline_quoted(value: str) -> bool:
+    """True if the value starts a quoted scalar that does not close on the same line.
+
+    A `key: "first half ... <newline> ... second half"` block parses fine in
+    PyYAML but my line-by-line sanitizer would only see `"first half ...` —
+    treating it as an unbalanced quote and double-wrapping it. We detect that
+    case and skip the value entirely, leaving the multi-line scalar intact.
+    """
+    stripped = value.strip()
+    if not stripped:
+        return False
+    if stripped[0] == '"':
+        escaped = False
+        for ch in stripped[1:]:
+            if escaped:
+                escaped = False
+                continue
+            if ch == "\\":
+                escaped = True
+            elif ch == '"':
+                return False  # closes on the same line
+        return True
+    if stripped[0] == "'":
+        i = 1
+        while i < len(stripped):
+            if stripped[i] == "'":
+                if i + 1 < len(stripped) and stripped[i + 1] == "'":
+                    i += 2  # YAML single-quote escape: `''`
+                    continue
+                return False
+            i += 1
+        return True
+    return False
+
+
 def _unquote_yaml(value: str) -> str:
     """Reverse of `_yaml_double_quote` / single-quote form. Returns raw text."""
     stripped = value.strip()
@@ -192,12 +240,16 @@ def _needs_yaml_quoting(value: str) -> bool:
     """True when an unquoted YAML scalar would be misparsed.
 
     The biggest hazard upstream skills hit is an unquoted `description`
-    containing `: ` mid-value (YAML parses it as a nested mapping).
+    containing `: ` mid-value (YAML parses it as a nested mapping). Balanced
+    flow collections (`[a, b]`, `{x: 1}`) and balanced quoted scalars are
+    explicitly excluded so their parsed type is preserved.
     """
     stripped = value.strip()
     if not stripped:
         return False
     if _is_yaml_quoted(stripped):
+        return False
+    if _is_balanced_flow_collection(stripped):
         return False
     if ": " in stripped:
         return True
@@ -361,6 +413,13 @@ def sanitize_skill_frontmatter(skill_file: Path) -> str:
             i += 1
             continue
         key, value = match.group(1), match.group(2)
+
+        # A `key: "..."` that doesn't close on the same line is a legitimate
+        # multi-line quoted scalar — line-by-line rewriting would corrupt it,
+        # so skip the field entirely and let YAML handle it.
+        if _opens_multiline_quoted(value):
+            i += 1
+            continue
 
         # Detect the broken `key: ">"` (or `"|"`, `">-"`, etc.) pattern where
         # the author quoted the YAML scalar style indicator and put the body

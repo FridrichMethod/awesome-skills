@@ -5,7 +5,7 @@ description: "All-atom protein design using BoltzGen diffusion model. Use this s
 For backbone-only generation, use rfdiffusion. For sequence-only design, use proteinmpnn. For structure validation, use boltz."
 license: MIT
 category: design-tools
-tags: "[structure-design, sequence-design, diffusion, all-atom, binder]"
+tags: [structure-design, sequence-design, diffusion, all-atom, binder]
 proteinbase_slug: boltzgen
 proteinbase_url: https://proteinbase.com/design-methods/boltzgen
 biomodals_script: modal_boltzgen.py
