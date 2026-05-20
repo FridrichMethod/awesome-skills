@@ -4,7 +4,7 @@ description: Pharmacogenomic report from DTC genetic data (23andMe/AncestryDNA) 
 version: 0.1.0
 author: Manuel Corpas
 license: MIT
-tags: [pharmacogenomics, CPIC, DTC-genetics, precision-medicine]
+tags: "[pharmacogenomics, CPIC, DTC-genetics, precision-medicine]"
 metadata:
   openclaw:
     requires:

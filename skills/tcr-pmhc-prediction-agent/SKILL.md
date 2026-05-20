@@ -1,3 +1,12 @@
+---
+name: 'tcr-pmhc-prediction-agent'
+description: 'AI-powered TCR-peptide-MHC interaction prediction using AlphaFold3 and deep learning for therapeutic TCR discovery, neoantigen validation, and T cell immunogenicity assessment.'
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,14 +20,6 @@
 
 -->
 
----
-name: 'tcr-pmhc-prediction-agent'
-description: 'AI-powered TCR-peptide-MHC interaction prediction using AlphaFold3 and deep learning for therapeutic TCR discovery, neoantigen validation, and T cell immunogenicity assessment.'
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 
 # TCR-pMHC Prediction Agent

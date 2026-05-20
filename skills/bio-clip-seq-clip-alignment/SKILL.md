@@ -1,3 +1,14 @@
+---
+name: bio-clip-seq-clip-alignment
+description: Align CLIP-seq reads to the genome with crosslink site awareness. Use when mapping preprocessed CLIP reads for peak calling.
+tool_type: cli
+primary_tool: STAR
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-clip-seq-clip-alignment
-description: Align CLIP-seq reads to the genome with crosslink site awareness. Use when mapping preprocessed CLIP reads for peak calling.
-tool_type: cli
-primary_tool: STAR
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # CLIP-seq Alignment
 

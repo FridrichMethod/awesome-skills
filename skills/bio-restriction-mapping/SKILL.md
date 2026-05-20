@@ -1,3 +1,14 @@
+---
+name: bio-restriction-mapping
+description: Create restriction maps showing enzyme cut positions on DNA sequences using Biopython Bio.Restriction. Visualize cut sites, calculate distances between sites, and generate text or graphical maps. Use when creating or analyzing restriction maps.
+tool_type: python
+primary_tool: Bio.Restriction
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-restriction-mapping
-description: Create restriction maps showing enzyme cut positions on DNA sequences using Biopython Bio.Restriction. Visualize cut sites, calculate distances between sites, and generate text or graphical maps. Use when creating or analyzing restriction maps.
-tool_type: python
-primary_tool: Bio.Restriction
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Restriction Mapping
 

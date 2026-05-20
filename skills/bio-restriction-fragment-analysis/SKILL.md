@@ -1,3 +1,14 @@
+---
+name: bio-restriction-fragment-analysis
+description: Analyze restriction digest fragments using Biopython Bio.Restriction. Predict fragment sizes, get fragment sequences, simulate gel electrophoresis patterns, and perform double digests. Use when analyzing restriction digest fragment patterns.
+tool_type: python
+primary_tool: Bio.Restriction
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-restriction-fragment-analysis
-description: Analyze restriction digest fragments using Biopython Bio.Restriction. Predict fragment sizes, get fragment sequences, simulate gel electrophoresis patterns, and perform double digests. Use when analyzing restriction digest fragment patterns.
-tool_type: python
-primary_tool: Bio.Restriction
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Fragment Analysis
 

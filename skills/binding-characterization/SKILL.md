@@ -1,14 +1,9 @@
 ---
 name: binding-characterization
-description: >
-  Guidance for SPR and BLI binding characterization experiments. Use when:
-  (1) Planning binding kinetics experiments,
-  (2) Troubleshooting poor/no binding signal,
-  (3) Interpreting kinetic data artifacts,
-  (4) Choosing between SPR vs BLI platforms.
+description: "Guidance for SPR and BLI binding characterization experiments. Use when: (1) Planning binding kinetics experiments, (2) Troubleshooting poor/no binding signal, (3) Interpreting kinetic data artifacts, (4) Choosing between SPR vs BLI platforms."
 license: MIT
 category: experimental
-tags: [binding, spr, bli, validation]
+tags: "[binding, spr, bli, validation]"
 ---
 
 # Binding Characterization: SPR and BLI

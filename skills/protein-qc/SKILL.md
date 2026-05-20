@@ -1,20 +1,11 @@
 ---
 name: protein-qc
-description: >
-  Quality control metrics and filtering thresholds for protein design.
-  Use this skill when: (1) Evaluating design quality for binding, expression, or structure,
-  (2) Setting filtering thresholds for pLDDT, ipTM, PAE,
-  (3) Checking sequence liabilities (cysteines, deamidation, polybasic clusters),
-  (4) Creating multi-stage filtering pipelines,
-  (5) Computing PyRosetta interface metrics (dG, SC, dSASA),
-  (6) Checking biophysical properties (instability, GRAVY, pI),
-  (7) Ranking designs with composite scoring.
+description: "Quality control metrics and filtering thresholds for protein design. Use this skill when: (1) Evaluating design quality for binding, expression, or structure, (2) Setting filtering thresholds for pLDDT, ipTM, PAE, (3) Checking sequence liabilities (cysteines, deamidation, polybasic clusters), (4) Creating multi-stage filtering pipelines, (5) Computing PyRosetta interface metrics (dG, SC, dSASA), (6) Checking biophysical properties (instability, GRAVY, pI), (7) Ranking designs with composite scoring.
 
-  This skill provides research-backed thresholds from binder design
-  competitions and published benchmarks.
+This skill provides research-backed thresholds from binder design competitions and published benchmarks."
 license: MIT
 category: evaluation
-tags: [qc, filtering, metrics, thresholds]
+tags: "[qc, filtering, metrics, thresholds]"
 ---
 
 # Protein Design Quality Control

@@ -1,3 +1,12 @@
+---
+name: 'tme-immune-profiling-agent'
+description: 'Comprehensive AI-powered tumor microenvironment immune profiling integrating bulk deconvolution, single-cell analysis, and spatial transcriptomics for immunotherapy biomarker discovery.'
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,14 +20,6 @@
 
 -->
 
----
-name: 'tme-immune-profiling-agent'
-description: 'Comprehensive AI-powered tumor microenvironment immune profiling integrating bulk deconvolution, single-cell analysis, and spatial transcriptomics for immunotherapy biomarker discovery.'
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 
 # TME Immune Profiling Agent

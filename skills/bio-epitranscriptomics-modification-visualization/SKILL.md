@@ -1,3 +1,14 @@
+---
+name: bio-epitranscriptomics-modification-visualization
+description: Create metagene plots and browser tracks for RNA modification data. Use when visualizing m6A distribution patterns around genomic features like stop codons.
+tool_type: r
+primary_tool: Guitar
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-epitranscriptomics-modification-visualization
-description: Create metagene plots and browser tracks for RNA modification data. Use when visualizing m6A distribution patterns around genomic features like stop codons.
-tool_type: r
-primary_tool: Guitar
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Modification Visualization
 

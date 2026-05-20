@@ -1,3 +1,12 @@
+---
+name: 'radiomics-pathomics-fusion-agent'
+description: 'AI-powered multimodal fusion of radiology (CT/MRI/PET) and pathology (H&E/IHC) imaging with clinical and genomic data for comprehensive cancer diagnostics and treatment prediction.'
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,14 +20,6 @@
 
 -->
 
----
-name: 'radiomics-pathomics-fusion-agent'
-description: 'AI-powered multimodal fusion of radiology (CT/MRI/PET) and pathology (H&E/IHC) imaging with clinical and genomic data for comprehensive cancer diagnostics and treatment prediction.'
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 
 # Radiomics Pathomics Fusion Agent

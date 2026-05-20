@@ -1,3 +1,14 @@
+---
+name: bio-reporting-jupyter-reports
+description: Creates reproducible Jupyter notebooks for bioinformatics analysis with parameterization using papermill. Use when generating automated analysis reports, running notebook-based pipelines, or creating shareable computational notebooks.
+tool_type: python
+primary_tool: papermill
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-reporting-jupyter-reports
-description: Creates reproducible Jupyter notebooks for bioinformatics analysis with parameterization using papermill. Use when generating automated analysis reports, running notebook-based pipelines, or creating shareable computational notebooks.
-tool_type: python
-primary_tool: papermill
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Jupyter Reports with Papermill
 

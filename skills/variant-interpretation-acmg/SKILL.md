@@ -1,3 +1,12 @@
+---
+name: 'variant-interpretation-acmg'
+description: 'Classifies genetic variants according to ACMG (American College of Medical Genetics) guidelines.'
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,14 +20,6 @@
 
 -->
 
----
-name: 'variant-interpretation-acmg'
-description: 'Classifies genetic variants according to ACMG (American College of Medical Genetics) guidelines.'
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 
 # Variant Interpretation (ACMG)

@@ -1,3 +1,14 @@
+---
+name: bio-experimental-design-power-analysis
+description: Calculates statistical power and minimum sample sizes for RNA-seq, ATAC-seq, and other sequencing experiments. Use when planning experiments, determining how many replicates are needed, or assessing whether a study is adequately powered to detect expected effect sizes.
+tool_type: r
+primary_tool: RNASeqPower
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-experimental-design-power-analysis
-description: Calculates statistical power and minimum sample sizes for RNA-seq, ATAC-seq, and other sequencing experiments. Use when planning experiments, determining how many replicates are needed, or assessing whether a study is adequately powered to detect expected effect sizes.
-tool_type: r
-primary_tool: RNASeqPower
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Power Analysis for Sequencing Experiments
 

@@ -4,7 +4,7 @@ description: "Galaxy tool discovery, intelligent recommendation, and execution â
 version: 0.2.0
 author: Manuel Corpas
 license: MIT
-tags: [galaxy, bioinformatics, tool-discovery, workflows, NGS, genomics, proteomics, metagenomics]
+tags: "[galaxy, bioinformatics, tool-discovery, workflows, NGS, genomics, proteomics, metagenomics]"
 metadata:
   openclaw:
     requires:

@@ -1,3 +1,14 @@
+---
+name: bio-clip-seq-clip-motif-analysis
+description: Identify enriched sequence motifs at CLIP-seq binding sites for RBP binding specificity. Use when characterizing the sequence preferences of an RNA-binding protein.
+tool_type: cli
+primary_tool: HOMER
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-clip-seq-clip-motif-analysis
-description: Identify enriched sequence motifs at CLIP-seq binding sites for RBP binding specificity. Use when characterizing the sequence preferences of an RNA-binding protein.
-tool_type: cli
-primary_tool: HOMER
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # CLIP Motif Analysis
 

@@ -1,3 +1,14 @@
+---
+name: bio-small-rna-seq-mirge3-analysis
+description: Fast miRNA quantification with isomiR detection and A-to-I editing analysis using miRge3. Use when quantifying known miRNAs quickly or analyzing isomiR variants and RNA editing.
+tool_type: python
+primary_tool: miRge3
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-small-rna-seq-mirge3-analysis
-description: Fast miRNA quantification with isomiR detection and A-to-I editing analysis using miRge3. Use when quantifying known miRNAs quickly or analyzing isomiR variants and RNA editing.
-tool_type: python
-primary_tool: miRge3
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # miRge3 Analysis
 

@@ -1,3 +1,14 @@
+---
+name: bio-systems-biology-gene-essentiality
+description: Perform in silico gene knockout analysis and synthetic lethality screens using COBRApy single and double deletions. Predict essential genes and identify synthetic lethal pairs for drug target discovery. Use when identifying essential genes or finding synthetic lethal drug targets.
+tool_type: python
+primary_tool: cobrapy
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-systems-biology-gene-essentiality
-description: Perform in silico gene knockout analysis and synthetic lethality screens using COBRApy single and double deletions. Predict essential genes and identify synthetic lethal pairs for drug target discovery. Use when identifying essential genes or finding synthetic lethal drug targets.
-tool_type: python
-primary_tool: cobrapy
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Gene Essentiality Analysis
 

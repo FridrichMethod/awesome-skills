@@ -1,3 +1,14 @@
+---
+name: bio-workflows-merip-pipeline
+description: End-to-end MeRIP-seq analysis from FASTQ to m6A peaks and differential methylation. Use when analyzing epitranscriptomic m6A modifications from immunoprecipitation data.
+tool_type: mixed
+primary_tool: exomePeak2
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-workflows-merip-pipeline
-description: End-to-end MeRIP-seq analysis from FASTQ to m6A peaks and differential methylation. Use when analyzing epitranscriptomic m6A modifications from immunoprecipitation data.
-tool_type: mixed
-primary_tool: exomePeak2
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # MeRIP-seq Pipeline
 

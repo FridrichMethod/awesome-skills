@@ -1,3 +1,14 @@
+---
+name: bio-genome-intervals-coverage-analysis
+description: Calculate read depth and coverage across genomic intervals using bedtools genomecov and coverage. Generate bedGraph files, compute per-base depth, and summarize coverage statistics. Use when assessing sequencing depth, creating coverage tracks, or evaluating target capture efficiency.
+tool_type: mixed
+primary_tool: bedtools
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-genome-intervals-coverage-analysis
-description: Calculate read depth and coverage across genomic intervals using bedtools genomecov and coverage. Generate bedGraph files, compute per-base depth, and summarize coverage statistics. Use when assessing sequencing depth, creating coverage tracks, or evaluating target capture efficiency.
-tool_type: mixed
-primary_tool: bedtools
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Coverage Analysis
 

@@ -1,10 +1,6 @@
 ---
 name: ontology-validator
-description: >
-  Validate material sample annotations and data structures against ontology constraints.
-  Use when checking if CMSO annotations are correct, verifying that required properties are
-  present, or validating that object property relationships have consistent domain and range.
-  Catches unknown classes, unknown properties, domain mismatches, and missing required fields.
+description: "Validate material sample annotations and data structures against ontology constraints. Use when checking if CMSO annotations are correct, verifying that required properties are present, or validating that object property relationships have consistent domain and range. Catches unknown classes, unknown properties, domain mismatches, and missing required fields."
 allowed-tools: Read, Bash
 ---
 

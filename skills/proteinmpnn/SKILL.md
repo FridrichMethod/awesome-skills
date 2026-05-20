@@ -1,19 +1,11 @@
 ---
 name: proteinmpnn
-description: >
-  Design protein sequences using ProteinMPNN inverse folding. Use this skill when:
-  (1) Designing sequences for RFdiffusion backbones,
-  (2) Redesigning existing protein sequences,
-  (3) Fixing specific residues while designing others,
-  (4) Optimizing sequences for expression or stability,
-  (5) Multi-state or negative design.
+description: "Design protein sequences using ProteinMPNN inverse folding. Use this skill when: (1) Designing sequences for RFdiffusion backbones, (2) Redesigning existing protein sequences, (3) Fixing specific residues while designing others, (4) Optimizing sequences for expression or stability, (5) Multi-state or negative design.
 
-  For backbone generation, use rfdiffusion or bindcraft.
-  For ligand-aware design, use ligandmpnn.
-  For solubility optimization, use solublempnn.
+For backbone generation, use rfdiffusion or bindcraft. For ligand-aware design, use ligandmpnn. For solubility optimization, use solublempnn."
 license: MIT
 category: design-tools
-tags: [sequence-design, inverse-folding]
+tags: "[sequence-design, inverse-folding]"
 biomodals_script: modal_ligandmpnn.py
 ---
 

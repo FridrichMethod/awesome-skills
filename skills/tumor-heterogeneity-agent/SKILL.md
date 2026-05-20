@@ -1,3 +1,12 @@
+---
+name: 'tumor-heterogeneity-agent'
+description: 'AI-powered intratumor heterogeneity analysis for clonal architecture reconstruction, subclonal evolution tracking, and therapy resistance prediction using multi-region and longitudinal sequencing.'
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,14 +20,6 @@
 
 -->
 
----
-name: 'tumor-heterogeneity-agent'
-description: 'AI-powered intratumor heterogeneity analysis for clonal architecture reconstruction, subclonal evolution tracking, and therapy resistance prediction using multi-region and longitudinal sequencing.'
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 
 # Tumor Heterogeneity Agent

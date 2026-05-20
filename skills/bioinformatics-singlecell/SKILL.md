@@ -1,3 +1,9 @@
+---
+name: bioinformatics-singlecell
+description: "Advanced single-cell multi-omics analysis including scRNA-seq, scCITE-seq, scATAC-seq, and TARGET-seq. Use when analyzing single-cell data, cell type identification, trajectory analysis, differential expression, UMAP/clustering, integrating protein and RNA modalities (TotalVI), or working with Scanpy, Seurat, scvi-tools. Includes workflows for MPN, hematologic malignancies, megakaryocyte biology."
+license: Proprietary
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,11 +17,6 @@
 
 -->
 
----
-name: bioinformatics-singlecell
-description: "Advanced single-cell multi-omics analysis including scRNA-seq, scCITE-seq, scATAC-seq, and TARGET-seq. Use when analyzing single-cell data, cell type identification, trajectory analysis, differential expression, UMAP/clustering, integrating protein and RNA modalities (TotalVI), or working with Scanpy, Seurat, scvi-tools. Includes workflows for MPN, hematologic malignancies, megakaryocyte biology."
-license: Proprietary
----
 
 # Single-Cell Multi-Omics Analysis
 

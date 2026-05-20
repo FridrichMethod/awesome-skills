@@ -1,3 +1,14 @@
+---
+name: bio-workflows-clip-pipeline
+description: End-to-end CLIP-seq analysis from FASTQ to binding sites and motif enrichment. Use when analyzing protein-RNA interactions from CLIP-based methods.
+tool_type: mixed
+primary_tool: CLIPper
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-workflows-clip-pipeline
-description: End-to-end CLIP-seq analysis from FASTQ to binding sites and motif enrichment. Use when analyzing protein-RNA interactions from CLIP-based methods.
-tool_type: mixed
-primary_tool: CLIPper
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # CLIP-seq Pipeline
 

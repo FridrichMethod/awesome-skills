@@ -1,3 +1,14 @@
+---
+name: bio-genome-assembly-assembly-polishing
+description: Polish genome assemblies to reduce errors using short reads (Pilon), long reads (Racon), or ONT-specific tools (medaka). Essential for improving long-read assembly accuracy. Use when improving assembly accuracy with polishing tools.
+tool_type: cli
+primary_tool: Pilon
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-genome-assembly-assembly-polishing
-description: Polish genome assemblies to reduce errors using short reads (Pilon), long reads (Racon), or ONT-specific tools (medaka). Essential for improving long-read assembly accuracy. Use when improving assembly accuracy with polishing tools.
-tool_type: cli
-primary_tool: Pilon
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Assembly Polishing
 

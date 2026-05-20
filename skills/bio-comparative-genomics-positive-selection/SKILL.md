@@ -1,3 +1,14 @@
+---
+name: bio-comparative-genomics-positive-selection
+description: Detect positive selection using dN/dS (omega) tests with PAML codeml and HyPhy. Identify sites and branches under adaptive evolution through codon models and branch-site tests. Use when testing for adaptive evolution in gene families or identifying positively selected sites.
+tool_type: mixed
+primary_tool: PAML
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-comparative-genomics-positive-selection
-description: Detect positive selection using dN/dS (omega) tests with PAML codeml and HyPhy. Identify sites and branches under adaptive evolution through codon models and branch-site tests. Use when testing for adaptive evolution in gene families or identifying positively selected sites.
-tool_type: mixed
-primary_tool: PAML
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Positive Selection Analysis
 

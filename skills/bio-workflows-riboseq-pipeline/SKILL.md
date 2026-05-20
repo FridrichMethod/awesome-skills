@@ -1,3 +1,14 @@
+---
+name: bio-workflows-riboseq-pipeline
+description: End-to-end Ribo-seq analysis from FASTQ to translation efficiency and ORF detection. Use when analyzing ribosome profiling data to study translation.
+tool_type: mixed
+primary_tool: Plastid
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-workflows-riboseq-pipeline
-description: End-to-end Ribo-seq analysis from FASTQ to translation efficiency and ORF detection. Use when analyzing ribosome profiling data to study translation.
-tool_type: mixed
-primary_tool: Plastid
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Ribo-seq Pipeline
 

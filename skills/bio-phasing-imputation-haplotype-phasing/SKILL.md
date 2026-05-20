@@ -1,3 +1,14 @@
+---
+name: bio-phasing-imputation-haplotype-phasing
+description: Phase genotypes into haplotypes using Beagle or SHAPEIT. Resolves which alleles are inherited together on each chromosome. Use when preparing VCF files for imputation, HLA typing, or population genetic analyses requiring phased haplotypes.
+tool_type: cli
+primary_tool: beagle
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-phasing-imputation-haplotype-phasing
-description: Phase genotypes into haplotypes using Beagle or SHAPEIT. Resolves which alleles are inherited together on each chromosome. Use when preparing VCF files for imputation, HLA typing, or population genetic analyses requiring phased haplotypes.
-tool_type: cli
-primary_tool: beagle
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Haplotype Phasing
 

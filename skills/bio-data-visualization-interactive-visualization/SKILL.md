@@ -1,3 +1,14 @@
+---
+name: bio-data-visualization-interactive-visualization
+description: Create interactive HTML plots with plotly and bokeh for exploratory data analysis and web-based sharing of omics visualizations. Use when building zoomable, hoverable plots for data exploration or web dashboards.
+tool_type: mixed
+primary_tool: plotly
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-data-visualization-interactive-visualization
-description: Create interactive HTML plots with plotly and bokeh for exploratory data analysis and web-based sharing of omics visualizations. Use when building zoomable, hoverable plots for data exploration or web dashboards.
-tool_type: mixed
-primary_tool: plotly
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Interactive Visualization
 

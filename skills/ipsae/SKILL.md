@@ -1,18 +1,11 @@
 ---
 name: ipsae
-description: >
-  Binder design ranking using ipSAE (interprotein Score from Aligned Errors).
-  Use this skill when: (1) Ranking binder designs for experimental testing,
-  (2) Filtering BindCraft or RFdiffusion outputs,
-  (3) Comparing AF2/AF3/Boltz predictions,
-  (4) Predicting binding success rates,
-  (5) Need better ranking than ipTM or iPAE.
+description: "Binder design ranking using ipSAE (interprotein Score from Aligned Errors). Use this skill when: (1) Ranking binder designs for experimental testing, (2) Filtering BindCraft or RFdiffusion outputs, (3) Comparing AF2/AF3/Boltz predictions, (4) Predicting binding success rates, (5) Need better ranking than ipTM or iPAE.
 
-  For structure prediction, use chai or alphafold.
-  For QC thresholds, use protein-qc.
+For structure prediction, use chai or alphafold. For QC thresholds, use protein-qc."
 license: MIT
 category: evaluation
-tags: [ranking, scoring, binding]
+tags: "[ranking, scoring, binding]"
 ---
 
 # ipSAE Binder Ranking

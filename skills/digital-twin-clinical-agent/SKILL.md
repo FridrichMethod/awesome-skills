@@ -1,3 +1,12 @@
+---
+name: 'digital-twin-clinical-agent'
+description: 'AI-powered patient digital twin creation for clinical trial simulation, treatment outcome prediction, and personalized medicine using real-world data and multi-omics integration.'
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,14 +20,6 @@
 
 -->
 
----
-name: 'digital-twin-clinical-agent'
-description: 'AI-powered patient digital twin creation for clinical trial simulation, treatment outcome prediction, and personalized medicine using real-world data and multi-omics integration.'
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 
 # Digital Twin Clinical Agent

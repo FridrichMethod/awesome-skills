@@ -1,3 +1,14 @@
+---
+name: bio-data-visualization-upset-plots
+description: Create UpSet plots to visualize set intersections as an alternative to Venn diagrams using UpSetR or upsetplot. Use when comparing overlapping gene sets, peak sets, or sample groups with more than 3 sets.
+tool_type: mixed
+primary_tool: UpSetR
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-data-visualization-upset-plots
-description: Create UpSet plots to visualize set intersections as an alternative to Venn diagrams using UpSetR or upsetplot. Use when comparing overlapping gene sets, peak sets, or sample groups with more than 3 sets.
-tool_type: mixed
-primary_tool: UpSetR
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # UpSet Plots
 

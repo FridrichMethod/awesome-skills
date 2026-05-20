@@ -1,3 +1,14 @@
+---
+name: bio-uniprot-access
+description: Access UniProt protein database for sequences, annotations, and functional information. Use when retrieving protein data, GO terms, domain annotations, or protein-protein interactions.
+tool_type: python
+primary_tool: requests
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-uniprot-access
-description: Access UniProt protein database for sequences, annotations, and functional information. Use when retrieving protein data, GO terms, domain annotations, or protein-protein interactions.
-tool_type: python
-primary_tool: requests
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # UniProt Access
 

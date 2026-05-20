@@ -1,12 +1,11 @@
 ---
 name: chemist-analyst
 version: 1.0.0
-description: |
-  Analyzes events through chemistry lens using molecular structure, reaction mechanisms, thermodynamics,
-  kinetics, and analytical techniques (spectroscopy, chromatography, mass spectrometry).
-  Provides insights on chemical processes, material properties, reaction pathways, synthesis, and analytical methods.
-  Use when: Chemical reactions, material analysis, synthesis planning, process optimization, environmental chemistry.
-  Evaluates: Molecular structure, reaction mechanisms, yield, selectivity, safety, environmental impact.
+description: "Analyzes events through chemistry lens using molecular structure, reaction mechanisms, thermodynamics,
+kinetics, and analytical techniques (spectroscopy, chromatography, mass spectrometry).
+Provides insights on chemical processes, material properties, reaction pathways, synthesis, and analytical methods.
+Use when: Chemical reactions, material analysis, synthesis planning, process optimization, environmental chemistry.
+Evaluates: Molecular structure, reaction mechanisms, yield, selectivity, safety, environmental impact."
 ---
 
 # Chemist Analyst Skill

@@ -1,19 +1,11 @@
 ---
 name: chai
-description: >
-  Structure prediction using Chai-1, a foundation model for molecular structure.
-  Use this skill when: (1) Predicting protein-protein complex structures,
-  (2) Validating designed binders,
-  (3) Predicting protein-ligand complexes,
-  (4) Using the Chai API for high-throughput prediction,
-  (5) Need an alternative to AlphaFold2.
+description: "Structure prediction using Chai-1, a foundation model for molecular structure. Use this skill when: (1) Predicting protein-protein complex structures, (2) Validating designed binders, (3) Predicting protein-ligand complexes, (4) Using the Chai API for high-throughput prediction, (5) Need an alternative to AlphaFold2.
 
-  For QC thresholds, use protein-qc.
-  For AlphaFold2 prediction, use alphafold.
-  For ESM-based analysis, use esm.
+For QC thresholds, use protein-qc. For AlphaFold2 prediction, use alphafold. For ESM-based analysis, use esm."
 license: MIT
 category: design-tools
-tags: [structure-prediction, validation, foundation-model]
+tags: "[structure-prediction, validation, foundation-model]"
 biomodals_script: modal_chai1.py
 ---
 

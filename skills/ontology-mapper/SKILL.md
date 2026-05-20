@@ -1,11 +1,6 @@
 ---
 name: ontology-mapper
-description: >
-  Map materials science terms, crystal structures, and sample descriptions to ontology classes
-  and properties. Supports any ontology registered in ontology_registry.json. Use when translating
-  natural-language material descriptions to ontology terms, annotating simulation inputs with
-  ontology metadata, or mapping crystal parameters (space group, Bravais lattice, lattice constants)
-  to standardized ontology representations.
+description: "Map materials science terms, crystal structures, and sample descriptions to ontology classes and properties. Supports any ontology registered in ontology_registry.json. Use when translating natural-language material descriptions to ontology terms, annotating simulation inputs with ontology metadata, or mapping crystal parameters (space group, Bravais lattice, lattice constants) to standardized ontology representations."
 allowed-tools: Read, Bash
 ---
 

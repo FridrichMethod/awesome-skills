@@ -1,3 +1,14 @@
+---
+name: bio-comparative-genomics-ancestral-reconstruction
+description: Reconstruct ancestral sequences at phylogenetic nodes using PAML and IQ-TREE marginal likelihood methods. Infer ancient protein sequences and trace evolutionary trajectories through sequence history. Use when inferring ancestral states for protein resurrection or tracing evolutionary history.
+tool_type: mixed
+primary_tool: PAML
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-comparative-genomics-ancestral-reconstruction
-description: Reconstruct ancestral sequences at phylogenetic nodes using PAML and IQ-TREE marginal likelihood methods. Infer ancient protein sequences and trace evolutionary trajectories through sequence history. Use when inferring ancestral states for protein resurrection or tracing evolutionary history.
-tool_type: mixed
-primary_tool: PAML
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Ancestral Sequence Reconstruction
 

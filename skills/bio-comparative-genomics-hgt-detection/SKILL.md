@@ -1,3 +1,14 @@
+---
+name: bio-comparative-genomics-hgt-detection
+description: Detect horizontal gene transfer events using HGTector, compositional analysis, and phylogenetic incongruence methods. Identify foreign genes in bacterial and archaeal genomes from anomalous composition or unexpected phylogenetic placement. Use when searching for horizontally transferred genes or analyzing genome evolution in prokaryotes.
+tool_type: mixed
+primary_tool: HGTector
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-comparative-genomics-hgt-detection
-description: Detect horizontal gene transfer events using HGTector, compositional analysis, and phylogenetic incongruence methods. Identify foreign genes in bacterial and archaeal genomes from anomalous composition or unexpected phylogenetic placement. Use when searching for horizontally transferred genes or analyzing genome evolution in prokaryotes.
-tool_type: mixed
-primary_tool: HGTector
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Horizontal Gene Transfer Detection
 

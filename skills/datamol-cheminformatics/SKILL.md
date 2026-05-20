@@ -1,11 +1,6 @@
 ---
 name: datamol-cheminformatics
-description: >-
-  Pythonic RDKit wrapper with sensible defaults for drug discovery. SMILES parsing,
-  standardization, descriptors, fingerprints, similarity, clustering, diversity
-  selection, scaffold analysis, BRICS/RECAP fragmentation, 3D conformers, and
-  visualization. Returns native rdkit.Chem.Mol. Prefer datamol for standard
-  workflows; use RDKit directly for advanced control.
+description: "Pythonic RDKit wrapper with sensible defaults for drug discovery. SMILES parsing, standardization, descriptors, fingerprints, similarity, clustering, diversity selection, scaffold analysis, BRICS/RECAP fragmentation, 3D conformers, and visualization. Returns native rdkit.Chem.Mol. Prefer datamol for standard workflows; use RDKit directly for advanced control."
 license: Apache-2.0
 ---
 

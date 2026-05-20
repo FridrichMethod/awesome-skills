@@ -1,12 +1,11 @@
 ---
 name: psychologist-analyst
 version: 1.0.0
-description: |
-  Analyzes events through psychological lens using cognitive psychology, social psychology, developmental psychology,
-  clinical psychology, and neuroscience. Provides insights on behavior, cognition, emotion, motivation, group dynamics,
-  decision-making biases, mental health, and individual differences.
-  Use when: Behavioral patterns, decision-making, group behavior, mental health, leadership, persuasion, trauma, development.
-  Evaluates: Cognitive processes, emotional responses, motivations, biases, group dynamics, personality, mental states.
+description: "Analyzes events through psychological lens using cognitive psychology, social psychology, developmental psychology,
+clinical psychology, and neuroscience. Provides insights on behavior, cognition, emotion, motivation, group dynamics,
+decision-making biases, mental health, and individual differences.
+Use when: Behavioral patterns, decision-making, group behavior, mental health, leadership, persuasion, trauma, development.
+Evaluates: Cognitive processes, emotional responses, motivations, biases, group dynamics, personality, mental states."
 ---
 
 # Psychologist Analyst Skill

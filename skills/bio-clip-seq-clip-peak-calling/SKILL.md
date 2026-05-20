@@ -1,3 +1,14 @@
+---
+name: bio-clip-seq-clip-peak-calling
+description: Call protein-RNA binding site peaks from CLIP-seq data using CLIPper, PureCLIP, or Piranha. Use when identifying RBP binding sites from aligned CLIP reads.
+tool_type: cli
+primary_tool: CLIPper
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-clip-seq-clip-peak-calling
-description: Call protein-RNA binding site peaks from CLIP-seq data using CLIPper, PureCLIP, or Piranha. Use when identifying RBP binding sites from aligned CLIP reads.
-tool_type: cli
-primary_tool: CLIPper
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # CLIP-seq Peak Calling
 

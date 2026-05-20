@@ -1,3 +1,12 @@
+---
+name: 'scfoundation-model-agent'
+description: 'Unified agent for leveraging single-cell foundation models (scGPT, scBERT, Geneformer, scFoundation) for cross-species annotation, perturbation prediction, and gene network inference.'
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,14 +20,6 @@
 
 -->
 
----
-name: 'scfoundation-model-agent'
-description: 'Unified agent for leveraging single-cell foundation models (scGPT, scBERT, Geneformer, scFoundation) for cross-species annotation, perturbation prediction, and gene network inference.'
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 
 # scFoundation Model Agent

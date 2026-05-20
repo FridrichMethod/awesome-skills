@@ -1,3 +1,9 @@
+---
+name: ngs-analysis
+description: "Next-generation sequencing data analysis pipelines including bulk RNA-seq, scRNA-seq preprocessing, variant calling, and quality control. Use when working with FASTQ files, alignment (STAR, BWA), quantification (featureCounts, Salmon), DESeq2/edgeR analysis, or building NGS pipelines. Supports GEO/SRA data retrieval."
+license: Proprietary
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,11 +17,6 @@
 
 -->
 
----
-name: ngs-analysis
-description: "Next-generation sequencing data analysis pipelines including bulk RNA-seq, scRNA-seq preprocessing, variant calling, and quality control. Use when working with FASTQ files, alignment (STAR, BWA), quantification (featureCounts, Salmon), DESeq2/edgeR analysis, or building NGS pipelines. Supports GEO/SRA data retrieval."
-license: Proprietary
----
 
 # NGS Data Analysis Pipelines
 

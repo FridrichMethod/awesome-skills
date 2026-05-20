@@ -1,3 +1,14 @@
+---
+name: bio-alignment-files-bam-statistics
+description: Generate alignment statistics using samtools flagstat, stats, depth, and coverage. Use when assessing alignment quality, calculating coverage, or generating QC reports.
+tool_type: cli
+primary_tool: samtools
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-alignment-files-bam-statistics
-description: Generate alignment statistics using samtools flagstat, stats, depth, and coverage. Use when assessing alignment quality, calculating coverage, or generating QC reports.
-tool_type: cli
-primary_tool: samtools
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # BAM Statistics
 

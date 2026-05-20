@@ -1,3 +1,14 @@
+---
+name: bio-primer-design-primer-validation
+description: Validate PCR primers for specificity, dimers, hairpins, and secondary structures using primer3-py thermodynamic calculations. Check self-complementarity, heterodimer formation, and 3' stability. Use when validating primer specificity and properties.
+tool_type: python
+primary_tool: primer3-py
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-primer-design-primer-validation
-description: Validate PCR primers for specificity, dimers, hairpins, and secondary structures using primer3-py thermodynamic calculations. Check self-complementarity, heterodimer formation, and 3' stability. Use when validating primer specificity and properties.
-tool_type: python
-primary_tool: primer3-py
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Primer Validation
 

@@ -1,3 +1,14 @@
+---
+name: bio-genome-assembly-short-read-assembly
+description: De novo genome assembly from Illumina short reads using SPAdes. Covers bacterial, fungal, and small eukaryotic genome assembly, as well as metagenome and transcriptome assembly modes. Use when assembling genomes from Illumina reads.
+tool_type: cli
+primary_tool: SPAdes
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-genome-assembly-short-read-assembly
-description: De novo genome assembly from Illumina short reads using SPAdes. Covers bacterial, fungal, and small eukaryotic genome assembly, as well as metagenome and transcriptome assembly modes. Use when assembling genomes from Illumina reads.
-tool_type: cli
-primary_tool: SPAdes
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Short-Read Assembly
 

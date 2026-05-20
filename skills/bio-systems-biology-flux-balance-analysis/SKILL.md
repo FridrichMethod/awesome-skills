@@ -1,3 +1,14 @@
+---
+name: bio-systems-biology-flux-balance-analysis
+description: Perform flux balance analysis (FBA) and flux variability analysis (FVA) on genome-scale metabolic models using COBRApy. Predict growth rates, metabolic fluxes, and optimal resource utilization. Use when predicting metabolic phenotypes or optimizing flux distributions.
+tool_type: python
+primary_tool: cobrapy
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-systems-biology-flux-balance-analysis
-description: Perform flux balance analysis (FBA) and flux variability analysis (FVA) on genome-scale metabolic models using COBRApy. Predict growth rates, metabolic fluxes, and optimal resource utilization. Use when predicting metabolic phenotypes or optimizing flux distributions.
-tool_type: python
-primary_tool: cobrapy
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Flux Balance Analysis
 

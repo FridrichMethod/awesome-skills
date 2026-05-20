@@ -1,3 +1,14 @@
+---
+name: bio-small-rna-seq-mirdeep2-analysis
+description: Discover novel miRNAs and quantify known miRNAs using miRDeep2 de novo prediction from small RNA-seq data. Use when identifying new miRNAs or performing comprehensive miRNA profiling with discovery.
+tool_type: cli
+primary_tool: miRDeep2
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-small-rna-seq-mirdeep2-analysis
-description: Discover novel miRNAs and quantify known miRNAs using miRDeep2 de novo prediction from small RNA-seq data. Use when identifying new miRNAs or performing comprehensive miRNA profiling with discovery.
-tool_type: cli
-primary_tool: miRDeep2
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # miRDeep2 Analysis
 

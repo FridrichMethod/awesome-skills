@@ -1,3 +1,12 @@
+---
+name: 'opentrons-protocol-agent'
+description: 'Generates executable Python protocols for Opentrons OT-2 and Flex robots from natural language descriptions.'
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,14 +20,6 @@
 
 -->
 
----
-name: 'opentrons-protocol-agent'
-description: 'Generates executable Python protocols for Opentrons OT-2 and Flex robots from natural language descriptions.'
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 
 # Opentrons Protocol Agent

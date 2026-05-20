@@ -1,3 +1,14 @@
+---
+name: bio-reporting-figure-export
+description: Exports publication-ready figures in various formats with proper resolution, sizing, and typography. Use when preparing figures for journal submission, creating vector graphics for presentations, or ensuring consistent figure styling across analyses.
+tool_type: mixed
+primary_tool: matplotlib
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-reporting-figure-export
-description: Exports publication-ready figures in various formats with proper resolution, sizing, and typography. Use when preparing figures for journal submission, creating vector graphics for presentations, or ensuring consistent figure styling across analyses.
-tool_type: mixed
-primary_tool: matplotlib
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Publication-Ready Figure Export
 

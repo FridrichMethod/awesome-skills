@@ -1,3 +1,14 @@
+---
+name: bio-local-blast
+description: Run local BLAST searches using BLAST+ command-line tools. Use when running fast unlimited searches, building custom databases, performing large-scale analysis, or when NCBI servers are slow or unavailable.
+tool_type: cli
+primary_tool: BLAST+
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-local-blast
-description: Run local BLAST searches using BLAST+ command-line tools. Use when running fast unlimited searches, building custom databases, performing large-scale analysis, or when NCBI servers are slow or unavailable.
-tool_type: cli
-primary_tool: BLAST+
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Local BLAST
 

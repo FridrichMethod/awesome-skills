@@ -1,3 +1,14 @@
+---
+name: bio-experimental-design-multiple-testing
+description: Applies multiple testing correction methods including FDR, Bonferroni, and q-value for genomics data. Use when filtering differential expression results, setting significance thresholds, or choosing between correction methods for different study designs.
+tool_type: r
+primary_tool: qvalue
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-experimental-design-multiple-testing
-description: Applies multiple testing correction methods including FDR, Bonferroni, and q-value for genomics data. Use when filtering differential expression results, setting significance thresholds, or choosing between correction methods for different study designs.
-tool_type: r
-primary_tool: qvalue
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Multiple Testing Correction
 

@@ -1,3 +1,14 @@
+---
+name: bio-population-genetics-scikit-allel-analysis
+description: Python population genetics with scikit-allel. Read VCF files, compute allele frequencies, calculate diversity statistics, perform PCA, and run selection scans using GenotypeArray and HaplotypeArray data structures. Use when analyzing population genetics in Python.
+tool_type: python
+primary_tool: scikit-allel
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-population-genetics-scikit-allel-analysis
-description: Python population genetics with scikit-allel. Read VCF files, compute allele frequencies, calculate diversity statistics, perform PCA, and run selection scans using GenotypeArray and HaplotypeArray data structures. Use when analyzing population genetics in Python.
-tool_type: python
-primary_tool: scikit-allel
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # scikit-allel Analysis
 

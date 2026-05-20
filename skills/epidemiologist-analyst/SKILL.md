@@ -1,12 +1,11 @@
 ---
 name: epidemiologist-analyst
 version: 1.0.0
-description: |
-  Analyzes disease patterns and health events through epidemiological lens using surveillance systems,
-  outbreak investigation methods, and disease modeling frameworks.
-  Provides insights on disease spread, risk factors, prevention strategies, and public health interventions.
-  Use when: Disease outbreaks, health policy evaluation, risk assessment, intervention planning.
-  Evaluates: Transmission dynamics, risk factors, causality, population health impact, intervention effectiveness.
+description: "Analyzes disease patterns and health events through epidemiological lens using surveillance systems,
+outbreak investigation methods, and disease modeling frameworks.
+Provides insights on disease spread, risk factors, prevention strategies, and public health interventions.
+Use when: Disease outbreaks, health policy evaluation, risk assessment, intervention planning.
+Evaluates: Transmission dynamics, risk factors, causality, population health impact, intervention effectiveness."
 ---
 
 # Epidemiologist Analyst Skill

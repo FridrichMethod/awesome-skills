@@ -1,3 +1,12 @@
+---
+name: 'cellfree-rna-agent'
+description: 'AI-powered cell-free RNA analysis from liquid biopsy for cancer detection, tissue-of-origin identification, and non-invasive transcriptomic profiling.'
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,14 +20,6 @@
 
 -->
 
----
-name: 'cellfree-rna-agent'
-description: 'AI-powered cell-free RNA analysis from liquid biopsy for cancer detection, tissue-of-origin identification, and non-invasive transcriptomic profiling.'
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 
 # Cell-Free RNA Analysis Agent

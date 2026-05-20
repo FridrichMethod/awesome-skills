@@ -1,18 +1,11 @@
 ---
 name: alphafold
-description: >
-  Validate protein designs using AlphaFold2 structure prediction. Use this skill when:
-  (1) Validating designed sequences fold correctly,
-  (2) Predicting binder-target complex structures,
-  (3) Calculating confidence metrics (pLDDT, pTM, ipTM),
-  (4) Self-consistency validation of designs,
-  (5) Multi-chain complex prediction with AlphaFold-Multimer.
+description: "Validate protein designs using AlphaFold2 structure prediction. Use this skill when: (1) Validating designed sequences fold correctly, (2) Predicting binder-target complex structures, (3) Calculating confidence metrics (pLDDT, pTM, ipTM), (4) Self-consistency validation of designs, (5) Multi-chain complex prediction with AlphaFold-Multimer.
 
-  For faster single-chain prediction, use esm.
-  For QC thresholds, use protein-qc.
+For faster single-chain prediction, use esm. For QC thresholds, use protein-qc."
 license: MIT
 category: design-tools
-tags: [structure-prediction, validation, reference]
+tags: "[structure-prediction, validation, reference]"
 biomodals_script: modal_alphafold.py
 ---
 

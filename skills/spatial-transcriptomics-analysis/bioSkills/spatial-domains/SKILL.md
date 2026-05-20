@@ -1,3 +1,14 @@
+---
+name: bio-spatial-transcriptomics-spatial-domains
+description: Identify spatial domains and tissue regions in spatial transcriptomics data using Squidpy and Scanpy. Cluster spots considering both expression and spatial context to define anatomical regions. Use when identifying tissue domains or spatial regions.
+tool_type: python
+primary_tool: squidpy
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-spatial-transcriptomics-spatial-domains
-description: Identify spatial domains and tissue regions in spatial transcriptomics data using Squidpy and Scanpy. Cluster spots considering both expression and spatial context to define anatomical regions. Use when identifying tissue domains or spatial regions.
-tool_type: python
-primary_tool: squidpy
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Spatial Domain Detection
 

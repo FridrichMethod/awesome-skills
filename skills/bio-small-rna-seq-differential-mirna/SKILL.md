@@ -1,3 +1,14 @@
+---
+name: bio-small-rna-seq-differential-mirna
+description: Perform differential expression analysis of miRNAs between conditions using DESeq2 or edgeR with small RNA-specific considerations. Use when identifying miRNAs that change between treatment groups, disease states, or developmental stages.
+tool_type: r
+primary_tool: DESeq2
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-small-rna-seq-differential-mirna
-description: Perform differential expression analysis of miRNAs between conditions using DESeq2 or edgeR with small RNA-specific considerations. Use when identifying miRNAs that change between treatment groups, disease states, or developmental stages.
-tool_type: r
-primary_tool: DESeq2
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Differential miRNA Expression
 

@@ -1,3 +1,11 @@
+---
+name: trial-eligibility-agent
+description: Parse trial protocols and patient data to produce criterion-level MET/NOT/UNKNOWN determinations with evidence and gaps for clinical trial screening tasks.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,13 +19,6 @@
 
 -->
 
----
-name: trial-eligibility-agent
-description: Parse trial protocols and patient data to produce criterion-level MET/NOT/UNKNOWN determinations with evidence and gaps for clinical trial screening tasks.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 ## At-a-Glance
 - **description (10-20 chars):** Trial triage hub

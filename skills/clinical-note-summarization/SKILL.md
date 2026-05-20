@@ -1,3 +1,11 @@
+---
+name: clinical-note-summarization
+description: Structure raw clinical notes into SOAP-format summaries with explicit contradictions, missing data, and ICD-linked assessments using the provided prompt + usage script.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,13 +19,6 @@
 
 -->
 
----
-name: clinical-note-summarization
-description: Structure raw clinical notes into SOAP-format summaries with explicit contradictions, missing data, and ICD-linked assessments using the provided prompt + usage script.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 ## At-a-Glance
 - **description (10-20 chars):** SOAP builder

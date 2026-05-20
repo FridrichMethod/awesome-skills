@@ -1,19 +1,11 @@
 ---
 name: boltzgen
-description: >
-  All-atom protein design using BoltzGen diffusion model. Use this skill when:
-  (1) Need side-chain aware design from the start,
-  (2) Designing around small molecules or ligands,
-  (3) Want all-atom diffusion (not just backbone),
-  (4) Require precise binding geometries,
-  (5) Using YAML-based configuration.
+description: "All-atom protein design using BoltzGen diffusion model. Use this skill when: (1) Need side-chain aware design from the start, (2) Designing around small molecules or ligands, (3) Want all-atom diffusion (not just backbone), (4) Require precise binding geometries, (5) Using YAML-based configuration.
 
-  For backbone-only generation, use rfdiffusion.
-  For sequence-only design, use proteinmpnn.
-  For structure validation, use boltz.
+For backbone-only generation, use rfdiffusion. For sequence-only design, use proteinmpnn. For structure validation, use boltz."
 license: MIT
 category: design-tools
-tags: [structure-design, sequence-design, diffusion, all-atom, binder]
+tags: "[structure-design, sequence-design, diffusion, all-atom, binder]"
 proteinbase_slug: boltzgen
 proteinbase_url: https://proteinbase.com/design-methods/boltzgen
 biomodals_script: modal_boltzgen.py

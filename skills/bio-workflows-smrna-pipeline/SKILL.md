@@ -1,3 +1,14 @@
+---
+name: bio-workflows-smrna-pipeline
+description: End-to-end small RNA-seq analysis from FASTQ to differential miRNA expression. Use when analyzing miRNA, piRNA, or other small RNA sequencing data.
+tool_type: mixed
+primary_tool: miRDeep2
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-workflows-smrna-pipeline
-description: End-to-end small RNA-seq analysis from FASTQ to differential miRNA expression. Use when analyzing miRNA, piRNA, or other small RNA sequencing data.
-tool_type: mixed
-primary_tool: miRDeep2
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Small RNA-seq Pipeline
 

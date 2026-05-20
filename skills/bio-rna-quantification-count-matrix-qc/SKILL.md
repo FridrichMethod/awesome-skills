@@ -1,3 +1,14 @@
+---
+name: bio-rna-quantification-count-matrix-qc
+description: Quality control and exploration of RNA-seq count matrices before differential expression. Check for outliers, batch effects, and sample relationships. Use when assessing count matrix quality before DE analysis.
+tool_type: mixed
+primary_tool: DESeq2
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-rna-quantification-count-matrix-qc
-description: Quality control and exploration of RNA-seq count matrices before differential expression. Check for outliers, batch effects, and sample relationships. Use when assessing count matrix quality before DE analysis.
-tool_type: mixed
-primary_tool: DESeq2
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Count Matrix QC
 

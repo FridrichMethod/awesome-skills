@@ -1,3 +1,14 @@
+---
+name: bio-restriction-enzyme-selection
+description: Select restriction enzymes by criteria using Biopython Bio.Restriction. Find enzymes that cut once, don't cut, produce specific overhangs, are commercially available, or have compatible ends for cloning. Use when selecting restriction enzymes for cloning or analysis.
+tool_type: python
+primary_tool: Bio.Restriction
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-restriction-enzyme-selection
-description: Select restriction enzymes by criteria using Biopython Bio.Restriction. Find enzymes that cut once, don't cut, produce specific overhangs, are commercially available, or have compatible ends for cloning. Use when selecting restriction enzymes for cloning or analysis.
-tool_type: python
-primary_tool: Bio.Restriction
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Enzyme Selection
 

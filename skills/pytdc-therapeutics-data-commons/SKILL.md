@@ -1,10 +1,6 @@
 ---
 name: pytdc-therapeutics-data-commons
-description: >
-  Therapeutics Data Commons (TDC) AI-ready drug discovery datasets. Curated ADME,
-  toxicity, DTI, DDI with scaffold/cold splits, standardized metrics, molecular oracles,
-  and ADMET benchmarks for therapeutic ML and property prediction. For chemical database
-  queries use chembl-database-bioactivity; for featurization use molfeat.
+description: "Therapeutics Data Commons (TDC) AI-ready drug discovery datasets. Curated ADME, toxicity, DTI, DDI with scaffold/cold splits, standardized metrics, molecular oracles, and ADMET benchmarks for therapeutic ML and property prediction. For chemical database queries use chembl-database-bioactivity; for featurization use molfeat."
 license: MIT
 ---
 

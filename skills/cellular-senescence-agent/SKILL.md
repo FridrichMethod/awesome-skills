@@ -1,3 +1,12 @@
+---
+name: 'cellular-senescence-agent'
+description: 'AI-powered analysis of cellular senescence for aging research, cancer therapy response, and senolytic drug development.'
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,14 +20,6 @@
 
 -->
 
----
-name: 'cellular-senescence-agent'
-description: 'AI-powered analysis of cellular senescence for aging research, cancer therapy response, and senolytic drug development.'
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 
 # Cellular Senescence Agent

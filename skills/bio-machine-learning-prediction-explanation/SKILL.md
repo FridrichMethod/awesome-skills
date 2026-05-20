@@ -1,3 +1,14 @@
+---
+name: bio-machine-learning-prediction-explanation
+description: Explains machine learning predictions on omics data using SHAP values and LIME for feature attribution. Identifies which genes or features drive classifier decisions. Use when interpreting biomarker classifiers or understanding model predictions.
+tool_type: python
+primary_tool: shap
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-machine-learning-prediction-explanation
-description: Explains machine learning predictions on omics data using SHAP values and LIME for feature attribution. Identifies which genes or features drive classifier decisions. Use when interpreting biomarker classifiers or understanding model predictions.
-tool_type: python
-primary_tool: shap
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Model Interpretation for Omics Classifiers
 

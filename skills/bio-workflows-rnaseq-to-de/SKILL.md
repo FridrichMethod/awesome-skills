@@ -1,16 +1,3 @@
-<!--
-# COPYRIGHT NOTICE
-# This file is part of the "Universal Biomedical Skills" project.
-# Copyright (c) 2026 MD BABU MIA, PhD <md.babu.mia@mssm.edu>
-# All Rights Reserved.
-#
-# This code is proprietary and confidential.
-# Unauthorized copying of this file, via any medium is strictly prohibited.
-#
-# Provenance: Authenticated by MD BABU MIA
-
--->
-
 ---
 name: bio-workflows-rnaseq-to-de
 description: End-to-end RNA-seq workflow from FASTQ files to differential expression results. Covers QC, quantification (Salmon or STAR+featureCounts), and DESeq2 analysis with visualization. Use when running RNA-seq from FASTQ to DE results.
@@ -32,6 +19,20 @@ allowed-tools:
   - read_file
   - run_shell_command
 ---
+
+<!--
+# COPYRIGHT NOTICE
+# This file is part of the "Universal Biomedical Skills" project.
+# Copyright (c) 2026 MD BABU MIA, PhD <md.babu.mia@mssm.edu>
+# All Rights Reserved.
+#
+# This code is proprietary and confidential.
+# Unauthorized copying of this file, via any medium is strictly prohibited.
+#
+# Provenance: Authenticated by MD BABU MIA
+
+-->
+
 
 # RNA-seq to Differential Expression Workflow
 

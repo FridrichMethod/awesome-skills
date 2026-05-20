@@ -1,3 +1,14 @@
+---
+name: bio-systems-biology-model-curation
+description: Validate, gap-fill, and curate genome-scale metabolic models using memote for quality scores and COBRApy for manual curation. Ensure models meet SBML standards and produce biologically meaningful predictions. Use when improving draft models or preparing models for publication.
+tool_type: python
+primary_tool: memote
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-systems-biology-model-curation
-description: Validate, gap-fill, and curate genome-scale metabolic models using memote for quality scores and COBRApy for manual curation. Ensure models meet SBML standards and produce biologically meaningful predictions. Use when improving draft models or preparing models for publication.
-tool_type: python
-primary_tool: memote
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Model Curation
 

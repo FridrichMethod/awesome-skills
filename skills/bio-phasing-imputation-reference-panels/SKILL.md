@@ -1,3 +1,14 @@
+---
+name: bio-phasing-imputation-reference-panels
+description: Download, prepare, and manage reference panels for phasing and imputation. Covers 1000 Genomes, HRC, and TOPMed panels. Use when setting up imputation infrastructure or selecting appropriate reference panels for target populations.
+tool_type: cli
+primary_tool: bcftools
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-phasing-imputation-reference-panels
-description: Download, prepare, and manage reference panels for phasing and imputation. Covers 1000 Genomes, HRC, and TOPMed panels. Use when setting up imputation infrastructure or selecting appropriate reference panels for target populations.
-tool_type: cli
-primary_tool: bcftools
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Reference Panels
 

@@ -1,3 +1,12 @@
+---
+name: 'time-resolved-cryoem-agent'
+description: 'AI-powered time-resolved cryo-EM analysis for capturing protein dynamics, drug-binding kinetics, and conformational transitions for dynamics-based drug discovery.'
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,14 +20,6 @@
 
 -->
 
----
-name: 'time-resolved-cryoem-agent'
-description: 'AI-powered time-resolved cryo-EM analysis for capturing protein dynamics, drug-binding kinetics, and conformational transitions for dynamics-based drug discovery.'
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 
 # Time-Resolved Cryo-EM Agent

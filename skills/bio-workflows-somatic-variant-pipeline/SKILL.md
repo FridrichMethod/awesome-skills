@@ -1,3 +1,14 @@
+---
+name: bio-workflows-somatic-variant-pipeline
+description: End-to-end somatic variant calling from tumor-normal paired samples using Mutect2 or Strelka2. Covers preprocessing, variant calling, filtering, and annotation for cancer genomics. Use when calling somatic mutations from tumor-normal pairs.
+tool_type: cli
+primary_tool: GATK Mutect2
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-workflows-somatic-variant-pipeline
-description: End-to-end somatic variant calling from tumor-normal paired samples using Mutect2 or Strelka2. Covers preprocessing, variant calling, filtering, and annotation for cancer genomics. Use when calling somatic mutations from tumor-normal pairs.
-tool_type: cli
-primary_tool: GATK Mutect2
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Somatic Variant Pipeline
 

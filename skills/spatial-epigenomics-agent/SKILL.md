@@ -1,3 +1,12 @@
+---
+name: 'spatial-epigenomics-agent'
+description: 'AI-powered spatial epigenomics analysis combining chromatin accessibility, histone modifications, and DNA methylation with spatial coordinates for tissue architecture mapping.'
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,14 +20,6 @@
 
 -->
 
----
-name: 'spatial-epigenomics-agent'
-description: 'AI-powered spatial epigenomics analysis combining chromatin accessibility, histone modifications, and DNA methylation with spatial coordinates for tissue architecture mapping.'
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 
 # Spatial Epigenomics Agent

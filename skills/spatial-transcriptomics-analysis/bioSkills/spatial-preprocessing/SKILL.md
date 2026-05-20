@@ -1,3 +1,14 @@
+---
+name: bio-spatial-transcriptomics-spatial-preprocessing
+description: Quality control, filtering, normalization, and feature selection for spatial transcriptomics data. Calculate QC metrics, filter spots/cells, normalize counts, and identify highly variable genes. Use when filtering and normalizing spatial transcriptomics data.
+tool_type: python
+primary_tool: squidpy
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-spatial-transcriptomics-spatial-preprocessing
-description: Quality control, filtering, normalization, and feature selection for spatial transcriptomics data. Calculate QC metrics, filter spots/cells, normalize counts, and identify highly variable genes. Use when filtering and normalizing spatial transcriptomics data.
-tool_type: python
-primary_tool: squidpy
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Spatial Preprocessing
 

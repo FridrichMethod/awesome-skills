@@ -1,11 +1,6 @@
 ---
 name: exploratory-data-analysis
-description: >-
-  Methodology for exploratory data analysis on scientific files. Decision
-  frameworks by data type (tabular, sequence, image, spectral, structural,
-  omics), quality assessment, report generation, format detection across 200+
-  formats. Use when given a data file for initial exploration or to pick an
-  analysis before a pipeline.
+description: "Methodology for exploratory data analysis on scientific files. Decision frameworks by data type (tabular, sequence, image, spectral, structural, omics), quality assessment, report generation, format detection across 200+ formats. Use when given a data file for initial exploration or to pick an analysis before a pipeline."
 license: CC-BY-4.0
 ---
 

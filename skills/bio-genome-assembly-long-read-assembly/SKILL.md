@@ -1,3 +1,14 @@
+---
+name: bio-genome-assembly-long-read-assembly
+description: De novo genome assembly from Oxford Nanopore or PacBio long reads using Flye and Canu. Produces highly contiguous assemblies suitable for complete bacterial genomes and resolving complex regions. Use when assembling genomes from ONT or PacBio reads.
+tool_type: cli
+primary_tool: Flye
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-genome-assembly-long-read-assembly
-description: De novo genome assembly from Oxford Nanopore or PacBio long reads using Flye and Canu. Produces highly contiguous assemblies suitable for complete bacterial genomes and resolving complex regions. Use when assembling genomes from ONT or PacBio reads.
-tool_type: cli
-primary_tool: Flye
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Long-Read Assembly
 

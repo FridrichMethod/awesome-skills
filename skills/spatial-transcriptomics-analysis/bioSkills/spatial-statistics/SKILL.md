@@ -1,3 +1,14 @@
+---
+name: bio-spatial-transcriptomics-spatial-statistics
+description: Compute spatial statistics for spatial transcriptomics data using Squidpy. Calculate Moran's I, Geary's C, spatial autocorrelation, co-occurrence analysis, and neighborhood enrichment. Use when computing spatial autocorrelation or co-occurrence statistics.
+tool_type: python
+primary_tool: squidpy
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-spatial-transcriptomics-spatial-statistics
-description: Compute spatial statistics for spatial transcriptomics data using Squidpy. Calculate Moran's I, Geary's C, spatial autocorrelation, co-occurrence analysis, and neighborhood enrichment. Use when computing spatial autocorrelation or co-occurrence statistics.
-tool_type: python
-primary_tool: squidpy
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Spatial Statistics
 

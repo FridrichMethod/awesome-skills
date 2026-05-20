@@ -1,3 +1,14 @@
+---
+name: bio-population-genetics-selection-statistics
+description: Detect signatures of natural selection using Fst, Tajima's D, iHS, XP-EHH, and other selection statistics. Calculate population differentiation, test for departures from neutrality, and identify selective sweeps with scikit-allel and vcftools. Use when computing selection signatures like Fst or Tajima's D.
+tool_type: mixed
+primary_tool: scikit-allel
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-population-genetics-selection-statistics
-description: Detect signatures of natural selection using Fst, Tajima's D, iHS, XP-EHH, and other selection statistics. Calculate population differentiation, test for departures from neutrality, and identify selective sweeps with scikit-allel and vcftools. Use when computing selection signatures like Fst or Tajima's D.
-tool_type: mixed
-primary_tool: scikit-allel
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Selection Statistics
 

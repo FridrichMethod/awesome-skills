@@ -1,3 +1,14 @@
+---
+name: bio-population-genetics-linkage-disequilibrium
+description: Calculate linkage disequilibrium statistics (r², D'), perform LD pruning for population structure analysis, identify haplotype blocks, and visualize LD patterns using PLINK, scikit-allel, and LDBlockShow. Use when calculating LD or pruning variants.
+tool_type: mixed
+primary_tool: plink2
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-population-genetics-linkage-disequilibrium
-description: Calculate linkage disequilibrium statistics (r², D'), perform LD pruning for population structure analysis, identify haplotype blocks, and visualize LD patterns using PLINK, scikit-allel, and LDBlockShow. Use when calculating LD or pruning variants.
-tool_type: mixed
-primary_tool: plink2
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Linkage Disequilibrium
 

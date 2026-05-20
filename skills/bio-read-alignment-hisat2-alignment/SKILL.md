@@ -1,3 +1,14 @@
+---
+name: bio-read-alignment-hisat2-alignment
+description: Align RNA-seq reads with HISAT2, a memory-efficient splice-aware aligner. Use when STAR's memory requirements are too high or for general RNA-seq alignment.
+tool_type: cli
+primary_tool: HISAT2
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-read-alignment-hisat2-alignment
-description: Align RNA-seq reads with HISAT2, a memory-efficient splice-aware aligner. Use when STAR's memory requirements are too high or for general RNA-seq alignment.
-tool_type: cli
-primary_tool: HISAT2
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # HISAT2 RNA-seq Alignment
 

@@ -1,3 +1,9 @@
+---
+name: mpn-research-assistant
+description: "Myeloproliferative neoplasm (MPN) research expertise including JAK2/CALR/MPL mutations, myelofibrosis, polycythemia vera, essential thrombocythemia. Use for MPN literature search, driver mutation analysis, PPM1D pathway analysis, fibrosis markers, megakaryocyte biology, clinical trial data interpretation, and translational research."
+license: Proprietary
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,11 +17,6 @@
 
 -->
 
----
-name: mpn-research-assistant
-description: "Myeloproliferative neoplasm (MPN) research expertise including JAK2/CALR/MPL mutations, myelofibrosis, polycythemia vera, essential thrombocythemia. Use for MPN literature search, driver mutation analysis, PPM1D pathway analysis, fibrosis markers, megakaryocyte biology, clinical trial data interpretation, and translational research."
-license: Proprietary
----
 
 # MPN Research Assistant
 

@@ -1,3 +1,12 @@
+---
+name: 'cnv-caller-agent'
+description: 'AI-enhanced copy number variation calling and analysis from sequencing data for cancer genomics, constitutional CNV detection, and chromosomal aberration characterization.'
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,14 +20,6 @@
 
 -->
 
----
-name: 'cnv-caller-agent'
-description: 'AI-enhanced copy number variation calling and analysis from sequencing data for cancer genomics, constitutional CNV detection, and chromosomal aberration characterization.'
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 
 # CNV Caller Agent

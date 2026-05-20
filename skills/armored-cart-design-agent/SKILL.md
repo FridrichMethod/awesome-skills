@@ -1,3 +1,12 @@
+---
+name: 'armored-cart-design-agent'
+description: 'AI-powered design of armored CAR-T cells with cytokine/chemokine expression for enhanced solid tumor efficacy, including IL-12, IL-15, IL-18, and IL-7 armoring strategies.'
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,14 +20,6 @@
 
 -->
 
----
-name: 'armored-cart-design-agent'
-description: 'AI-powered design of armored CAR-T cells with cytokine/chemokine expression for enhanced solid tumor efficacy, including IL-12, IL-15, IL-18, and IL-7 armoring strategies.'
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 
 # Armored CAR-T Design Agent

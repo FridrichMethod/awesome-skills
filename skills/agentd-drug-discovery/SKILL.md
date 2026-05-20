@@ -1,3 +1,11 @@
+---
+name: agentd-drug-discovery
+description: Use the AgentD workflow to mine evidence, design molecules, and rank candidates with SAR plus ADMET annotations for early drug discovery tasks.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,13 +19,6 @@
 
 -->
 
----
-name: agentd-drug-discovery
-description: Use the AgentD workflow to mine evidence, design molecules, and rank candidates with SAR plus ADMET annotations for early drug discovery tasks.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 ## At-a-Glance
 - **description (10-20 chars):** Hypothesis foundry

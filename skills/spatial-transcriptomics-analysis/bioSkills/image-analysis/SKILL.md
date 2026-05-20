@@ -1,3 +1,14 @@
+---
+name: bio-spatial-transcriptomics-image-analysis
+description: Process and analyze tissue images from spatial transcriptomics data using Squidpy. Extract image features, segment cells/nuclei, and compute morphological features from H&E or IF images. Use when processing tissue images for spatial transcriptomics.
+tool_type: python
+primary_tool: squidpy
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-spatial-transcriptomics-image-analysis
-description: Process and analyze tissue images from spatial transcriptomics data using Squidpy. Extract image features, segment cells/nuclei, and compute morphological features from H&E or IF images. Use when processing tissue images for spatial transcriptomics.
-tool_type: python
-primary_tool: squidpy
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Image Analysis for Spatial Transcriptomics
 

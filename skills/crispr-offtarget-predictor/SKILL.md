@@ -1,3 +1,12 @@
+---
+name: 'crispr-offtarget-predictor'
+description: 'Predicts potential off-target sites for a given sgRNA sequence using mismatch analysis.'
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,14 +20,6 @@
 
 -->
 
----
-name: 'crispr-offtarget-predictor'
-description: 'Predicts potential off-target sites for a given sgRNA sequence using mismatch analysis.'
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 
 # CRISPR Off-Target Predictor

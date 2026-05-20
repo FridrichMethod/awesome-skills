@@ -1,10 +1,6 @@
 ---
 name: polars-dataframes
-description: >-
-  Fast in-memory DataFrame with lazy evaluation, parallel execution, Arrow backend.
-  Use for tabular data in RAM (1–100 GB) when pandas is too slow. Expression API:
-  select, filter, group_by, joins, pivots, window. Lazy mode enables predicate/projection
-  pushdown. Reads CSV, Parquet, JSON, Excel, DBs, cloud. Larger-than-RAM: Dask; GPU: cuDF.
+description: "Fast in-memory DataFrame with lazy evaluation, parallel execution, Arrow backend. Use for tabular data in RAM (1–100 GB) when pandas is too slow. Expression API: select, filter, group_by, joins, pivots, window. Lazy mode enables predicate/projection pushdown. Reads CSV, Parquet, JSON, Excel, DBs, cloud. Larger-than-RAM: Dask; GPU: cuDF."
 license: MIT
 ---
 

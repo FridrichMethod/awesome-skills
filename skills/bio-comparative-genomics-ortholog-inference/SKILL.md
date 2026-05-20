@@ -1,3 +1,14 @@
+---
+name: bio-comparative-genomics-ortholog-inference
+description: Infer orthologous gene groups across species using OrthoFinder and ProteinOrtho. Identify orthologs, paralogs, and co-orthologs for comparative genomics and functional annotation transfer. Use when identifying gene orthologs across species or building orthogroups for evolutionary analysis.
+tool_type: cli
+primary_tool: OrthoFinder
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-comparative-genomics-ortholog-inference
-description: Infer orthologous gene groups across species using OrthoFinder and ProteinOrtho. Identify orthologs, paralogs, and co-orthologs for comparative genomics and functional annotation transfer. Use when identifying gene orthologs across species or building orthogroups for evolutionary analysis.
-tool_type: cli
-primary_tool: OrthoFinder
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Ortholog Inference
 

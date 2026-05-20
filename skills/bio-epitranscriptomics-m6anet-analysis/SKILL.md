@@ -1,3 +1,14 @@
+---
+name: bio-epitranscriptomics-m6anet-analysis
+description: Detect m6A modifications from Oxford Nanopore direct RNA sequencing using m6Anet. Use when analyzing epitranscriptomic modifications from long-read RNA data without immunoprecipitation.
+tool_type: python
+primary_tool: m6Anet
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-epitranscriptomics-m6anet-analysis
-description: Detect m6A modifications from Oxford Nanopore direct RNA sequencing using m6Anet. Use when analyzing epitranscriptomic modifications from long-read RNA data without immunoprecipitation.
-tool_type: python
-primary_tool: m6Anet
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # m6Anet Analysis
 

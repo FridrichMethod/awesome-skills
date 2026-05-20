@@ -1,3 +1,14 @@
+---
+name: bio-genome-intervals-proximity-operations
+description: Find nearest features, search within windows, and extend intervals using closest, window, flank, and slop operations. Use when performing TSS proximity analysis, assigning enhancers to genes, defining promoter regions, or finding nearby genomic features.
+tool_type: mixed
+primary_tool: bedtools
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-genome-intervals-proximity-operations
-description: Find nearest features, search within windows, and extend intervals using closest, window, flank, and slop operations. Use when performing TSS proximity analysis, assigning enhancers to genes, defining promoter regions, or finding nearby genomic features.
-tool_type: mixed
-primary_tool: bedtools
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Proximity Operations
 

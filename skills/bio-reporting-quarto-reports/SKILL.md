@@ -1,3 +1,14 @@
+---
+name: bio-reporting-quarto-reports
+description: Build reproducible scientific documents, presentations, and websites with Quarto supporting R, Python, Julia, and Observable JS. Use when creating reproducible reports with Quarto.
+tool_type: mixed
+primary_tool: Quarto
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-reporting-quarto-reports
-description: Build reproducible scientific documents, presentations, and websites with Quarto supporting R, Python, Julia, and Observable JS. Use when creating reproducible reports with Quarto.
-tool_type: mixed
-primary_tool: Quarto
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Quarto Reports
 

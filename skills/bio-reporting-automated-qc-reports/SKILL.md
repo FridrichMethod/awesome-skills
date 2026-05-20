@@ -1,3 +1,14 @@
+---
+name: bio-reporting-automated-qc-reports
+description: Generates standardized quality control reports by aggregating metrics from FastQC, alignment, and other tools using MultiQC. Use when summarizing QC metrics across samples, creating shareable quality reports, or building automated QC pipelines.
+tool_type: cli
+primary_tool: multiqc
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-reporting-automated-qc-reports
-description: Generates standardized quality control reports by aggregating metrics from FastQC, alignment, and other tools using MultiQC. Use when summarizing QC metrics across samples, creating shareable quality reports, or building automated QC pipelines.
-tool_type: cli
-primary_tool: multiqc
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Automated QC Reports with MultiQC
 

@@ -1,3 +1,14 @@
+---
+name: bio-data-visualization-ggplot2-fundamentals
+description: Create publication-quality scientific figures with ggplot2 including scatter plots, boxplots, heatmaps, and multi-panel layouts. Use when creating static figures for papers, presentations, or reports in R.
+tool_type: r
+primary_tool: ggplot2
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-data-visualization-ggplot2-fundamentals
-description: Create publication-quality scientific figures with ggplot2 including scatter plots, boxplots, heatmaps, and multi-panel layouts. Use when creating static figures for papers, presentations, or reports in R.
-tool_type: r
-primary_tool: ggplot2
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # ggplot2 Fundamentals
 

@@ -1,3 +1,14 @@
+---
+name: bio-small-rna-seq-target-prediction
+description: Predict miRNA target genes using sequence-based algorithms and database lookups. Use when identifying potential mRNA targets of differentially expressed or functionally important miRNAs.
+tool_type: mixed
+primary_tool: miRanda
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-small-rna-seq-target-prediction
-description: Predict miRNA target genes using sequence-based algorithms and database lookups. Use when identifying potential mRNA targets of differentially expressed or functionally important miRNAs.
-tool_type: mixed
-primary_tool: miRanda
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # miRNA Target Prediction
 

@@ -1,18 +1,11 @@
 ---
 name: pdb
-description: >
-  Fetch and analyze protein structures from RCSB PDB. Use this skill when:
-  (1) Need to download a structure by PDB ID,
-  (2) Search for similar structures,
-  (3) Prepare target for binder design,
-  (4) Extract specific chains or domains,
-  (5) Get structure metadata.
+description: "Fetch and analyze protein structures from RCSB PDB. Use this skill when: (1) Need to download a structure by PDB ID, (2) Search for similar structures, (3) Prepare target for binder design, (4) Extract specific chains or domains, (5) Get structure metadata.
 
-  For sequence lookup, use uniprot.
-  For binder design workflow, use binder-design.
+For sequence lookup, use uniprot. For binder design workflow, use binder-design."
 license: MIT
 category: utilities
-tags: [database, structure, fetch]
+tags: "[database, structure, fetch]"
 ---
 
 # PDB Database Access

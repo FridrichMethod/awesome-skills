@@ -1,19 +1,11 @@
 ---
 name: campaign-manager
-description: >
-  Goal-oriented binder design campaign planning and health assessment.
-  Use this skill when: (1) Planning a complete binder design campaign,
-  (2) Converting high-level goals into runnable pipelines,
-  (3) Assessing campaign health and pass rates,
-  (4) Diagnosing why designs are failing QC,
-  (5) Estimating time, cost, and expected yields,
-  (6) Selecting between design tools for a specific target.
+description: "Goal-oriented binder design campaign planning and health assessment. Use this skill when: (1) Planning a complete binder design campaign, (2) Converting high-level goals into runnable pipelines, (3) Assessing campaign health and pass rates, (4) Diagnosing why designs are failing QC, (5) Estimating time, cost, and expected yields, (6) Selecting between design tools for a specific target.
 
-  This skill orchestrates the other protein design tools.
-  For individual tool parameters, use the specific tool skills.
+This skill orchestrates the other protein design tools. For individual tool parameters, use the specific tool skills."
 license: MIT
 category: orchestration
-tags: [planning, campaign, coordination]
+tags: "[planning, campaign, coordination]"
 ---
 
 # Campaign Manager

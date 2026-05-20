@@ -1,3 +1,11 @@
+---
+name: precision-oncology-agent
+description: Fuse genomic variants, pathology findings, and clinical context to draft evidence-linked therapy options for tumor board review.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,13 +19,6 @@
 
 -->
 
----
-name: precision-oncology-agent
-description: Fuse genomic variants, pathology findings, and clinical context to draft evidence-linked therapy options for tumor board review.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 ## At-a-Glance
 - **description (10-20 chars):** Tumor board copilot

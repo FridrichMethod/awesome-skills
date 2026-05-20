@@ -1,3 +1,14 @@
+---
+name: bio-genome-intervals-bigwig-tracks
+description: Create and read bigWig browser tracks for visualizing continuous genomic data. Convert bedGraph to bigWig, extract signal values, and generate coverage tracks using UCSC tools and pyBigWig. Use when preparing coverage tracks for genome browsers or extracting signal at specific regions.
+tool_type: mixed
+primary_tool: pyBigWig
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-genome-intervals-bigwig-tracks
-description: Create and read bigWig browser tracks for visualizing continuous genomic data. Convert bedGraph to bigWig, extract signal values, and generate coverage tracks using UCSC tools and pyBigWig. Use when preparing coverage tracks for genome browsers or extracting signal at specific regions.
-tool_type: mixed
-primary_tool: pyBigWig
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # BigWig Tracks
 

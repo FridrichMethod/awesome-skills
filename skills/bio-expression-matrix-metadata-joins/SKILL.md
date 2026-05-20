@@ -1,3 +1,14 @@
+---
+name: bio-expression-matrix-metadata-joins
+description: Merge sample metadata with count matrices and add gene annotations. Use when preparing data for differential expression analysis or visualization.
+tool_type: mixed
+primary_tool: pandas
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-expression-matrix-metadata-joins
-description: Merge sample metadata with count matrices and add gene annotations. Use when preparing data for differential expression analysis or visualization.
-tool_type: mixed
-primary_tool: pandas
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Metadata Joins
 

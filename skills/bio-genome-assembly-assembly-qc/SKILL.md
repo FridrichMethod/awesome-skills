@@ -1,3 +1,14 @@
+---
+name: bio-genome-assembly-assembly-qc
+description: Assess genome assembly quality using QUAST for contiguity metrics and BUSCO for completeness. Essential for evaluating assembly success and comparing assemblers. Use when evaluating assembly completeness and quality.
+tool_type: cli
+primary_tool: QUAST
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-genome-assembly-assembly-qc
-description: Assess genome assembly quality using QUAST for contiguity metrics and BUSCO for completeness. Essential for evaluating assembly success and comparing assemblers. Use when evaluating assembly completeness and quality.
-tool_type: cli
-primary_tool: QUAST
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Assembly QC
 

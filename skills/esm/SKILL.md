@@ -1,18 +1,11 @@
 ---
 name: esm
-description: >
-  ESM2 protein language model for embeddings and sequence scoring.
-  Use this skill when: (1) Computing pseudo-log-likelihood (PLL) scores,
-  (2) Getting protein embeddings for clustering,
-  (3) Filtering designs by sequence plausibility,
-  (4) Zero-shot variant effect prediction,
-  (5) Analyzing sequence-function relationships.
+description: "ESM2 protein language model for embeddings and sequence scoring. Use this skill when: (1) Computing pseudo-log-likelihood (PLL) scores, (2) Getting protein embeddings for clustering, (3) Filtering designs by sequence plausibility, (4) Zero-shot variant effect prediction, (5) Analyzing sequence-function relationships.
 
-  For structure prediction, use chai or boltz.
-  For QC thresholds, use protein-qc.
+For structure prediction, use chai or boltz. For QC thresholds, use protein-qc."
 license: MIT
 category: design-tools
-tags: [sequence-design, embeddings, scoring]
+tags: "[sequence-design, embeddings, scoring]"
 proteinbase_slug: esm2-optimization
 proteinbase_url: https://proteinbase.com/design-methods/esm2-optimization
 biomodals_script: modal_esm2_predict_masked.py

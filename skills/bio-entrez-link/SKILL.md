@@ -1,3 +1,14 @@
+---
+name: bio-entrez-link
+description: Find cross-references between NCBI databases using Biopython Bio.Entrez. Use when navigating from genes to proteins, sequences to publications, finding related records, or discovering database relationships.
+tool_type: python
+primary_tool: Bio.Entrez
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-entrez-link
-description: Find cross-references between NCBI databases using Biopython Bio.Entrez. Use when navigating from genes to proteins, sequences to publications, finding related records, or discovering database relationships.
-tool_type: python
-primary_tool: Bio.Entrez
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Entrez Link
 

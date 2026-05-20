@@ -1,18 +1,11 @@
 ---
 name: solublempnn
-description: >
-  Solubility-optimized protein sequence design using SolubleMPNN.
-  Use this skill when: (1) Designing for E. coli expression,
-  (2) Optimizing solubility of designed proteins,
-  (3) Reducing aggregation propensity,
-  (4) Need high-yield expression,
-  (5) Avoiding inclusion body formation.
+description: "Solubility-optimized protein sequence design using SolubleMPNN. Use this skill when: (1) Designing for E. coli expression, (2) Optimizing solubility of designed proteins, (3) Reducing aggregation propensity, (4) Need high-yield expression, (5) Avoiding inclusion body formation.
 
-  For standard design, use proteinmpnn.
-  For ligand-aware design, use ligandmpnn.
+For standard design, use proteinmpnn. For ligand-aware design, use ligandmpnn."
 license: MIT
 category: design-tools
-tags: [sequence-design, inverse-folding, solubility]
+tags: "[sequence-design, inverse-folding, solubility]"
 biomodals_script: modal_ligandmpnn.py
 ---
 

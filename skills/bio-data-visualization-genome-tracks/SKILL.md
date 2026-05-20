@@ -1,3 +1,14 @@
+---
+name: bio-data-visualization-genome-tracks
+description: Create genome browser-style visualizations showing multiple data tracks (coverage, peaks, genes) using pyGenomeTracks, Gviz, and IGV. Use when visualizing genomic data at specific loci with multiple aligned tracks.
+tool_type: mixed
+primary_tool: pyGenomeTracks
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-data-visualization-genome-tracks
-description: Create genome browser-style visualizations showing multiple data tracks (coverage, peaks, genes) using pyGenomeTracks, Gviz, and IGV. Use when visualizing genomic data at specific loci with multiple aligned tracks.
-tool_type: mixed
-primary_tool: pyGenomeTracks
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Genome Track Visualization
 

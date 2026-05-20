@@ -1,3 +1,14 @@
+---
+name: bio-experimental-design-batch-design
+description: Designs experiments to minimize and account for batch effects using balanced layouts and blocking strategies. Use when planning multi-batch experiments, assigning samples to sequencing lanes, or designing studies where technical variation could confound biological signals.
+tool_type: r
+primary_tool: sva
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-experimental-design-batch-design
-description: Designs experiments to minimize and account for batch effects using balanced layouts and blocking strategies. Use when planning multi-batch experiments, assigning samples to sequencing lanes, or designing studies where technical variation could confound biological signals.
-tool_type: r
-primary_tool: sva
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Batch Design and Mitigation
 

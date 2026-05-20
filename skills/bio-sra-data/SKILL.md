@@ -1,3 +1,14 @@
+---
+name: bio-sra-data
+description: Download sequencing data from NCBI SRA using the SRA toolkit. Use when downloading FASTQ files from SRA accessions, prefetching large datasets, or validating SRA downloads.
+tool_type: cli
+primary_tool: sra-tools
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-sra-data
-description: Download sequencing data from NCBI SRA using the SRA toolkit. Use when downloading FASTQ files from SRA accessions, prefetching large datasets, or validating SRA downloads.
-tool_type: cli
-primary_tool: sra-tools
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # SRA Data
 

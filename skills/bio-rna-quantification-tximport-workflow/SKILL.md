@@ -1,3 +1,14 @@
+---
+name: bio-rna-quantification-tximport-workflow
+description: Import transcript-level quantifications from Salmon/kallisto into R for gene-level analysis with DESeq2/edgeR using tximport or tximeta. Use when importing transcript counts into R for DESeq2/edgeR.
+tool_type: r
+primary_tool: tximport
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-rna-quantification-tximport-workflow
-description: Import transcript-level quantifications from Salmon/kallisto into R for gene-level analysis with DESeq2/edgeR using tximport or tximeta. Use when importing transcript counts into R for DESeq2/edgeR.
-tool_type: r
-primary_tool: tximport
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # tximport Workflow
 

@@ -1,11 +1,6 @@
 ---
 name: geopandas-geospatial
-description: >-
-  Geospatial vector analysis extending pandas. Read/write spatial formats
-  (Shapefile, GeoJSON, GeoPackage, Parquet, PostGIS), CRS handling, geometric
-  ops (buffer, simplify, centroid, affine), spatial analysis (joins, overlays,
-  dissolve, clipping, distance), visualization (choropleth, interactive maps,
-  basemaps). Use for spatial joins, overlays, CRS transforms, area/distance, maps.
+description: "Geospatial vector analysis extending pandas. Read/write spatial formats (Shapefile, GeoJSON, GeoPackage, Parquet, PostGIS), CRS handling, geometric ops (buffer, simplify, centroid, affine), spatial analysis (joins, overlays, dissolve, clipping, distance), visualization (choropleth, interactive maps, basemaps). Use for spatial joins, overlays, CRS transforms, area/distance, maps."
 license: BSD-3-Clause
 ---
 

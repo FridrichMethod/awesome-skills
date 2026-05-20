@@ -1,18 +1,11 @@
 ---
 name: protein-design-workflow
-description: >
-  End-to-end guidance for protein design pipelines.
-  Use this skill when: (1) Starting a new protein design project,
-  (2) Need step-by-step workflow guidance,
-  (3) Understanding the full design pipeline,
-  (4) Planning compute resources and timelines,
-  (5) Integrating multiple design tools.
+description: "End-to-end guidance for protein design pipelines. Use this skill when: (1) Starting a new protein design project, (2) Need step-by-step workflow guidance, (3) Understanding the full design pipeline, (4) Planning compute resources and timelines, (5) Integrating multiple design tools.
 
-  For tool selection, use binder-design.
-  For QC thresholds, use protein-qc.
+For tool selection, use binder-design. For QC thresholds, use protein-qc."
 license: MIT
 category: orchestration
-tags: [guidance, pipeline, workflow]
+tags: "[guidance, pipeline, workflow]"
 ---
 
 # Protein Design Workflow Guide

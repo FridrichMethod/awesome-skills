@@ -1,6 +1,6 @@
 ---
 name: academic-paper-composer
-description: Systematic writing framework for philosophy and interdisciplinary academic papers from optimized outline to submission-ready manuscript. Use when users want to: (1) write a paper from a detailed outline, (2) ensure quality control during writing, (3) maintain consistency across chapters, (4) prepare a submission-ready manuscript, or (5) systematically execute a planned paper. Triggered by phrases like 'write the paper from this outline,' 'compose the full manuscript,' 'execute the outline,' or when users have completed strategic planning (academic-paper-strategist skill) and are ready to write. Takes optimized outline as input; outputs complete manuscript with iterative quality checks.
+description: "Systematic writing framework for philosophy and interdisciplinary academic papers from optimized outline to submission-ready manuscript. Use when users want to: (1) write a paper from a detailed outline, (2) ensure quality control during writing, (3) maintain consistency across chapters, (4) prepare a submission-ready manuscript, or (5) systematically execute a planned paper. Triggered by phrases like 'write the paper from this outline,' 'compose the full manuscript,' 'execute the outline,' or when users have completed strategic planning (academic-paper-strategist skill) and are ready to write. Takes optimized outline as input; outputs complete manuscript with iterative quality checks."
 ---
 
 # Academic Paper Composer

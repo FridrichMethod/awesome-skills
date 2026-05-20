@@ -1,3 +1,14 @@
+---
+name: bio-experimental-design-sample-size
+description: Estimates required sample sizes for differential expression, ChIP-seq, methylation, and proteomics studies. Use when budgeting experiments, writing grant proposals, or determining minimum replicates needed to achieve statistical significance for expected effect sizes.
+tool_type: r
+primary_tool: ssizeRNA
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-experimental-design-sample-size
-description: Estimates required sample sizes for differential expression, ChIP-seq, methylation, and proteomics studies. Use when budgeting experiments, writing grant proposals, or determining minimum replicates needed to achieve statistical significance for expected effect sizes.
-tool_type: r
-primary_tool: ssizeRNA
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Sample Size Estimation
 

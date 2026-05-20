@@ -1,3 +1,14 @@
+---
+name: bio-clip-seq-clip-preprocessing
+description: Preprocess CLIP-seq data including adapter trimming, UMI extraction, and PCR duplicate removal. Use when preparing raw CLIP, iCLIP, or eCLIP reads for peak calling.
+tool_type: cli
+primary_tool: umi_tools
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-clip-seq-clip-preprocessing
-description: Preprocess CLIP-seq data including adapter trimming, UMI extraction, and PCR duplicate removal. Use when preparing raw CLIP, iCLIP, or eCLIP reads for peak calling.
-tool_type: cli
-primary_tool: umi_tools
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # CLIP-seq Preprocessing
 

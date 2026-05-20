@@ -1,3 +1,14 @@
+---
+name: bio-comparative-genomics-synteny-analysis
+description: Analyze genome collinearity and syntenic blocks using MCScanX, SyRI, and JCVI for comparative genomics. Detect conserved gene order, chromosomal rearrangements, and whole-genome duplications. Use when comparing genome structure between species or identifying conserved genomic regions.
+tool_type: mixed
+primary_tool: MCScanX
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-comparative-genomics-synteny-analysis
-description: Analyze genome collinearity and syntenic blocks using MCScanX, SyRI, and JCVI for comparative genomics. Detect conserved gene order, chromosomal rearrangements, and whole-genome duplications. Use when comparing genome structure between species or identifying conserved genomic regions.
-tool_type: mixed
-primary_tool: MCScanX
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Synteny Analysis
 

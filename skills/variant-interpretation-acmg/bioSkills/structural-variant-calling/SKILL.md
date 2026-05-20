@@ -1,3 +1,14 @@
+---
+name: bio-variant-calling-structural-variant-calling
+description: Call structural variants (SVs) from short-read sequencing using Manta, Delly, and LUMPY. Detects deletions, insertions, inversions, duplications, and translocations that are too large for standard SNV callers. Use when detecting structural variants from short-read data.
+tool_type: cli
+primary_tool: manta
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-variant-calling-structural-variant-calling
-description: Call structural variants (SVs) from short-read sequencing using Manta, Delly, and LUMPY. Detects deletions, insertions, inversions, duplications, and translocations that are too large for standard SNV callers. Use when detecting structural variants from short-read data.
-tool_type: cli
-primary_tool: manta
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Structural Variant Calling (Short Reads)
 

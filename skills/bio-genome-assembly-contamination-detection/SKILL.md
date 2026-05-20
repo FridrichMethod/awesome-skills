@@ -1,3 +1,14 @@
+---
+name: bio-genome-assembly-contamination-detection
+description: Detect contamination and assess genome quality using CheckM, CheckM2, GTDB-Tk, and GUNC for metagenome-assembled genomes and isolate assemblies. Use when checking assemblies for contamination.
+tool_type: cli
+primary_tool: CheckM2
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-genome-assembly-contamination-detection
-description: Detect contamination and assess genome quality using CheckM, CheckM2, GTDB-Tk, and GUNC for metagenome-assembled genomes and isolate assemblies. Use when checking assemblies for contamination.
-tool_type: cli
-primary_tool: CheckM2
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Contamination Detection
 

@@ -1,3 +1,14 @@
+---
+name: bio-data-visualization-color-palettes
+description: Select and apply colorblind-friendly palettes for scientific figures using viridis, RColorBrewer, and custom color schemes. Use when selecting colorblind-friendly palettes for figures.
+tool_type: mixed
+primary_tool: viridis
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-data-visualization-color-palettes
-description: Select and apply colorblind-friendly palettes for scientific figures using viridis, RColorBrewer, and custom color schemes. Use when selecting colorblind-friendly palettes for figures.
-tool_type: mixed
-primary_tool: viridis
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Color Palettes
 

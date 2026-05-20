@@ -1,3 +1,14 @@
+---
+name: bio-rna-quantification-alignment-free-quant
+description: Quantify transcript expression using pseudo-alignment with Salmon or kallisto. Use when quantifying transcripts with Salmon or kallisto.
+tool_type: cli
+primary_tool: salmon
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-rna-quantification-alignment-free-quant
-description: Quantify transcript expression using pseudo-alignment with Salmon or kallisto. Use when quantifying transcripts with Salmon or kallisto.
-tool_type: cli
-primary_tool: salmon
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Alignment-Free Quantification
 

@@ -1,3 +1,12 @@
+---
+name: 'universal-single-cell-annotator'
+description: 'Annotate scRNA-seq'
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,14 +20,6 @@
 
 -->
 
----
-name: 'universal-single-cell-annotator'
-description: 'Annotate scRNA-seq'
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 
 # Universal Single-Cell Annotator

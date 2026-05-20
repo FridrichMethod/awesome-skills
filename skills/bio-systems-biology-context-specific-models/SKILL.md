@@ -1,3 +1,14 @@
+---
+name: bio-systems-biology-context-specific-models
+description: Build tissue and condition-specific metabolic models using GIMME, iMAT, and INIT algorithms with expression data constraints. Create models that reflect cell-type specific metabolism. Use when building tissue-specific metabolic models or integrating transcriptomics with FBA.
+tool_type: python
+primary_tool: cobrapy
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-systems-biology-context-specific-models
-description: Build tissue and condition-specific metabolic models using GIMME, iMAT, and INIT algorithms with expression data constraints. Create models that reflect cell-type specific metabolism. Use when building tissue-specific metabolic models or integrating transcriptomics with FBA.
-tool_type: python
-primary_tool: cobrapy
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Context-Specific Models
 

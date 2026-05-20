@@ -1,3 +1,12 @@
+---
+name: 'ehr-fhir-integration'
+description: 'Provides comprehensive tools for working with Electronic Health Records (EHR) using the HL7 FHIR standard.'
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,14 +20,6 @@
 
 -->
 
----
-name: 'ehr-fhir-integration'
-description: 'Provides comprehensive tools for working with Electronic Health Records (EHR) using the HL7 FHIR standard.'
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 
 # EHR/FHIR Integration

@@ -1,3 +1,14 @@
+---
+name: bio-population-genetics-association-testing
+description: Genome-wide association studies (GWAS) with PLINK. Perform case-control and quantitative trait association testing using logistic/linear regression with covariates, generate Manhattan and QQ plots for result visualization. Use when running GWAS or association tests.
+tool_type: cli
+primary_tool: plink2
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-population-genetics-association-testing
-description: Genome-wide association studies (GWAS) with PLINK. Perform case-control and quantitative trait association testing using logistic/linear regression with covariates, generate Manhattan and QQ plots for result visualization. Use when running GWAS or association tests.
-tool_type: cli
-primary_tool: plink2
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Association Testing
 

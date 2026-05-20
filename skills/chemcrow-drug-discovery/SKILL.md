@@ -1,3 +1,12 @@
+---
+name: 'chemcrow-drug-discovery'
+description: 'An LLM chemistry agent with expert-designed tools for organic synthesis, drug discovery, and materials design.'
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,14 +20,6 @@
 
 -->
 
----
-name: 'chemcrow-drug-discovery'
-description: 'An LLM chemistry agent with expert-designed tools for organic synthesis, drug discovery, and materials design.'
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 
 # ChemCrow

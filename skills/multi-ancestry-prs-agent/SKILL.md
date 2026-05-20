@@ -1,3 +1,12 @@
+---
+name: 'multi-ancestry-prs-agent'
+description: 'AI-powered multi-ancestry polygenic risk score calculation and optimization for equitable disease risk prediction across diverse global populations.'
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,14 +20,6 @@
 
 -->
 
----
-name: 'multi-ancestry-prs-agent'
-description: 'AI-powered multi-ancestry polygenic risk score calculation and optimization for equitable disease risk prediction across diverse global populations.'
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 
 # Multi-Ancestry PRS Agent

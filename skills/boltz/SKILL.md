@@ -1,19 +1,11 @@
 ---
 name: boltz
-description: >
-  Structure prediction using Boltz-1/Boltz-2, an open biomolecular structure predictor.
-  Use this skill when: (1) Predicting protein complex structures,
-  (2) Validating designed binders,
-  (3) Need open-source alternative to AF2,
-  (4) Predicting protein-ligand complexes,
-  (5) Using local GPU resources.
+description: "Structure prediction using Boltz-1/Boltz-2, an open biomolecular structure predictor. Use this skill when: (1) Predicting protein complex structures, (2) Validating designed binders, (3) Need open-source alternative to AF2, (4) Predicting protein-ligand complexes, (5) Using local GPU resources.
 
-  For QC thresholds, use protein-qc.
-  For AlphaFold2 prediction, use alphafold.
-  For Chai prediction, use chai.
+For QC thresholds, use protein-qc. For AlphaFold2 prediction, use alphafold. For Chai prediction, use chai."
 license: MIT
 category: design-tools
-tags: [structure-prediction, validation, open-source]
+tags: "[structure-prediction, validation, open-source]"
 biomodals_script: modal_boltz.py
 ---
 

@@ -1,3 +1,14 @@
+---
+name: bio-epitranscriptomics-merip-preprocessing
+description: Align and QC MeRIP-seq IP and input samples for m6A analysis. Use when preparing MeRIP-seq data for peak calling or differential methylation analysis.
+tool_type: cli
+primary_tool: STAR
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-epitranscriptomics-merip-preprocessing
-description: Align and QC MeRIP-seq IP and input samples for m6A analysis. Use when preparing MeRIP-seq data for peak calling or differential methylation analysis.
-tool_type: cli
-primary_tool: STAR
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # MeRIP-seq Preprocessing
 

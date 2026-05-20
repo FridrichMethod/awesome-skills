@@ -1,3 +1,14 @@
+---
+name: bio-workflow-management-wdl-workflows
+description: Create portable bioinformatics pipelines with Workflow Description Language (WDL) using Cromwell or miniwdl execution engines. Use when running GATK best practices pipelines, working with Terra/AnVIL platforms, or building workflows for cloud execution on Google Cloud or AWS.
+tool_type: cli
+primary_tool: cromwell
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-workflow-management-wdl-workflows
-description: Create portable bioinformatics pipelines with Workflow Description Language (WDL) using Cromwell or miniwdl execution engines. Use when running GATK best practices pipelines, working with Terra/AnVIL platforms, or building workflows for cloud execution on Google Cloud or AWS.
-tool_type: cli
-primary_tool: cromwell
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # WDL Workflows
 

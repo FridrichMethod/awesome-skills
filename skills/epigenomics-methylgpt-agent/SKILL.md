@@ -1,3 +1,12 @@
+---
+name: 'epigenomics-methylgpt-agent'
+description: 'AI-powered DNA methylation analysis using MethylGPT foundation models for epigenomic profiling, differential methylation detection, and cancer epigenome characterization.'
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,14 +20,6 @@
 
 -->
 
----
-name: 'epigenomics-methylgpt-agent'
-description: 'AI-powered DNA methylation analysis using MethylGPT foundation models for epigenomic profiling, differential methylation detection, and cancer epigenome characterization.'
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 
 # Epigenomics MethylGPT Agent

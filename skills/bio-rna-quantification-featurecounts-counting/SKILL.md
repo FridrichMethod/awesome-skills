@@ -1,3 +1,14 @@
+---
+name: bio-rna-quantification-featurecounts-counting
+description: Count reads per gene from aligned BAM files using Subread featureCounts. Use when processing BAM files from STAR/HISAT2 to generate gene-level counts for DESeq2/edgeR.
+tool_type: cli
+primary_tool: featureCounts
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-rna-quantification-featurecounts-counting
-description: Count reads per gene from aligned BAM files using Subread featureCounts. Use when processing BAM files from STAR/HISAT2 to generate gene-level counts for DESeq2/edgeR.
-tool_type: cli
-primary_tool: featureCounts
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # featureCounts Counting
 

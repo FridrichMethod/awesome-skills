@@ -1,20 +1,11 @@
 ---
 name: rfdiffusion
-description: >
-  Generate protein backbones using RFdiffusion, a diffusion-based generative
-  model for de novo protein structure generation. Use this skill when:
-  (1) Designing binder scaffolds for a target protein,
-  (2) Generating novel protein backbones from scratch,
-  (3) Scaffolding functional motifs into new proteins,
-  (4) Specifying hotspot residues for interface design,
-  (5) Creating symmetric oligomers.
+description: "Generate protein backbones using RFdiffusion, a diffusion-based generative model for de novo protein structure generation. Use this skill when: (1) Designing binder scaffolds for a target protein, (2) Generating novel protein backbones from scratch, (3) Scaffolding functional motifs into new proteins, (4) Specifying hotspot residues for interface design, (5) Creating symmetric oligomers.
 
-  For sequence design after backbone generation, use proteinmpnn.
-  For structure validation, use alphafold or chai.
-  For QC thresholds, use protein-qc.
+For sequence design after backbone generation, use proteinmpnn. For structure validation, use alphafold or chai. For QC thresholds, use protein-qc."
 license: MIT
 category: design-tools
-tags: [structure-design, diffusion, backbone, binder]
+tags: "[structure-design, diffusion, backbone, binder]"
 proteinbase_slug: rfdiffusion
 proteinbase_url: https://proteinbase.com/design-methods/rfdiffusion
 biomodals_script: modal_rfdiffusion.py

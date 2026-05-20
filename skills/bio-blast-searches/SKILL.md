@@ -1,3 +1,14 @@
+---
+name: bio-blast-searches
+description: Run remote BLAST searches against NCBI databases using Biopython Bio.Blast. Use when identifying unknown sequences, finding homologs, or searching for sequence similarity against NCBI's nr/nt databases.
+tool_type: python
+primary_tool: Bio.Blast.NCBIWWW
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-blast-searches
-description: Run remote BLAST searches against NCBI databases using Biopython Bio.Blast. Use when identifying unknown sequences, finding homologs, or searching for sequence similarity against NCBI's nr/nt databases.
-tool_type: python
-primary_tool: Bio.Blast.NCBIWWW
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # BLAST Searches
 

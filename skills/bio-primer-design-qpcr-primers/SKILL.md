@@ -1,3 +1,14 @@
+---
+name: bio-primer-design-qpcr-primers
+description: Design qPCR primers and TaqMan/molecular beacon probes using primer3-py. Configure probe Tm, primer-probe spacing, and hydrolysis probe constraints for real-time PCR assays. Use when designing qPCR primers and probes.
+tool_type: python
+primary_tool: primer3-py
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-primer-design-qpcr-primers
-description: Design qPCR primers and TaqMan/molecular beacon probes using primer3-py. Configure probe Tm, primer-probe spacing, and hydrolysis probe constraints for real-time PCR assays. Use when designing qPCR primers and probes.
-tool_type: python
-primary_tool: primer3-py
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # qPCR Primer and Probe Design
 

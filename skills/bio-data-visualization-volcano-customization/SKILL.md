@@ -1,3 +1,14 @@
+---
+name: bio-data-visualization-volcano-customization
+description: Create publication-ready volcano plots with custom thresholds, gene labels, and highlighting using ggplot2, EnhancedVolcano, or matplotlib. Use when visualizing differential expression or association results with gene annotations.
+tool_type: mixed
+primary_tool: ggplot2
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-data-visualization-volcano-customization
-description: Create publication-ready volcano plots with custom thresholds, gene labels, and highlighting using ggplot2, EnhancedVolcano, or matplotlib. Use when visualizing differential expression or association results with gene annotations.
-tool_type: mixed
-primary_tool: ggplot2
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Volcano Plot Customization
 

@@ -1,3 +1,9 @@
+---
+name: scientific-manuscript
+description: "High-impact scientific manuscript preparation for journals like Nature, Blood, Cell. Use when writing abstracts, introductions, methods, results, discussions, or figure legends. Includes citation management, statistical reporting standards, ICMJE guidelines, and journal-specific formatting for hematology/oncology publications."
+license: Proprietary
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,11 +17,6 @@
 
 -->
 
----
-name: scientific-manuscript
-description: "High-impact scientific manuscript preparation for journals like Nature, Blood, Cell. Use when writing abstracts, introductions, methods, results, discussions, or figure legends. Includes citation management, statistical reporting standards, ICMJE guidelines, and journal-specific formatting for hematology/oncology publications."
-license: Proprietary
----
 
 # Scientific Manuscript Preparation
 

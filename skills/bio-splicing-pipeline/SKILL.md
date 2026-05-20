@@ -1,3 +1,14 @@
+---
+name: bio-splicing-pipeline
+description: End-to-end alternative splicing analysis from FASTQ to differential splicing results. Aligns with STAR 2-pass mode, performs junction QC, runs rMATS-turbo for differential analysis, and generates sashimi visualizations. Use when performing comprehensive splicing analysis from raw RNA-seq data.
+tool_type: mixed
+primary_tool: rMATS-turbo
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-splicing-pipeline
-description: End-to-end alternative splicing analysis from FASTQ to differential splicing results. Aligns with STAR 2-pass mode, performs junction QC, runs rMATS-turbo for differential analysis, and generates sashimi visualizations. Use when performing comprehensive splicing analysis from raw RNA-seq data.
-tool_type: mixed
-primary_tool: rMATS-turbo
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Alternative Splicing Analysis Pipeline
 

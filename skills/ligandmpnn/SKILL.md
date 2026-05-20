@@ -1,18 +1,11 @@
 ---
 name: ligandmpnn
-description: >
-  Ligand-aware protein sequence design using LigandMPNN.
-  Use this skill when: (1) Designing sequences around small molecules,
-  (2) Enzyme active site design,
-  (3) Ligand binding pocket optimization,
-  (4) Metal coordination site design,
-  (5) Cofactor binding proteins.
+description: "Ligand-aware protein sequence design using LigandMPNN. Use this skill when: (1) Designing sequences around small molecules, (2) Enzyme active site design, (3) Ligand binding pocket optimization, (4) Metal coordination site design, (5) Cofactor binding proteins.
 
-  For standard protein design, use proteinmpnn.
-  For solubility optimization, use solublempnn.
+For standard protein design, use proteinmpnn. For solubility optimization, use solublempnn."
 license: MIT
 category: design-tools
-tags: [sequence-design, inverse-folding, ligand-aware]
+tags: "[sequence-design, inverse-folding, ligand-aware]"
 biomodals_script: modal_ligandmpnn.py
 ---
 

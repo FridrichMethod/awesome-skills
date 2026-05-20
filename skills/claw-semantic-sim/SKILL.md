@@ -4,7 +4,7 @@ version: 0.1.0
 description: Semantic Similarity Index for disease research literature using PubMedBERT embeddings
 author: Manuel Corpas
 license: MIT
-tags: [health-equity, semantic-analysis, NLP, PubMedBERT, disease-neglect]
+tags: "[health-equity, semantic-analysis, NLP, PubMedBERT, disease-neglect]"
 metadata:
   openclaw:
     requires:

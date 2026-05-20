@@ -1,3 +1,14 @@
+---
+name: bio-small-rna-seq-smrna-preprocessing
+description: Preprocess small RNA sequencing data with adapter trimming and size selection optimized for miRNA, piRNA, and other small RNAs. Use when preparing small RNA-seq reads for downstream quantification or discovery analysis.
+tool_type: cli
+primary_tool: cutadapt
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-small-rna-seq-smrna-preprocessing
-description: Preprocess small RNA sequencing data with adapter trimming and size selection optimized for miRNA, piRNA, and other small RNAs. Use when preparing small RNA-seq reads for downstream quantification or discovery analysis.
-tool_type: cli
-primary_tool: cutadapt
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # Small RNA Preprocessing
 

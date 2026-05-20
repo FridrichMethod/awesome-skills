@@ -1,3 +1,14 @@
+---
+name: bio-read-alignment-star-alignment
+description: Align RNA-seq reads with STAR (Spliced Transcripts Alignment to a Reference). Supports two-pass mode for novel splice junction discovery. Use when aligning RNA-seq data requiring splice-aware alignment.
+tool_type: cli
+primary_tool: STAR
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,16 +22,6 @@
 
 -->
 
----
-name: bio-read-alignment-star-alignment
-description: Align RNA-seq reads with STAR (Spliced Transcripts Alignment to a Reference). Supports two-pass mode for novel splice junction discovery. Use when aligning RNA-seq data requiring splice-aware alignment.
-tool_type: cli
-primary_tool: STAR
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 # STAR RNA-seq Alignment
 

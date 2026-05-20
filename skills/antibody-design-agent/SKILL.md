@@ -1,3 +1,12 @@
+---
+name: 'antibody-design-agent'
+description: 'An advanced agent for de novo antibody design and optimization using state-of-the-art protein language models (MAGE, RFdiffusion).'
+measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
+allowed-tools:
+  - read_file
+  - run_shell_command
+---
+
 <!--
 # COPYRIGHT NOTICE
 # This file is part of the "Universal Biomedical Skills" project.
@@ -11,14 +20,6 @@
 
 -->
 
----
-name: 'antibody-design-agent'
-description: 'An advanced agent for de novo antibody design and optimization using state-of-the-art protein language models (MAGE, RFdiffusion).'
-measurable_outcome: Execute skill workflow successfully with valid output within 15 minutes.
-allowed-tools:
-  - read_file
-  - run_shell_command
----
 
 
 # Antibody Design Agent
