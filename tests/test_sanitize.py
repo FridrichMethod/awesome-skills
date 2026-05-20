@@ -258,10 +258,51 @@ class TestSanitizeSkillFrontmatter:
         # Preamble preserved somewhere below.
         assert "<!-- upstream copyright header -->" in out
 
-    def test_missing_frontmatter_returns_marker(self, tmp_path: Path) -> None:
-        body = "No frontmatter here.\n"
-        f = _write(tmp_path, body)
-        assert ss.sanitize_skill_frontmatter(f) == "missing_frontmatter"
+    def test_synthesizes_frontmatter_when_pure_markdown(self, tmp_path: Path) -> None:
+        skill_dir = tmp_path / "scholar-evaluation"
+        skill_dir.mkdir()
+        body = (
+            "# Scholar Evaluation\n"
+            "\n"
+            "## Overview\n"
+            "\n"
+            "Apply the ScholarEval framework to systematically evaluate "
+            "scholarly and research work.\n"
+            "\n"
+            "## When to Use This Skill\n"
+            "- one\n"
+            "- two\n"
+        )
+        f = skill_dir / "SKILL.md"
+        f.write_text(body, encoding="utf-8")
+        assert ss.sanitize_skill_frontmatter(f) == "synthesized"
+        doc = _parse_frontmatter(f.read_text())
+        assert isinstance(doc, dict)
+        assert doc["name"] == "scholar-evaluation"
+        assert "ScholarEval" in doc["description"]
+        # Original body preserved below the new frontmatter.
+        assert "# Scholar Evaluation" in f.read_text()
+
+    def test_synthesizes_from_h1_when_no_overview(self, tmp_path: Path) -> None:
+        skill_dir = tmp_path / "foo-bar"
+        skill_dir.mkdir()
+        f = skill_dir / "SKILL.md"
+        f.write_text("# Foo Bar\n\nA quick body sentence.\n", encoding="utf-8")
+        assert ss.sanitize_skill_frontmatter(f) == "synthesized"
+        doc = _parse_frontmatter(f.read_text())
+        assert doc["name"] == "foo-bar"
+        # Falls back to the first paragraph after the H1.
+        assert "quick body sentence" in doc["description"]
+
+    def test_synthesizes_with_only_dirname_fallback(self, tmp_path: Path) -> None:
+        skill_dir = tmp_path / "barebones"
+        skill_dir.mkdir()
+        f = skill_dir / "SKILL.md"
+        f.write_text("# Barebones\n", encoding="utf-8")
+        ss.sanitize_skill_frontmatter(f)
+        doc = _parse_frontmatter(f.read_text())
+        assert doc["name"] == "barebones"
+        assert doc["description"]  # non-empty
 
 
 class TestIdempotency:

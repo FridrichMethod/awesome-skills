@@ -336,6 +336,82 @@ def _fold_scalar(body_lines: list[str], style: str) -> str:
     return folded.strip()
 
 
+def _extract_description_from_body(body: str) -> str:
+    """Heuristic pick of a description from a markdown body.
+
+    Order of preference: first `## Overview` / `## Description` / `## About`
+    section body, otherwise the first non-empty paragraph that isn't a heading
+    or a list. Returns an empty string if nothing usable is found.
+    """
+    lines = body.splitlines()
+
+    # Preferred sections (case-insensitive header match).
+    preferred_headers = {"overview", "description", "about", "summary"}
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped.startswith("## ") and stripped[3:].strip().lower() in preferred_headers:
+            paragraph: list[str] = []
+            for follow in lines[i + 1 :]:
+                fstrip = follow.strip()
+                if fstrip.startswith("#"):
+                    break
+                if not fstrip:
+                    if paragraph:
+                        break
+                    continue
+                if fstrip.startswith(("-", "*", ">", "|", "```")):
+                    if paragraph:
+                        break
+                    continue
+                paragraph.append(fstrip)
+            if paragraph:
+                return " ".join(paragraph)
+
+    # Otherwise: first non-empty plain paragraph that isn't a heading/list/code.
+    paragraph = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            if paragraph:
+                return " ".join(paragraph)
+            continue
+        if stripped.startswith(("#", "-", "*", ">", "|", "```")):
+            if paragraph:
+                return " ".join(paragraph)
+            continue
+        paragraph.append(stripped)
+    return " ".join(paragraph)
+
+
+def _synthesize_frontmatter(skill_file: Path) -> str:
+    """Generate `---\\nname: ...\\ndescription: ...\\n---` from filename + body.
+
+    Used when a SKILL.md is pure markdown with no `---`-delimited block at all.
+    """
+    text = skill_file.read_text(encoding="utf-8", errors="ignore")
+    name = skill_file.parent.name
+
+    # Strip a leading H1 (`# Title`) — keep it as a fallback description and
+    # remove it from the synthesized body so we don't double-print.
+    body = text
+    h1_fallback = ""
+    for line in text.splitlines():
+        s = line.strip()
+        if not s:
+            continue
+        if s.startswith("# ") and not s.startswith("## "):
+            h1_fallback = s[2:].strip()
+        break
+
+    description = _extract_description_from_body(body) or h1_fallback or name
+    if len(description) > DESCRIPTION_MAX:
+        description = _smart_trim(description)
+    quoted = _yaml_double_quote(description)
+    new_frontmatter = f"---\nname: {name}\ndescription: {quoted}\n---\n\n"
+    skill_file.write_text(new_frontmatter + text, encoding="utf-8")
+    return "synthesized"
+
+
 def _reorder_preamble(lines: list[str]) -> list[str] | None:
     """If frontmatter is preceded by a preamble, move the preamble below.
 
@@ -391,7 +467,11 @@ def sanitize_skill_frontmatter(skill_file: Path) -> str:
     lines = text.splitlines(keepends=True)
     reordered = _reorder_preamble(lines)
     if reordered is None:
-        return "missing_frontmatter"
+        # No recoverable frontmatter at all — synthesize minimal one so the
+        # strict Codex loader can pick it up. Falls back to dir name + first
+        # markdown paragraph.
+        _synthesize_frontmatter(skill_file)
+        return "synthesized"
     lines = reordered
 
     if not lines or lines[0].strip() != "---":
@@ -566,7 +646,7 @@ def sanitize_only(target: Path) -> int:
         print(f"sanitize-only: {target} does not exist", file=sys.stderr)
         return 1
 
-    total = sanitized = invalid = 0
+    total = sanitized = synthesized = invalid = 0
     invalid_files: list[Path] = []
     for skill_md in sorted(target.rglob("SKILL.md")):
         total += 1
@@ -574,15 +654,21 @@ def sanitize_only(target: Path) -> int:
         if status == "sanitized":
             sanitized += 1
             print(f"  sanitized: {skill_md.relative_to(target.parent)}")
+        elif status == "synthesized":
+            synthesized += 1
+            print(f"  synthesized frontmatter: {skill_md.relative_to(target.parent)}")
         elif status == "missing_frontmatter":
             invalid += 1
             invalid_files.append(skill_md)
 
     print()
-    print(f"sanitize-only: scanned {total}, rewrote {sanitized}, {invalid} missing frontmatter")
+    print(
+        f"sanitize-only: scanned {total}, rewrote {sanitized}, "
+        f"synthesized {synthesized}, {invalid} unrecoverable"
+    )
     if invalid_files:
         for f in invalid_files[:20]:
-            print(f"  missing frontmatter: {f.relative_to(target.parent)}", file=sys.stderr)
+            print(f"  unrecoverable: {f.relative_to(target.parent)}", file=sys.stderr)
         if len(invalid_files) > 20:
             print(f"  ... and {len(invalid_files) - 20} more", file=sys.stderr)
     return 0

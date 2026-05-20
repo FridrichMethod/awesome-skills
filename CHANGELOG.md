@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format is based on 
 
 ## [Unreleased]
 
+## [0.3.2] — 2026-05-20
+
+### Fixed
+- **Synthesize frontmatter when missing.** Upstream `scholar-evaluation` shipped as pure markdown with no `---` block; the Codex loader was skipping it. The sanitizer now generates `---\nname: <dir>\ndescription: "..."\n---` from a heuristic over the body (preferring `## Overview` / `## Description` / `## About` sections, falling back to the first paragraph or H1).
+
+### Added
+- `_synthesize_frontmatter()` and `_extract_description_from_body()` in `scripts/sync_skills.py`.
+- `--sanitize-only` CLI now reports `synthesized` count distinct from `sanitized`.
+- 3 new tests covering synthesis from `## Overview`, from a body paragraph, and from a dirname fallback. Test count: 54 → **57**.
+
 ## [0.3.1] — 2026-05-20
 
 ### Fixed
@@ -60,7 +70,8 @@ All notable changes to this project are documented here. The format is based on 
 - Sources: K-Dense scientific-skills (137), K-Dense scientific-writer (81), GPTomics bioSkills (475), OpenClaw Medical (~868), SciAgent (199), journalism (53), Imbad academic-research (4), lishix academic-paper (2), adaptyv protein-design (21).
 - `install.sh` for syncing `skills/` into `~/.claude/skills/` and `~/.codex/skills/`.
 
-[Unreleased]: https://github.com/FridrichMethod/awesome-skills/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/FridrichMethod/awesome-skills/compare/v0.3.2...HEAD
+[0.3.2]: https://github.com/FridrichMethod/awesome-skills/releases/tag/v0.3.2
 [0.3.1]: https://github.com/FridrichMethod/awesome-skills/releases/tag/v0.3.1
 [0.3.0]: https://github.com/FridrichMethod/awesome-skills/releases/tag/v0.3.0
 [0.2.0]: https://github.com/FridrichMethod/awesome-skills/releases/tag/v0.2.0
