@@ -4,16 +4,6 @@ All notable changes to this project are documented here. The format is based on 
 
 ## [Unreleased]
 
-## [0.3.2] — 2026-05-20
-
-### Fixed
-- **Synthesize frontmatter when missing.** Upstream `scholar-evaluation` shipped as pure markdown with no `---` block; the Codex loader was skipping it. The sanitizer now generates `---\nname: <dir>\ndescription: "..."\n---` from a heuristic over the body (preferring `## Overview` / `## Description` / `## About` sections, falling back to the first paragraph or H1).
-
-### Added
-- `_synthesize_frontmatter()` and `_extract_description_from_body()` in `scripts/sync_skills.py`.
-- `--sanitize-only` CLI now reports `synthesized` count distinct from `sanitized`.
-- 3 new tests covering synthesis from `## Overview`, from a body paragraph, and from a dirname fallback. Test count: 54 → **57**.
-
 ## [0.3.1] — 2026-05-20
 
 ### Fixed
@@ -23,16 +13,18 @@ All notable changes to this project are documented here. The format is based on 
   - **Broken folded-scalar collapse.** Upstream typos like `description: ">"` followed by indented body lines are collapsed into a single quoted scalar honoring `>` / `>-` / `>+` / `|` / `|-` / `|+` fold semantics (~38 files: `alphafold`, `pdb`, `chai`, `boltz`, `blueprint`, …).
   - **Flow-collection passthrough.** `tags: [a, b]` and `metadata: {x: 1}` are no longer corrupted into strings; their parsed `list` / `dict` types are preserved.
   - **Multi-line quoted scalar passthrough.** A `description: "first half\n\nsecond half"` block is left intact instead of being double-wrapped.
+  - **Synthesize frontmatter when missing.** Upstream `scholar-evaluation` shipped as pure markdown with no `---` block; the Codex loader was skipping it. The sanitizer now generates `---\nname: <dir>\ndescription: "..."\n---` from a heuristic over the body (preferring `## Overview` / `## Description` / `## About` / `## Summary` sections, falling back to the first paragraph or H1).
 - Sanitizer is idempotent: a second `--sanitize-only` pass touches 0 files.
 
 ### Added
-- `scripts/sync_skills.py --sanitize-only` CLI flag to normalize the existing `skills/` tree without running an upstream sync.
-- `tests/test_sanitize.py` — 54 pytest cases across smart-trim, YAML quoting helpers, end-to-end sanitization, idempotency (including a live-tree scan), and post-sanitize invariants.
+- `scripts/sync_skills.py --sanitize-only` CLI flag to normalize the existing `skills/` tree without running an upstream sync. Reports `sanitized`, `synthesized`, and `unrecoverable` counts.
+- `_synthesize_frontmatter()` and `_extract_description_from_body()` helpers.
+- `tests/test_sanitize.py` — **57 pytest cases** across smart-trim, YAML quoting helpers, end-to-end sanitization, idempotency (including a live-tree scan), post-sanitize invariants, and the three synthesis pathways (from `## Overview`, from a body paragraph, and from a dirname fallback).
 - `.github/workflows/ci.yml` — runs `ruff check` + `pytest` on every push, PR, and manual dispatch.
 - `pyproject.toml` — pytest and ruff configuration, dev dependency group.
 
 ### Changed
-- Skill count after re-sync: 1,856 → **1,907** (+51 from upstream growth; 33 added, 121 modified, 2 deleted in the 2026-05-20 sync).
+- Skill count after re-sync: 1,856 → **1,907** (+51 from upstream growth; 33 added, 121 modified, 2 deleted in the 2026-05-20 sync). All 1,907 SKILL.md files parse cleanly under `yaml.safe_load`, every `description` is ≤ 1024 chars, and Codex loads every skill including `scholar-evaluation`.
 
 ## [0.3.0] — 2026-05-17
 
@@ -70,8 +62,7 @@ All notable changes to this project are documented here. The format is based on 
 - Sources: K-Dense scientific-skills (137), K-Dense scientific-writer (81), GPTomics bioSkills (475), OpenClaw Medical (~868), SciAgent (199), journalism (53), Imbad academic-research (4), lishix academic-paper (2), adaptyv protein-design (21).
 - `install.sh` for syncing `skills/` into `~/.claude/skills/` and `~/.codex/skills/`.
 
-[Unreleased]: https://github.com/FridrichMethod/awesome-skills/compare/v0.3.2...HEAD
-[0.3.2]: https://github.com/FridrichMethod/awesome-skills/releases/tag/v0.3.2
+[Unreleased]: https://github.com/FridrichMethod/awesome-skills/compare/v0.3.1...HEAD
 [0.3.1]: https://github.com/FridrichMethod/awesome-skills/releases/tag/v0.3.1
 [0.3.0]: https://github.com/FridrichMethod/awesome-skills/releases/tag/v0.3.0
 [0.2.0]: https://github.com/FridrichMethod/awesome-skills/releases/tag/v0.2.0
