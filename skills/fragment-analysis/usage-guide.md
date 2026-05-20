@@ -1,129 +1,57 @@
 # Fragment Analysis - Usage Guide
 
 ## Overview
-Predict and analyze DNA fragments produced by restriction enzyme digestion.
+Analyze cfDNA fragment size distributions and fragmentomics patterns for cancer detection. Extract nucleosome positioning signals and DELFI-style fragmentation profiles.
 
 ## Prerequisites
 ```bash
-pip install biopython
+# FinaleToolkit
+pip install finaletoolkit
+
+# Griffin (optional, for nucleosome profiling)
+pip install griffin
+
+# Dependencies
+pip install pysam numpy pandas matplotlib
 ```
 
 ## Quick Start
 Tell your AI agent what you want to do:
-- "Predict the fragment sizes from an EcoRI digest"
-- "What bands will I see on a gel after cutting with BamHI?"
+- "Analyze fragment size distribution for tumor signal"
+- "Calculate short-to-long fragment ratios across the genome"
+- "Run DELFI-style fragmentomics analysis"
+- "Profile nucleosome positioning from my cfDNA"
 
 ## Example Prompts
 
-### Single Digest
-> "What fragment sizes will I get from an EcoRI digest of my plasmid?"
+### Fragment Size Analysis
+> "Calculate the short (100-150bp) to long (151-220bp) fragment ratio for my sample."
 
-> "Predict the gel pattern for HindIII digestion of sequence.fasta"
+> "Generate genome-wide fragmentation profiles in 5Mb bins."
 
-### Double Digest
-> "Calculate fragment sizes for an EcoRI + BamHI double digest"
+### FinaleToolkit
+> "Run FinaleToolkit to replicate DELFI-style analysis."
 
-> "What bands will I see from digesting with both PstI and SalI?"
+> "Calculate GC-corrected fragmentation ratios."
 
-### Gel Comparison
-> "Compare my predicted fragments to a 1kb ladder"
-
-> "My gel shows bands at 3000, 2000, and 1000 bp - does this match EcoRI digestion?"
-
-### Verification
-> "Verify my digest worked by comparing observed vs expected fragments"
+### Nucleosome Profiling
+> "Analyze nucleosome accessibility around transcription start sites."
 
 ## What the Agent Will Do
-1. Load your DNA sequence
-2. Find enzyme cut positions
-3. Calculate fragment sizes
-4. Sort fragments for gel comparison
-5. Optionally compare to observed gel results
-
-## Code Patterns
-
-### Basic Fragment Prediction
-```python
-from Bio import SeqIO
-from Bio.Restriction import EcoRI
-
-record = SeqIO.read('plasmid.fasta', 'fasta')
-fragments = EcoRI.catalyze(record.seq)[0]
-sizes = sorted([len(f) for f in fragments], reverse=True)
-print(f'Fragment sizes: {sizes}')
-```
-
-### Understanding catalyze()
-```python
-# catalyze() returns a tuple
-five_prime_frags, three_prime_frags = EcoRI.catalyze(seq)
-# [0]: 5' fragments (most common use)
-# [1]: 3' fragments (for asymmetric cuts)
-```
-
-### Linear vs Circular DNA
-
-| DNA Type | n cuts | Fragments |
-|----------|--------|-----------|
-| Linear | n | n + 1 |
-| Circular | n | n |
-
-```python
-# Plasmid (circular)
-fragments = EcoRI.catalyze(seq, linear=False)[0]
-```
-
-### Double Digest
-```python
-from Bio.Restriction import EcoRI, BamHI
-
-ecori_sites = EcoRI.search(seq)
-bamhi_sites = BamHI.search(seq)
-all_sites = sorted(set(ecori_sites + bamhi_sites))
-
-def calc_fragments(seq_len, positions, linear=True):
-    if not positions:
-        return [seq_len]
-    positions = sorted(positions)
-    frags = []
-    if linear:
-        frags.append(positions[0])
-        for i in range(len(positions) - 1):
-            frags.append(positions[i + 1] - positions[i])
-        frags.append(seq_len - positions[-1])
-    else:
-        for i in range(len(positions) - 1):
-            frags.append(positions[i + 1] - positions[i])
-        frags.append((seq_len - positions[-1]) + positions[0])
-    return frags
-
-sizes = calc_fragments(len(seq), all_sites, linear=True)
-```
-
-### Gel Simulation
-```python
-def gel_pattern(sizes, ladder=[10000, 5000, 3000, 2000, 1500, 1000, 500]):
-    all_bands = sorted(set(sizes + ladder), reverse=True)
-    for band in all_bands:
-        marker = 'L' if band in ladder else ' '
-        sample = '=' * (sizes.count(band) * 4) if band in sizes else ''
-        print(f'{band:>6} {marker} | {sample}')
-```
-
-### Comparing Predicted vs Observed
-```python
-predicted = [3000, 2000, 1000]
-observed = [3050, 1980, 1020]  # From gel image
-tolerance = 100  # bp
-
-for pred in predicted:
-    matches = [obs for obs in observed if abs(pred - obs) <= tolerance]
-    if matches:
-        print(f'{pred} bp matches {matches[0]} bp')
-```
+1. Extract fragment sizes from BAM files
+2. Calculate short/long fragment ratios
+3. Generate genome-wide fragmentation profiles
+4. Apply GC correction if requested
+5. Compare patterns to healthy reference
 
 ## Tips
-- Check linear vs circular setting if fragment count is wrong
-- For linear DNA: sum of fragments should equal sequence length
-- Small fragments (<100 bp) may run off the gel
-- Allow ~5-10% tolerance when comparing to gel measurements
+- DELFI is a commercial company, NOT software - use FinaleToolkit (MIT license)
+- FinaleToolkit 0.7.1+ is 50x faster than original DELFI approach
+- Short fragments (100-150bp) are enriched in ctDNA
+- Normal cfDNA peaks at ~167bp (mononucleosome)
+- Griffin 0.2.0 is useful for tissue deconvolution
+
+## Related Skills
+- cfdna-preprocessing - Preprocess before fragment analysis
+- tumor-fraction-estimation - Complement with CNV-based estimation
+- methylation-based-detection - Alternative detection approach

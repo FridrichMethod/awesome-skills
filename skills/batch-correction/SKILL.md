@@ -1,263 +1,316 @@
 ---
-name: bio-differential-expression-batch-correction
-description: Remove batch effects from RNA-seq data using ComBat, ComBat-Seq, limma removeBatchEffect, and SVA for unknown batch variables. Use when correcting batch effects in expression data.
-tool_type: r
-primary_tool: sva
+name: bio-crispr-screens-batch-correction
+description: Batch effect correction for CRISPR screens. Covers normalization across batches, technical replicate handling, and batch-aware analysis. Use when combining screens from multiple batches or correcting systematic technical variation.
+tool_type: python
+primary_tool: scipy
 ---
 
 ## Version Compatibility
 
-Reference examples tested with: DESeq2 1.42+, ggplot2 3.5+, limma 3.58+, scanpy 1.10+
+Reference examples tested with: DESeq2 1.42+, MAGeCK 0.5+, matplotlib 3.8+, numpy 1.26+, pandas 2.2+, scikit-learn 1.4+, scipy 1.12+
 
 Before using code patterns, verify installed versions match. If versions differ:
-- R: `packageVersion('<pkg>')` then `?function_name` to verify parameters
+- Python: `pip show <package>` then `help(module.function)` to check signatures
 
 If code throws ImportError, AttributeError, or TypeError, introspect the installed
 package and adapt the example to match the actual API rather than retrying.
 
-# Batch Effect Correction
+# Batch Correction
 
-## ComBat-Seq (Count Data)
+**"Correct batch effects in my CRISPR screens"** → Normalize and harmonize sgRNA count data across screen batches to remove systematic technical variation while preserving biological signal.
+- Python: `scipy`/`sklearn` for median normalization and batch correction
+- CLI: `mageck test` with batch-aware design
 
-**Goal:** Remove batch effects from raw count data while preserving biological group differences.
+## Median Normalization
 
-**Approach:** Apply ComBat-Seq's negative binomial regression to adjust counts, keeping the integer nature of the data.
+**Goal:** Remove systematic library-size differences between batches.
 
-**"Remove batch effects from my RNA-seq counts"** → Adjust raw count matrix for known batch labels using negative binomial modeling, preserving biological condition effects.
+**Approach:** Scale each sample within a batch so that sample medians match a global median, correcting for sequencing depth variation.
 
-```r
-library(sva)
+```python
+import numpy as np
+import pandas as pd
+from scipy import stats
 
-# counts: raw count matrix (genes x samples)
-# batch: vector of batch labels
-# group: vector of biological condition (optional, to preserve)
+def median_normalize(counts_df, batch_column='batch'):
+    '''Normalize counts to median within each batch.'''
+    normalized = counts_df.copy()
 
-corrected_counts <- ComBat_seq(counts = as.matrix(counts),
-                                batch = batch,
-                                group = condition,
-                                full_mod = TRUE)
+    guide_columns = [c for c in counts_df.columns if c not in [batch_column, 'gene', 'guide']]
 
-# Result is batch-corrected count matrix
-# Use for visualization, clustering, but NOT for DE (use design formula instead)
+    for batch in counts_df[batch_column].unique():
+        batch_mask = counts_df[batch_column] == batch
+        batch_data = counts_df.loc[batch_mask, guide_columns]
+
+        sample_medians = batch_data.median(axis=0)
+        global_median = sample_medians.median()
+
+        scale_factors = global_median / sample_medians
+        normalized.loc[batch_mask, guide_columns] = batch_data * scale_factors
+
+    return normalized
+
+counts_df = pd.read_csv('screen_counts.csv')
+normalized = median_normalize(counts_df, 'batch')
 ```
 
-## ComBat (Normalized Data)
+## Size Factor Normalization
 
-**Goal:** Remove batch effects from normalized (log-transformed or TPM) expression data.
+```python
+def size_factor_normalize(counts_df, reference='geometric_mean'):
+    '''DESeq2-style size factor normalization.'''
+    guide_cols = [c for c in counts_df.columns if c.startswith('sample_')]
+    counts = counts_df[guide_cols].values
 
-**Approach:** Apply parametric empirical Bayes adjustment to normalized expression while protecting biological covariates.
+    counts_nonzero = np.where(counts == 0, np.nan, counts)
 
-```r
-library(sva)
+    if reference == 'geometric_mean':
+        log_counts = np.log(counts_nonzero)
+        geometric_mean = np.exp(np.nanmean(log_counts, axis=1))
+    else:
+        geometric_mean = counts_nonzero.mean(axis=1)
 
-# For normalized expression (log-transformed, TPM, etc.)
-# NOT for raw counts
+    ratios = counts_nonzero / geometric_mean[:, np.newaxis]
+    size_factors = np.nanmedian(ratios, axis=0)
 
-# Create model matrix
-mod <- model.matrix(~ condition, data = metadata)
-mod0 <- model.matrix(~ 1, data = metadata)
+    normalized_counts = counts / size_factors
+    normalized_df = counts_df.copy()
+    normalized_df[guide_cols] = normalized_counts
 
-# Run ComBat
-corrected_expr <- ComBat(dat = as.matrix(normalized_expr),
-                          batch = metadata$batch,
-                          mod = mod,
-                          par.prior = TRUE)
+    return normalized_df, size_factors
+
+normalized, size_factors = size_factor_normalize(counts_df)
+print('Size factors:', size_factors)
 ```
 
-## limma removeBatchEffect
+## Quantile Normalization
 
-**Goal:** Produce batch-corrected expression values for visualization while preserving group differences.
+```python
+def quantile_normalize(counts_df, guide_cols=None):
+    '''Quantile normalization across samples.'''
+    if guide_cols is None:
+        guide_cols = [c for c in counts_df.columns if c.startswith('sample_')]
 
-**Approach:** Regress out the batch effect from normalized expression using limma's linear model.
+    data = counts_df[guide_cols].values.copy()
 
-```r
-library(limma)
+    sorted_data = np.sort(data, axis=0)
+    mean_values = sorted_data.mean(axis=1)
 
-# For visualization/clustering only
-# Preserves group differences while removing batch
+    ranks = np.argsort(np.argsort(data, axis=0), axis=0)
+    normalized = mean_values[ranks]
 
-design <- model.matrix(~ condition, data = metadata)
-corrected_expr <- removeBatchEffect(normalized_expr,
-                                     batch = metadata$batch,
-                                     design = design)
+    result = counts_df.copy()
+    result[guide_cols] = normalized
 
-# For PCA, heatmaps, etc.
+    return result
+
+qn_counts = quantile_normalize(counts_df)
 ```
 
-## DESeq2 Design Formula (Recommended for DE)
+## Control-Based Normalization
 
-**Goal:** Account for batch effects during DE testing without modifying the count data.
+```python
+def normalize_to_controls(counts_df, control_genes, method='median'):
+    '''Normalize using non-targeting or negative control guides.'''
+    guide_cols = [c for c in counts_df.columns if c.startswith('sample_')]
 
-**Approach:** Include batch as a covariate in the DESeq2 design formula so batch variance is modeled, not removed.
+    is_control = counts_df['gene'].isin(control_genes)
+    control_data = counts_df.loc[is_control, guide_cols]
 
-```r
-library(DESeq2)
+    if method == 'median':
+        control_values = control_data.median(axis=0)
+    elif method == 'mean':
+        control_values = control_data.mean(axis=0)
+    elif method == 'sum':
+        control_values = control_data.sum(axis=0)
 
-# Include batch in design formula - preferred for DE analysis
-dds <- DESeqDataSetFromMatrix(countData = counts,
-                               colData = metadata,
-                               design = ~ batch + condition)
+    reference = control_values.median()
+    scale_factors = reference / control_values
 
-# Batch is modeled, not removed
-# DE results are adjusted for batch
-dds <- DESeq(dds)
-res <- results(dds, contrast = c('condition', 'treatment', 'control'))
+    normalized = counts_df.copy()
+    normalized[guide_cols] = counts_df[guide_cols] * scale_factors
+
+    return normalized, scale_factors
+
+nontargeting = counts_df[counts_df['gene'].str.startswith('NonTargeting')]['gene'].unique()
+normalized, factors = normalize_to_controls(counts_df, nontargeting)
 ```
 
-## Surrogate Variable Analysis (SVA)
+## Batch Effect Removal with ComBat
 
-**Goal:** Discover and correct for unknown sources of variation (hidden batch effects).
+**Goal:** Remove batch effects using empirical Bayes adjustment while preserving biological signal.
 
-**Approach:** Estimate surrogate variables from the residual variation not explained by the biological model.
+**Approach:** Log-transform counts, apply pyCombat with a batch vector, and back-transform to count space.
 
-**"Correct for unknown batch effects in my expression data"** → Estimate latent surrogate variables capturing unwanted variation, then include them as covariates in the DE model.
+```python
+def combat_correction(counts_df, batch_vector, guide_cols=None):
+    '''ComBat batch correction for count data.'''
+    from combat.pycombat import pycombat
 
-```r
-library(sva)
+    if guide_cols is None:
+        guide_cols = [c for c in counts_df.columns if c.startswith('sample_')]
 
-# When batch is unknown, estimate surrogate variables
-mod <- model.matrix(~ condition, data = metadata)
-mod0 <- model.matrix(~ 1, data = metadata)
+    data = counts_df[guide_cols].values.T
 
-# Estimate number of surrogate variables
-n_sv <- num.sv(normalized_expr, mod, method = 'leek')
+    log_data = np.log2(data + 1)
+    corrected = pycombat(log_data, batch_vector)
+    corrected_counts = np.power(2, corrected) - 1
+    corrected_counts = np.maximum(corrected_counts, 0)
 
-# Estimate surrogate variables
-svobj <- sva(normalized_expr, mod, mod0, n.sv = n_sv)
+    result = counts_df.copy()
+    result[guide_cols] = corrected_counts.T
 
-# Add SVs to design for DE
-design_with_sv <- cbind(mod, svobj$sv)
+    return result
+
+batches = [1, 1, 1, 2, 2, 2]
+corrected = combat_correction(counts_df, batches)
 ```
 
-## SVA with DESeq2
+## Batch-Aware Log-Fold Change
 
-**Goal:** Integrate surrogate variables into DESeq2 to adjust for hidden confounders during DE testing.
+```python
+def batch_aware_lfc(counts_df, treatment_cols, control_cols, batch_vector):
+    '''Calculate LFC accounting for batch structure.'''
+    batches = np.unique(batch_vector)
 
-**Approach:** Estimate SVs from normalized counts, add them to colData, and update the design formula.
+    lfc_by_batch = []
+    for batch in batches:
+        batch_treat = [c for c, b in zip(treatment_cols, batch_vector) if b == batch and c in treatment_cols]
+        batch_ctrl = [c for c, b in zip(control_cols, batch_vector) if b == batch and c in control_cols]
 
-```r
-library(DESeq2)
-library(sva)
+        if len(batch_treat) == 0 or len(batch_ctrl) == 0:
+            continue
 
-# Normalize for SV estimation
-dds <- DESeqDataSetFromMatrix(countData = counts, colData = metadata, design = ~ condition)
-dds <- estimateSizeFactors(dds)
-norm_counts <- counts(dds, normalized = TRUE)
+        treat_mean = counts_df[batch_treat].mean(axis=1)
+        ctrl_mean = counts_df[batch_ctrl].mean(axis=1)
 
-# Estimate SVs
-mod <- model.matrix(~ condition, data = metadata)
-mod0 <- model.matrix(~ 1, data = metadata)
-svobj <- sva(norm_counts, mod, mod0)
+        batch_lfc = np.log2((treat_mean + 1) / (ctrl_mean + 1))
+        lfc_by_batch.append(batch_lfc)
 
-# Add SVs to colData
-for (i in seq_len(ncol(svobj$sv))) {
-    colData(dds)[[paste0('SV', i)]] <- svobj$sv[, i]
+    combined_lfc = pd.concat(lfc_by_batch, axis=1).mean(axis=1)
+    lfc_var = pd.concat(lfc_by_batch, axis=1).var(axis=1)
+
+    return combined_lfc, lfc_var
+```
+
+## Replicate Correlation Check
+
+```python
+def check_replicate_correlation(counts_df, sample_cols, replicate_groups):
+    '''Check correlation between replicates.'''
+    correlations = []
+
+    for group, replicates in replicate_groups.items():
+        if len(replicates) < 2:
+            continue
+
+        for i in range(len(replicates)):
+            for j in range(i+1, len(replicates)):
+                r1, r2 = replicates[i], replicates[j]
+                if r1 in sample_cols and r2 in sample_cols:
+                    log_r1 = np.log2(counts_df[r1] + 1)
+                    log_r2 = np.log2(counts_df[r2] + 1)
+
+                    corr, pval = stats.pearsonr(log_r1, log_r2)
+                    correlations.append({
+                        'group': group,
+                        'rep1': r1,
+                        'rep2': r2,
+                        'pearson_r': corr,
+                        'pvalue': pval
+                    })
+
+    return pd.DataFrame(correlations)
+
+replicate_groups = {
+    'treatment_batch1': ['sample_1', 'sample_2'],
+    'treatment_batch2': ['sample_4', 'sample_5'],
+    'control_batch1': ['sample_3'],
+    'control_batch2': ['sample_6']
 }
 
-# Update design
-sv_formula <- as.formula(paste('~', paste(paste0('SV', 1:ncol(svobj$sv)), collapse = ' + '), '+ condition'))
-design(dds) <- sv_formula
-
-# Run DESeq2
-dds <- DESeq(dds)
+corr_df = check_replicate_correlation(counts_df, counts_df.columns[3:], replicate_groups)
+print(corr_df)
 ```
 
-## Visualize Batch Effects
+## Batch QC Metrics
 
-**Goal:** Confirm batch effect removal by comparing PCA plots before and after correction.
+**Goal:** Quantify batch effect magnitude to determine whether correction is needed.
 
-**Approach:** Run PCA on pre- and post-correction expression, coloring points by batch and condition.
+**Approach:** Run PCA on log-transformed counts, compute between-batch vs within-batch variance ratio, and assess whether batch structure dominates the first principal components.
 
-```r
-library(ggplot2)
+```python
+def batch_qc_metrics(counts_df, batch_vector, sample_cols):
+    '''Calculate batch-related QC metrics.'''
+    from sklearn.decomposition import PCA
+    from scipy.spatial.distance import pdist
 
-# PCA before correction
-pca_before <- prcomp(t(normalized_expr), scale. = TRUE)
-pca_df <- data.frame(PC1 = pca_before$x[, 1], PC2 = pca_before$x[, 2],
-                     batch = metadata$batch, condition = metadata$condition)
+    log_counts = np.log2(counts_df[sample_cols].values.T + 1)
 
-p1 <- ggplot(pca_df, aes(PC1, PC2, color = batch, shape = condition)) +
-    geom_point(size = 3) + ggtitle('Before Correction')
+    pca = PCA(n_components=min(5, len(sample_cols)))
+    pcs = pca.fit_transform(log_counts)
 
-# PCA after correction
-pca_after <- prcomp(t(corrected_expr), scale. = TRUE)
-pca_df_after <- data.frame(PC1 = pca_after$x[, 1], PC2 = pca_after$x[, 2],
-                           batch = metadata$batch, condition = metadata$condition)
+    batch_labels = np.array(batch_vector)
+    unique_batches = np.unique(batch_labels)
 
-p2 <- ggplot(pca_df_after, aes(PC1, PC2, color = batch, shape = condition)) +
-    geom_point(size = 3) + ggtitle('After Correction')
+    if len(unique_batches) > 1:
+        batch_means = [pcs[batch_labels == b].mean(axis=0) for b in unique_batches]
+        batch_separation = np.mean(pdist(batch_means))
 
-library(patchwork)
-p1 + p2
+        within_batch_var = np.mean([pcs[batch_labels == b].var() for b in unique_batches])
+        between_batch_var = np.var(batch_means, axis=0).sum()
+
+        batch_effect_ratio = between_batch_var / (within_batch_var + 1e-10)
+    else:
+        batch_separation = 0
+        batch_effect_ratio = 0
+
+    return {
+        'batch_separation': batch_separation,
+        'batch_effect_ratio': batch_effect_ratio,
+        'pca_variance_explained': pca.explained_variance_ratio_,
+        'n_batches': len(unique_batches)
+    }
+
+qc = batch_qc_metrics(counts_df, [1,1,1,2,2,2], sample_cols)
+print(f"Batch effect ratio: {qc['batch_effect_ratio']:.2f}")
 ```
 
-## Quantify Batch Effect
+## Visualization
 
-**Goal:** Measure the proportion of variance attributable to batch versus biological condition.
+```python
+import matplotlib.pyplot as plt
 
-**Approach:** Correlate principal components with batch and condition labels, or use PVCA.
+def plot_batch_effect(counts_df, batch_vector, sample_cols, output_file):
+    '''Visualize batch effects with PCA.'''
+    from sklearn.decomposition import PCA
 
-```r
-# PVCA - Principal Variance Component Analysis
-library(pvca)
+    log_counts = np.log2(counts_df[sample_cols].values.T + 1)
 
-# Proportion of variance explained by batch vs condition
-pvcaObj <- pvcaBatchAssess(normalized_expr, metadata, threshold = 0.6,
-                            theInteractionTerms = c('batch', 'condition'))
+    pca = PCA(n_components=2)
+    pcs = pca.fit_transform(log_counts)
 
-# Or manual approach
-pca <- prcomp(t(normalized_expr), scale. = TRUE)
-variance_explained <- summary(pca)$importance[2, 1:5]
+    fig, ax = plt.subplots(figsize=(8, 6))
 
-# Correlation of PCs with batch
-cor(pca$x[, 1], as.numeric(as.factor(metadata$batch)))
+    for batch in np.unique(batch_vector):
+        mask = np.array(batch_vector) == batch
+        ax.scatter(pcs[mask, 0], pcs[mask, 1], label=f'Batch {batch}', s=100)
+
+    ax.set_xlabel(f'PC1 ({pca.explained_variance_ratio_[0]:.1%})')
+    ax.set_ylabel(f'PC2 ({pca.explained_variance_ratio_[1]:.1%})')
+    ax.legend()
+    ax.set_title('PCA - Batch Effects')
+
+    plt.tight_layout()
+    plt.savefig(output_file, dpi=150)
+    plt.close()
+
+plot_batch_effect(counts_df, [1,1,1,2,2,2], sample_cols, 'batch_pca.png')
 ```
-
-## Harmony (Single-Cell Integration)
-
-**Goal:** Integrate single-cell data from multiple batches into a shared embedding.
-
-**Approach:** Apply Harmony to PCA embeddings to iteratively remove batch effects while preserving cell-type structure.
-
-```r
-library(harmony)
-library(Seurat)
-
-# For single-cell data with multiple batches
-seurat_obj <- RunHarmony(seurat_obj, group.by.vars = 'batch', reduction = 'pca',
-                          dims.use = 1:30)
-
-# Use harmony reduction for downstream
-seurat_obj <- RunUMAP(seurat_obj, reduction = 'harmony', dims = 1:30)
-seurat_obj <- FindNeighbors(seurat_obj, reduction = 'harmony', dims = 1:30)
-```
-
-## Critical: When NOT to Use Corrected Counts
-
-**Never use batch-corrected counts as input to DESeq2 or edgeR.** Two-step correction (ComBat/ComBat-Seq then DE) introduces correlation structure in residuals, inflating or deflating significance. Include batch as a covariate in the design formula (`~ batch + condition`) instead.
-
-`limma::removeBatchEffect()` is designed for visualization only — it does not produce counts suitable for DE testing.
-
-| Task | Use Raw Counts + Design | Use Corrected Values |
-|------|------------------------|---------------------|
-| Differential expression | Yes (`~ batch + condition`) | **No** |
-| Pathway analysis on DE results | Yes (from design-based DE) | **No** |
-| PCA, UMAP, heatmaps | — | Yes |
-| Clustering | — | Yes |
-| Machine learning features | — | Yes |
-| Cross-study meta-analysis | — | Yes (ComBat-Seq) |
-
-## Confounding and Limitations
-
-| Situation | Detectable? | Solution |
-|-----------|------------|----------|
-| Batch partially correlated with condition | Yes (PCA) | Include batch in design; results are valid but power is reduced |
-| Batch perfectly correlated with condition (all treated in batch 1, all control in batch 2) | Yes (PCA) | **Unfixable** — cannot separate batch from condition |
-| Unknown batch variables | Sometimes (PCA shows unexplained clustering) | Use SVA to estimate surrogate variables |
-| Over-correction removing biological signal | Hard to detect | Compare results with and without correction; balanced designs prevent this |
 
 ## Related Skills
 
-- differential-expression/deseq2-basics - DE with batch in design
-- single-cell/clustering - Integration methods
-- expression-matrix/normalization - Data normalization and transformation
+- mageck-analysis - Batch-aware MAGeCK analysis
+- screen-qc - Quality control before correction
+- hit-calling - Analysis after batch correction
+- library-design - Control guide design
