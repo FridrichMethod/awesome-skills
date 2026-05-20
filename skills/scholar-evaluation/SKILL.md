@@ -1,8 +1,3 @@
----
-name: scholar-evaluation
-description: Evaluate scholarly and research work using structured quality dimensions, rubrics, and publication-readiness criteria. Use when reviewing papers, proposals, literature reviews, or scholarly writing.
----
-
 # Scholar Evaluation
 
 ## Overview
