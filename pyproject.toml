@@ -1,0 +1,27 @@
+[project]
+name = "awesome-skills"
+version = "0.3.1"
+description = "Curated, auto-synced Claude Code & Codex skills"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pyyaml>=6.0",
+    "ruff>=0.7",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-ra -q --strict-markers"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B"]
+ignore = ["E501"]
