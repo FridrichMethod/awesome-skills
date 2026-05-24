@@ -1,16 +1,15 @@
 ---
-name: bio-single-cell-doublet-detection
-description: Detect and remove doublets (multiple cells captured in one droplet) from single-cell RNA-seq data. Uses Scrublet (Python), DoubletFinder (R), and scDblFinder (R). Essential QC step before clustering to avoid artificial cell populations. Use when identifying and removing doublets from scRNA-seq data.
-tool_type: mixed
-primary_tool: Scrublet
+name: bio-flow-cytometry-doublet-detection
+description: Detect and remove doublets from flow and mass cytometry data. Covers FSC/SSC gating and computational doublet detection methods. Use when filtering out cell aggregates before clustering or quantitative analysis.
+tool_type: r
+primary_tool: flowCore
 ---
 
 ## Version Compatibility
 
-Reference examples tested with: matplotlib 3.8+, numpy 1.26+, scanpy 1.10+
+Reference examples tested with: flowCore 2.14+, ggplot2 3.5+
 
 Before using code patterns, verify installed versions match. If versions differ:
-- Python: `pip show <package>` then `help(module.function)` to check signatures
 - R: `packageVersion('<pkg>')` then `?function_name` to verify parameters
 
 If code throws ImportError, AttributeError, or TypeError, introspect the installed
@@ -18,345 +17,272 @@ package and adapt the example to match the actual API rather than retrying.
 
 # Doublet Detection
 
-Doublets are droplets containing two or more cells. They appear as artificial intermediate cell populations and must be removed before analysis.
+**"Remove doublets from my flow cytometry data"** → Detect and filter out cell aggregates using FSC-A/FSC-H gating or computational methods before clustering or quantitative analysis.
+- R: `flowCore` rectangular gates on FSC-A vs FSC-H
 
-## Scrublet (Python)
+## FSC-A vs FSC-H Gating (Standard Method)
 
-**Goal:** Detect and score doublets in scRNA-seq data using simulated doublet profiles.
+```r
+library(flowCore)
+library(ggcyto)
 
-**Approach:** Simulate artificial doublets by combining random cell pairs, embed real and simulated cells together, and score each cell's similarity to simulated doublets.
+# Load data
+fs <- read.flowSet(list.files('data/', pattern = '\\.fcs$', full.names = TRUE))
 
-**"Remove doublets from my data"** → Identify droplets containing multiple cells by comparing each cell's profile to computationally simulated doublets, then filter flagged cells.
+# FSC-A vs FSC-H for doublet discrimination
+# Singlets fall on diagonal, doublets have higher FSC-A for given FSC-H
 
-### Basic Usage
-
-```python
-import scrublet as scr
-import scanpy as sc
-import numpy as np
-
-adata = sc.read_10x_mtx('filtered_feature_bc_matrix/')
-
-scrub = scr.Scrublet(adata.X, expected_doublet_rate=0.06)
-doublet_scores, predicted_doublets = scrub.scrub_doublets()
-
-adata.obs['doublet_score'] = doublet_scores
-adata.obs['predicted_doublet'] = predicted_doublets
-
-print(f'Detected {predicted_doublets.sum()} doublets ({100*predicted_doublets.mean():.1f}%)')
-```
-
-### Adjust Parameters
-
-```python
-scrub = scr.Scrublet(adata.X, expected_doublet_rate=0.06)
-doublet_scores, predicted_doublets = scrub.scrub_doublets(
-    min_counts=2,
-    min_cells=3,
-    min_gene_variability_pctl=85,
-    n_prin_comps=30,
-    synthetic_doublet_umi_subsampling=1.0
+# Manual rectangular gate
+singlet_gate <- rectangleGate(
+    filterId = 'singlets',
+    'FSC-A' = c(50000, 250000),
+    'FSC-H' = c(50000, 250000)
 )
-```
 
-### Visualize Doublet Scores
-
-```python
-import matplotlib.pyplot as plt
-
-scrub.plot_histogram()
-plt.savefig('doublet_histogram.pdf')
-
-# UMAP with doublet scores
-sc.pp.normalize_total(adata, target_sum=1e4)
-sc.pp.log1p(adata)
-sc.pp.highly_variable_genes(adata)
-sc.pp.pca(adata)
-sc.pp.neighbors(adata)
-sc.tl.umap(adata)
-
-sc.pl.umap(adata, color=['doublet_score', 'predicted_doublet'], save='_doublets.pdf')
-```
-
-### Filter Doublets
-
-```python
-adata_filtered = adata[~adata.obs['predicted_doublet']].copy()
-print(f'Kept {adata_filtered.n_obs} cells after doublet removal')
-```
-
-### Set Manual Threshold
-
-```python
-scrub = scr.Scrublet(adata.X)
-doublet_scores, _ = scrub.scrub_doublets()
-
-threshold = 0.25
-predicted_doublets = doublet_scores > threshold
-adata.obs['predicted_doublet'] = predicted_doublets
-```
-
-## DoubletFinder (R)
-
-**Goal:** Detect doublets in Seurat objects using DoubletFinder's pANN-based classification.
-
-**Approach:** Optimize the pK neighborhood parameter via parameter sweep, compute artificial nearest neighbor proportions, and classify cells as singlets or doublets.
-
-### Basic Usage
-
-```r
-library(Seurat)
-library(DoubletFinder)
-
-seurat_obj <- Read10X(data.dir = 'filtered_feature_bc_matrix/')
-seurat_obj <- CreateSeuratObject(counts = seurat_obj, min.cells = 3, min.features = 200)
-
-seurat_obj <- NormalizeData(seurat_obj)
-seurat_obj <- FindVariableFeatures(seurat_obj)
-seurat_obj <- ScaleData(seurat_obj)
-seurat_obj <- RunPCA(seurat_obj)
-seurat_obj <- RunUMAP(seurat_obj, dims = 1:20)
-seurat_obj <- FindNeighbors(seurat_obj, dims = 1:20)
-seurat_obj <- FindClusters(seurat_obj, resolution = 0.5)
-
-sweep.res <- paramSweep(seurat_obj, PCs = 1:20, sct = FALSE)
-sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
-bcmvn <- find.pK(sweep.stats)
-
-optimal_pk <- as.numeric(as.character(bcmvn$pK[which.max(bcmvn$BCmetric)]))
-
-nExp_poi <- round(0.06 * nrow(seurat_obj@meta.data))
-seurat_obj <- doubletFinder(seurat_obj, PCs = 1:20, pN = 0.25, pK = optimal_pk,
-                             nExp = nExp_poi, reuse.pANN = FALSE, sct = FALSE)
-
-colnames(seurat_obj@meta.data)
-```
-
-### With SCTransform
-
-```r
-seurat_obj <- SCTransform(seurat_obj)
-seurat_obj <- RunPCA(seurat_obj)
-seurat_obj <- RunUMAP(seurat_obj, dims = 1:30)
-seurat_obj <- FindNeighbors(seurat_obj, dims = 1:30)
-seurat_obj <- FindClusters(seurat_obj, resolution = 0.5)
-
-sweep.res <- paramSweep(seurat_obj, PCs = 1:30, sct = TRUE)
-sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
-bcmvn <- find.pK(sweep.stats)
-
-optimal_pk <- as.numeric(as.character(bcmvn$pK[which.max(bcmvn$BCmetric)]))
-nExp_poi <- round(0.06 * nrow(seurat_obj@meta.data))
-
-seurat_obj <- doubletFinder(seurat_obj, PCs = 1:30, pN = 0.25, pK = optimal_pk,
-                             nExp = nExp_poi, reuse.pANN = FALSE, sct = TRUE)
-```
-
-### Filter Doublets
-
-```r
-df_col <- grep('DF.classifications', colnames(seurat_obj@meta.data), value = TRUE)
-seurat_obj$doublet <- seurat_obj@meta.data[[df_col]]
-
-DimPlot(seurat_obj, group.by = 'doublet')
-
-seurat_obj <- subset(seurat_obj, subset = doublet == 'Singlet')
-```
-
-### Adjust Expected Doublet Rate
-
-```r
-n_cells <- ncol(seurat_obj)
-doublet_rate <- n_cells / 1000 * 0.008
-nExp_poi <- round(doublet_rate * n_cells)
-```
-
-## scDblFinder (R/Bioconductor)
-
-**Goal:** Detect doublets using scDblFinder's gradient-boosted classifier for fast, accurate identification.
-
-**Approach:** Simulate doublets, train a gradient boosting classifier on real vs simulated profiles, and score each cell.
-
-### Basic Usage
-
-```r
-library(scDblFinder)
-library(SingleCellExperiment)
-
-sce <- SingleCellExperiment(assays = list(counts = counts_matrix))
-sce <- scDblFinder(sce)
-
-table(sce$scDblFinder.class)
-```
-
-### From Seurat Object
-
-```r
-library(scDblFinder)
-library(Seurat)
-
-sce <- as.SingleCellExperiment(seurat_obj)
-
-sce <- scDblFinder(sce)
-
-seurat_obj$scDblFinder_class <- sce$scDblFinder.class
-seurat_obj$scDblFinder_score <- sce$scDblFinder.score
-
-DimPlot(seurat_obj, group.by = 'scDblFinder_class')
-
-seurat_obj <- subset(seurat_obj, subset = scDblFinder_class == 'singlet')
-```
-
-### Multi-Sample Processing
-
-```r
-sce <- scDblFinder(sce, samples = 'sample_id')
-```
-
-### Adjust Parameters
-
-```r
-sce <- scDblFinder(sce,
-    dbr = 0.06,
-    dbr.sd = 0.015,
-    nfeatures = 1500,
-    dims = 20,
-    k = 30
+# Or use polygon gate for diagonal
+singlet_polygon <- polygonGate(
+    filterId = 'singlets',
+    .gate = data.frame(
+        'FSC-A' = c(50000, 250000, 250000, 50000),
+        'FSC-H' = c(40000, 200000, 260000, 60000)
+    )
 )
+
+# Apply gate
+singlets <- Subset(fs, singlet_gate)
+
+# Visualize
+autoplot(fs[[1]], 'FSC-A', 'FSC-H') + geom_gate(singlet_gate)
 ```
 
-## Expected Doublet Rates
-
-| Cells Loaded | Expected Rate |
-|--------------|---------------|
-| 1,000 | ~0.8% |
-| 2,000 | ~1.6% |
-| 5,000 | ~4.0% |
-| 10,000 | ~8.0% |
-| 15,000 | ~12% |
-
-Formula: `rate ≈ cells_loaded / 1000 * 0.008`
-
-## Compare Methods
+## Automated Singlet Gating with flowDensity
 
 ```r
-library(scDblFinder)
+library(flowDensity)
 
-seurat_obj$scrublet <- scrublet_results
-sce <- as.SingleCellExperiment(seurat_obj)
-sce <- scDblFinder(sce)
-seurat_obj$scDblFinder <- sce$scDblFinder.class
+# Automatic singlet gate
+singlet_result <- flowDensity(
+    fs[[1]],
+    channels = c('FSC-A', 'FSC-H'),
+    position = c(TRUE, TRUE),
+    gates = c(NA, NA)
+)
 
-DimPlot(seurat_obj, group.by = c('doublet', 'scDblFinder', 'scrublet'), ncol = 3)
+# Get gated population
+singlets <- getflowFrame(singlet_result)
 
-table(seurat_obj$doublet, seurat_obj$scDblFinder)
+# Percentage singlets
+pct_singlets <- nrow(singlets) / nrow(fs[[1]]) * 100
+cat('Singlets:', round(pct_singlets, 1), '%\n')
 ```
 
-## Handling Heterotypic vs Homotypic Doublets
-
-### Heterotypic Doublets
-- Two different cell types
-- Easier to detect (intermediate expression)
-- All methods handle well
-
-### Homotypic Doublets
-- Same cell type
-- Harder to detect (no intermediate signature)
-- May have higher total counts
-
-```python
-adata.obs['log_counts'] = np.log1p(adata.obs['total_counts'])
-sc.pl.violin(adata, 'log_counts', groupby='predicted_doublet')
-```
-
-## Scanpy Integration Pipeline
-
-**Goal:** Run doublet detection as part of a complete Scanpy preprocessing workflow.
-
-**Approach:** Detect and remove doublets with Scrublet before QC filtering, then proceed through normalization, HVG selection, and clustering.
-
-```python
-import scanpy as sc
-import scrublet as scr
-
-adata = sc.read_10x_mtx('filtered_feature_bc_matrix/')
-
-adata.var['mt'] = adata.var_names.str.startswith('MT-')
-sc.pp.calculate_qc_metrics(adata, qc_vars=['mt'], inplace=True)
-
-scrub = scr.Scrublet(adata.X, expected_doublet_rate=0.06)
-doublet_scores, predicted_doublets = scrub.scrub_doublets()
-adata.obs['doublet_score'] = doublet_scores
-adata.obs['is_doublet'] = predicted_doublets
-
-print(f'Before filtering: {adata.n_obs} cells')
-adata = adata[~adata.obs['is_doublet']].copy()
-adata = adata[adata.obs['pct_counts_mt'] < 20].copy()
-print(f'After filtering: {adata.n_obs} cells')
-
-sc.pp.normalize_total(adata, target_sum=1e4)
-sc.pp.log1p(adata)
-sc.pp.highly_variable_genes(adata)
-sc.pp.pca(adata)
-sc.pp.neighbors(adata)
-sc.tl.umap(adata)
-sc.tl.leiden(adata)
-```
-
-## Seurat Integration Pipeline
-
-**Goal:** Run DoubletFinder as part of a complete Seurat preprocessing workflow.
-
-**Approach:** Preprocess and cluster, run DoubletFinder parameter sweep and classification, filter doublets, then re-preprocess clean singlets.
+## flowAI Quality Control
 
 ```r
-library(Seurat)
-library(DoubletFinder)
+library(flowAI)
 
-seurat_obj <- Read10X('filtered_feature_bc_matrix/')
-seurat_obj <- CreateSeuratObject(counts = seurat_obj, min.cells = 3, min.features = 200)
+# flowAI performs comprehensive QC including:
+# - Flow rate anomaly detection
+# - Signal acquisition anomaly detection
+# - Dynamic range anomaly detection
 
-seurat_obj[['percent.mt']] <- PercentageFeatureSet(seurat_obj, pattern = '^MT-')
+# Run flowAI
+fs_qc <- flow_auto_qc(
+    fs,
+    folder_results = 'flowAI_results',
+    fcs_QC = TRUE,
+    fcs_highQ = TRUE
+)
 
-seurat_obj <- NormalizeData(seurat_obj)
-seurat_obj <- FindVariableFeatures(seurat_obj)
-seurat_obj <- ScaleData(seurat_obj)
-seurat_obj <- RunPCA(seurat_obj)
-seurat_obj <- RunUMAP(seurat_obj, dims = 1:20)
-seurat_obj <- FindNeighbors(seurat_obj, dims = 1:20)
-seurat_obj <- FindClusters(seurat_obj, resolution = 0.5)
-
-sweep.res <- paramSweep(seurat_obj, PCs = 1:20)
-sweep.stats <- summarizeSweep(sweep.res)
-bcmvn <- find.pK(sweep.stats)
-pk <- as.numeric(as.character(bcmvn$pK[which.max(bcmvn$BCmetric)]))
-nExp <- round(0.06 * ncol(seurat_obj))
-
-seurat_obj <- doubletFinder(seurat_obj, PCs = 1:20, pN = 0.25, pK = pk, nExp = nExp)
-
-df_col <- grep('DF.classifications', colnames(seurat_obj@meta.data), value = TRUE)
-seurat_obj <- subset(seurat_obj, cells = colnames(seurat_obj)[seurat_obj@meta.data[[df_col]] == 'Singlet'])
-seurat_obj <- subset(seurat_obj, subset = percent.mt < 20)
-
-seurat_obj <- NormalizeData(seurat_obj)
-seurat_obj <- FindVariableFeatures(seurat_obj)
-seurat_obj <- ScaleData(seurat_obj)
-seurat_obj <- RunPCA(seurat_obj)
-seurat_obj <- RunUMAP(seurat_obj, dims = 1:20)
-seurat_obj <- FindNeighbors(seurat_obj, dims = 1:20)
-seurat_obj <- FindClusters(seurat_obj)
+# Results include singlet detection based on flow rate stability
 ```
 
-## Method Comparison
+## FSC-A/FSC-W Method (Width Parameter)
 
-| Method | Speed | Accuracy | Language |
-|--------|-------|----------|----------|
-| Scrublet | Fast | Good | Python |
-| DoubletFinder | Slow | Good | R |
-| scDblFinder | Fast | Excellent | R |
+```r
+# Some instruments provide FSC-W (width) instead of FSC-H
+# FSC-A = FSC-H × FSC-W
+# Doublets have higher width
+
+if ('FSC-W' %in% colnames(fs[[1]])) {
+    singlet_gate_w <- rectangleGate(
+        filterId = 'singlets',
+        'FSC-A' = c(50000, 250000),
+        'FSC-W' = c(50000, 100000)  # Lower width = singlets
+    )
+
+    singlets <- Subset(fs, singlet_gate_w)
+}
+```
+
+## Ratio-Based Doublet Detection
+
+```r
+# Calculate FSC-A/FSC-H ratio
+# Singlets have ratio close to constant (based on pulse geometry)
+# Doublets have elevated ratio
+
+calculate_fsc_ratio <- function(ff) {
+    fsc_a <- exprs(ff)[, 'FSC-A']
+    fsc_h <- exprs(ff)[, 'FSC-H']
+
+    ratio <- fsc_a / (fsc_h + 1)  # Add small value to avoid division by zero
+    return(ratio)
+}
+
+# Add ratio as derived parameter
+for (i in 1:length(fs)) {
+    ratio <- calculate_fsc_ratio(fs[[i]])
+    fs[[i]] <- cbind2(fs[[i]], ratio)
+    colnames(fs[[i]])[ncol(fs[[i]])] <- 'FSC_ratio'
+}
+
+# Gate on ratio
+ratio_cutoff <- quantile(exprs(fs[[1]])[, 'FSC_ratio'], 0.95)
+singlet_gate_ratio <- rectangleGate(filterId = 'singlets', 'FSC_ratio' = c(0, ratio_cutoff))
+```
+
+## SSC-Based Doublet Detection
+
+```r
+# For cell types where FSC doesn't discriminate well,
+# use SSC-A vs SSC-H additionally
+
+ssc_singlet_gate <- rectangleGate(
+    filterId = 'ssc_singlets',
+    'SSC-A' = c(10000, 200000),
+    'SSC-H' = c(10000, 200000)
+)
+
+# Combine FSC and SSC gates
+combined_gate <- singlet_gate & ssc_singlet_gate
+singlets <- Subset(fs, combined_gate)
+```
+
+## CyTOF Doublet Detection
+
+```r
+library(CATALYST)
+
+# For CyTOF data, use DNA channels or event length
+
+# DNA-based doublet detection (if DNA channels present)
+# Doublets have ~2x DNA content
+sce <- prepData(fs, panel, md)
+
+# If Event_length channel exists
+if ('Event_length' %in% rownames(sce)) {
+    event_length <- assay(sce)['Event_length', ]
+    singlet_idx <- event_length < quantile(event_length, 0.95)
+
+    sce_singlets <- sce[, singlet_idx]
+    cat('Removed', sum(!singlet_idx), 'doublets based on event length\n')
+}
+
+# DNA intercalator method
+if (all(c('DNA1', 'DNA2') %in% rownames(sce))) {
+    dna_total <- assay(sce)['DNA1', ] + assay(sce)['DNA2', ]
+    dna_cutoff <- quantile(dna_total, 0.95)
+
+    singlet_idx <- dna_total < dna_cutoff
+    sce_singlets <- sce[, singlet_idx]
+}
+```
+
+## CATALYST Workflow with Doublet Removal
+
+**Goal:** Detect and remove cell doublets from a CyTOF/flow dataset using a regression-based approach on scatter parameters.
+
+**Approach:** Model the expected FSC-A vs FSC-H relationship for singlets with linear regression, classify events with large residuals (above the 95th percentile) as doublets, and filter them out.
+
+```r
+library(CATALYST)
+
+# Load and prepare data
+sce <- prepData(fs, panel, md, transform = TRUE, cofactor = 5)
+
+# Remove doublets using marker-based method
+sce <- filterSCE(sce, !is_doublet(sce))
+
+# Custom doublet detection based on FSC
+fsc_a <- colData(sce)$FSC_A
+fsc_h <- colData(sce)$FSC_H
+
+# Model expected singlet relationship
+fit <- lm(fsc_a ~ fsc_h)
+residuals <- abs(fsc_a - predict(fit))
+threshold <- quantile(residuals, 0.95)
+
+# Mark doublets
+colData(sce)$doublet <- residuals > threshold
+sce_singlets <- sce[, !colData(sce)$doublet]
+
+cat('Doublet rate:', round(mean(colData(sce)$doublet) * 100, 1), '%\n')
+```
+
+## Batch Processing
+
+```r
+# Process all samples
+detect_doublets <- function(ff, method = 'fsc') {
+    if (method == 'fsc') {
+        fsc_a <- exprs(ff)[, 'FSC-A']
+        fsc_h <- exprs(ff)[, 'FSC-H']
+
+        fit <- lm(fsc_a ~ fsc_h)
+        residuals <- abs(fsc_a - predict(fit))
+        threshold <- quantile(residuals, 0.95)
+
+        singlet_idx <- residuals <= threshold
+    } else if (method == 'ratio') {
+        ratio <- exprs(ff)[, 'FSC-A'] / (exprs(ff)[, 'FSC-H'] + 1)
+        singlet_idx <- ratio < quantile(ratio, 0.95)
+    }
+
+    return(ff[singlet_idx, ])
+}
+
+# Apply to all samples
+fs_singlets <- fsApply(fs, detect_doublets, method = 'fsc')
+
+# Report
+doublet_rates <- sapply(1:length(fs), function(i) {
+    1 - nrow(fs_singlets[[i]]) / nrow(fs[[i]])
+})
+cat('Mean doublet rate:', round(mean(doublet_rates) * 100, 1), '%\n')
+```
+
+## Visualization
+
+```r
+library(ggplot2)
+
+# Extract data for plotting
+plot_data <- data.frame(
+    FSC_A = exprs(fs[[1]])[, 'FSC-A'],
+    FSC_H = exprs(fs[[1]])[, 'FSC-H']
+)
+
+# Calculate doublet status
+fit <- lm(FSC_A ~ FSC_H, data = plot_data)
+plot_data$residual <- abs(plot_data$FSC_A - predict(fit))
+plot_data$doublet <- plot_data$residual > quantile(plot_data$residual, 0.95)
+
+# Plot
+ggplot(plot_data, aes(x = FSC_H, y = FSC_A, color = doublet)) +
+    geom_point(alpha = 0.3, size = 0.5) +
+    scale_color_manual(values = c('gray', 'red')) +
+    theme_bw() +
+    labs(title = 'Doublet Detection', x = 'FSC-H', y = 'FSC-A')
+ggsave('doublet_detection.png', width = 8, height = 6)
+```
 
 ## Related Skills
 
-- preprocessing - QC before doublet detection
-- clustering - Run after filtering doublets
-- data-io - Load data before processing
+Workflow order: cytometry-qc → doublet-detection → bead-normalization → clustering
+
+- cytometry-qc - Run first: identify flow rate and signal issues
+- bead-normalization - Run after: correct remaining instrument drift
+- fcs-handling - Load FCS files
+- gating-analysis - Manual gating workflows
+- clustering-phenotyping - Downstream analysis after doublet removal
