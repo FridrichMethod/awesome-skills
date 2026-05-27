@@ -59,6 +59,7 @@ UPSTREAMS = [
     # --- specialized bio / academic curations ---
     ("https://github.com/lishix520/academic-paper-skills.git", "lishix-paper", "lishix academic-paper"),
     ("https://github.com/Imbad0202/academic-research-skills.git", "imbad-academic", "Imbad academic-research"),
+    ("https://github.com/Yuan1z0825/nature-skills.git", "nature-skills", "Nature journal writing & figures (13k ⭐)"),
     ("https://github.com/adaptyvbio/protein-design-skills.git", "adaptyv-protein", "Adaptyv protein-design [P0]"),
     # --- general-purpose dev/productivity collections ---
     ("https://github.com/wshobson/agents.git", "wshobson-agents", "wshobson agents (155 dev skills, 35.5k ⭐)"),

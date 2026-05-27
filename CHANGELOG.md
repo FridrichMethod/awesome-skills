@@ -4,6 +4,11 @@ All notable changes to this project are documented here. The format is based on 
 
 ## [Unreleased]
 
+### Added
+- New upstream source: [Yuan1z0825/nature-skills](https://github.com/Yuan1z0825/nature-skills) (13k ⭐, 9 skills — Nature journal writing, polishing, figures, citations, peer-review response, paper-to-PPT, academic search).
+- Placed in the academic/writing tier in `scripts/sync_skills.py`, before `adaptyv-protein` (protein-design wins on conflict).
+- README: source table, highlights, acknowledgements, badge updated (14 → 15 sources).
+
 ## [0.3.1] — 2026-05-20
 
 ### Fixed
