@@ -8,7 +8,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![sync-skills](https://github.com/FridrichMethod/awesome-skills/actions/workflows/sync-skills.yml/badge.svg)](https://github.com/FridrichMethod/awesome-skills/actions/workflows/sync-skills.yml)
 [![Skills](https://img.shields.io/badge/skills-1800%2B-brightgreen)](#sources)
-[![Sources](https://img.shields.io/badge/upstream%20sources-14-blue)](#sources)
+[![Sources](https://img.shields.io/badge/upstream%20sources-15-blue)](#sources)
 [![Last Commit](https://img.shields.io/github/last-commit/FridrichMethod/awesome-skills)](https://github.com/FridrichMethod/awesome-skills/commits/main)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
@@ -26,7 +26,7 @@ Agent skills are how you give Claude Code or Codex CLI deep, reusable expertise 
 
 **awesome-skills** does three things:
 
-1. **Aggregates** the best Claude Code / Codex skills from 14 upstream curated collections — bio/scientific, academic writing, official Anthropic, Superpowers, Karpathy, and major community libraries.
+1. **Aggregates** the best Claude Code / Codex skills from 15 upstream curated collections — bio/scientific, academic writing, official Anthropic, Superpowers, Karpathy, and major community libraries.
 2. **Filters** out things that break installs (Git LFS pointers, files >40 MB, bundled vector DBs, stale `.gitattributes`).
 3. **Auto-syncs** every Sunday so your skill library stays current without manual work.
 
@@ -133,7 +133,7 @@ If you already have the repo cloned, `./install.sh` detects the adjacent `skills
 
 ## Sources
 
-Skills are aggregated from these upstream repositories — credit and gratitude to the original authors. Sources are grouped by scope; within `scripts/sync_skills.py` they are listed in install order (later = wins on name collision).
+Skills are aggregated from these upstream repositories — credit and gratitude to the original authors. Sources are grouped by scope; within `scripts/sync_skills.py` they are listed in install order (later = wins on name collision). Currently **15 sources**.
 
 ### Bio / scientific / medical
 
@@ -153,6 +153,7 @@ Skills are aggregated from these upstream repositories — credit and gratitude 
 | [Imbad0202/academic-research-skills](https://github.com/Imbad0202/academic-research-skills) | 8.6k | 4 | Academic research→write→review pipeline |
 | [lishix520/academic-paper-skills](https://github.com/lishix520/academic-paper-skills) | 624 | 2 | Paper strategist + composer |
 | [jamditis/claude-skills-journalism](https://github.com/jamditis/claude-skills-journalism) | 209 | 53 | Journalism, FOIA, fact-checking, academic writing |
+| [Yuan1z0825/nature-skills](https://github.com/Yuan1z0825/nature-skills) | 13k | 9 | **Nature journal** writing, polishing, figures, citations, peer-review response |
 
 ### General-purpose & foundational
 
@@ -198,6 +199,7 @@ Skills are aggregated from these upstream repositories — credit and gratitude 
 | **Citation / lit search** | `pubmed-database` · `biorxiv-database` · `medrxiv-search` · `literature-review` · `citation-management` · `paperzilla` |
 | **Figures** | `latex-posters` · `latex-research-posters` · `scientific-schematics` · `scientific-visualization` · `markdown-mermaid-writing` · `pptx-posters` |
 | **Venue figure guides** | `nature-figure-guide` · `cell-figure-guide` · `science-figure-guide` · `lancet-figure-guide` · `nejm-figure-guide` · `pnas-figure-guide` · `elife-figure-guide` · `cancer-research-figure-guide` |
+| **Nature journal** | `nature-figure` · `nature-polishing` · `nature-writing` · `nature-citation` · `nature-data` · `nature-reader` · `nature-response` · `nature-paper2ppt` · `nature-academic-search` |
 
 </details>
 
@@ -305,6 +307,7 @@ This project would not exist without the work of:
 **Academic / writing**
 
 - [Imbad0202](https://github.com/Imbad0202) and [lishix520](https://github.com/lishix520) for the academic paper pipelines
+- [Yuan1z0825](https://github.com/Yuan1z0825) for [nature-skills](https://github.com/Yuan1z0825/nature-skills) — Nature journal writing, polishing, figures, citations, and peer-review response
 - [Joe Amditis](https://github.com/jamditis) for the journalism skills
 
 **General-purpose / foundational**
