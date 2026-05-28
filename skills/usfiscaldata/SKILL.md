@@ -1,9 +1,11 @@
 ---
 name: usfiscaldata
-description: Query the U.S. Treasury Fiscal Data API for federal financial data including national debt, government spending, revenue, interest rates, exchange rates, and savings bonds. Access 54 datasets and 182 data tables with no API key required. Use when working with U.S. federal fiscal data, national debt tracking (Debt to the Penny), Daily Treasury Statements, Monthly Treasury Statements, Treasury securities auctions, interest rates on Treasury securities, foreign exchange rates, savings bonds, or any U.S. government financial statistics.
+description: Query the U.S. Treasury Fiscal Data REST API for federal financial data. No API key required. Use for national debt (Debt to the Penny), Daily Treasury Statements, Monthly Treasury Statements, Treasury securities auctions, interest rates, foreign exchange rates, savings bonds, or U.S. government revenue and spending statistics.
 license: MIT
+allowed-tools: Read Write Edit Bash
 metadata:
-    skill-author: K-Dense Inc.
+  version: "1.1"
+  skill-author: K-Dense Inc.
 ---
 
 # U.S. Treasury Fiscal Data API
@@ -11,6 +13,14 @@ metadata:
 Free, open REST API from the U.S. Department of the Treasury for federal financial data. No API key or registration required.
 
 **Base URL:** `https://api.fiscaldata.treasury.gov/services/api/fiscal_service`
+
+Browse [54 datasets and 179 data tables](https://fiscaldata.treasury.gov/datasets/) via the dataset search. Verify endpoint paths on each dataset's API Quick Guide — paths change over time.
+
+## Installation
+
+```bash
+uv pip install requests pandas
+```
 
 ## Quick Start
 
@@ -69,7 +79,7 @@ None required. The API is fully open and free.
 | Dataset | Endpoint | Frequency |
 |---------|----------|-----------|
 | Debt to the Penny | `/v2/accounting/od/debt_to_penny` | Daily |
-| Historical Debt Outstanding | `/v2/accounting/od/historical_debt_outstanding` | Annual |
+| Historical Debt Outstanding | `/v2/accounting/od/debt_outstanding` | Annual |
 | Schedules of Federal Debt | `/v1/accounting/od/schedules_fed_debt` | Monthly |
 
 ### Daily & Monthly Statements
@@ -78,7 +88,7 @@ None required. The API is fully open and free.
 |---------|----------|-----------|
 | DTS Operating Cash Balance | `/v1/accounting/dts/operating_cash_balance` | Daily |
 | DTS Deposits & Withdrawals | `/v1/accounting/dts/deposits_withdrawals_operating_cash` | Daily |
-| Monthly Treasury Statement (MTS) | `/v1/accounting/mts/mts_table_1` (16 tables) | Monthly |
+| Monthly Treasury Statement (MTS) | `/v1/accounting/mts/mts_table_1` (18 tables — see [datasets-fiscal.md](references/datasets-fiscal.md)) | Monthly |
 
 ### Interest Rates & Exchange
 
@@ -94,14 +104,14 @@ None required. The API is fully open and free.
 |---------|----------|-----------|
 | Treasury Securities Auctions Data | `/v1/accounting/od/auctions_query` | As Needed |
 | Treasury Securities Upcoming Auctions | `/v1/accounting/od/upcoming_auctions` | As Needed |
-| Average Interest Rates | `/v2/accounting/od/avg_interest_rates` | Monthly |
+| Treasury Securities Buybacks | `/v1/accounting/od/buybacks_operations` | As Needed |
 
 ### Savings Bonds
 
 | Dataset | Endpoint | Frequency |
 |---------|----------|-----------|
-| I Bonds Interest Rates | `/v2/accounting/od/i_bond_interest_rates` | Semi-Annual |
-| U.S. Treasury Savings Bonds: Issues, Redemptions & Maturities | `/v1/accounting/od/sb_issues_redemptions` | Monthly |
+| I Bonds Interest Rates | `/v1/accounting/od/i_bonds_interest_rates` | Semi-Annual |
+| Savings Bonds Issues, Redemptions & Maturities | `/v1/accounting/od/savings_bonds_report` | Monthly |
 
 ## Response Structure
 
@@ -126,14 +136,16 @@ None required. The API is fully open and free.
 
 ### Load all pages into a DataFrame
 
+Use the bounded `fetch_all()` helper in [parameters.md](references/parameters.md). For small result sets, a single request with `page[size]=10000` may suffice when `meta.total-pages` is 1.
+
 ```python
-def fetch_all_pages(endpoint, params=None):
-    params = params or {}
-    params["page[size]"] = 10000  # max size to minimize requests
-    resp = requests.get(f"{BASE_URL}{endpoint}", params=params)
-    result = resp.json()
-    df = pd.DataFrame(result["data"])
-    return df
+# Single-page fetch when total-pages == 1
+params = {"sort": "-record_date", "page[size]": 10000}
+resp = requests.get(f"{BASE_URL}/v2/accounting/od/debt_outstanding", params=params)
+result = resp.json()
+if result["meta"]["total-pages"] > 1:
+    raise ValueError("Use fetch_all() from parameters.md for multi-page results")
+df = pd.DataFrame(result["data"])
 ```
 
 ### Aggregation (automatic sum)

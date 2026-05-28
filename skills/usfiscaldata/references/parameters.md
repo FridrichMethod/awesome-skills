@@ -111,29 +111,56 @@ Controls how many records per page and which page to return.
 
 ### Fetch All Records
 
+For small result sets where `meta.total-pages` is 1, a single request with `page[size]=10000` is enough. Use `fetch_all()` below when pagination is required.
+
 ```python
+import time
 import requests
 import pandas as pd
 
-def fetch_all(endpoint, params=None):
-    """Fetch all pages and return as DataFrame."""
+def fetch_all(endpoint, params=None, max_pages=50, max_records=500_000):
+    """Fetch paginated results and return as DataFrame.
+
+    Stops when all pages are retrieved or when max_pages / max_records limits
+    are reached. Retries on HTTP 429 with exponential backoff.
+    """
     params = dict(params or {})
-    params["page[size]"] = 10000
+    params["page[size]"] = min(params.get("page[size]", 10000), 10000)
     params["page[number]"] = 1
-    
+
     base = "https://api.fiscaldata.treasury.gov/services/api/fiscal_service"
     all_data = []
-    
-    while True:
-        resp = requests.get(f"{base}{endpoint}", params=params)
+
+    for _ in range(max_pages):
+        for attempt in range(3):
+            resp = requests.get(f"{base}{endpoint}", params=params)
+            if resp.status_code == 429:
+                time.sleep(2 ** attempt)
+                continue
+            resp.raise_for_status()
+            break
+        else:
+            raise RuntimeError("Rate limited after retries")
+
         result = resp.json()
+        if "error" in result:
+            raise ValueError(f"API error: {result['error']} — {result.get('message', '')}")
+
         all_data.extend(result["data"])
-        
+        if len(all_data) >= max_records:
+            all_data = all_data[:max_records]
+            break
+
         meta = result["meta"]
         if params["page[number]"] >= meta["total-pages"]:
             break
         params["page[number]"] += 1
-    
+        time.sleep(0.1)
+    else:
+        raise RuntimeError(
+            f"Reached max_pages={max_pages}; increase limit or narrow filters"
+        )
+
     return pd.DataFrame(all_data)
 ```
 

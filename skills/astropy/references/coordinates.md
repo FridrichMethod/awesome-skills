@@ -188,6 +188,8 @@ matches = target.separation(catalog) < 1*u.arcsec
 
 Retrieve coordinates from online catalogs:
 
+**Network note:** `SkyCoord.from_name()` sends the object name to remote name-resolution services such as Sesame/SIMBAD/NED. Do not use it with confidential target names or proprietary survey identifiers; use explicit coordinates when privacy or reproducibility matters.
+
 ```python
 # Query by name (requires internet)
 m31 = SkyCoord.from_name("M31")
@@ -199,6 +201,8 @@ psr = SkyCoord.from_name("PSR J1012+5307")
 
 Define observer locations:
 
+**Network note:** `EarthLocation.of_site()` normally uses the bundled site registry, but `refresh_cache=True` downloads an updated registry. `EarthLocation.of_address()` sends the address to a geocoding service, so prefer explicit latitude/longitude/height for sensitive sites.
+
 ```python
 # By coordinates
 location = EarthLocation(lat=40*u.deg, lon=-120*u.deg, height=1000*u.m)
@@ -207,8 +211,11 @@ location = EarthLocation(lat=40*u.deg, lon=-120*u.deg, height=1000*u.m)
 keck = EarthLocation.of_site('Keck Observatory')
 vlt = EarthLocation.of_site('Paranal Observatory')
 
+# Force a fresh observatory registry only when network access is acceptable
+keck = EarthLocation.of_site('Keck Observatory', refresh_cache=True)
+
 # By address (requires internet)
-location = EarthLocation.of_address('1002 Holy Grail Court, St. Louis, MO')
+location = EarthLocation.of_address('1 Observatory Road, Example City')
 
 # List available observatories
 EarthLocation.get_site_names()

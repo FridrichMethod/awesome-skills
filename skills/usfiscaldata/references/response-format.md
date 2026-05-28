@@ -60,6 +60,8 @@ Use the `links` object to navigate pagination programmatically:
 | `next` | Next page (null if on last page) |
 | `last` | Last page |
 
+The HTTP response also includes a **`Link` header** with RFC 5988 relations (`rel="first"`, `rel="prev"`, `rel="next"`, `rel="last"`). Either the JSON `links` object or the `Link` header can be used for pagination.
+
 ## `data` Object
 
 Array of row objects. All values are **strings**, regardless of logical type.

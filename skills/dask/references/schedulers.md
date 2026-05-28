@@ -339,15 +339,28 @@ client = Client(
 - Use more workers with fewer threads
 - Example: 8 cores → 8 workers with 1 thread each
 
-### Environment Variables
+### Configuration via dask.config
 
-```bash
-# Set thread count via environment
-export DASK_NUM_WORKERS=4
-export DASK_THREADS_PER_WORKER=2
+Prefer `dask.config` over shell environment variables so worker settings stay explicit in code:
 
-# Or via config file
+```python
+import dask
+
+dask.config.set({
+    "distributed.worker.memory.target": 0.60,
+    "distributed.worker.memory.spill": 0.70,
+})
 ```
+
+When creating a `Client`, pass resource limits directly:
+
+```python
+from dask.distributed import Client
+
+client = Client(n_workers=4, threads_per_worker=2, memory_limit='4GB')
+```
+
+Upstream also supports `DASK_*` environment variables (for example `DASK_SCHEDULER_ADDRESS` when connecting to an existing cluster). Set only the specific variables documented for your deployment — do not copy entire `.env` files into the environment.
 
 ## Common Patterns
 

@@ -111,18 +111,18 @@ model.to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
 
 ### Precision Control
 
-**torch_dtype**: Set model precision
+**dtype**: Set model precision (preferred in v5; `torch_dtype` still works but is deprecated)
 ```python
 import torch
 
 # Float16 (half precision)
-model = AutoModel.from_pretrained("model-id", torch_dtype=torch.float16)
+model = AutoModel.from_pretrained("model-id", dtype=torch.float16)
 
 # BFloat16 (better range than float16)
-model = AutoModel.from_pretrained("model-id", torch_dtype=torch.bfloat16)
+model = AutoModel.from_pretrained("model-id", dtype=torch.bfloat16)
 
 # Auto (use original dtype)
-model = AutoModel.from_pretrained("model-id", torch_dtype="auto")
+model = AutoModel.from_pretrained("model-id", dtype="auto")
 ```
 
 ### Attention Implementation
@@ -150,7 +150,7 @@ model = AutoModelForCausalLM.from_pretrained(
 )
 ```
 
-**load_in_8bit**: 8-bit quantization (requires bitsandbytes)
+**load_in_8bit**: 8-bit quantization (requires optional `bitsandbytes`; `uv pip install bitsandbytes`)
 ```python
 model = AutoModelForCausalLM.from_pretrained(
     "model-id",
@@ -209,13 +209,13 @@ model = AutoModel.from_pretrained("model-id")
 print(model.training)  # False
 
 # Switch to training mode
-model.train()
+model.train(True)
 
-# Switch back to evaluation mode
-model.eval()
+# Switch back to evaluation mode (equivalent to eval mode on nn.Module)
+model.train(False)
 ```
 
-Evaluation mode disables dropout and uses batch norm statistics.
+Evaluation mode disables dropout and uses batch norm statistics. `model.train(False)` is equivalent to `model.eval()` in PyTorch.
 
 ## Saving Models
 
@@ -324,20 +324,20 @@ export(
 ## Best Practices
 
 1. **Use AutoModel classes**: Automatic architecture detection
-2. **Specify dtype explicitly**: Control precision and memory
+2. **Specify `dtype` explicitly**: Control precision and memory (avoid deprecated `torch_dtype` in new code)
 3. **Use device_map="auto"**: For large models
 4. **Enable low_cpu_mem_usage**: When loading large models
 5. **Use safetensors format**: Faster and safer serialization
 6. **Check model.training**: Ensure correct mode for task
 7. **Consider quantization**: For deployment on resource-constrained devices
-8. **Cache models locally**: Set TRANSFORMERS_CACHE environment variable
+8. **Cache models locally**: Set `HF_HOME` (Hub cache at `$HF_HOME/hub`)
 
 ## Common Issues
 
 **CUDA out of memory:**
 ```python
 # Use smaller precision
-model = AutoModel.from_pretrained("model-id", torch_dtype=torch.float16)
+model = AutoModel.from_pretrained("model-id", dtype=torch.float16)
 
 # Or use quantization
 model = AutoModel.from_pretrained("model-id", load_in_8bit=True)

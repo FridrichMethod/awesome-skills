@@ -248,13 +248,16 @@ device.validate_circuit(circuit)
 ### Noisy Virtual Hardware
 
 ```python
-# Simulate with device noise
-processor = cirq_google.get_engine().get_processor('weber')
+import os
+import cirq_google as cg
+
+# Simulate with device noise from calibration data
+engine = cg.Engine(project_id=os.environ['GOOGLE_CLOUD_PROJECT'])
+processor = engine.get_processor('weber')
 noise_props = processor.get_device_specification()
 
-# Create realistic noisy simulator
 noisy_sim = cirq.DensityMatrixSimulator(
-    noise=cirq_google.NoiseModelFromGoogleNoiseProperties(noise_props)
+    noise=cg.NoiseModelFromGoogleNoiseProperties(noise_props)
 )
 
 result = noisy_sim.run(circuit, repetitions=1000)

@@ -3,14 +3,15 @@ name: biopython
 description: Comprehensive molecular biology toolkit. Use for sequence manipulation, file parsing (FASTA/GenBank/PDB), phylogenetics, and programmatic NCBI/PubMed access (Bio.Entrez). Best for batch processing, custom bioinformatics pipelines, BLAST automation. For quick lookups use gget; for multi-service integration use bioservices.
 license: Unknown
 metadata:
-    skill-author: K-Dense Inc.
+  version: "1.0"
+  skill-author: K-Dense Inc.
 ---
 
 # Biopython: Computational Molecular Biology in Python
 
 ## Overview
 
-Biopython is a comprehensive set of freely available Python tools for biological computation. It provides functionality for sequence manipulation, file I/O, database access, structural bioinformatics, phylogenetics, and many other bioinformatics tasks. The current version is **Biopython 1.85** (released January 2025), which supports Python 3 and requires NumPy.
+Biopython is a comprehensive set of freely available Python tools for biological computation. It provides functionality for sequence manipulation, file I/O, database access, structural bioinformatics, phylogenetics, and many other bioinformatics tasks. The current version is **Biopython 1.87** (released March 2026). It requires **Python 3.10+** and NumPy.
 
 ## When to Use This Skill
 
@@ -43,20 +44,23 @@ Biopython is organized into modular sub-packages, each addressing specific bioin
 
 ## Installation and Setup
 
-Install Biopython using pip (requires Python 3 and NumPy):
+Install Biopython (requires Python 3.10+ and NumPy):
 
-```python
+```bash
 uv pip install biopython
 ```
 
-For NCBI database access, always set your email address (required by NCBI):
+For NCBI database access, always set your email address (required by NCBI). For higher rate limits (10 req/s instead of 3 req/s), read `NCBI_API_KEY` from the environment — do not hardcode keys:
 
 ```python
+import os
 from Bio import Entrez
-Entrez.email = "your.email@example.com"
 
-# Optional: API key for higher rate limits (10 req/s instead of 3 req/s)
-Entrez.api_key = "your_api_key_here"
+Entrez.email = "your.email@example.com"  # required — use your real email
+
+# Optional: register at https://www.ncbi.nlm.nih.gov/account/settings/
+if api_key := os.environ.get("NCBI_API_KEY"):
+    Entrez.api_key = api_key
 ```
 
 ## Using This Skill
@@ -262,9 +266,12 @@ Follow these principles when writing Biopython code:
    from Bio.Seq import Seq
    ```
 
-2. **Set Entrez email** when using NCBI databases
+2. **Set Entrez email** when using NCBI databases; load `NCBI_API_KEY` from the environment if present
    ```python
+   import os
    Entrez.email = "your.email@example.com"
+   if api_key := os.environ.get("NCBI_API_KEY"):
+       Entrez.api_key = api_key
    ```
 
 3. **Use appropriate file formats** - Check which format best suits the task
@@ -403,6 +410,12 @@ Phylo.draw_ascii(tree)
 
 ### Issue: PDB parser warnings
 **Solution:** Use `PDBParser(QUIET=True)` to suppress warnings, or investigate structure quality.
+
+### Issue: ImportError for Bio.HMM, Bio.MarkovModel, or Bio.Application
+**Solution:** These modules were removed in Biopython 1.86. Use [hmmlearn](https://pypi.org/project/hmmlearn/) for HMMs and the standard library `subprocess` module instead of `Bio.Application` CLI wrappers.
+
+### Issue: PairwiseAligner returns fewer alignments after upgrading to 1.86+
+**Solution:** The default gap score changed from 0 to -1 in 1.86, eliminating trivial tie alignments. Set `aligner.gap_score = 0` to restore the old behavior if needed (see `references/alignment.md`).
 
 ## Additional Resources
 

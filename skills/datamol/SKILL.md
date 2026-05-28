@@ -2,8 +2,11 @@
 name: datamol
 description: Pythonic wrapper around RDKit with simplified interface and sensible defaults. Preferred for standard drug discovery including SMILES parsing, standardization, descriptors, fingerprints, clustering, 3D conformers, parallel processing. Returns native rdkit.Chem.Mol objects. For advanced control or custom parameters, use rdkit directly.
 license: Apache-2.0 license
+allowed-tools: Read Write Edit Bash
+compatibility: Requires Python 3.8+ and datamol (uv pip install). RDKit is installed automatically as a datamol dependency (since 0.12.2). Optional s3fs/gcsfs for cloud I/O via fsspec.
 metadata:
-    skill-author: K-Dense Inc.
+  version: "1.0"
+  skill-author: K-Dense Inc.
 ---
 
 # Datamol Cheminformatics Skill
@@ -11,6 +14,8 @@ metadata:
 ## Overview
 
 Datamol is a Python library that provides a lightweight, Pythonic abstraction layer over RDKit for molecular cheminformatics. Simplify complex molecular operations with sensible defaults, efficient parallelization, and modern I/O capabilities. All molecular objects are native `rdkit.Chem.Mol` instances, ensuring full compatibility with the RDKit ecosystem.
+
+**Version note:** Examples target **datamol 0.12.x** (PyPI stable: **0.12.5**, June 2024). Since 0.10.0, modules are lazy-loaded by default (set `DATAMOL_DISABLE_LAZY_LOADING=1` to disable). Since 0.12.2, RDKit is a direct PyPI dependency of datamol. Fingerprints use RDKit's `rdFingerprintGenerator` API (0.12.5+).
 
 **Key capabilities**:
 - Molecular format conversion (SMILES, SELFIES, InChI)
@@ -30,6 +35,13 @@ Guide users to install datamol:
 
 ```bash
 uv pip install datamol
+```
+
+RDKit is installed automatically with datamol. For remote file paths (S3, GCS, HTTP), install the matching fsspec backend:
+
+```bash
+uv pip install s3fs   # AWS S3
+uv pip install gcsfs  # Google Cloud Storage
 ```
 
 **Import convention**:
@@ -107,8 +119,9 @@ df = dm.read_csv("data.csv", smiles_column="SMILES", mol_column="mol")
 # Excel files
 df = dm.read_excel("compounds.xlsx", sheet_name=0, mol_column="mol")
 
-# Universal reader (auto-detects format)
-df = dm.open_df("file.sdf")  # Works with .sdf, .csv, .xlsx, .parquet, .json
+# Universal reader/writer (auto-detects format; supports compression)
+df = dm.open_df("file.sdf")  # .sdf, .csv, .xlsx, .parquet, .json, .gz, etc.
+dm.save_df(df, "output.parquet")
 ```
 
 **Writing files**:
@@ -125,15 +138,20 @@ dm.to_smi(mols, "output.smi")
 dm.to_xlsx(df, "output.xlsx", mol_columns=["mol"])
 ```
 
-**Remote file support** (S3, GCS, HTTP):
+**Remote file support** (S3, GCS, HTTP via fsspec):
+
+Only use cloud paths when the user explicitly requests them. Confirm the destination before writing.
+
 ```python
-# Read from cloud storage
+# Read from cloud storage or HTTPS (user-provided URLs only)
 df = dm.read_sdf("s3://bucket/compounds.sdf")
 df = dm.read_csv("https://example.com/data.csv")
 
-# Write to cloud storage
+# Write to cloud storage — confirm path with user first
 dm.to_sdf(mols, "s3://bucket/output.sdf")
 ```
+
+Cloud backends read credentials from the standard provider environment (for example `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, or `GOOGLE_APPLICATION_CREDENTIALS`). Datamol passes these to fsspec locally; it does not collect or transmit environment variables to third-party endpoints. Scope credential access to the named provider variables only.
 
 ### 3. Molecular Descriptors and Properties
 
@@ -189,14 +207,18 @@ druglike_mols = [mol for mol in mols if is_druglike(mol)]
 ### 4. Molecular Fingerprints and Similarity
 
 **Generating fingerprints**:
+
+Datamol defaults to ECFP6 (`radius=3`, `n_bits=2048`). Pass `radius=2` explicitly for ECFP4.
+
 ```python
-# ECFP (Extended Connectivity Fingerprint, default)
+# ECFP4 (common in similarity screening)
 fp = dm.to_fp(mol, fp_type='ecfp', radius=2, n_bits=2048)
 
 # Other fingerprint types
 fp_maccs = dm.to_fp(mol, fp_type='maccs')
 fp_topological = dm.to_fp(mol, fp_type='topological')
 fp_atompair = dm.to_fp(mol, fp_type='atompair')
+fp_rdkit = dm.to_fp(mol, fp_type='rdkit')
 ```
 
 **Similarity calculations**:
@@ -207,8 +229,8 @@ distance_matrix = dm.pdist(mols, n_jobs=-1)
 # Distances between two sets
 distances = dm.cdist(query_mols, library_mols, n_jobs=-1)
 
-# Find most similar molecules
-from scipy.spatial.distance import squareform
+# Find most similar molecules (scipy is a PyPI package, not a file in this skill)
+from scipy.spatial.distance import squareform  # third-party library
 dist_matrix = squareform(dm.pdist(mols))
 # Lower distance = higher similarity (Tanimoto distance = 1 - Tanimoto similarity)
 ```
@@ -566,14 +588,9 @@ for scaffold, group in sar_df.groupby('scaffold'):
 ### Virtual Screening Pipeline
 
 ```python
-# 1. Generate fingerprints for query and library
-query_fps = [dm.to_fp(mol) for mol in query_actives]
-library_fps = [dm.to_fp(mol) for mol in library_mols]
-
-# 2. Calculate similarities
-from scipy.spatial.distance import cdist
 import numpy as np
 
+# 1. Calculate Tanimoto distances between query actives and library
 distances = dm.cdist(query_actives, library_mols, n_jobs=-1)
 
 # 3. Find closest matches (min distance to any query)
@@ -623,7 +640,7 @@ For detailed API documentation, consult these reference files:
    result = dm.operation(..., n_jobs=-1, progress=True)
    ```
 
-4. **Leverage fsspec** for cloud storage:
+4. **Use cloud I/O only when requested** — confirm remote write paths; install `s3fs`/`gcsfs` as needed:
    ```python
    df = dm.read_sdf("s3://bucket/compounds.sdf")
    ```
@@ -665,7 +682,11 @@ for smiles in smiles_list:
 
 ## Integration with Machine Learning
 
+Datamol ships with `scipy` and `scikit-learn` as dependencies. Import them as normal PyPI packages — they are not scripts bundled in this skill.
+
 ```python
+import numpy as np
+
 # Feature generation
 X = np.array([dm.to_fp(mol) for mol in mols])
 
@@ -673,8 +694,8 @@ X = np.array([dm.to_fp(mol) for mol in mols])
 desc_df = dm.descriptors.batch_compute_many_descriptors(mols, n_jobs=-1)
 X = desc_df.values
 
-# Train model
-from sklearn.ensemble import RandomForestRegressor
+# Train model (scikit-learn PyPI package)
+from sklearn.ensemble import RandomForestRegressor  # third-party library
 model = RandomForestRegressor()
 model.fit(X, y_target)
 
@@ -694,7 +715,7 @@ predictions = model.predict(X_test)
 - **Solution**: Reduce `n_confs` or increase `rms_cutoff` to generate fewer conformers
 
 **Issue**: Remote file access fails
-- **Solution**: Ensure fsspec and appropriate cloud provider libraries are installed (s3fs, gcsfs, etc.)
+- **Solution**: Install the matching fsspec backend (`uv pip install s3fs` or `gcsfs`) and verify only the provider credentials needed for that backend are set (see Remote file support above)
 
 ## Additional Resources
 

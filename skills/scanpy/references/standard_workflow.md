@@ -34,6 +34,10 @@ sc.pp.filter_genes(adata, min_cells=3)
 # Remove cells with high mitochondrial content
 adata = adata[adata.obs.pct_counts_mt < 5, :]
 
+# Optional: doublet detection (run on raw counts before normalization)
+# sc.pp.scrublet(adata)
+# adata = adata[~adata.obs['predicted_doublet'], :].copy()
+
 # Visualize QC metrics
 sc.pl.violin(adata, ['n_genes_by_counts', 'total_counts', 'pct_counts_mt'],
              jitter=0.4, multi_panel=True)
@@ -100,11 +104,8 @@ sc.tl.umap(adata)
 ### 7. Clustering
 
 ```python
-# Leiden clustering (recommended)
+# Leiden clustering
 sc.tl.leiden(adata, resolution=0.5)
-
-# Alternative: Louvain clustering
-# sc.tl.louvain(adata, resolution=0.5)
 
 # Visualize clustering results
 sc.pl.umap(adata, color=['leiden'], legend_loc='on data')
@@ -112,8 +113,10 @@ sc.pl.umap(adata, color=['leiden'], legend_loc='on data')
 
 ### 8. Marker Gene Identification
 
+`rank_genes_groups` is appropriate for exploratory cluster markers. Per-cell tests produce inflated p-values; for rigorous DE between conditions, pseudobulk with `sc.get.aggregate()` and use pydeseq2.
+
 ```python
-# Find marker genes for each cluster
+# Find marker genes for each cluster (exploratory)
 sc.tl.rank_genes_groups(adata, 'leiden', method='wilcoxon')
 
 # Visualize top marker genes
@@ -171,8 +174,21 @@ sc.pl.umap(adata, color=['dpt_pseudotime'])
 
 ### Differential Expression Between Conditions
 
+Pseudobulk by sample and cell type, then run proper DE (e.g., pydeseq2):
+
 ```python
-# Compare conditions within a cell type
+pb = sc.get.aggregate(
+    adata,
+    by=['sample', 'cell_type'],
+    func='sum',
+    layer='counts',
+)
+# Export pb and use pydeseq2 for condition comparisons
+```
+
+For quick exploratory comparisons only:
+
+```python
 sc.tl.rank_genes_groups(adata, groupby='condition', groups=['treated'],
                          reference='control', method='wilcoxon')
 sc.pl.rank_genes_groups(adata, groups=['treated'])
@@ -200,7 +216,8 @@ sc.pl.umap(adata, color='T_cell_score')
 
 1. Always visualize QC metrics before filtering
 2. Save raw counts before normalization (`adata.raw = adata`)
-3. Use Leiden instead of Louvain for clustering (more efficient)
+3. Use Leiden clustering (`sc.tl.louvain` deprecated in scanpy 1.12)
 4. Try multiple clustering resolutions to find optimal granularity
 5. Validate cell type annotations with known marker genes
-6. Save intermediate results at key steps
+6. Pseudobulk for rigorous DE; treat `rank_genes_groups` p-values as exploratory
+7. Save intermediate results at key steps

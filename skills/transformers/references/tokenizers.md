@@ -74,13 +74,10 @@ inputs = tokenizer(texts, padding=True, truncation=True)
 
 ### Return Tensors
 
-**return_tensors**: Output format ("pt", "tf", "np")
+**return_tensors**: Output format (`"pt"` for PyTorch, `"np"` for NumPy)
 ```python
-# PyTorch tensors
+# PyTorch tensors (default for Transformers v5 workflows)
 inputs = tokenizer("text", return_tensors="pt")
-
-# TensorFlow tensors
-inputs = tokenizer("text", return_tensors="tf")
 
 # NumPy arrays
 inputs = tokenizer("text", return_tensors="np")

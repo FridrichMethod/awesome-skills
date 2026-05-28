@@ -82,7 +82,7 @@ def main(argv=None):
     parser.add_argument("--config", required=True,
                         help="path to autoskill config.yaml")
     parser.add_argument("--skills-dir", required=True,
-                        help="path to scientific-skills/")
+                        help="path to skills/")
     args = parser.parse_args(argv)
 
     config = yaml.safe_load(Path(args.config).read_text())

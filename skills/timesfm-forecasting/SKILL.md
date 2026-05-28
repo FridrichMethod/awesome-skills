@@ -4,6 +4,7 @@ description: Zero-shot time series forecasting with Google's TimesFM foundation 
 allowed-tools: Read Write Edit Bash
 license: Apache-2.0 license
 metadata:
+  version: "1.0"
   skill-author: Clayton Young / Superior Byte Works, LLC (@borealBytes)
   skill-version: "1.0.0"
 ---

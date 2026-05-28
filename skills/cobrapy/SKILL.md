@@ -2,8 +2,11 @@
 name: cobrapy
 description: Constraint-based metabolic modeling (COBRA). FBA, FVA, gene knockouts, flux sampling, SBML models, for systems biology and metabolic engineering analysis.
 license: GPL-2.0 license
+allowed-tools: Read Write Edit Bash
+compatibility: Requires Python 3.9+ (cobra 0.30+ dropped 3.8). Install with uv pip install. GLPK (swiglpk) is the default solver; CPLEX/Gurobi optional. load_model fetches from bundled data, BiGG, or BioModels (network required for remote models).
 metadata:
-    skill-author: K-Dense Inc.
+  version: "1.1"
+  skill-author: K-Dense Inc.
 ---
 
 # COBRApy - Constraint-Based Reconstruction and Analysis
@@ -11,6 +14,31 @@ metadata:
 ## Overview
 
 COBRApy is a Python library for constraint-based reconstruction and analysis (COBRA) of metabolic models, essential for systems biology research. Work with genome-scale metabolic models, perform computational simulations of cellular metabolism, conduct metabolic engineering analyses, and predict phenotypic behaviors.
+
+**Version note:** Examples target **cobra 0.31.1** on PyPI (import `cobra`). Docs: [cobrapy.readthedocs.io](https://cobrapy.readthedocs.io/en/latest/). Repo: [opencobra/cobrapy](https://github.com/opencobra/cobrapy).
+
+## When to Use This Skill
+
+Use this skill when:
+- Loading, building, or exporting genome-scale metabolic models (SBML, JSON, YAML)
+- Running FBA, pFBA, FVA, or flux sampling on COBRA models
+- Performing gene or reaction knockout screens and production envelope analysis
+- Designing or optimizing growth media and exchange constraints
+- Gap-filling infeasible models or validating model consistency
+
+## Installation
+
+```bash
+uv pip install "cobra==0.31.1"
+```
+
+MATLAB model I/O (optional):
+
+```bash
+uv pip install "cobra[array]==0.31.1"
+```
+
+COBRApy uses [optlang](https://optlang.readthedocs.io/) for solvers. GLPK installs automatically via `swiglpk`. For large MILPs/QPs, cobra 0.29+ adds a **hybrid** solver (HIGHS/OSQP); `model.solver = "osqp"` now routes through hybrid and may error on plain LPs in a future release—prefer `model.solver = "hybrid"` when available.
 
 ## Core Capabilities
 
@@ -22,10 +50,14 @@ Load existing models from repositories or files:
 ```python
 from cobra.io import load_model
 
-# Load bundled test models
-model = load_model("textbook")  # E. coli core model
-model = load_model("ecoli")     # Full E. coli model
-model = load_model("salmonella")
+# Bundled locally (no network): textbook, iJO1366, salmonella
+model = load_model("textbook")      # alias for e_coli_core (95 reactions)
+model = load_model("e_coli_core")   # same core E. coli model
+model = load_model("iJO1366")       # genome-scale E. coli (bundled)
+model = load_model("salmonella")    # Salmonella iYS1720 (bundled)
+
+# Remote (BiGG / BioModels; requires network, cached after first fetch)
+model = load_model("iML1515")       # E. coli genome-scale on BiGG
 
 # Load from files
 from cobra.io import read_sbml_model, load_json_model, load_yaml_model
@@ -226,8 +258,9 @@ Add reactions to make models feasible:
 ```python
 from cobra.flux_analysis import gapfill
 
-# Prepare universal model with candidate reactions
-universal = load_model("universal")
+# Provide a universal reaction database (SBML/JSON); not bundled in cobra 0.31+
+from cobra.io import read_sbml_model
+universal = read_sbml_model("path/to/universal_reactions.xml")
 
 # Perform gapfilling
 with model:
@@ -291,8 +324,8 @@ model.objective = "ATPASE"
 ```python
 from cobra.io import load_model
 
-# Load model
-model = load_model("ecoli")
+# Load model (textbook = fast tutorial; iJO1366 / iML1515 for genome-scale)
+model = load_model("textbook")
 
 # Run FBA
 solution = model.optimize()
@@ -309,7 +342,8 @@ from cobra.io import load_model
 from cobra.flux_analysis import single_gene_deletion
 
 # Load model
-model = load_model("ecoli")
+model = load_model("textbook")
+baseline = model.slim_optimize()
 
 # Perform single gene deletions
 results = single_gene_deletion(model)
@@ -319,7 +353,7 @@ essential_genes = results[results["growth"] < 0.01]
 print(f"Found {len(essential_genes)} essential genes")
 
 # Find genes with minimal impact
-neutral_genes = results[results["growth"] > 0.9 * solution.objective_value]
+neutral_genes = results[results["growth"] > 0.9 * baseline]
 ```
 
 ### Workflow 3: Media Optimization
@@ -329,7 +363,7 @@ from cobra.io import load_model
 from cobra.medium import minimal_medium
 
 # Load model
-model = load_model("ecoli")
+model = load_model("textbook")
 
 # Calculate minimal medium for 50% of max growth
 target_growth = model.slim_optimize() * 0.5
@@ -351,7 +385,7 @@ from cobra.flux_analysis import flux_variability_analysis
 from cobra.sampling import sample
 
 # Load model
-model = load_model("ecoli")
+model = load_model("textbook")
 
 # First check flux ranges at optimality
 fva = flux_variability_analysis(model, fraction_of_optimum=1.0)
@@ -439,10 +473,11 @@ Special reactions representing metabolite import/export:
 3. **Check solution status** after optimization - `optimal` indicates successful solve
 4. **Use loopless FVA** when thermodynamic feasibility matters
 5. **Set fraction_of_optimum** appropriately in FVA to explore suboptimal space
-6. **Parallelize** computationally expensive operations (sampling, double deletions)
+6. **Parallelize** computationally expensive operations (sampling, double deletions) — start with small `n` and `processes=1` on genome-scale models
 7. **Prefer SBML format** for model exchange and long-term storage
 8. **Use slim_optimize()** when only objective value needed for performance
 9. **Validate flux samples** to ensure numerical stability
+10. **Confirm output paths** before writing CSV/PNG files from workflow examples
 
 ## Troubleshooting
 

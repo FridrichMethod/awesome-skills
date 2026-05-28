@@ -1,281 +1,352 @@
 ---
-name: bio-crispr-screens-batch-correction
-description: Batch effect correction for CRISPR screens covering ComBat empirical-Bayes, RUV, SVA, control-sgRNA normalization, and the model-based alternative of including batch as a covariate in MAGeCK MLE or Chronos. Covers screen-specific batch sources (passage cohort, library lot, infection day, sequencing run, Cas9 lot, FBS lot), PCA + variance-decomposition diagnostic to decide if correction is needed, when correction harms biology by over-correcting condition into batch, limma removeBatchEffect for visualization-only correction, and relationship to multi-condition design matrices. Use when combining screens for joint analysis, when passage cohort confounds biology, when DepMap-style panels need Chronos with batch covariates, when picking ComBat vs RUV, or when correction harms biology and should be replaced with explicit covariate modeling.
-tool_type: mixed
-primary_tool: pyComBat
+name: bio-differential-expression-batch-correction
+description: Handles batch effects in bulk RNA-seq via design-matrix inclusion (the correct path for DE), ComBat/ComBat-seq for visualization, SVA for unknown latent factors, RUVSeq for negative-control-gene-anchored unwanted variation, and limma::removeBatchEffect for plotting only. Encodes the Nygaard 2016 cardinal sin against testing on a batch-corrected matrix, the choice between SVA/RUVg/RUVs/RUVr, the confounding non-identifiability problem, the single-cell boundary (Harmony/MNN are NOT for bulk), and the Goh 2017 harmonization critique. Use when designing a DE analysis with batch structure, troubleshooting batch-dominated PCA, choosing ComBat vs ComBat-seq, handling unknown batch via SVA, integrating across studies, or deciding when (rarely) to subtract batch.
+tool_type: r
+primary_tool: sva
 ---
 
 ## Version Compatibility
 
-Reference examples tested with: pyComBat 0.3.3+ (epigenelabs/pyComBat), MAGeCK 0.5.9+, R/limma 3.58+, sva 3.50+, RUVSeq 1.36+, pandas 2.2+, numpy 1.26+, scikit-learn 1.4+, scipy 1.12+.
+Reference examples tested with: sva 3.50+ (includes ComBat + ComBat_seq), DESeq2 1.42+, edgeR 4.0+, limma 3.58+, RUVSeq 1.36+, ggplot2 3.5+, harmony 1.2+ (single-cell context only)
 
 Before using code patterns, verify installed versions match. If versions differ:
-- Python: `pip show pycombat`; `from combat.pycombat import pycombat`
-- R: `packageVersion('sva')`; `?ComBat`; `packageVersion('RUVSeq')`; `?RUVg`
+- R: `packageVersion('<pkg>')` then `?function_name` to verify parameters
 
-If code throws ImportError, AttributeError, or TypeError, introspect the installed package and adapt the example to match the actual API rather than retrying.
+If code throws ImportError, AttributeError, or TypeError, introspect the installed
+package and adapt the example to match the actual API rather than retrying.
 
-## Batch Correction for CRISPR Screens
+# Batch Effect Correction
 
-**"Correct batch effects in my CRISPR screens"** -> Diagnose the batch source, decide whether to remove via empirical-Bayes (ComBat), explicit covariate modeling (MAGeCK MLE / Chronos design matrix), control-guide-anchored normalization, or unwanted-variation decomposition (RUV, SVA), then apply only the correction that preserves biological condition signal.
+**"Remove the batch effect before DE"** -> Almost always WRONG. Include batch as a covariate in the design formula (`~ batch + condition`) so DESeq2/edgeR/limma model it without subtracting. Subtraction is for visualization only.
 
-- Python: `pyComBat.pycombat` for empirical-Bayes correction
-- Python: explicit batch covariates in `mageck mle --design-matrix`
-- R: `sva::ComBat`, `RUVSeq::RUVg`, `limma::removeBatchEffect`
-- CLI: `chronos-cn` natively handles screen-batch covariates
+## The Single Most Important Modern Insight -- The Nygaard 2016 cardinal sin
 
-## Batch Sources in CRISPR Screens
+Nygaard, Rødland, Hovig 2016 *Biostatistics* 17(1):29-39, "Methods that remove batch effects while retaining group differences may lead to exaggerated confidence in downstream analyses." Translation: **never run ComBat (or ComBat-seq, or `removeBatchEffect`, or SVA-subtract-then-test) and then run DE on the corrected matrix.**
 
-| Source | Mechanism | Detectable by |
-|--------|-----------|---------------|
-| Library lot | Different aliquots or PCR amplifications | Gini shift; plasmid-pool sequencing |
-| Cell passage cohort | Cells passaged through different periods | PCA Day-0 samples clustering by passage |
-| Infection day | Lentivirus titer drifts; FBS lot changes | PCA Day-0 samples cluster by day |
-| Cas9 enzyme lot | Cas9 expression heterogeneity | PR-AUC drift across screens |
-| Sequencing run | Lane bias, flowcell variant, machine | Per-sample read-count distribution |
-| FBS / culture lot | Fetal bovine serum lot variations confound proliferation | Day-0 vs endpoint differential not present in vehicle |
-| Tissue-prep batch | In-vivo: animal cohort, surgical day, organ-prep tech | In-vivo screens (see [[in-vivo-screens]]) |
+Mechanism: batch-correction methods fit a model `y_ij = alpha + X_ij beta + gamma_i + delta_i epsilon_ij` and subtract the batch terms. The downstream DE test then computes p-values as if those degrees of freedom had never been spent. Residual df is lower than what DESeq2/edgeR/limma assume. Type-I error inflates -- the gene list looks more significant than it should.
 
-**Critical:** Batch effects in CRISPR screens often correlate with biology (e.g., the drug arm was processed in batch 2 because that's when the drug arrived). This confounds correction. Always check for confounding before applying ComBat.
+The right approach: **include batch in the design**. `~ batch + condition`. DESeq2/edgeR/limma will properly partial out the batch effect from the condition estimate and account for the spent degrees of freedom in the inference. The batch is corrected at the inference stage, not by mutating counts.
 
-## Batch Effect Decision Tree
+`removeBatchEffect` (limma) is for visualization only -- the function's help page says so. ComBat/ComBat-seq output is for visualization, clustering, or downstream tools that cannot take a design matrix (rare; mostly ML).
 
-| Diagnostic finding | Recommended correction |
-|--------------------|------------------------|
-| PCA shows samples cluster by condition, not batch | No correction needed; biology dominates |
-| PCA PC1 separates batches, PC2 separates conditions | Apply ComBat with condition as biological_covariate |
-| Batch fully confounded with condition (e.g. all drug in batch 2, all vehicle in batch 1) | Correction will destroy biology; instead redesign next screen with cross-batch balance OR re-analyze with batch in MAGeCK MLE design matrix |
-| Day-0 (pre-perturbation) samples cluster by batch | Strong batch effect; ComBat needed |
-| Endpoint samples cluster by batch but not Day-0 | Selection-driven artifact (FBS lot etc); correct or include batch as covariate |
-| Replicates within a batch are tight; across-batch much wider | Classic batch effect; ComBat |
-| Each replicate scatters randomly across PCs | Sample-level noise; no batch correction will help |
-| Cancer-line panel with multiple batches | Use Chronos (built-in batch modeling) |
+A second clarification: structural confounding (every "treated" sample in batch 1, every "control" in batch 2) is non-identifiable. No method fixes this -- the "treatment effect" and "batch effect" are mathematically the same vector. The fix is experimental design (randomize batches in advance). ComBat/SVA on a fully-confounded design silently removes the treatment effect along with the batch effect.
 
-## Diagnose: PCA + Variance Decomposition
+## Algorithmic Taxonomy
 
-**Goal:** Quantify what fraction of variance is batch vs condition before correcting.
+| Method | Input | Mechanism | Use for |
+|--------|-------|-----------|---------|
+| Design-matrix inclusion (`~ batch + condition`) | Raw counts; known batch | Partial out batch in the GLM, spent df accounted | DE testing -- the correct path |
+| ComBat (Johnson, Li, Rabinovic 2007) | Log-transformed / continuous expression | Empirical-Bayes location and scale shifts per batch | Visualization of microarray / continuous data |
+| ComBat-seq (Zhang, Parmigiani, Johnson 2020) | Raw RNA-seq counts | NB-GLM equivalent of ComBat; returns integer counts | Visualization of RNA-seq counts; cross-study harmonization for ML (with caveat) |
+| `limma::removeBatchEffect` | Normalized expression | Linear regression subtraction with design protection | Visualization only -- explicit help-page warning |
+| SVA (Leek, Storey 2007 + Leek 2012) | Normalized expression | Estimate latent surrogate variables explaining residual variance independent of variable-of-interest | Unknown batch / hidden technical structure -- add SVs to design |
+| svaseq (Leek 2014) | Counts | Count-data variant of SVA | Counts version |
+| RUVg (Risso, Ngai, Speed, Dudoit 2014) | Counts; negative control genes | Factor analysis of control-gene residual; W as covariate | Strong negative controls (ERCC, housekeeping) -- add W to design |
+| RUVs | Counts; replicate samples | Factor analysis within replicate groups; assumes replicates differ only by unwanted variation | Multi-condition with biological replicates as "controls" |
+| RUVr | Counts; design only | Factor analysis of residuals from initial fit | Most data-driven; most likely to absorb biology -- caution |
+| Harmony, MNN, Scanorama, BBKNN | Single-cell embeddings | Iterative alignment of clusters across samples | Single-cell ONLY; not bulk |
 
-**Approach:** Run PCA on log10(counts+1); fit ANOVA decomposing variance into batch and condition components; report variance explained.
+## Decision Tree by Scenario
 
-```python
-import pandas as pd
-import numpy as np
-from sklearn.decomposition import PCA
-from scipy import stats
+| Scenario | Recommended approach | Why |
+|----------|---------------------|-----|
+| Known batch, want DE | `~ batch + condition` in design; do NOT subtract | Cardinal sin avoidance |
+| PCA shows batch separation | Include batch in design; for the figure, `removeBatchEffect` is OK (visualization only) | Two purposes, two tools |
+| Unknown batch structure | `sva` / `svaseq`; add SVs as covariates in design | Captures latent technical factors |
+| Have ERCC spike-ins or trusted housekeeping | `RUVSeq::RUVg` with control gene indices; add W to design | Most principled UV removal |
+| Have replicate samples (technical reps within biological) | `RUVSeq::RUVs` | Replicate structure tells you "this differs only by UV" |
+| Cross-study integration (TCGA + ICGC + own data) | ComBat-seq for counts, ComBat for log-expression, THEN meta-analysis -- do NOT pool then DE | Goh 2017 warning |
+| Fully confounded batch and condition | Re-collect samples; no method fixes this | Non-identifiable |
+| Visualizing batch removal for a figure | `removeBatchEffect(expr, batch = batch, design = model.matrix(~condition))` | Visualization is what it's for |
+| Single-cell data | Harmony / MNN / Scanorama in the single-cell category, not here | Different problem |
 
-def batch_diagnostic(counts_df, metadata_df, batch_col='batch', condition_col='condition'):
-    '''Variance decomposition: report fraction of PC1/PC2 variance attributable to batch vs condition.'''
-    log_counts = np.log10(counts_df + 1).T  # samples as rows
-    pca = PCA(n_components=5)
-    pcs = pca.fit_transform(log_counts)
-    out = pd.DataFrame({
-        'PC': range(1, 6),
-        'var_explained': pca.explained_variance_ratio_,
-    })
-    pc_df = pd.DataFrame(pcs, columns=[f'PC{i+1}' for i in range(5)], index=counts_df.columns).join(metadata_df)
-    for i in range(5):
-        pc = pc_df[f'PC{i+1}']
-        f_b, p_b = stats.f_oneway(*[pc[pc_df[batch_col] == b] for b in pc_df[batch_col].unique()])
-        f_c, p_c = stats.f_oneway(*[pc[pc_df[condition_col] == c] for c in pc_df[condition_col].unique()])
-        out.loc[i, 'batch_F'] = f_b
-        out.loc[i, 'batch_p'] = p_b
-        out.loc[i, 'cond_F'] = f_c
-        out.loc[i, 'cond_p'] = p_c
-    return out
-```
+## Standard Workflow -- Design-Matrix Inclusion
 
-**Interpretation:** If PC1 has batch F-stat > condition F-stat by 10x, batch is dominating and correction is warranted. If condition dominates PC1, no correction needed.
+**Goal:** Test the condition effect while accounting for known batch structure with proper degrees-of-freedom accounting.
 
-## ComBat Empirical-Bayes Correction
-
-**Goal:** Remove batch-specific location and scale shifts while preserving biological condition signal.
-
-**Approach:** Log-transform counts, fit ComBat with explicit `biological_covariate` indicating condition (so the model knows which signal to preserve), back-transform.
-
-```python
-import numpy as np
-from combat.pycombat import pycombat
-
-def combat_correct(counts_df, batch_vector, condition_vector=None):
-    '''ComBat on log-counts with optional biological covariate (condition).
-    Preserves condition signal while removing batch shifts.'''
-    data = np.log2(counts_df.values + 1)
-    if condition_vector is not None:
-        mod = pd.get_dummies(condition_vector).values.astype(float)
-        corrected = pycombat(data, np.array(batch_vector), mod=mod)
-    else:
-        corrected = pycombat(data, np.array(batch_vector))
-    return pd.DataFrame(np.power(2, corrected) - 1,
-                         index=counts_df.index, columns=counts_df.columns).clip(lower=0)
-```
-
-**Critical caveat:** ComBat assumes batch effects are linear shifts of mean and variance in log space. Non-linear effects (e.g., gene-specific batch sensitivity) remain. Always re-check PCA after correction to confirm batches now overlap.
-
-## RUV (Remove Unwanted Variation)
-
-**Goal:** Identify hidden batch sources via control sgRNAs whose true signal is known.
-
-**Approach:** Designate non-targeting controls as "negative controls" (assumed unchanged); RUV decomposes their variance into unwanted factors, then subtracts these from all data.
+**Approach:** Include batch as a covariate in the design formula; DESeq2/edgeR/limma will partial it out and compute correct p-values.
 
 ```r
-library(RUVSeq)
-# counts_df: rows = sgRNAs, columns = samples
-ntc_indices <- which(rownames(counts_df) %in% ntc_sgrna_names)
-seqset <- newSeqExpressionSet(counts = as.matrix(counts_df))
-ruv_corrected <- RUVg(seqset, cIdx = ntc_indices, k = 2)  # k = 2 unwanted factors
-# Access corrected data
-corrected_counts <- normCounts(ruv_corrected)
+library(DESeq2)
+
+dds <- DESeqDataSetFromMatrix(countData = counts, colData = coldata,
+                               design = ~ batch + condition)
+dds <- DESeq(dds)
+res <- results(dds, name = 'condition_treated_vs_control')
 ```
 
-**When to use:** RUV preferred over ComBat when batches are not annotated (e.g., unknown technical confounders). Worse than ComBat when batch is known and well-annotated; ComBat is more direct.
+```r
+library(edgeR)
+y <- DGEList(counts = counts, group = coldata$condition)
+keep <- filterByExpr(y, design = model.matrix(~ batch + condition, coldata))
+y <- y[keep, , keep.lib.sizes = FALSE]
+y <- normLibSizes(y)
 
-## SVA (Surrogate Variable Analysis)
+design <- model.matrix(~ batch + condition, coldata)
+y <- estimateDisp(y, design, robust = TRUE)
+fit <- glmQLFit(y, design, robust = TRUE)
+qlf <- glmQLFTest(fit, coef = 'conditiontreated')
+```
 
-**Goal:** Estimate unknown latent factors that may confound the screen.
+When known confounders are continuous (RIN, library prep date as days), include them as continuous covariates -- no batch correction needed for those:
 
-**Approach:** SVA computes surrogate variables that capture variance not explained by known biological factors; these can then be added to the MAGeCK MLE design matrix as covariates.
+```r
+design = ~ RIN + library_prep_day + condition
+```
+
+## ComBat-seq (Visualization or Cross-Study Counts)
+
+**Goal:** Adjust raw counts to remove known batch effects while preserving biology, for VISUALIZATION or for downstream tools that need a single corrected matrix.
+
+**Approach:** `ComBat_seq(counts, batch, group)` returns batch-adjusted integer counts via NB-GLM. Use the output for PCA, clustering, ML -- NOT for DE testing.
 
 ```r
 library(sva)
-# counts_df: rows = sgRNAs, columns = samples
-mod <- model.matrix(~ condition, data = metadata)
-mod0 <- model.matrix(~ 1, data = metadata)
-sv_obj <- sva(as.matrix(counts_df), mod, mod0)
-n_sv <- sv_obj$n.sv  # number of surrogate variables
-# Add to design matrix for MAGeCK MLE
-design_mat <- cbind(mod, sv_obj$sv)
+
+corrected_counts <- ComBat_seq(counts = as.matrix(counts),
+                                batch = coldata$batch,
+                                group = coldata$condition,
+                                full_mod = TRUE)
+
+vsd_corrected <- vst(DESeqDataSetFromMatrix(corrected_counts, coldata, ~1))
+plotPCA(vsd_corrected, intgroup = 'condition')
 ```
 
-**Use case:** When the screen has clear biological signal (e.g. essentiality recovery passes) but small effect sizes are hidden by noise; SVA-discovered latent factors as covariates can recover them.
+`full_mod = TRUE` keeps biological covariates protected (the `group` argument). With `full_mod = FALSE`, ComBat-seq removes batch AND group differences -- a serious failure mode.
 
-## Batch as Explicit Covariate (Preferred for MAGeCK MLE / Chronos)
+`ComBat` (the non-seq version) is for log-transformed or microarray data, NOT raw counts. Running `ComBat` on raw counts produces fractional values and assumes Gaussian residuals where counts are NB. Wrong tool, silent failure.
 
-**Goal:** Model batch and biology in the same regression instead of pre-correcting.
+## SVA -- Unknown Batch
 
-**Approach:** Add batch indicator columns to the MLE design matrix. The fitted beta for condition is the effect after accounting for batch; no pre-correction needed.
+**Goal:** Discover latent technical factors when batch is not recorded, add them as covariates.
 
-```bash
-# Design matrix for a screen with 2 batches and 2 conditions
-cat > design.txt <<EOF
-Samples         baseline    batch2    treatment
-Veh_b1_r1       1           0         0
-Veh_b1_r2       1           0         0
-Drug_b1_r1      1           0         1
-Drug_b1_r2      1           0         1
-Veh_b2_r1       1           1         0
-Veh_b2_r2       1           1         0
-Drug_b2_r1      1           1         1
-Drug_b2_r2      1           1         1
-EOF
+**Approach:** Estimate the number of surrogate variables; estimate the SVs themselves; add them to the design and re-run DE.
 
-mageck mle \
-    --count-table counts.txt \
-    --design-matrix design.txt \
-    --output-prefix batch_aware_mle
+```r
+library(sva)
+library(DESeq2)
+
+dds <- DESeqDataSetFromMatrix(counts, coldata, design = ~ condition)
+dds <- estimateSizeFactors(dds)
+norm_counts <- counts(dds, normalized = TRUE)
+
+mod  <- model.matrix(~ condition, coldata)
+mod0 <- model.matrix(~ 1, coldata)
+
+n_sv <- num.sv(norm_counts, mod, method = 'leek')
+svobj <- svaseq(norm_counts, mod, mod0, n.sv = n_sv)
+
+for (i in seq_len(ncol(svobj$sv))) {
+    colData(dds)[[paste0('SV', i)]] <- svobj$sv[, i]
+}
+sv_formula <- as.formula(paste('~', paste(paste0('SV', seq_len(ncol(svobj$sv))),
+                                          collapse = ' + '), '+ condition'))
+design(dds) <- sv_formula
+dds <- DESeq(dds)
 ```
 
-**Why this is preferred:** ComBat shifts counts before testing; the MLE-with-covariates approach correctly propagates uncertainty from the batch term into the condition beta's standard error. ComBat-then-test pretends the corrected counts are noise-free, biasing FDR.
+CRITICAL CHECK: compute the correlation between each SV and the variable of interest. If any SV correlates with treatment at r > 0.3, do NOT include it -- you would be partialling out biology, deflating the effect of interest.
 
-## Control-Sgrna Anchored Normalization
-
-**Goal:** Use non-targeting controls as the per-sample reference so batch shifts cancel.
-
-**Approach:** Scale each sample so its NTC sgRNAs have a constant median. Subsequent fold changes are relative to NTCs in each sample, automatically batch-controlling.
-
-```python
-def ntc_anchored_normalize(counts_df, ntc_sgrna_names, target_median=1000):
-    '''Scale each sample so its NTC median is target_median. Subsequent LFC is NTC-anchored.'''
-    is_ntc = counts_df.index.isin(ntc_sgrna_names)
-    ntc_medians = counts_df.loc[is_ntc].median(axis=0)
-    scale_factors = target_median / ntc_medians.replace(0, np.nan)
-    return counts_df * scale_factors, scale_factors
+```r
+sapply(seq_len(ncol(svobj$sv)),
+       function(i) cor(svobj$sv[, i], as.numeric(coldata$condition)))
 ```
 
-**Critical:** Requires ≥500 NTCs in the library (see [[library-design]]). With fewer, the NTC median is unstable and amplifies noise rather than removing batch.
+`svaseq` is the count-data version (Leek 2014); `sva` is for log-transformed / microarray data.
 
-## When NOT to Correct
+## RUVSeq -- Negative-Control-Anchored UV
 
-| Situation | Why correction hurts |
-|-----------|----------------------|
-| Batch is fully confounded with condition | Correction destroys biology along with batch; redesign or accept |
-| Batch effect is smaller than between-replicate noise | Correction adds noise without removing meaningful variance |
-| Replicates already correlate >0.95 within and across batches | No batch effect to correct |
-| Single-screen analysis | No "batch" to correct; only replicate noise |
-| Per-batch sample size <3 | Cannot estimate batch shift reliably; correction is harmful |
+**Goal:** Estimate unwanted variation using ERCC spike-ins, housekeeping genes, replicate samples, or post-fit residuals; add as covariates in design.
 
-## Failure Modes
+**Approach:** Pick the RUV variant matching the available controls; add the resulting W matrix to the design.
 
-### ComBat eliminates biological signal
+```r
+library(RUVSeq)
+library(edgeR)
 
-**Trigger:** Batch is correlated with condition (e.g., all drug-arm samples were processed week 2; all vehicle-arm samples week 1).
-**Mechanism:** ComBat without a `mod` covariate treats condition variance as batch variance; corrects it away.
-**Symptom:** PR-AUC against CEGv2 drops after ComBat correction.
-**Fix:** Always supply `mod` covariate matrix indicating condition; verify by comparing PR-AUC before and after.
+control_idx <- which(rownames(counts) %in% ercc_genes)
 
-### RUV adds noise instead of removing it
+set <- newSeqExpressionSet(as.matrix(counts), phenoData = coldata)
+set <- betweenLaneNormalization(set, which = 'upper')
 
-**Trigger:** k (number of unwanted factors) set too high.
-**Mechanism:** RUV's least-squares decomposition over-fits; "removed" variance includes biology.
-**Symptom:** Hits decrease and replicate Pearson drops after correction.
-**Fix:** Choose k via cross-validation; default k=1 or 2 for most screens.
+ruv <- RUVg(set, control_idx, k = 2)
 
-### Batch-aware MLE collinear design matrix
+design <- model.matrix(~ pData(ruv)$W_1 + pData(ruv)$W_2 + condition,
+                        data = coldata)
+y <- DGEList(counts = counts, group = coldata$condition)
+y <- normLibSizes(y)
+y <- estimateDisp(y, design, robust = TRUE)
+fit <- glmQLFit(y, design, robust = TRUE)
+qlf <- glmQLFTest(fit, coef = 'conditiontreated')
+```
 
-**Trigger:** Adding a batch indicator that is fully collinear with another design column (e.g., all of batch 2 is also Day 21).
-**Mechanism:** MLE design matrix is singular; betas not estimable.
-**Symptom:** MAGeCK MLE errors out or produces NaN betas.
-**Fix:** Drop the collinear column; re-design experiment with cross-batch balance.
+| Variant | Control source | Most appropriate when | Failure mode |
+|---------|----------------|----------------------|--------------|
+| RUVg | Negative control genes (ERCC, housekeeping) | Strong, validated controls exist | Bad controls -> partials out biology |
+| RUVs | Replicate samples / technical reps | Multi-condition with reps that should differ only by UV | Wrong replicate structure absorbs condition effect |
+| RUVr | Residuals from an initial GLM | No external controls; most data-driven | Most likely to absorb true biology -- use last |
 
-### ComBat after RUV double-corrects
+Choice of k (number of unwanted factors): no automatic procedure. Try k = 1, 2, 3 and inspect PCA after RUV correction. Treatment effect should remain visible; if it disappears, k is too high. 5-10 is typical; >10 is suspicious.
 
-**Trigger:** Applying multiple corrections sequentially.
-**Mechanism:** Both methods remove variance; sequential application removes biology twice.
-**Symptom:** All signal gone; counts look uniformly noisy.
-**Fix:** Pick one method based on diagnostic; never combine.
+## removeBatchEffect -- Visualization Only
 
-### Per-batch sample size too small
+```r
+library(limma)
 
-**Trigger:** 2 replicates per batch with 3 batches; ComBat estimates batch shift from 2 samples.
-**Mechanism:** Insufficient data to estimate batch parameters; high-variance estimates.
-**Symptom:** Correction makes some batches worse than uncorrected.
-**Fix:** Need ≥3 (preferably 4-6) samples per batch; below this, use covariate modeling instead.
+design <- model.matrix(~ condition, coldata)
+log_expr_corrected <- removeBatchEffect(log_expr,
+                                         batch = coldata$batch,
+                                         design = design)
 
-## Quantitative Thresholds
+library(ggplot2)
+pca <- prcomp(t(log_expr_corrected), scale. = TRUE)
+ggplot(data.frame(PC1 = pca$x[,1], PC2 = pca$x[,2],
+                  condition = coldata$condition, batch = coldata$batch),
+       aes(PC1, PC2, color = condition, shape = batch)) +
+    geom_point(size = 3) +
+    ggtitle('After removeBatchEffect (visualization only)')
+```
 
-| Threshold | Value | Source / Rationale |
-|-----------|-------|--------------------|
-| PC1 batch F vs condition F | F_batch > 10x F_cond -> apply correction | Standard variance-decomposition diagnostic |
-| ComBat min samples per batch | ≥3, ideally 4-6 | Empirical Bayes prior estimation |
-| RUV `k` (unwanted factors) | k=1 default; k=2 if multiple known batch sources | Risso 2014; cross-validate |
-| NTCs needed for NTC-anchored norm | ≥500 in library | Stable median |
-| Post-correction PCA check | Batches must overlap in PC1/PC2 plot | Visual sanity check |
-| Post-correction PR-AUC | Should be same or higher than pre | If lower, correction destroyed biology |
+The `design` argument protects condition while removing batch. Common error: passing batch ALSO in the design ("Coefficients not estimable" warning) -- pass batch via `batch=` only, NOT also in `design=`.
 
-## Common Errors
+DO NOT feed `log_expr_corrected` back into limma `lmFit` for DE testing. The function's own help page says so. The right approach: `lmFit(log_expr, model.matrix(~ batch + condition, coldata))` -- include batch as a covariate.
 
-| Error / symptom | Cause | Solution |
-|-----------------|-------|----------|
-| PR-AUC drops after ComBat | Batch confounded with condition | Add `mod` covariate; or redesign |
-| MAGeCK MLE NaN beta after adding batch column | Collinear design matrix | Drop collinear column |
-| Replicates still cluster by batch after RUV | k too low | Increase k; cross-validate |
-| Replicates lose internal cohesion after correction | Over-correction | Reduce k or revert |
-| NTC-anchored norm worse than median | Too few NTCs | Use median; add NTCs to next library |
-| Sequencing-run-level batch survives ComBat | Non-linear sequencing effect | Pre-normalize with `mageck count --norm-method control` first |
+## Detecting Confounding Early
+
+```r
+ct <- table(coldata$condition, coldata$batch)
+ct
+```
+
+| Pattern | Status | Action |
+|---------|--------|--------|
+| All cells > 0 with roughly equal proportions | Balanced | Include batch as covariate |
+| Some cells low (e.g., 4/4/2/0) | Partially confounded | Include batch; report reduced power |
+| Some cells zero AND one factor entirely in one batch | Perfectly confounded | UNFIXABLE -- re-collect or drop the affected comparison |
+
+`alias()` reveals collinear columns in a design matrix:
+
+```r
+alias(model.matrix(~ batch + condition, coldata))$Complete
+```
+
+## The Single-Cell Boundary
+
+Harmony (Korsunsky et al. 2019 *Nat Methods* 16:1289), MNN (Haghverdi et al. 2018 *Nat Biotechnol* 36:421), Scanorama, BBKNN are designed for single-cell integration where the goal is aligning cell-type clusters across samples/batches. They modify the embedding (PCA coordinates) for downstream UMAP/clustering -- they assume the structural alignment problem of single-cell (many similar cells; align clusters).
+
+DO NOT apply to bulk RNA-seq. Bulk lacks the cluster structure these methods assume.
+
+Conversely, DO NOT use ComBat / ComBat-seq for single-cell. ComBat assumes much more homogeneity than scRNA exhibits; it does not handle zeros well.
+
+See `single-cell/batch-integration` for the single-cell methods.
+
+## The Goh 2017 Critique on "Harmonization"
+
+Goh, Wang, Wong 2017 *Trends Biotechnol* 35(6):498-507 warn that batch-correction methods can:
+
+- Introduce NEW batch-like artifacts (false positives) when the batch structure is unclear
+- Fail when the "most genes not DE" assumption is violated (heat shock, immune activation, viral host shutoff)
+- Inflate downstream confidence (echoing Nygaard 2016)
+
+Their recommendation for cross-study work: per-cohort DE first, then meta-analyze the effect sizes (`metafor`, `limma` `treat` across cohorts). DO NOT pool data, harmonize, then re-test.
+
+"Harmonization" in clinical genomics often means ComBat across cohorts then DE on the harmonized matrix -- the exact failure mode Nygaard 2016 describes. Same problem, different vocabulary.
+
+## Reconciliation: When Methods Disagree
+
+| Pattern | Likely cause | Action |
+|---------|--------------|--------|
+| Design-inclusion (`~ batch + condition`) and SVA give different gene lists | SVA captured biology (high SV-condition correlation) OR known batch was incomplete | Check SV-vs-condition correlations; if any |r|>0.3, drop that SV. If SVA still differs after pruning, hidden technical factor exists beyond known batch -- combine `~ batch + SV_clean + condition` |
+| Design-inclusion and RUVg disagree | RUVg control genes (ERCC, housekeeping) had real biological variation | Validate control set; switch RUVg -> RUVs (replicate-based) or back to design only |
+| ComBat-seq corrected gene list larger than design-included gene list | Nygaard 2016 cardinal sin: spent df not accounted for in downstream DE on corrected matrix | DISCARD the ComBat-seq DE result; report design-included only |
+| Cross-cohort meta-analysis shows different DE per cohort | Real biological heterogeneity OR cohort-specific technical drift | Per-cohort DE then meta-analyze effect sizes (`metafor`); do NOT pool then test (Goh 2017) |
+| All methods (design, SVA, RUVg) agree on top 100 genes | Robust signal | Report the intersection as high-confidence |
+| All methods disagree | Confounded design OR weak signal at high noise floor | Suspect non-identifiability; verify `alias()` and balance |
+
+The design-inclusion result (`~ batch + condition` or `~ confounders + condition`) is the reference. SVA/RUV results are sensitivity analyses; when they agree with the design result, confidence rises. When they diverge, investigate before believing either.
+
+## Per-Method Failure Modes
+
+### Tested on a batch-corrected matrix -- inflated significance
+
+**Trigger:** Pipeline: `ComBat_seq(counts, batch)` -> `DESeq2 on corrected_counts`. Many more "significant" genes than expected.
+
+**Mechanism:** ComBat-seq removed batch terms; DESeq2 then computed inference as if those df had not been spent. Type-I error inflates.
+
+**Symptom:** Implausibly long DE gene list; replication in independent cohort recovers <50%; p-value histogram leans anti-conservative.
+
+**Fix:** Re-run with `~ batch + condition` design on RAW counts. Discard the corrected-counts DE result.
+
+### SVA captured the biology
+
+**Trigger:** `sva` returned 5 SVs; SV2 correlates with `condition` at r = 0.7; user added all SVs to design.
+
+**Mechanism:** When biology is correlated with the hidden factor (e.g., disease severity drives both expression AND blood-draw timing), SVA's SVs capture biology along with technical noise. Partialling them out deflates the effect of interest.
+
+**Symptom:** Condition effect that was clear in raw PCA disappears after SV adjustment; few or no DE genes.
+
+**Fix:** Compute SV-vs-condition correlations; exclude any SV with |r| > 0.3 from the design. Re-fit.
+
+### ComBat applied to raw counts
+
+**Trigger:** Pipeline uses `ComBat(counts, batch)` (not `ComBat_seq`); output is fractional.
+
+**Mechanism:** ComBat is for log-transformed / Gaussian data. Counts are NB. The Gaussian assumption is wrong and the output is uninterpretable as counts.
+
+**Symptom:** Corrected matrix has fractional values; DESeq2 errors out ("counts matrix should be integers"); naive `round()` gives garbage.
+
+**Fix:** Use `ComBat_seq()` for counts. Or better, include batch as a design covariate.
+
+### Confounded design corrected with SVA -- biology gone
+
+**Trigger:** All treated samples in batch 1, all control in batch 2; user runs SVA hoping it will rescue the design.
+
+**Mechanism:** Batch and treatment vectors are identical (or nearly so). SVA estimates "the unwanted factor"; "the unwanted factor" is treatment.
+
+**Symptom:** SV1 correlates with treatment at r ~ 1; after adjustment, no DE genes.
+
+**Fix:** Acknowledge the design is non-identifiable. No statistical method fixes structural confounding. Re-collect with randomized batches.
+
+### Used Harmony on bulk RNA-seq
+
+**Trigger:** Bulk RNA-seq with batch effect; user reaches for Harmony because they've used it for single-cell.
+
+**Mechanism:** Harmony aligns cluster centroids in single-cell embeddings. Bulk has no cluster structure -- typically 6-30 samples, not 10000+ cells.
+
+**Symptom:** Harmony "succeeds" but the result is meaningless; downstream DE is nonsense.
+
+**Fix:** Use design-matrix inclusion (`~ batch + condition`) or ComBat-seq for visualization. Harmony belongs to `single-cell/batch-integration`.
+
+## Common errors
+
+| Error / symptom | Cause | Fix |
+|-----------------|-------|-----|
+| `Coefficients not estimable` from removeBatchEffect | Batch included in both `batch=` and `design=` | Pass batch via `batch=` only |
+| ComBat output has fractional values | Wrong tool for counts | Use `ComBat_seq` |
+| SV adjustment kills condition effect | SVs captured biology | Check correlation; exclude high-correlation SVs |
+| `Inconsistent dimensions` in RUVg | `control_idx` is symbols vs ENSEMBL rownames | Match index type |
+| `full_mod` not specified in ComBat-seq | Defaults; biology may not be protected | Set `full_mod = TRUE` and pass `group =` |
 
 ## References
 
-- Johnson WE et al. 2007. *Biostatistics* 8:118. Original ComBat algorithm.
-- Leek JT et al. 2012. *Bioinformatics* 28:882. SVA package.
-- Risso D et al. 2014. *Nat Biotechnol* 32:896. RUVSeq.
-- Pacini C et al. 2021. *Cell Syst* 12:1132. CRISPR-screen batch effects analysis.
-- Hayer KE et al. 2023. *Genome Biol* 24:1. Benchmark of normalization methods for CRISPR screens.
+- Nygaard V, Rødland EA, Hovig E. 2016. Methods that remove batch effects while retaining group differences may lead to exaggerated confidence in downstream analyses. *Biostatistics* 17(1):29-39. doi:10.1093/biostatistics/kxv027
+- Johnson WE, Li C, Rabinovic A. 2007. Adjusting batch effects in microarray expression data using empirical Bayes methods. *Biostatistics* 8(1):118-127. doi:10.1093/biostatistics/kxj037
+- Zhang Y, Parmigiani G, Johnson WE. 2020. ComBat-seq: batch effect adjustment for RNA-seq count data. *NAR Genom Bioinform* 2(3):lqaa078. doi:10.1093/nargab/lqaa078
+- Leek JT, Storey JD. 2007. Capturing heterogeneity in gene expression studies by surrogate variable analysis. *PLoS Genet* 3(9):e161. doi:10.1371/journal.pgen.0030161
+- Leek JT, Johnson WE, Parker HS, Jaffe AE, Storey JD. 2012. The sva package for removing batch effects and other unwanted variation in high-throughput experiments. *Bioinformatics* 28(6):882-883. doi:10.1093/bioinformatics/bts034
+- Leek JT. 2014. svaseq: removing batch effects and other unwanted noise from sequencing data. *Nucleic Acids Res* 42(21):e161. doi:10.1093/nar/gku864
+- Risso D, Ngai J, Speed TP, Dudoit S. 2014. Normalization of RNA-seq data using factor analysis of control genes or samples. *Nat Biotechnol* 32(9):896-902. doi:10.1038/nbt.2931
+- Goh WWB, Wang W, Wong L. 2017. Why batch effects matter in omics data, and how to avoid them. *Trends Biotechnol* 35(6):498-507. doi:10.1016/j.tibtech.2017.02.012
+- Korsunsky I et al. 2019. Fast, sensitive and accurate integration of single-cell data with Harmony. *Nat Methods* 16(12):1289-1296. doi:10.1038/s41592-019-0619-0
+- Haghverdi L, Lun ATL, Morgan MD, Marioni JC. 2018. Batch effects in single-cell RNA-sequencing data are corrected by matching mutual nearest neighbors. *Nat Biotechnol* 36(5):421-427. doi:10.1038/nbt.4091
+- Ritchie ME et al. 2015. limma powers differential expression analyses for RNA-sequencing and microarray studies. *Nucleic Acids Res* 43(7):e47. doi:10.1093/nar/gkv007
 
 ## Related Skills
 
-- crispr-screens/mageck-analysis - MAGeCK MLE with explicit batch covariates
-- crispr-screens/screen-qc - Pre-correction PCA diagnostic
-- crispr-screens/copy-number-correction - Chronos handles batch + CN jointly
-- crispr-screens/library-design - NTC composition for NTC-anchored normalization
-- crispr-screens/jacks-analysis - Joint analysis across batches with shared efficacy
-- crispr-screens/hit-calling - Post-correction hit calling
-- crispr-screens/in-vivo-screens - In-vivo-specific batch sources (animal cohort, tissue prep)
+- deseq2-basics - DE with `~ batch + condition` design
+- edger-basics - edgeR pipeline with batch in design
+- de-results - p-value histogram diagnostics for missed batch
+- de-visualization - PCA shows batch effects; sample distance heatmap; figure-time use of removeBatchEffect
+- expression-matrix/metadata-joins - Confounding detection; sample swap detection
+- expression-matrix/normalization - TMM/RLE failure modes overlap with batch failure modes
+- single-cell/batch-integration - Harmony, MNN, Scanorama for single-cell (not bulk)

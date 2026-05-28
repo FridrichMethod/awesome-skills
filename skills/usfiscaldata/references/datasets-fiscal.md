@@ -71,30 +71,32 @@ resp = requests.get(
 
 ## Monthly Treasury Statement (MTS)
 
-The MTS dataset has **16 data tables**, all under `/v1/accounting/mts/`. Updated monthly.
+The MTS dataset has **18 data tables**, all under `/v1/accounting/mts/`. Updated monthly.
 
 **Date Range:** October 1980 to present
 
 ### MTS Tables
 
-| Table | Endpoint | Description |
-|-------|----------|-------------|
-| MTS Table 1 | `/v1/accounting/mts/mts_table_1` | Summary of Receipts and Outlays |
-| MTS Table 2 | `/v1/accounting/mts/mts_table_2` | Receipts by Source |
-| MTS Table 3 | `/v1/accounting/mts/mts_table_3` | Outlays by Function |
-| MTS Table 4 | `/v1/accounting/mts/mts_table_4` | Outlays by Agency |
-| MTS Table 5 | `/v1/accounting/mts/mts_table_5` | Outlays by Category |
-| MTS Table 6 | `/v1/accounting/mts/mts_table_6` | Means of Financing |
-| MTS Table 7 | `/v1/accounting/mts/mts_table_7` | Receipts by Source (Quarterly) |
-| MTS Table 8 | `/v1/accounting/mts/mts_table_8` | Outlays by Function (Quarterly) |
-| MTS Table 9 | `/v1/accounting/mts/mts_table_9` | Receipts: Comparative Summary |
-| MTS Table 10 | `/v1/accounting/mts/mts_table_10` | Outlays: Comparative Summary |
-| MTS Table 11 | `/v1/accounting/mts/mts_table_11` | Supplemental Detail on Receipts |
-| MTS Table 12 | `/v1/accounting/mts/mts_table_12` | Supplemental Detail on Outlays |
-| MTS Table 13 | `/v1/accounting/mts/mts_table_13` | Federal Borrowing and Debt |
-| MTS Table 14 | `/v1/accounting/mts/mts_table_14` | Means of Financing: Federal |
-| MTS Table 15 | `/v1/accounting/mts/mts_table_15` | Federal Trust Fund Summary |
-| MTS Table 16 | `/v1/accounting/mts/mts_table_16` | Means of Financing: Off-Budget |
+| Endpoint | Description |
+|----------|-------------|
+| `/v1/accounting/mts/mts_table_1` | Summary of receipts, outlays, and deficit/surplus |
+| `/v1/accounting/mts/mts_table_2` | Summary of budget and off-budget results |
+| `/v1/accounting/mts/mts_table_3` | Summary of receipts and outlays |
+| `/v1/accounting/mts/mts_table_4` | Receipts of the U.S. Government |
+| `/v1/accounting/mts/mts_table_5` | Outlays of the U.S. Government |
+| `/v1/accounting/mts/mts_table_5m` | Receipts and outlays by month |
+| `/v1/accounting/mts/mts_table_6` | Means of financing the deficit or disposition of surplus |
+| `/v1/accounting/mts/mts_table_6a` | Analysis of change in excess of liabilities |
+| `/v1/accounting/mts/mts_table_6b` | Securities issued under special financing authorities |
+| `/v1/accounting/mts/mts_table_6c` | Federal agency borrowing via Treasury securities |
+| `/v1/accounting/mts/mts_table_6d` | Investments of federal accounts in federal securities |
+| `/v1/accounting/mts/mts_table_6e` | Guaranteed and direct loan financing, net activity |
+| `/v1/accounting/mts/mts_table_7` | Receipts and outlays by month |
+| `/v1/accounting/mts/mts_table_8` | Trust fund impact on budget results and holdings |
+| `/v1/accounting/mts/mts_table_9` | Summary of receipts by source and outlays by function |
+| `/v1/accounting/mts/mts_table_9_outlays_functions_subfunctions` | Outlays by function and subfunction |
+| `/v1/accounting/mts/mts_distributed_offsetting_receipts` | Distributed offsetting receipts |
+| `/v1/accounting/mts/mts_receipts_outlays_deficit_surplus` | Receipts, outlays, and deficit/surplus |
 
 ### Common MTS Fields
 
@@ -136,7 +138,7 @@ resp = requests.get(
 
 ## U.S. Government Revenue Collections
 
-**Endpoint:** `/v1/accounting/od/rev_collections`  
+**Endpoint:** `/v2/revenue/rcm`  
 **Frequency:** Daily  
 **Date Range:** October 2004 to present
 
@@ -169,7 +171,7 @@ Monthly federal disbursements data.
 
 ## Receipts by Department
 
-**Endpoint:** `/v2/accounting/od/receipts_by_dept`  
+**Endpoint:** `/v1/accounting/od/receipts_by_department`  
 **Frequency:** Annual  
 **Date Range:** September 2015 to present
 
@@ -191,6 +193,20 @@ Treasury-managed trust and special funds account data.
 **Frequency:** Quarterly  
 **Date Range:** March 2021 to present (13 tables)
 
-Quarterly financial report covering government finances, public debt, savings bonds, and more.
+Quarterly financial report covering government finances, public debt, savings bonds, and more. Endpoints use the `/v1/accounting/tb/` prefix (not `/v1/accounting/od/`).
 
-**Endpoint prefix:** `/v1/accounting/od/treasury_bulletin_`
+| Endpoint | Description |
+|----------|-------------|
+| `/v1/accounting/tb/esf1_balances` | Exchange Stabilization Fund balances |
+| `/v1/accounting/tb/esf2_statement_net_cost` | ESF statement of net cost |
+| `/v1/accounting/tb/fcp1_weekly_report_major_market_participants` | Major market participants (weekly) |
+| `/v1/accounting/tb/fcp2_monthly_report_major_market_participants` | Major market participants (monthly) |
+| `/v1/accounting/tb/fcp3_quarterly_report_large_market_participants` | Large market participants (quarterly) |
+| `/v1/accounting/tb/ffo5_internal_revenue_by_state` | Internal revenue receipts by state |
+| `/v1/accounting/tb/ffo6_customs_border_protection_collections` | Customs and border protection collections |
+| `/v1/accounting/tb/ofs1_distribution_federal_securities_class_investors_type_issues` | Distribution of federal securities by class and investor |
+| `/v1/accounting/tb/ofs2_estimated_ownership_treasury_securities` | Estimated ownership of Treasury securities |
+| `/v1/accounting/tb/pdo1_offerings_regular_weekly_treasury_bills` | Offerings of regular weekly Treasury bills |
+| `/v1/accounting/tb/pdo2_offerings_marketable_securities_other_regular_weekly_treasury_bills` | Other marketable securities offerings |
+| `/v1/accounting/tb/uscc1_amounts_outstanding_circulation` | Amounts outstanding and in circulation |
+| `/v1/accounting/tb/uscc2_amounts_outstanding_circulation` | Amounts outstanding and in circulation (continued) |

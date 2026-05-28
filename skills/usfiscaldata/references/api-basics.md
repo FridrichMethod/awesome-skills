@@ -30,6 +30,16 @@ https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od
 - **v2**: Newer or updated datasets (Debt to Penny, TROR, avg interest rates)
 - Check the specific dataset page at `fiscaldata.treasury.gov/datasets/` to confirm the version
 
+## Verifying Endpoint Paths
+
+Endpoint paths change when datasets are restructured. Always confirm the current path on the dataset's **API Quick Guide** before querying.
+
+Authoritative sources (in order):
+
+1. Dataset detail page at `https://fiscaldata.treasury.gov/datasets/{slug}/`
+2. Gatsby page data: `https://fiscaldata.treasury.gov/page-data/datasets/{slug}/page-data.json` (look for `"endpoint"` fields)
+3. [API endpoint table](https://fiscaldata.treasury.gov/api-documentation/#list-of-endpoints-table)
+
 ## Data Types
 
 All field values in responses are **strings** (quoted), regardless of their logical type.
@@ -80,6 +90,15 @@ def get_with_retry(url, params, retries=3):
 
 - HTTP 304 (Not Modified) can be returned for cached responses
 - Safe to cache responses; most datasets update daily, monthly, or quarterly
+
+## Pagination Headers
+
+Responses include pagination in two places:
+
+- **`links` object** in the JSON body (`self`, `first`, `prev`, `next`, `last`)
+- **`Link` HTTP header** with RFC 5988 relations (`rel="first"`, `rel="next"`, etc.)
+
+Either can be used to navigate pages programmatically. See [response-format.md](response-format.md) for details.
 
 ## Data Registry
 

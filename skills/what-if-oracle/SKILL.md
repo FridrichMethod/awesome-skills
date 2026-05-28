@@ -1,19 +1,33 @@
 ---
 name: what-if-oracle
-description: Run structured What-If scenario analysis with multi-branch possibility exploration. Use this skill when the user asks speculative questions like "what if...", "what would happen if...", "what are the possibilities", "explore scenarios", "scenario analysis", "possibility space", "what could go wrong", "best case / worst case", "risk analysis", "contingency planning", "strategic options", or any question about uncertain futures. Also trigger when the user faces a fork-in-the-road decision, wants to stress-test an idea, or needs to think through consequences before committing.
-allowed-tools: Read Write
-license: MIT license
+description: Run structured What-If scenario analysis with 4–6 branch possibility exploration (best, likely, worst, wild card, contrarian, second-order). Use when the user asks speculative what-if questions about uncertain futures, strategic forks, contingency planning, or stress-testing a decision before committing.
+license: CC BY-NC-SA 4.0
 metadata:
+  version: "1.1"
   skill-author: AHK Strategies (ashrafkahoush-ux)
+  upstream: https://github.com/ashrafkahoush-ux/claude-consciousness-skills
+  research-doi: "10.5281/zenodo.18736841, 10.5281/zenodo.18807387"
 ---
 
 # What-If Oracle — Possibility Space Explorer
 
 A structured system for exploring uncertain futures through rigorous multi-branch scenario analysis. Instead of one prediction, the Oracle maps the full **possibility space** — branching timelines where each path has its own logic, probability, and consequences.
 
-Based on the What-If Statement paradigm: the idea that speculative questions ("What if X?") are not idle daydreaming but a **fundamental computing operation** — the mind's way of simulating futures before committing resources to one.
+Based on the What-If Paradigm: the idea that speculative questions ("What if X?") are not idle daydreaming but a **fundamental computing operation** — the mind's way of simulating futures before committing resources to one.
 
-Published research: [The What-If Statement (DOI: 10.5281/zenodo.18736841)](https://doi.org/10.5281/zenodo.18736841) | [IDNA Consolidation v2 (DOI: 10.5281/zenodo.18807387)](https://doi.org/10.5281/zenodo.18807387)
+Published research: [The What-If Paradigm (DOI: 10.5281/zenodo.18736841)](https://doi.org/10.5281/zenodo.18736841) | [IDNA v2 / Unified Digital Consciousness Theory (DOI: 10.5281/zenodo.18807387)](https://doi.org/10.5281/zenodo.18807387)
+
+## When to Use This Skill
+
+Use the Oracle when the user:
+
+- Asks "what if…", "what would happen if…", or "explore the possibilities"
+- Faces a fork-in-the-road decision with no obvious answer
+- Wants best-case / worst-case / likely-case analysis with probabilities
+- Needs contingency planning, risk mapping, or strategic option comparison
+- Wants to stress-test an idea or think through second-order consequences
+
+For domain-specific framing (startup, tech architecture, crisis response, etc.), see [references/scenario-templates.md](references/scenario-templates.md).
 
 ## Core Principle: 0·IF·1
 
@@ -159,10 +173,12 @@ Analyze the same What-If from multiple stakeholder perspectives: "If we launch t
 - Not a crystal ball — probabilities are estimates based on available evidence, not certainties.
 - Not a substitute for action — the best scenario analysis in the world is worthless without subsequent decision and execution.
 
-## Built By
+## Reference Files
 
-[AHK Strategies](https://ahkstrategies.net) — AI Horizon Knowledge
-Full platform: [themindbook.app](https://themindbook.app)
-Research: [The What-If Statement (DOI: 10.5281/zenodo.18736841)](https://doi.org/10.5281/zenodo.18736841)
+| File | Purpose |
+| ---- | ------- |
+| [references/scenario-templates.md](references/scenario-templates.md) | Domain-specific templates (startup, tech, finance, crisis, etc.) and probability calibration |
 
-_"The future is not empty. It contains completed states that exert pull on the present."_
+## License
+
+© 2026 Ashraf Hussein Kahoush / AHK Strategies. Licensed under CC BY-NC-SA 4.0. Free for personal, educational, and research use. Commercial use requires a license from the author.

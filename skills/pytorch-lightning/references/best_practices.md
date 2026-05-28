@@ -720,5 +720,5 @@ transforms = T.Compose([
 ])
 
 # Use PIL-SIMD for faster image loading
-# pip install pillow-simd
+# uv pip install pillow-simd
 ```

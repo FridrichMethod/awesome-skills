@@ -1,10 +1,11 @@
 ---
 name: transformers
-description: This skill should be used when working with pre-trained transformer models for natural language processing, computer vision, audio, or multimodal tasks. Use for text generation, classification, question answering, translation, summarization, image classification, object detection, speech recognition, and fine-tuning models on custom datasets.
+description: Hugging Face Transformers for loading Hub models, running pipeline inference, text generation, and Trainer fine-tuning on NLP, vision, audio, and multimodal tasks. Use when working with AutoModel, pipelines, tokenizers, or TrainingArguments—not for general ML outside the Transformers library.
 license: Apache-2.0 license
-compatibility: Some features require an Huggingface token
+compatibility: Requires Python 3.10+, PyTorch 2.4+, and transformers 5.x. Gated or private Hub models need an HF token (hf auth login or HF_TOKEN).
 metadata:
-    skill-author: K-Dense Inc.
+  version: "1.1"
+  skill-author: K-Dense Inc.
 ---
 
 # Transformers
@@ -15,37 +16,65 @@ The Hugging Face Transformers library provides access to thousands of pre-traine
 
 ## Installation
 
-Install transformers and core dependencies:
+Tested against **transformers 5.9.x** (stable; May 2026). Requires **Python 3.10+** and **PyTorch 2.4+**.
 
 ```bash
-uv pip install torch transformers datasets evaluate accelerate
+uv pip install "transformers[torch]>=5.9" huggingface_hub datasets evaluate accelerate
 ```
 
 For vision tasks, add:
+
 ```bash
 uv pip install timm pillow
 ```
 
 For audio tasks, add:
+
 ```bash
 uv pip install librosa soundfile
 ```
 
+Check your version:
+
+```python
+import transformers
+print(transformers.__version__)
+```
+
 ## Authentication
 
-Many models on the Hugging Face Hub require authentication. Set up access:
+Many models on the Hugging Face Hub are gated or private. Authenticate before loading them.
+
+**Recommended:** CLI login (stores token in `~/.cache/huggingface/token`):
+
+```bash
+hf auth login
+```
+
+**Python:**
 
 ```python
 from huggingface_hub import login
-login()  # Follow prompts to enter token
+login()  # Interactive prompt; do not hardcode tokens in scripts
 ```
 
-Or set environment variable:
+**Servers / CI:** set `HF_TOKEN` in the environment (never commit tokens to git or shell profiles):
+
 ```bash
-export HUGGINGFACE_TOKEN="your_token_here"
+export HF_TOKEN="..."  # Read token from a secret manager, not source code
 ```
 
 Get tokens at: https://huggingface.co/settings/tokens
+
+**Security:** Never paste tokens into notebooks, repos, or shared configs. Prefer `hf auth login` over exporting tokens in `.bashrc` or `.zshrc`.
+
+## Transformers v5
+
+Transformers v5 is **PyTorch-only** (TensorFlow and JAX backends were removed). For upgrades from v4, see the [v5 migration guide](https://github.com/huggingface/transformers/blob/main/MIGRATION_GUIDE_V5.md). New projects should pair **transformers 5.x** with **huggingface_hub 1.x**.
+
+**Gated or custom architectures:** accept the model license on the Hub, then load with `trust_remote_code=True` only when the model card requires custom code you have reviewed.
+
+**Cache location:** set `HF_HOME` for a writable cache root (Hub files default under `$HF_HOME/hub`).
 
 ## Quick Start
 
@@ -54,9 +83,9 @@ Use the Pipeline API for fast inference without manual configuration:
 ```python
 from transformers import pipeline
 
-# Text generation
-generator = pipeline("text-generation", model="gpt2")
-result = generator("The future of AI is", max_length=50)
+# Text generation (prefer max_new_tokens for causal LMs)
+generator = pipeline("text-generation", model="Qwen/Qwen2.5-1.5B")
+result = generator("The future of AI is", max_new_tokens=50)
 
 # Text classification
 classifier = pipeline("text-classification")
@@ -159,4 +188,3 @@ For detailed information on specific components:
 - **Generation**: `references/generation.md` - Text generation strategies and parameters
 - **Training**: `references/training.md` - Fine-tuning with Trainer API
 - **Tokenizers**: `references/tokenizers.md` - Tokenization and preprocessing
-

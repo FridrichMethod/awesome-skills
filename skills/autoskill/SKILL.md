@@ -4,8 +4,9 @@ description: Observe the user's screen via screenpipe, detect repeated research 
 allowed-tools: Read Write Edit Bash
 license: MIT license
 metadata:
-    skill-author: K-Dense Inc.
-    requires: screenpipe
+  version: "1.0"
+  skill-author: K-Dense Inc.
+  requires: screenpipe
 ---
 
 # autoskill
@@ -112,7 +113,7 @@ scripts/synthesize.py      → LLM judge: reuse / compose / novel
   ├── composition-recipes/<name>/SKILL.md
   └── new-skills/<name>/SKILL.md
 
-scripts/promote.py         → user-approved proposal → scientific-skills/<name>/
+scripts/promote.py         → user-approved proposal → skills/<name>/
 ```
 
 ## Workflow
@@ -131,8 +132,8 @@ Before a full run, verify every dependency in one shot:
 
 ```bash
 python scripts/autoskill.py doctor \
-  --config scientific-skills/autoskill/config.yaml \
-  --skills-dir scientific-skills
+  --config skills/autoskill/config.yaml \
+  --skills-dir skills
 ```
 
 The report covers `config` (backend choice valid), `skills_dir` (exists), `screenpipe` (reachable + authed), and `llm` (LM Studio serving or API key present). Non-zero exit on any failure, with the offending line marked `error`.
@@ -144,8 +145,8 @@ export SCREENPIPE_TOKEN=$(screenpipe auth token)
 python scripts/autoskill.py run \
   --start "2026-04-17T00:00:00Z" \
   --end   "2026-04-17T23:59:59Z" \
-  --config scientific-skills/autoskill/config.yaml \
-  --skills-dir scientific-skills
+  --config skills/autoskill/config.yaml \
+  --skills-dir skills
 ```
 
 Proposals land in `~/.autoskill/proposed/<timestamp>/` by default, keeping experimental output out of the skills repo. Pass `--out PATH` to override.
@@ -154,7 +155,7 @@ Internally:
 1. **Fetch** — `fetch_window` paginates screenpipe's `/search` endpoint, normalizes events to `{ts, app, window_title, text, content_type}`.
 2. **Redact** — `redact` scrubs emails, API keys, bearer tokens, phones from OCR text and window titles as defense-in-depth over screenpipe's own PII removal.
 3. **Cluster** — `segment_sessions` splits on idle gaps (default 10 min) and drops short sessions; `cluster_sessions` groups sessions by app-signature and keeps clusters of size `min_cluster_size` (default 2).
-4. **Match** — `load_skill_descriptions` reads frontmatter from every `SKILL.md` in `scientific-skills/`; `top_k_matches` ranks each cluster against all skills using local `sentence-transformers` embeddings (cosine similarity).
+4. **Match** — `load_skill_descriptions` reads frontmatter from every `SKILL.md` in `skills/`; `top_k_matches` ranks each cluster against all skills using local `sentence-transformers` embeddings (cosine similarity).
 5. **Synthesize** — `synthesize` prompts the configured LLM backend to classify each cluster as `reuse`, `compose`, or `novel` and emit a SKILL.md body where appropriate.
 6. **Report** — writes `<out_dir>/<ts>/report.md`, plus `new-skills/<name>/SKILL.md` or `composition-recipes/<name>/SKILL.md` for each proposal.
 
@@ -167,11 +168,11 @@ Open `~/.autoskill/proposed/<ts>/report.md`, edit drafts in place, delete anythi
 ```bash
 python scripts/autoskill.py promote \
   --proposed ~/.autoskill/proposed/2026-04-17T14-30-00 \
-  --skills-dir scientific-skills \
+  --skills-dir skills \
   --name zotero-pubmed-helper
 ```
 
-`promote` moves the directory into `scientific-skills/<name>/`, refusing to overwrite an existing skill. Exits non-zero with a friendly error if the proposal isn't found or the target already exists.
+`promote` moves the directory into `skills/<name>/`, refusing to overwrite an existing skill. Exits non-zero with a friendly error if the proposal isn't found or the target already exists.
 
 ## Configuration
 
@@ -210,7 +211,7 @@ claude:
 The skill is covered by a small pytest suite at `tests/`. Each script is unit-tested in isolation with dependency injection (mock HTTP transport, stub backend, stub embedder):
 
 ```bash
-cd scientific-skills/autoskill
+cd skills/autoskill
 python -m pytest tests/ -v
 ```
 

@@ -2,8 +2,11 @@
 name: bioservices
 description: Unified Python interface to 40+ bioinformatics services. Use when querying multiple databases (UniProt, KEGG, ChEMBL, Reactome) in a single workflow with consistent API. Best for cross-database analysis, ID mapping across services. For quick single-database lookups use gget; for sequence/file manipulation use biopython.
 license: GPLv3 license
+allowed-tools: Read Write Edit Bash
+compatibility: Requires Python 3.9–3.12 and internet access to 40+ bioinformatics web APIs. NCBI BLAST requires a contact email (`NCBI_EMAIL` env var or explicit parameter).
 metadata:
-    skill-author: K-Dense Inc.
+  version: "1.1"
+  skill-author: K-Dense Inc.
 ---
 
 # BioServices
@@ -11,6 +14,8 @@ metadata:
 ## Overview
 
 BioServices is a Python package providing programmatic access to approximately 40 bioinformatics web services and databases. Retrieve biological data, perform cross-database queries, map identifiers, analyze sequences, and integrate multiple biological resources in Python workflows. The package handles both REST and SOAP/WSDL protocols transparently.
+
+**Version note:** Examples target **bioservices 1.16.0** (PyPI, Mar 2026). Requires **Python 3.9–3.12**. UniProt REST changes in mid-2022 (bioservices ≥1.10) mainly affect tabular `columns` names — see upstream `_legacy_names` if parsing breaks. ChEMBL wrappers changed at 1.6.0 (2018 API); use `get_similarity`, `get_substructure`, `get_molecule` instead of pre-1.6 method names.
 
 ## When to Use This Skill
 
@@ -122,12 +127,14 @@ Reference: `references/identifier_mapping.md` for complete cross-database mappin
 
 ### 4. Sequence Analysis
 
-Run BLAST searches and sequence alignments:
+Run BLAST searches and sequence alignments. NCBI requires a contact email — prefer the `NCBI_EMAIL` environment variable (same convention as BioPython Entrez and other repo skills):
 
 ```python
+import os
 from bioservices import NCBIblast
 
 s = NCBIblast(verbose=False)
+email = os.environ["NCBI_EMAIL"]  # set before running: export NCBI_EMAIL=you@lab.org
 
 # Run BLASTP against UniProtKB
 jobid = s.run(
@@ -135,7 +142,7 @@ jobid = s.run(
     sequence=protein_sequence,
     stype="protein",
     database="uniprotkb",
-    email="your.email@example.com"  # Required by NCBI
+    email=email,
 )
 
 # Check job status and retrieve results
@@ -219,6 +226,9 @@ BioServices excels at combining multiple services for comprehensive analysis. Co
 Execute a full protein characterization workflow:
 
 ```bash
+export NCBI_EMAIL=your.email@example.com
+python scripts/protein_analysis_workflow.py ZAP70_HUMAN
+# Or pass email as optional second argument if NCBI_EMAIL is unset
 python scripts/protein_analysis_workflow.py ZAP70_HUMAN your.email@example.com
 ```
 
@@ -345,10 +355,27 @@ Load references when working with specific services or complex integration tasks
 ## Installation
 
 ```bash
-uv pip install bioservices
+uv pip install "bioservices==1.16.0"
 ```
 
-Dependencies are automatically managed. Package is tested on Python 3.9-3.12.
+Dependencies are installed automatically. Upstream CI tests Python 3.9–3.12 ([PyPI](https://pypi.org/project/bioservices/), [docs](https://bioservices.readthedocs.io/)).
+
+## Credentials
+
+Most services need no API key. Exceptions:
+
+| Service | Requirement |
+|---------|-------------|
+| NCBI BLAST | Contact email via `NCBI_EMAIL` or `email=` in `NCBIblast.run()` |
+| Some EBI services | Optional; check service docs if rate-limited |
+
+Set once per shell session:
+
+```bash
+export NCBI_EMAIL=your.email@example.com
+```
+
+Use a real institutional or lab address — NCBI may contact you about heavy BLAST usage.
 
 ## Additional Information
 

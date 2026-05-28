@@ -6,13 +6,14 @@ This script demonstrates the standard workflow for inferring gene regulatory
 networks from expression data using GRNBoost2.
 
 Usage:
-    python basic_grn_inference.py <expression_file> <output_file> [--tf-file TF_FILE] [--seed SEED]
+    python basic_grn_inference.py <expression_file> <output_file> [--tf-file TF_FILE] [--seed SEED] [--limit LIMIT]
 
 Arguments:
     expression_file: Path to expression matrix (TSV format, genes as columns)
     output_file: Path for output network (TSV format)
     --tf-file: Optional path to transcription factors file (one per line)
     --seed: Random seed for reproducibility (default: 777)
+    --limit: Return only the top N regulatory links (optional)
 """
 
 import argparse
@@ -21,7 +22,7 @@ from arboreto.algo import grnboost2
 from arboreto.utils import load_tf_names
 
 
-def run_grn_inference(expression_file, output_file, tf_file=None, seed=777):
+def run_grn_inference(expression_file, output_file, tf_file=None, seed=777, limit=None):
     """
     Run GRN inference using GRNBoost2.
 
@@ -30,6 +31,7 @@ def run_grn_inference(expression_file, output_file, tf_file=None, seed=777):
         output_file: Path for output network file
         tf_file: Optional path to TF names file
         seed: Random seed for reproducibility
+        limit: Optional cap on number of regulatory links returned
     """
     print(f"Loading expression data from {expression_file}...")
     expression_data = pd.read_csv(expression_file, sep='\t')
@@ -51,6 +53,7 @@ def run_grn_inference(expression_file, output_file, tf_file=None, seed=777):
         expression_data=expression_data,
         tf_names=tf_names,
         seed=seed,
+        limit=limit,
         verbose=True
     )
 
@@ -86,6 +89,12 @@ if __name__ == '__main__':
         type=int,
         default=777
     )
+    parser.add_argument(
+        '--limit',
+        help='Return only the top N regulatory links',
+        type=int,
+        default=None
+    )
 
     args = parser.parse_args()
 
@@ -93,5 +102,6 @@ if __name__ == '__main__':
         expression_file=args.expression_file,
         output_file=args.output_file,
         tf_file=args.tf_file,
-        seed=args.seed
+        seed=args.seed,
+        limit=args.limit
     )

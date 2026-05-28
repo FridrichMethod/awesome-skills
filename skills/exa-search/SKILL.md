@@ -4,6 +4,7 @@ description: "Web toolkit powered by Exa, tuned for scientific and technical con
 compatibility: Requires exa-py Python SDK, an EXA_API_KEY, and internet access.
 license: MIT
 metadata:
+  version: "1.0"
   skill-author: Exa
   website: https://exa.ai
   docs: https://exa.ai/docs

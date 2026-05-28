@@ -4,6 +4,7 @@ description: Run a multi-perspective Mind Council deliberation on any question, 
 allowed-tools: Read Write
 license: MIT license
 metadata:
+  version: "1.0"
   skill-author: AHK Strategies (ashrafkahoush-ux)
 ---
 

@@ -16,7 +16,7 @@ def _stage_proposed_skill(proposed_root: Path, kind: str, name: str,
 def test_promotes_new_skill_into_skills_dir(tmp_path: Path):
     proposed = tmp_path / "_proposed" / "2026-04-17T09-00"
     _stage_proposed_skill(proposed, "new-skills", "zotero-pubmed-helper")
-    skills_dir = tmp_path / "scientific-skills"
+    skills_dir = tmp_path / "skills"
     skills_dir.mkdir()
 
     target = promote(proposed, skills_dir, "zotero-pubmed-helper")
@@ -29,7 +29,7 @@ def test_promotes_new_skill_into_skills_dir(tmp_path: Path):
 def test_promotes_composition_recipe_into_skills_dir(tmp_path: Path):
     proposed = tmp_path / "_proposed" / "2026-04-17T09-00"
     _stage_proposed_skill(proposed, "composition-recipes", "lit-review-flow")
-    skills_dir = tmp_path / "scientific-skills"
+    skills_dir = tmp_path / "skills"
     skills_dir.mkdir()
 
     target = promote(proposed, skills_dir, "lit-review-flow")
@@ -42,7 +42,7 @@ def test_preserves_nested_files(tmp_path: Path):
     skill = _stage_proposed_skill(proposed, "new-skills", "my-skill")
     (skill / "references").mkdir()
     (skill / "references" / "notes.md").write_text("note")
-    skills_dir = tmp_path / "scientific-skills"
+    skills_dir = tmp_path / "skills"
     skills_dir.mkdir()
 
     target = promote(proposed, skills_dir, "my-skill")
@@ -53,7 +53,7 @@ def test_preserves_nested_files(tmp_path: Path):
 def test_raises_when_proposed_skill_is_missing(tmp_path: Path):
     proposed = tmp_path / "_proposed" / "ts"
     proposed.mkdir(parents=True)
-    skills_dir = tmp_path / "scientific-skills"
+    skills_dir = tmp_path / "skills"
     skills_dir.mkdir()
 
     with pytest.raises(PromoteError, match="not found"):
@@ -63,7 +63,7 @@ def test_raises_when_proposed_skill_is_missing(tmp_path: Path):
 def test_cli_promotes_successfully(tmp_path: Path, capsys):
     proposed = tmp_path / "_proposed" / "2026-04-17T09-00"
     _stage_proposed_skill(proposed, "new-skills", "my-new-skill")
-    skills_dir = tmp_path / "scientific-skills"
+    skills_dir = tmp_path / "skills"
     skills_dir.mkdir()
 
     rc = promote_main([
@@ -81,7 +81,7 @@ def test_cli_promotes_successfully(tmp_path: Path, capsys):
 def test_cli_returns_nonzero_with_friendly_error_on_promote_failure(tmp_path: Path, capsys):
     proposed = tmp_path / "_proposed" / "ts"
     proposed.mkdir(parents=True)
-    skills_dir = tmp_path / "scientific-skills"
+    skills_dir = tmp_path / "skills"
     skills_dir.mkdir()
 
     rc = promote_main([
@@ -100,7 +100,7 @@ def test_cli_returns_nonzero_with_friendly_error_on_promote_failure(tmp_path: Pa
 def test_raises_when_target_already_exists(tmp_path: Path):
     proposed = tmp_path / "_proposed" / "ts"
     _stage_proposed_skill(proposed, "new-skills", "existing")
-    skills_dir = tmp_path / "scientific-skills"
+    skills_dir = tmp_path / "skills"
     skills_dir.mkdir()
     (skills_dir / "existing").mkdir()
 

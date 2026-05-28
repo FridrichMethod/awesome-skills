@@ -85,11 +85,26 @@ Tracks auction records (largest, highest rate, lowest rate, etc.) for each secur
 
 Data on Treasury's secondary market buyback (repurchase) operations. Active since the program's relaunch in 2024.
 
+| Table | Endpoint | Description |
+|-------|----------|-------------|
+| Buybacks Operations | `/v1/accounting/od/buybacks_operations` | Announcements and results per operation |
+| Security Details | `/v1/accounting/od/buybacks_security_details` | Security details per operation |
+
+```python
+# Recent buyback operations
+resp = requests.get(
+    "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/buybacks_operations",
+    params={"sort": "-operation_date", "page[size]": 10}
+)
+df = pd.DataFrame(resp.json()["data"])
+print(df[["operation_date", "settlement_date"]].head())
+```
+
 ---
 
 ## I Bonds Interest Rates
 
-**Endpoint:** `/v2/accounting/od/i_bond_interest_rates`  
+**Endpoint:** `/v1/accounting/od/i_bonds_interest_rates`  
 **Frequency:** Semi-Annual (May and November)  
 **Date Range:** September 1998 to present
 
@@ -98,34 +113,41 @@ Composite interest rates for Series I Savings Bonds, including fixed rate and in
 **Key fields:**
 | Field | Type | Description |
 |-------|------|-------------|
-| `effective_date` | DATE | Rate effective date |
-| `announcement_date` | DATE | Announcement date |
+| `earning_period_start` | DATE | Start of six-month earning period |
+| `earning_period_end` | DATE | End of six-month earning period |
 | `fixed_rate` | PERCENTAGE | Fixed rate component |
-| `semiannual_inflation_rate` | PERCENTAGE | Semi-annual CPI-U inflation rate |
-| `earnings_rate_i_bonds` | PERCENTAGE | Combined composite rate |
+| `semi_annual_inflation_rate` | PERCENTAGE | Semi-annual CPI-U inflation rate |
+| `combined_rate` | PERCENTAGE | Combined composite rate |
 
 ```python
 # Current I Bond rates
 resp = requests.get(
-    "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/i_bond_interest_rates",
-    params={"sort": "-effective_date", "page[size]": 5}
+    "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/i_bonds_interest_rates",
+    params={"sort": "-earning_period_start", "page[size]": 5}
 )
 df = pd.DataFrame(resp.json()["data"])
 latest = df.iloc[0]
-print(f"Current I Bond rate: {latest['earnings_rate_i_bonds']}%")
+print(f"Current I Bond rate: {latest['combined_rate']}%")
 print(f"  Fixed rate: {latest['fixed_rate']}%")
-print(f"  Inflation component: {latest['semiannual_inflation_rate']}%")
+print(f"  Inflation component: {latest['semi_annual_inflation_rate']}%")
 ```
 
 ## U.S. Treasury Savings Bonds: Issues, Redemptions & Maturities
 
-**Endpoint:** `/v1/accounting/od/sb_issues_redemptions`  (3 tables)  
+Three data tables under `/v1/accounting/od/`:
+
+| Table | Endpoint | Description |
+|-------|----------|-------------|
+| Issues, Redemptions & Maturities | `/v1/accounting/od/savings_bonds_report` | Monthly statistics by series |
+| Matured Unredeemed Debt | `/v1/accounting/od/savings_bonds_mud` | Matured unredeemed debt |
+| Piece Information by Series | `/v1/accounting/od/savings_bonds_pcs` | Piece information by series |
+
 **Frequency:** Monthly  
 **Date Range:** September 1998 to present
 
 Monthly statistics on Series EE, Series I, and Series HH savings bonds outstanding, issued, and redeemed.
 
-**Key fields:**
+**Key fields (savings_bonds_report):**
 | Field | Type | Description |
 |-------|------|-------------|
 | `record_date` | DATE | Month end date |
@@ -159,7 +181,7 @@ Monthly redemption value tables for historical savings bonds.
 
 ## State and Local Government Series (SLGS) Securities
 
-**Endpoint:** `/v1/accounting/od/slgs_statistics`  
+**Endpoint:** `/v2/accounting/od/slgs_statistics`  
 **Frequency:** Daily  
 **Date Range:** October 1998 to present
 

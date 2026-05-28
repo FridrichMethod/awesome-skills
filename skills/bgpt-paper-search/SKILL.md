@@ -1,12 +1,13 @@
 ---
 name: bgpt-paper-search
 description: Search scientific papers and retrieve structured experimental data extracted from full-text studies via the BGPT MCP server. Returns 25+ fields per paper including methods, results, sample sizes, quality scores, and conclusions. Use for literature reviews, evidence synthesis, and finding experimental details not available in abstracts alone.
-allowed-tools: Bash
 license: MIT
+compatibility: Requires the BGPT MCP server configured in the agent host (npx mcp-remote or npx bgpt-mcp), internet access to bgpt.pro, and an optional BGPT API key for paid usage.
 metadata:
-    skill-author: BGPT
-    website: https://bgpt.pro/mcp
-    github: https://github.com/connerlambden/bgpt-mcp
+  version: "1.1"
+  skill-author: BGPT
+  website: https://bgpt.pro/mcp
+  github: https://github.com/connerlambden/bgpt-mcp
 ---
 
 # BGPT Paper Search
@@ -28,7 +29,7 @@ Use this skill when:
 
 ## Setup
 
-BGPT is a remote MCP server — no local installation required.
+BGPT is a remote MCP server — no local installation required. Configure it in your agent's MCP settings before use; this skill instructs the agent to call the `search_papers` MCP tool and does not enable MCP access by itself.
 
 ### Claude Desktop / Claude Code
 
@@ -53,7 +54,7 @@ npx bgpt-mcp
 
 ## Usage
 
-Once configured, use the `search_papers` tool provided by the BGPT MCP server:
+Once the BGPT MCP server is configured, call its `search_papers` tool via the agent's MCP interface (not via Bash):
 
 ```
 Search for papers about: "CRISPR gene editing efficiency in human cells"

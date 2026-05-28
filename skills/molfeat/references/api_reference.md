@@ -7,8 +7,9 @@ Molfeat is organized into several key modules that provide different aspects of 
 - **`molfeat.store`** - Manages model loading, listing, and registration
 - **`molfeat.calc`** - Provides calculators for single-molecule featurization
 - **`molfeat.trans`** - Offers scikit-learn compatible transformers for batch processing
+- **`molfeat.plugins`** - Plugin system for third-party featurizer extensions
 - **`molfeat.utils`** - Utility functions for data handling
-- **`molfeat.viz`** - Visualization tools for molecular features
+- **`molfeat.viz`** - Visualization tools for molecular features (requires `molfeat[viz]`)
 
 ---
 

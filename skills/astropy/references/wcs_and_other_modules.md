@@ -327,6 +327,8 @@ robust_scale = biweight_scale(data)
 
 ### Data Downloads
 
+`download_file()` fetches a remote URL and caches it locally. Treat the URL as data you are disclosing to the remote host; do not pass confidential signed URLs or internal file locations unless the workflow explicitly permits it. Use `cache=False` for one-off downloads that should not be retained in Astropy's cache.
+
 ```python
 from astropy.utils.data import download_file
 

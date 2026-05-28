@@ -3,14 +3,35 @@ name: scanpy
 description: Standard single-cell RNA-seq analysis pipeline. Use for QC, normalization, dimensionality reduction (PCA/UMAP/t-SNE), clustering, differential expression, and visualization. Best for exploratory scRNA-seq analysis with established workflows. For deep learning models use scvi-tools; for data format questions use anndata.
 license: BSD-3-Clause
 metadata:
-    skill-author: K-Dense Inc.
+  version: "1.1"
+  skill-author: K-Dense Inc.
 ---
 
 # Scanpy: Single-Cell Analysis
 
 ## Overview
 
-Scanpy is a scalable Python toolkit for analyzing single-cell RNA-seq data, built on AnnData. Apply this skill for complete single-cell workflows including quality control, normalization, dimensionality reduction, clustering, marker gene identification, visualization, and trajectory analysis.
+Scanpy is a scalable Python toolkit for analyzing single-cell RNA-seq data, built on AnnData. Apply this skill for complete single-cell workflows including quality control, normalization, dimensionality reduction, clustering, marker gene identification, visualization, and trajectory analysis. Current stable release: **scanpy 1.12.x** (January 2026).
+
+## Installation
+
+Requires Python **3.12+** (scanpy 1.12 dropped Python ≤3.11) and anndata **≥0.10**.
+
+```bash
+uv pip install "scanpy[leiden]"
+```
+
+The `[leiden]` extra installs `python-igraph` and `leidenalg`, required for Leiden clustering. For reproducible environments, pin a version: `uv pip install "scanpy[leiden]==1.12.1"`.
+
+For large or out-of-core datasets, many functions support [Dask](https://docs.dask.org/) arrays (experimental):
+
+```bash
+uv pip install "scanpy[leiden]" dask
+```
+
+See the [Using dask with Scanpy](https://scanpy.scverse.org/en/stable/tutorials/experimental/dask.html) tutorial. For GPU-accelerated scanpy-like operations, use [rapids-singlecell](https://rapids-singlecell.readthedocs.io/) as a separate package.
+
+For AnnData structure and I/O details, use the **anndata** skill. For probabilistic models and batch correction, use **scvi-tools**.
 
 ## When to Use This Skill
 
@@ -36,6 +57,7 @@ import numpy as np
 sc.settings.verbosity = 3
 sc.settings.set_figure_params(dpi=80, facecolor='white')
 sc.settings.figdir = './figures/'
+sc.settings.autosave = True  # Preferred over per-plot save= (deprecated in scanpy 1.12)
 ```
 
 ### Loading Data
@@ -92,9 +114,17 @@ sc.pp.filter_genes(adata, min_cells=3)
 adata = adata[adata.obs.pct_counts_mt < 5, :]  # Remove high MT% cells
 ```
 
-**Use the QC script for automated analysis:**
+**Doublet detection (optional, on raw counts before normalization):**
+
+```python
+sc.pp.scrublet(adata)  # Core API since scanpy 1.10 (was scanpy.external.pp)
+adata = adata[~adata.obs['predicted_doublet'], :].copy()
+```
+
+**Use the QC script for automated analysis** (run from the skill directory or pass the full path):
+
 ```bash
-python scripts/qc_analysis.py input_file.h5ad --output filtered.h5ad
+python skills/scanpy/scripts/qc_analysis.py input_file.h5ad --output filtered.h5ad
 ```
 
 ### 2. Normalization and Preprocessing
@@ -155,8 +185,10 @@ for res in [0.3, 0.5, 0.8, 1.0]:
 
 ### 5. Marker Gene Identification
 
+Use `rank_genes_groups` for **exploratory cluster markers** only. Per-cell statistical tests inflate p-values because cells are not independent observations. For rigorous differential expression between conditions or samples, pseudobulk first (see below) and use **pydeseq2** or similar tools.
+
 ```python
-# Find marker genes for each cluster
+# Find marker genes for each cluster (exploratory)
 sc.tl.rank_genes_groups(adata, 'leiden', method='wilcoxon')
 
 # Visualize results
@@ -206,28 +238,29 @@ adata.var.to_csv('results/gene_metadata.csv')
 
 ### Creating Publication-Quality Plots
 
+Prefer `sc.settings.autosave` and `sc.settings.figdir` for saving figures. The per-plot `save=` parameter is deprecated in scanpy 1.12.
+
 ```python
 # Set high-quality defaults
 sc.settings.set_figure_params(dpi=300, frameon=False, figsize=(5, 5))
 sc.settings.file_format_figs = 'pdf'
+sc.settings.figdir = './figures/'
+sc.settings.autosave = True
 
-# UMAP with custom styling
+# UMAP with custom styling (saved as figures/umap.pdf via autosave)
 sc.pl.umap(adata, color='cell_type',
            palette='Set2',
            legend_loc='on data',
            legend_fontsize=12,
            legend_fontoutline=2,
-           frameon=False,
-           save='_publication.pdf')
+           frameon=False)
 
 # Heatmap of marker genes
 sc.pl.heatmap(adata, var_names=genes, groupby='cell_type',
-              swap_axes=True, show_gene_labels=True,
-              save='_markers.pdf')
+              swap_axes=True, show_gene_labels=True)
 
 # Dot plot
-sc.pl.dotplot(adata, var_names=genes, groupby='cell_type',
-              save='_dotplot.pdf')
+sc.pl.dotplot(adata, var_names=genes, groupby='cell_type')
 ```
 
 Refer to `references/plotting_guide.md` for comprehensive visualization examples.
@@ -245,10 +278,24 @@ sc.tl.dpt(adata)
 sc.pl.umap(adata, color='dpt_pseudotime')
 ```
 
-### Differential Expression Between Conditions
+### Pseudobulk and Differential Expression Between Conditions
+
+Pseudobulk by sample and cell type, then run proper DE (e.g., pydeseq2) rather than per-cell `rank_genes_groups`:
 
 ```python
-# Compare treated vs control within cell types
+# Aggregate counts by sample and cell type (dask-compatible in scanpy 1.12)
+pb = sc.get.aggregate(
+    adata,
+    by=['sample', 'cell_type'],
+    func='sum',
+    layer='counts',  # Use raw counts layer if available
+)
+# Downstream: export pb and use pydeseq2 for condition comparisons
+```
+
+For quick exploratory comparisons within a cluster, `rank_genes_groups` is acceptable but interpret p-values cautiously:
+
+```python
 adata_subset = adata[adata.obs['cell_type'] == 'T cells']
 sc.tl.rank_genes_groups(adata_subset, groupby='condition',
                          groups=['treated'], reference='control')
@@ -298,12 +345,14 @@ sc.pp.combat(adata, key='batch')
 
 1. **Always save raw counts**: `adata.raw = adata` before filtering genes
 2. **Check QC plots carefully**: Adjust thresholds based on dataset quality
-3. **Use Leiden over Louvain**: More efficient and better results
+3. **Use Leiden clustering**: `sc.tl.louvain` is deprecated in scanpy 1.12
 4. **Try multiple clustering resolutions**: Find optimal granularity
 5. **Validate cell type annotations**: Use multiple marker genes
-6. **Use `use_raw=True` for gene expression plots**: Shows original counts
+6. **Use `use_raw=True` for gene expression plots**: Shows normalized counts from `.raw`
 7. **Check PCA variance ratio**: Determine optimal number of PCs
 8. **Save intermediate results**: Long workflows can fail partway through
+9. **Pseudobulk for DE**: Do not treat `rank_genes_groups` p-values as rigorous DE between conditions
+10. **Save plots via settings**: Use `sc.settings.autosave` instead of deprecated `save=` on plot functions
 
 ## Bundled Resources
 
@@ -311,7 +360,7 @@ sc.pp.combat(adata, key='batch')
 Automated quality control script that calculates metrics, generates plots, and filters data:
 
 ```bash
-python scripts/qc_analysis.py input.h5ad --output filtered.h5ad \
+python skills/scanpy/scripts/qc_analysis.py input.h5ad --output filtered.h5ad \
     --mt-threshold 5 --min-genes 200 --min-cells 3
 ```
 
@@ -322,7 +371,8 @@ Complete step-by-step workflow with detailed explanations and code examples for:
 - Normalization and scaling
 - Feature selection
 - Dimensionality reduction (PCA, UMAP, t-SNE)
-- Clustering (Leiden, Louvain)
+- Clustering (Leiden)
+- Doublet detection (scrublet) and pseudobulk aggregation
 - Marker gene identification
 - Cell type annotation
 - Trajectory inference
@@ -367,8 +417,9 @@ The template includes all standard steps with configurable parameters and helpfu
 
 ## Additional Resources
 
-- **Official scanpy documentation**: https://scanpy.readthedocs.io/
-- **Scanpy tutorials**: https://scanpy-tutorials.readthedocs.io/
+- **Official scanpy documentation**: https://scanpy.scverse.org/en/stable/
+- **Scanpy tutorials**: https://scanpy.scverse.org/en/stable/tutorials/index.html
+- **Release notes**: https://scanpy.scverse.org/en/stable/release-notes/index.html
 - **scverse ecosystem**: https://scverse.org/ (related tools: squidpy, scvi-tools, cellrank)
 - **Best practices**: Luecken & Theis (2019) "Current best practices in single-cell RNA-seq"
 

@@ -261,14 +261,16 @@ Pre-trained GNN models from DGL-Life:
 
 ### Model Dependencies
 
-Some featurizers require optional dependencies:
+Some featurizers require optional dependencies (molfeat 0.11.0):
 
-- **DGL models** (gin-*, jtvae): `pip install "molfeat[dgl]"`
-- **Graphormer**: `pip install "molfeat[graphormer]"`
-- **Transformers** (ChemBERTa, ChemGPT, MolT5): `pip install "molfeat[transformer]"`
-- **FCD**: `pip install "molfeat[fcd]"`
-- **MAP4**: `pip install "molfeat[map4]"`
-- **All dependencies**: `pip install "molfeat[all]"`
+- **DGL models** (gin-*, jtvae): `uv pip install "molfeat[dgl]==0.11.0"` (upstream recommends `dgl<=2.0`)
+- **Graphormer**: `uv pip install "molfeat[graphormer]==0.11.0"`
+- **Transformers** (ChemBERTa, ChemGPT, MolT5): `uv pip install "molfeat[transformer]==0.11.0"`
+- **FCD**: `uv pip install "molfeat[fcd]==0.11.0"`
+- **PyTorch Geometric**: `uv pip install "molfeat[pyg]==0.11.0"`
+- **Visualization**: `uv pip install "molfeat[viz]==0.11.0"`
+- **MAP4**: external package — see [reymond-group/map4](https://github.com/reymond-group/map4) (not a molfeat PyPI extra)
+- **All pip extras**: `uv pip install "molfeat[all]==0.11.0"`
 
 ### Accessing All Available Models
 

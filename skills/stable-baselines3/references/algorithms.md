@@ -172,8 +172,8 @@ This document provides detailed characteristics of all RL algorithms in Stable B
 - `exploration_final_eps`: 0.05
 
 **Variants:**
-- **QR-DQN**: Distributional RL version for better value estimates
-- **Maskable DQN**: For environments with action masking
+- **QR-DQN**: Distributional RL version for better value estimates (SB3-Contrib)
+- **Maskable DQN**: For environments with action masking (SB3-Contrib)
 
 ### HER (Hindsight Experience Replay)
 
@@ -278,6 +278,7 @@ model = PPO(
     n_epochs=10,
     learning_rate=3e-4,
     gamma=0.99,
+    device="cpu",  # Often faster than GPU for small MLP tasks
 )
 ```
 
@@ -311,12 +312,12 @@ model = SAC(
 
 ## Performance Benchmarks
 
-Approximate expected performance (mean reward) on common benchmarks:
+Approximate expected performance (mean reward) on common benchmarks. Numbers are **indicative only** — actual results vary significantly with hyperparameters, training time, and random seed.
 
-### Continuous Control (MuJoCo)
-- **HalfCheetah-v3**: PPO ~1800, SAC ~12000, TD3 ~9500
-- **Hopper-v3**: PPO ~2500, SAC ~3600, TD3 ~3600
-- **Walker2d-v3**: PPO ~3000, SAC ~5500, TD3 ~5000
+### Continuous Control (MuJoCo, Gymnasium v4)
+- **HalfCheetah-v4**: PPO ~1800, SAC ~12000, TD3 ~9500
+- **Hopper-v4**: PPO ~2500, SAC ~3600, TD3 ~3600
+- **Walker2d-v4**: PPO ~3000, SAC ~5500, TD3 ~5000
 
 ### Discrete Control (Atari)
 - **Breakout**: PPO ~400, DQN ~300
@@ -325,9 +326,23 @@ Approximate expected performance (mean reward) on common benchmarks:
 
 *Note: Performance varies significantly with hyperparameters and training time.*
 
+## SB3-Contrib (Experimental Algorithms)
+
+These algorithms live in the separate **[sb3-contrib](https://github.com/Stable-Baselines-Team/stable-baselines3-contrib)** package, not core SB3:
+
+| Algorithm | Use Case |
+|-----------|----------|
+| **MaskablePPO** | Discrete actions with action masking (invalid moves masked out) |
+| **CrossQ** | Continuous control; sample-efficient off-policy (added SB3-Contrib 2.4+) |
+| **QR-DQN** | Distributional DQN for better value estimates |
+| **RecurrentPPO** | Partial observability (POMDP) with LSTM policy |
+| **TQC** | Continuous control with distributional critics |
+
+Install with `uv pip install sb3-contrib`.
+
 ## Additional Resources
 
 - **RL Baselines3 Zoo**: Collection of pre-trained agents and hyperparameters: https://github.com/DLR-RM/rl-baselines3-zoo
 - **Hyperparameter Tuning**: Use Optuna for systematic tuning
 - **Custom Policies**: Extend base policies for custom network architectures
-- **Contribution Repo**: SB3-Contrib for experimental algorithms (QR-DQN, TQC, etc.)
+- **PPO + MlpPolicy on CPU**: For small MLP tasks (CartPole, Pendulum), `device="cpu"` often trains faster than GPU

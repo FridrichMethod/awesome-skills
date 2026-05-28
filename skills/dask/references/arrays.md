@@ -332,16 +332,14 @@ numpy_array = dask_array.compute()
 
 ### To Disk
 ```python
+# Save to Zarr (dask 2026.1+: use mode= and zarr_array_kwargs= for zarr-python 3)
+da.to_zarr(x, 'output.zarr', mode='w')
+
 # Save to HDF5
 import h5py
 with h5py.File('output.hdf5', mode='w') as f:
     dset = f.create_dataset('/data', shape=x.shape, dtype=x.dtype)
     da.store(x, dset)
-
-# Save to Zarr
-import zarr
-z = zarr.open('output.zarr', mode='w', shape=x.shape, dtype=x.dtype, chunks=x.chunks)
-da.store(x, z)
 ```
 
 ## Performance Considerations

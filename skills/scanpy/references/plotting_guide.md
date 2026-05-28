@@ -7,8 +7,14 @@ Comprehensive guide for creating publication-quality visualizations with scanpy.
 All scanpy plotting functions follow consistent patterns:
 - Functions in `sc.pl.*` mirror analysis functions in `sc.tl.*`
 - Most accept `color` parameter for gene names or metadata columns
-- Results are saved via `save` parameter
+- Prefer `sc.settings.autosave = True` and `sc.settings.figdir` for saving (the per-plot `save=` parameter is deprecated in scanpy 1.12)
 - Multiple plots can be generated in a single call
+
+```python
+sc.settings.figdir = './figures/'
+sc.settings.autosave = True
+sc.settings.file_format_figs = 'pdf'
+```
 
 ## Essential Quality Control Plots
 
@@ -106,8 +112,8 @@ sc.pl.umap(adata, color='leiden', size=50, edges=True,
 ### Cluster Comparison
 
 ```python
-# Compare clustering results
-sc.pl.umap(adata, color=['leiden', 'louvain'],
+# Compare clustering resolutions
+sc.pl.umap(adata, color=['leiden_0.3', 'leiden_0.5', 'leiden_0.8'],
            save='_cluster_comparison.pdf')
 
 # Cluster dendrogram
@@ -297,14 +303,21 @@ sc.pl.umap(adata, color='leiden', legend_loc=None,
 
 ## Exporting Plots
 
-### Save Individual Plots
+### Save via Settings (recommended)
 
 ```python
-# Automatic saving with save parameter
-sc.pl.umap(adata, color='leiden', save='_leiden.pdf')
-# Saves to: sc.settings.figdir + 'umap_leiden.pdf'
+sc.settings.figdir = './figures/'
+sc.settings.autosave = True
+sc.settings.file_format_figs = 'pdf'
 
-# Manual saving
+sc.pl.umap(adata, color='leiden')  # Saves to figures/umap.pdf
+```
+
+The per-plot `save=` parameter still works but is deprecated in scanpy 1.12.
+
+### Manual Saving
+
+```python
 import matplotlib.pyplot as plt
 fig = sc.pl.umap(adata, color='leiden', show=False, return_fig=True)
 fig.savefig('figures/my_umap.pdf', dpi=300, bbox_inches='tight')
@@ -313,9 +326,9 @@ fig.savefig('figures/my_umap.pdf', dpi=300, bbox_inches='tight')
 ### Batch Export
 
 ```python
-# Save multiple versions
-for gene in ['CD3D', 'CD14', 'MS4A1']:
-    sc.pl.umap(adata, color=gene, save=f'_{gene}.pdf')
+genes = ['CD3D', 'CD14', 'MS4A1']
+for gene in genes:
+    sc.pl.umap(adata, color=gene)  # Each saved via autosave
 ```
 
 ## Common Customization Parameters
@@ -336,9 +349,9 @@ for gene in ['CD3D', 'CD14', 'MS4A1']:
 - `use_raw`: Use raw counts for gene expression
 
 ### Saving Parameters
-- `save`: Filename suffix for saving
 - `show`: Whether to display plot
 - `dpi`: Resolution for raster formats
+- Use `sc.settings.autosave` + `sc.settings.figdir` instead of deprecated `save=`
 
 ## Tips for Publication Figures
 

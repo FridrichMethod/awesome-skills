@@ -60,8 +60,12 @@ Apply SMILES standardization procedures directly to a SMILES string.
 ### `fix_mol(mol)`
 Attempt to fix molecular structure issues automatically.
 
-### `fix_valence(mol)`
-Correct valence errors in molecular structures.
+### `fix_valence(mol)` / `fix_valence_charge(mol, inplace=False)`
+Correct valence errors in molecular structures (charge-aware variant available).
+
+### `hash_mol(mol, hash_scheme='all')`
+Generate a chemistry-aware hash for deduplication (requires RDKit ≥ 2022.09).
+- **`hash_scheme`**: `'all'` (default), `'no_stereo'`, or `'no_tautomers'`
 
 ## Molecular Properties
 
@@ -80,12 +84,14 @@ Add explicit hydrogen atoms to molecular structure.
 ### `to_fp(mol, fp_type='ecfp', ...)`
 Generate molecular fingerprints for similarity calculations.
 - **Fingerprint types**:
-  - `'ecfp'` - Extended Connectivity Fingerprints (Morgan)
-  - `'fcfp'` - Functional Connectivity Fingerprints
+  - `'ecfp'` / `'fcfp'` - Morgan fingerprints (default radius 3 for ECFP6; pass `radius=2` for ECFP4)
   - `'maccs'` - MACCS keys
   - `'topological'` - Topological fingerprints
   - `'atompair'` - Atom pair fingerprints
-- **Common parameters**: `n_bits`, `radius`
+  - `'rdkit'` - RDKit topological fingerprint
+  - Count variants: `'ecfp-count'`, `'fcfp-count'`, `'atompair-count'`, etc.
+- **Implementation**: Uses RDKit `rdFingerprintGenerator` (datamol ≥ 0.12.5)
+- **Common parameters**: `n_bits` (default 2048), `radius`
 - **Returns**: Numpy array or RDKit fingerprint object
 
 ### `pdist(mols, ...)`

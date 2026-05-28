@@ -49,8 +49,8 @@ Parse PDB block string.
 
 ### `dm.open_df(filename, ...)`
 Universal DataFrame reader - automatically detects format.
-- **Supported formats**: CSV, Excel, Parquet, JSON, SDF
-- **Example**: `df = dm.open_df("data.csv")` or `df = dm.open_df("molecules.sdf")`
+- **Supported formats**: CSV, Excel, Parquet, JSON, SDF (including compressed files such as `.gz`)
+- **Example**: `df = dm.open_df("data.csv")` or `df = dm.open_df("molecules.sdf.gz")`
 
 ## Writing Molecular Files
 
@@ -87,16 +87,19 @@ Convert molecule to MOL block string.
 Convert molecule to PDB block string.
 
 ### `dm.save_df(df, filename, ...)`
-Save DataFrame in multiple formats (CSV, Excel, Parquet, JSON).
+Save DataFrame in multiple formats (CSV, Excel, Parquet, JSON). Auto-detects format from the file extension; supports compression (added in datamol 0.10.0).
 
 ## Remote File Support
 
 All I/O functions support remote file paths through fsspec integration:
 - **Supported protocols**: S3 (AWS), GCS (Google Cloud), Azure, HTTP/HTTPS
+- **Optional backends**: `uv pip install s3fs` (S3), `uv pip install gcsfs` (GCS)
+- **Credentials**: Standard provider environment variables only (`AWS_*`, `GOOGLE_APPLICATION_CREDENTIALS`, etc.). Datamol uses fsspec locally; confirm remote write paths with the user before saving.
 - **Example**:
   ```python
   dm.read_sdf("s3://bucket/compounds.sdf")
   dm.read_csv("https://example.com/data.csv")
+  dm.save_df(df, "s3://bucket/output.parquet")  # confirm destination first
   ```
 
 ## Key Parameters Across Functions

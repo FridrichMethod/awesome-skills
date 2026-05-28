@@ -77,14 +77,14 @@ df = vaex.open('gs://bucket/data.parquet')
 ### CSV Files
 
 ```python
-# Simple CSV
+# Lazy CSV (preferred for exploration, vaex 4.14+)
+df = vaex.open('data.csv')
+
+# Load entire CSV into memory
 df = vaex.from_csv('data.csv')
 
-# Large CSV with automatic chunking
-df = vaex.from_csv('large_data.csv', chunk_size=5_000_000)
-
-# CSV with conversion to HDF5
-df = vaex.from_csv('large_data.csv', convert='large_data.hdf5')
+# Large CSV with automatic chunking and HDF5 conversion
+df = vaex.from_csv('large_data.csv', convert='large_data.hdf5', chunk_size=5_000_000)
 # Creates HDF5 file for future fast loading
 
 # CSV with options
@@ -335,16 +335,28 @@ df.export_arrow('output.arrow')
 
 ## Remote and Cloud Storage
 
+Vaex supports streaming HDF5, Arrow, Parquet, and CSV from S3 and Google Cloud Storage. Install optional filesystem backends:
+
+```bash
+uv pip install s3fs gcsfs adlfs
+```
+
 ### Reading from S3
 
 ```python
 import vaex
 
-# Read from S3 (requires s3fs)
+# Read from S3 using default credentials (~/.aws/credentials or env vars)
 df = vaex.open('s3://bucket-name/data.parquet')
 df = vaex.open('s3://bucket-name/data.hdf5')
 
-# With credentials
+# With explicit fs_options (anon, profile, region, access_key, secret_key)
+df = vaex.open(
+    's3://bucket-name/data.parquet',
+    fs_options={'profile': 'myprofile', 'region': 'us-east-1'},
+)
+
+# With explicit filesystem object
 import s3fs
 fs = s3fs.S3FileSystem(key='access_key', secret='secret_key')
 df = vaex.open('s3://bucket-name/data.parquet', fs=fs)
@@ -659,7 +671,10 @@ df_all.export_hdf5('unified.hdf5')
 ### Issue: CSV Loading Too Slow
 
 ```python
-# Solution: Convert to HDF5
+# Solution 1: Lazy open for exploration (vaex 4.14+)
+df = vaex.open('large.csv')
+
+# Solution 2: Convert to HDF5 for repeated use
 df = vaex.from_csv('large.csv', convert='large.hdf5')
 # Future: df = vaex.open('large.hdf5')
 ```
@@ -676,7 +691,7 @@ df_materialized.export_hdf5('output.hdf5')
 
 ```python
 # Install required libraries
-# pip install s3fs gcsfs adlfs
+# uv pip install s3fs gcsfs adlfs
 
 # Verify credentials
 import s3fs

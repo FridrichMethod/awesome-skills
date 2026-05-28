@@ -74,7 +74,7 @@ Set `content` to any Zotero export format:
 | BibLaTeX | `'biblatex'` | list of unicode strings |
 | Wikipedia Citation Templates | `'wikipedia'` | list of unicode strings |
 
-**Note**: When using an export format as `content`, you must provide a `limit` parameter. Multiple simultaneous format retrieval is not supported.
+**Note**: When using an export format as `content`, you must provide a `limit` parameter. Multiple simultaneous export formats are not supported.
 
 ```python
 # Export as RIS

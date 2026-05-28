@@ -306,7 +306,7 @@ dsolve(Derivative(f(x), x, 2) + f(x), f(x))
 
 ### Pattern 1: Building Complex Expressions Incrementally
 ```python
-from sympy import *
+from sympy import symbols, simplify
 x, y = symbols('x y')
 
 # Build step by step

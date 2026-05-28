@@ -1,6 +1,6 @@
 # COBRApy API Quick Reference
 
-This document provides quick reference for common COBRApy functions, signatures, and usage patterns.
+Quick reference for **cobra 0.31.1**. Full API: https://cobrapy.readthedocs.io/
 
 ## Model I/O
 
@@ -9,10 +9,14 @@ This document provides quick reference for common COBRApy functions, signatures,
 ```python
 from cobra.io import load_model, read_sbml_model, load_json_model, load_yaml_model, load_matlab_model
 
-# Bundled test models
-model = load_model("textbook")   # E. coli core metabolism
-model = load_model("ecoli")      # Full E. coli iJO1366
-model = load_model("salmonella") # Salmonella LT2
+# Bundled locally (cobra.data): textbook, iJO1366, salmonella
+model = load_model("textbook")      # e_coli_core (95 reactions)
+model = load_model("e_coli_core")   # same as textbook
+model = load_model("iJO1366")       # genome-scale E. coli
+model = load_model("salmonella")    # iYS1720
+
+# BiGG / BioModels (network + disk cache)
+model = load_model("iML1515")
 
 # From files
 model = read_sbml_model(filename, f_replace={}, **kwargs)
@@ -137,10 +141,14 @@ model.objective_direction = "max"  # or "min"
 ```python
 # Check available solvers
 from cobra.util.solver import solvers
-print(solvers)
+print(solvers)  # typically includes glpk; CPLEX/Gurobi if installed
 
 # Change solver
-model.solver = "glpk"  # or "cplex", "gurobi", etc.
+model.solver = "glpk"  # default via swiglpk
+# model.solver = "hybrid"   # HIGHS/OSQP for large MILPs/QPs (0.29+)
+# model.solver = "cplex"    # or "gurobi" with licenses installed
+
+# OSQP: deprecated as standalone LP solver; routes through hybrid in 0.29+
 
 # Solver-specific configuration
 model.solver.configuration.timeout = 60  # seconds
@@ -652,4 +660,6 @@ for value in parameter_values:
 df = pd.DataFrame(results)
 ```
 
-This quick reference covers the most commonly used COBRApy functions and patterns. For complete API documentation, see https://cobrapy.readthedocs.io/
+This quick reference covers the most commonly used COBRApy functions and patterns. For complete API documentation, see https://cobrapy.readthedocs.io/en/latest/
+
+**File outputs:** Workflow examples that call `to_csv` or `savefig` should use a user-approved `OUTDIR` — see `references/workflows.md`.

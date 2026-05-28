@@ -10,17 +10,21 @@ The `Slide` class is the primary interface for working with whole slide images (
 from histolab.slide import Slide
 
 # Initialize a slide with a WSI file and output directory
-slide = Slide(processed_path="path/to/processed/output",
-              slide_path="path/to/slide.svs")
+slide = Slide("path/to/slide.svs", processed_path="path/to/processed/output")
 ```
 
 **Parameters:**
-- `slide_path`: Path to the whole slide image file (supports multiple formats: SVS, TIFF, NDPI, etc.)
+- `path`: Path to the whole slide image file (supports multiple formats: SVS, TIFF, NDPI, etc.)
 - `processed_path`: Directory where processed outputs (tiles, thumbnails, etc.) will be saved
+- `use_largeimage` (optional): Use `large_image` for multi-format backends and mpp-based extraction
 
 ## Loading Sample Data
 
-Histolab provides built-in sample datasets from TCGA for testing and demonstration:
+Histolab provides built-in sample datasets from TCGA for testing and demonstration. Install `pooch` to download them:
+
+```bash
+uv pip install pooch
+```
 
 ```python
 from histolab.data import prostate_tissue, ovarian_tissue, breast_tissue, heart_tissue, kidney_tissue
@@ -73,11 +77,14 @@ properties = slide.properties
 ## Thumbnail Generation
 
 ```python
-# Get thumbnail at specific size
+from pathlib import Path
+
+# Get thumbnail at default size
 thumbnail = slide.thumbnail
 
-# Save thumbnail to disk
-slide.save_thumbnail()  # Saves to processed_path
+# Save thumbnail to processed_path
+Path(slide.processed_path).mkdir(parents=True, exist_ok=True)
+slide.thumbnail.save(Path(slide.processed_path) / f"{slide.name}_thumbnail.png")
 
 # Get scaled thumbnail
 scaled_thumbnail = slide.scaled_image(scale_factor=32)
@@ -99,12 +106,15 @@ plt.show()
 ## Extracting Regions
 
 ```python
-# Extract region at specific coordinates and level
-region = slide.extract_region(
-    location=(x, y),  # Top-left coordinates at level 0
-    size=(width, height),  # Region size
-    level=0  # Pyramid level
+from histolab.types import CoordinatePair
+
+# Extract a tile at specific coordinates and level
+tile = slide.extract_tile(
+    coords=CoordinatePair(x_ul=x, y_ul=y, x_br=x + width, y_br=y + height),
+    tile_size=(width, height),
+    level=0,
 )
+region = tile.image
 ```
 
 ## Working with Pyramid Levels
@@ -127,8 +137,8 @@ for level in range(slide.levels):
 # Get slide filename without extension
 slide_name = slide.name
 
-# Get full path to slide file
-slide_path = slide.scaled_image
+# Get output directory for processed artifacts
+output_dir = slide.processed_path
 ```
 
 ## Best Practices
@@ -154,7 +164,9 @@ print(f"Levels: {slide.levels}")
 print(f"Magnification: {slide.properties.get('openslide.objective-power', 'N/A')}")
 
 # Save thumbnail for review
-slide.save_thumbnail()
+from pathlib import Path
+Path(slide.processed_path).mkdir(parents=True, exist_ok=True)
+slide.thumbnail.save(Path(slide.processed_path) / f"{slide.name}_thumbnail.png")
 ```
 
 ### Multi-Slide Processing

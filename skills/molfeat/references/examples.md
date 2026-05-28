@@ -4,20 +4,20 @@ This document provides practical examples for common molfeat use cases.
 
 ## Installation
 
+Requires Python 3.9 or 3.10 (molfeat 0.11.0 does not support 3.11+):
+
 ```bash
-# Recommended: Using conda/mamba
-mamba install -c conda-forge molfeat
+uv pip install "molfeat==0.11.0"
 
-# Alternative: Using pip
-pip install molfeat
-
-# With all optional dependencies
-pip install "molfeat[all]"
+# With all pip-installable optional dependencies
+uv pip install "molfeat[all]==0.11.0"
 
 # With specific dependencies
-pip install "molfeat[dgl]"          # For GNN models
-pip install "molfeat[graphormer]"   # For Graphormer
-pip install "molfeat[transformer]"  # For ChemBERTa, ChemGPT
+uv pip install "molfeat[dgl]==0.11.0"          # For GNN models
+uv pip install "molfeat[graphormer]==0.11.0"   # For Graphormer
+uv pip install "molfeat[transformer]==0.11.0"  # For ChemBERTa, ChemGPT
+uv pip install "molfeat[pyg]==0.11.0"          # For PyTorch Geometric
+uv pip install "molfeat[viz]==0.11.0"          # For NGLView widgets
 ```
 
 ---
@@ -530,24 +530,21 @@ for n_jobs in [1, 2, 4, -1]:
 
 ```python
 from molfeat.trans.pretrained import PretrainedMolTransformer
-import pickle
+import numpy as np
+from pathlib import Path
 
 # Load expensive pretrained model
 transformer = PretrainedMolTransformer("ChemBERTa-77M-MLM", n_jobs=-1)
 
-# Cache embeddings for reuse
-cache_file = "embeddings_cache.pkl"
+# Cache embeddings with NumPy (avoid pickle for untrusted paths)
+cache_file = Path("embeddings_cache.npz")
 
-try:
-    # Try loading cached embeddings
-    with open(cache_file, "rb") as f:
-        embeddings = pickle.load(f)
+if cache_file.exists():
+    embeddings = np.load(cache_file)["embeddings"]
     print("Loaded cached embeddings")
-except FileNotFoundError:
-    # Compute and cache
+else:
     embeddings = transformer(smiles_list)
-    with open(cache_file, "wb") as f:
-        pickle.dump(embeddings, f)
+    np.savez(cache_file, embeddings=embeddings)
     print("Computed and cached embeddings")
 ```
 

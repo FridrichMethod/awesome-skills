@@ -3,13 +3,17 @@ name: pyzotero
 description: Interact with Zotero reference management libraries using the pyzotero Python client. Retrieve, create, update, and delete items, collections, tags, and attachments via the Zotero Web API v3. Use this skill when working with Zotero libraries programmatically, managing bibliographic references, exporting citations, searching library contents, uploading PDF attachments, or building research automation workflows that integrate with Zotero.
 allowed-tools: Read Write Edit Bash
 license: MIT License
+compatibility: Requires Python 3.10+ and pyzotero 1.13+. Web API access needs a Zotero API key. Optional CLI and MCP extras require Zotero 7 with local API access enabled.
 metadata:
-    skill-author: K-Dense Inc.
+  version: "1.0"
+  skill-author: K-Dense Inc.
 ---
 
 # Pyzotero
 
 Pyzotero is a Python wrapper for the [Zotero API v3](https://www.zotero.org/support/dev/web_api/v3/start). Use it to programmatically manage Zotero libraries: read items and collections, create and update references, upload attachments, manage tags, and export citations.
+
+**Current upstream:** pyzotero 1.13.0 (PyPI, May 2026). Docs: [pyzotero.readthedocs.io](https://pyzotero.readthedocs.io/en/latest/).
 
 ## Authentication Setup
 
@@ -30,17 +34,22 @@ See [references/authentication.md](references/authentication.md) for full setup 
 ## Installation
 
 ```bash
-uv add pyzotero
-# or with CLI support:
-uv add "pyzotero[cli]"
+uv add pyzotero              # Web API client
+uv add "pyzotero[cli]"       # + local CLI (Zotero 7)
+uv add "pyzotero[mcp]"       # + MCP server for LLM clients (Zotero 7)
 ```
 
 ## Quick Start
 
 ```python
+import os
 from pyzotero import Zotero
 
-zot = Zotero(library_id='123456', library_type='user', api_key='ABC1234XYZ')
+zot = Zotero(
+    library_id=os.environ['ZOTERO_LIBRARY_ID'],
+    library_type=os.environ.get('ZOTERO_LIBRARY_TYPE', 'user'),
+    api_key=os.environ['ZOTERO_API_KEY'],
+)
 
 # Retrieve top-level items (returns 100 by default)
 items = zot.top(limit=10)
@@ -70,13 +79,14 @@ all_items = zot.everything(zot.items())
 | [references/search-params.md](references/search-params.md) | Filtering, sorting, search parameters |
 | [references/write-api.md](references/write-api.md) | Creating, updating, deleting items |
 | [references/collections.md](references/collections.md) | Collection CRUD operations |
-| [references/tags.md](references/tags.md) | Tag retrieval and management |
-| [references/files-attachments.md](references/files-attachments.md) | File retrieval and attachment uploads |
+| [references/tags.md](references/tags.md) | Tag access and management |
+| [references/files-attachments.md](references/files-attachments.md) | File download and attachment uploads |
 | [references/exports.md](references/exports.md) | BibTeX, CSL-JSON, bibliography export |
 | [references/pagination.md](references/pagination.md) | follow(), everything(), generators |
-| [references/full-text.md](references/full-text.md) | Full-text content indexing and retrieval |
+| [references/full-text.md](references/full-text.md) | Full-text content indexing and access |
 | [references/saved-searches.md](references/saved-searches.md) | Saved search management |
-| [references/cli.md](references/cli.md) | Command-line interface usage |
+| [references/cli.md](references/cli.md) | Command-line interface (local Zotero 7) |
+| [references/mcp.md](references/mcp.md) | MCP server for LLM clients (local Zotero 7) |
 | [references/error-handling.md](references/error-handling.md) | Errors and exception handling |
 
 ## Common Patterns
@@ -109,3 +119,7 @@ print(bibtex.entries)
 zot = Zotero(library_id='123456', library_type='user', local=True)
 items = zot.items()
 ```
+
+### Local Zotero 7 (CLI or MCP, no API key)
+
+For searching a locally running Zotero desktop app (including full-text PDF search), use the CLI or MCP server instead of the Web API. Both require Zotero 7 with local API access enabled. See [references/cli.md](references/cli.md) and [references/mcp.md](references/mcp.md).

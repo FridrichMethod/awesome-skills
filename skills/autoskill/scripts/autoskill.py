@@ -3,7 +3,7 @@
 Subcommands:
   run      — detect workflows and draft proposed skills
   doctor   — verify screenpipe + LM Studio + config + skills dir
-  promote  — move an approved proposal into scientific-skills/
+  promote  — move an approved proposal into skills/
 """
 
 import argparse

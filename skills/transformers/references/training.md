@@ -4,6 +4,10 @@
 
 Fine-tune pre-trained models on custom datasets using the Trainer API. The Trainer handles training loops, gradient accumulation, mixed precision, logging, and checkpointing.
 
+**Metrics:** use `evaluate.load("metric_name")` — the old `datasets.load_metric` API was removed.
+
+**Hub uploads:** `trainer.push_to_hub()` requires authentication (`hf auth login` or `HF_TOKEN`).
+
 ## Basic Fine-Tuning Workflow
 
 ### Step 1: Load and Preprocess Data
@@ -168,12 +172,12 @@ metric_for_best_model="accuracy"  # Metric to compare
 gradient_accumulation_steps=4  # Effective batch size = batch_size * 4
 ```
 
-**fp16**: Enable mixed precision (NVIDIA GPUs)
+**fp16**: Enable mixed precision (NVIDIA GPUs without native bfloat16)
 ```python
 fp16=True
 ```
 
-**bf16**: Enable bfloat16 (newer GPUs)
+**bf16**: Enable bfloat16 (preferred on Ampere+ and newer GPUs when supported)
 ```python
 bf16=True
 ```

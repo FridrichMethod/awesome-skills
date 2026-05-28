@@ -61,7 +61,11 @@ except ValueError as e:
 import cirq_google
 
 # Get calibration metrics
-processor = cirq_google.get_engine().get_processor('weber')
+import os
+import cirq_google as cg
+
+engine = cg.Engine(project_id=os.environ['GOOGLE_CLOUD_PROJECT'])
+processor = engine.get_processor('weber')
 calibration = processor.get_current_calibration()
 
 # Find qubits with lowest error rates
@@ -107,31 +111,40 @@ def select_connected_qubits(device, n_qubits):
 
 ### Google Quantum AI (Cirq-Google)
 
+Google hardware access is restricted to approved users. You need a Google Cloud project with the [Quantum Engine API enabled](https://console.cloud.google.com/apis/library/quantum.googleapis.com) and Application Default Credentials configured.
+
 #### Setup
 
 ```python
-import cirq_google
+import cirq_google as cg
 
-# Authenticate (requires Google Cloud project)
-# Set environment variable: GOOGLE_CLOUD_PROJECT=your-project-id
+# Authenticate via Application Default Credentials:
+#   gcloud auth application-default login
+# Set your GCP project ID:
+#   export GOOGLE_CLOUD_PROJECT=your-project-id
 
-# Get quantum engine
-engine = cirq_google.get_engine()
+import os
+project_id = os.environ['GOOGLE_CLOUD_PROJECT']
+engine = cg.Engine(project_id=project_id)
 
-# List available processors
-processors = engine.list_processors()
-for processor in processors:
+# List available processors (also visible in Cloud Console)
+for processor in engine.list_processors():
     print(f"Processor: {processor.processor_id}")
 ```
 
 #### Running on Google Hardware
 
 ```python
-# Create circuit for Google device
-import cirq_google
+import cirq
+import cirq_google as cg
+import os
 
-# Get processor
-processor = engine.get_processor('weber')
+project_id = os.environ['GOOGLE_CLOUD_PROJECT']
+engine = cg.Engine(project_id=project_id)
+
+# Select a processor you have access to (e.g. weber, sycamore, willow)
+processor_id = 'weber'
+processor = engine.get_processor(processor_id)
 device = processor.get_device()
 
 # Create circuit on device qubits
@@ -142,13 +155,11 @@ circuit = cirq.Circuit(
     cirq.measure(*qubits, key='result')
 )
 
-# Validate and run
+# Validate and run via sampler
 device.validate_circuit(circuit)
-job = processor.run(circuit, repetitions=1000)
-
-# Get results
-results = job.results()[0]
-print(results.histogram(key='result'))
+sampler = engine.get_sampler(processor_id=processor_id)
+result = sampler.run(circuit, repetitions=1000)
+print(result.histogram(key='result'))
 ```
 
 ### IonQ
@@ -156,23 +167,22 @@ print(results.histogram(key='result'))
 #### Setup
 
 ```python
-import cirq_ionq
+import cirq_ionq as ionq
 
-# Set API key
-# Option 1: Environment variable
+# Set API key via environment variable (recommended):
 # export IONQ_API_KEY=your_api_key
+# Obtain keys at: https://cloud.ionq.com/settings/keys
 
-# Option 2: In code
-service = cirq_ionq.Service(api_key='your_api_key')
+service = ionq.Service()  # reads IONQ_API_KEY from environment
 ```
 
 #### Running on IonQ
 
 ```python
-import cirq_ionq
+import cirq
+import cirq_ionq as ionq
 
-# Create service
-service = cirq_ionq.Service(api_key='your_api_key')
+service = ionq.Service()  # uses IONQ_API_KEY from environment
 
 # Create circuit (IonQ uses generic qubits)
 qubits = cirq.LineQubit.range(3)
@@ -232,17 +242,15 @@ print(f"Timing: {calibration['timing']}")
 #### Setup
 
 ```python
-from azure.quantum import Workspace
 from azure.quantum.cirq import AzureQuantumService
+import os
 
-# Create workspace connection
-workspace = Workspace(
-    resource_id="/subscriptions/.../resourceGroups/.../providers/Microsoft.Quantum/Workspaces/...",
-    location="eastus"
+# Create service from workspace resource ID and location
+# (copy from Azure Portal → your Quantum workspace header)
+service = AzureQuantumService(
+    resource_id=os.environ['AZURE_QUANTUM_RESOURCE_ID'],
+    location=os.environ['AZURE_QUANTUM_LOCATION'],
 )
-
-# Create Cirq service
-service = AzureQuantumService(workspace)
 ```
 
 #### Running on Azure Quantum (IonQ Backend)
@@ -268,18 +276,17 @@ result = service.run(
 )
 ```
 
-#### Running on Azure Quantum (Honeywell Backend)
+#### Running on Azure Quantum (Honeywell/Quantinuum Backend)
 
 ```python
-# Run on Honeywell System Model H1
+# Target names are workspace-specific; list available targets first
 result = service.run(
     circuit=circuit,
     repetitions=1000,
-    target='honeywell.hqs-lt-s1'
+    target='honeywell.hqs-lt-s1-apival'  # example; use service.targets() to list
 )
 
-# Check Honeywell-specific options
-target_info = service.get_target('honeywell.hqs-lt-s1')
+target_info = service.get_target('honeywell.hqs-lt-s1-apival')
 print(f"Target info: {target_info}")
 ```
 
@@ -288,15 +295,15 @@ print(f"Target info: {target_info}")
 #### Setup
 
 ```python
+import os
 import cirq_aqt
 
-# Set API token
+# Set API token via environment variable:
 # export AQT_TOKEN=your_token
 
-# Create service
 service = cirq_aqt.AQTSampler(
     remote_host='https://gateway.aqt.eu',
-    access_token='your_token'
+    access_token=os.environ['AQT_TOKEN']
 )
 ```
 
@@ -340,10 +347,12 @@ device = cirq_pasqal.PasqalDevice(qubits=cirq.LineQubit.range(10))
 #### Running on Pasqal
 
 ```python
-# Create sampler
+# Create sampler (requires PASQAL token in environment)
+import os
+
 sampler = cirq_pasqal.PasqalSampler(
     remote_host='https://api.pasqal.cloud',
-    access_token='your_token',
+    access_token=os.environ['PASQAL_TOKEN'],
     device=device
 )
 
@@ -467,26 +476,29 @@ def print_device_info(device):
 
 **Google Cloud:**
 ```bash
-# Install gcloud CLI
-# Visit: https://cloud.google.com/sdk/docs/install
+# Install gcloud CLI: https://cloud.google.com/sdk/docs/install
 
-# Authenticate
+# Authenticate with Application Default Credentials
 gcloud auth application-default login
 
-# Set project
+# Enable Quantum Engine API in your project, then set:
 export GOOGLE_CLOUD_PROJECT=your-project-id
 ```
 
+See [Access and authentication](https://quantumai.google/cirq/google/access) for approval requirements.
+
 **IonQ:**
 ```bash
-# Set API key
+# Obtain key at https://cloud.ionq.com/settings/keys
 export IONQ_API_KEY=your_api_key
 ```
 
 **Azure Quantum:**
-```python
-# Use Azure CLI or workspace connection string
-# See: https://docs.microsoft.com/azure/quantum/
+```bash
+# Set workspace connection details from Azure Portal
+export AZURE_QUANTUM_RESOURCE_ID=/subscriptions/.../providers/Microsoft.Quantum/Workspaces/...
+export AZURE_QUANTUM_LOCATION=eastus
+# See: https://quantumai.google/cirq/hardware/azure-quantum/access
 ```
 
 **AQT:**

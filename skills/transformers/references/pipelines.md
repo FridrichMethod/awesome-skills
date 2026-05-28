@@ -29,7 +29,7 @@ pipe = pipeline("text-classification", model="distilbert-base-uncased-finetuned-
 **text-generation**: Generate text continuations
 ```python
 generator = pipeline("text-generation", model="gpt2")
-output = generator("Once upon a time", max_length=50, num_return_sequences=2)
+output = generator("Once upon a time", max_new_tokens=50, num_return_sequences=2)
 ```
 
 **text-classification**: Classify text into categories
@@ -177,10 +177,10 @@ pipe = pipeline("task", device=0)  # Use first GPU
 pipe = pipeline("task", model="large-model", device_map="auto")
 ```
 
-**dtype**: Model precision (reduces memory)
+**dtype**: Model precision (reduces memory; `torch_dtype` is deprecated but still accepted)
 ```python
 import torch
-pipe = pipeline("task", torch_dtype=torch.float16)
+pipe = pipeline("task", dtype=torch.float16)
 ```
 
 **batch_size**: Process multiple inputs at once
@@ -189,10 +189,7 @@ pipe = pipeline("task", batch_size=8)
 results = pipe(["text1", "text2", "text3"])
 ```
 
-**framework**: Choose PyTorch or TensorFlow
-```python
-pipe = pipeline("task", framework="pt")  # or "tf"
-```
+**Backend**: Transformers v5 pipelines use PyTorch only (TensorFlow/JAX backends were removed in v5).
 
 ## Batch Processing
 
@@ -231,7 +228,7 @@ pipe = pipeline("task", device=0)
 Use float16 for 2x speedup on supported GPUs:
 ```python
 import torch
-pipe = pipeline("task", torch_dtype=torch.float16, device=0)
+pipe = pipeline("task", dtype=torch.float16, device=0)
 ```
 
 ### Batching Guidelines
@@ -252,10 +249,12 @@ results = pipe(list_of_texts)
 For text generation, stream tokens as they're generated:
 
 ```python
-from transformers import TextStreamer
+from transformers import AutoTokenizer, TextStreamer, pipeline
 
-generator = pipeline("text-generation", model="gpt2", streamer=TextStreamer())
-generator("The future of AI", max_length=100)
+tokenizer = AutoTokenizer.from_pretrained("gpt2")
+streamer = TextStreamer(tokenizer)
+generator = pipeline("text-generation", model="gpt2", streamer=streamer)
+generator("The future of AI", max_new_tokens=100)
 ```
 
 ## Custom Pipeline Configuration

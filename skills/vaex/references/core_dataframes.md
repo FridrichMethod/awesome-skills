@@ -23,7 +23,7 @@ import vaex
 df = vaex.open('data.hdf5')     # HDF5 (recommended)
 df = vaex.open('data.arrow')    # Apache Arrow (recommended)
 df = vaex.open('data.parquet')  # Parquet
-df = vaex.open('data.csv')      # CSV (slower for large files)
+df = vaex.open('data.csv')      # CSV (lazy since 4.14; convert to HDF5 for repeated use)
 df = vaex.open('data.fits')     # FITS (astronomy)
 
 # Can open multiple files as one DataFrame
@@ -32,19 +32,25 @@ df = vaex.open('data_*.hdf5')   # Wildcards supported
 
 **Key characteristics:**
 - **Instant for HDF5/Arrow** - Memory-maps files, no loading time
-- **Handles large CSVs** - Automatically chunks large CSV files
+- **Lazy CSV (4.14+)** - `vaex.open('file.csv')` reads CSV lazily without loading all data into RAM
 - **Returns immediately** - Lazy evaluation means no computation until needed
 
 ### Format-Specific Loaders
 
 ```python
-# CSV with options
+# Lazy CSV (preferred for exploration since vaex 4.14)
+df = vaex.open('large_file.csv')
+
+# CSV with conversion to HDF5 (preferred for repeated use)
 df = vaex.from_csv(
     'large_file.csv',
-    chunk_size=5_000_000,      # Process in chunks
-    convert=True,               # Convert to HDF5 automatically
+    convert='large_file.hdf5',  # or convert=True
+    chunk_size=5_000_000,       # Process in chunks during conversion
     copy_index=False            # Don't copy pandas index if present
 )
+
+# To load entire CSV into memory instead of lazy open:
+# df = vaex.from_csv('large_file.csv')
 
 # Apache Arrow
 df = vaex.open('data.arrow')    # Native support, very fast

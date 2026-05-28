@@ -1,13 +1,50 @@
 ---
 name: torch-geometric
-description: "Guide for building Graph Neural Networks with PyTorch Geometric (PyG). Use this skill whenever the user asks about graph neural networks, GNNs, node classification, link prediction, graph classification, message passing networks, heterogeneous graphs, neighbor sampling, or any task involving torch_geometric / PyG. Also trigger when you see imports from torch_geometric, or the user mentions graph convolutions (GCN, GAT, GraphSAGE, GIN), graph data structures, or working with relational/network data. Even if the user just says 'graph learning' or 'geometric deep learning', use this skill."
+description: PyTorch Geometric (PyG) for graph neural networks — node/link/graph classification, message passing (GCN, GAT, GraphSAGE, GIN), heterogeneous graphs, neighbor sampling, and custom datasets. Use when working with torch_geometric, not for general NetworkX analytics or non-graph PyTorch models.
+license: MIT license
+compatibility: Requires Python 3.10+, PyTorch 2.6+, and torch-geometric 2.7.x. Optional extension wheels (pyg-lib, torch-scatter, torch-sparse, torch-cluster) must match your PyTorch/CUDA build from https://data.pyg.org/whl.
+metadata:
+  version: "1.1"
+  skill-author: K-Dense Inc.
 ---
 
 # PyTorch Geometric (PyG)
 
 PyG is the standard library for Graph Neural Networks built on PyTorch. It provides data structures for graphs, 60+ GNN layer implementations, scalable mini-batch training, and support for heterogeneous graphs.
 
-Install: `uv add torch_geometric` (or `uv pip install torch_geometric`; requires PyTorch). Optional: `pyg-lib`, `torch-scatter`, `torch-sparse`, `torch-cluster` for accelerated ops.
+## Installation
+
+Tested against **torch-geometric 2.7.x** (Oct 2025). Requires **Python 3.10+** and **PyTorch 2.6+**.
+
+```bash
+# 1. Install PyTorch first (match your CUDA/CPU setup — see https://pytorch.org/get-started/locally/)
+uv pip install torch
+
+# 2. Core PyG (no extension wheels required for basic usage)
+uv pip install torch_geometric
+```
+
+Optional accelerated ops (`pyg-lib`, `torch-scatter`, `torch-sparse`, `torch-cluster`) are **not required** for basic PyG usage (since PyG 2.3). Install version-matched wheels from the [PyG wheel index](https://data.pyg.org/whl) after checking your PyTorch and CUDA versions:
+
+```bash
+python -c "import torch; print(torch.__version__, torch.version.cuda)"
+# Then install wheels for your torch+CUDA combo, e.g.:
+uv pip install pyg-lib torch-scatter torch-sparse torch-cluster \
+  -f https://data.pyg.org/whl/torch-2.8.0+cu128.html
+```
+
+Check your version:
+
+```python
+import torch_geometric
+print(torch_geometric.__version__)
+```
+
+**Conda:** the `pyg` conda channel is no longer maintained for PyTorch >2.5 — use `uv pip install` and the wheel index above instead.
+
+### PyG 2.7 notes
+
+PyG 2.7 dropped Python 3.9 and PyTorch ≤2.5. See the [2.7.0 release notes](https://github.com/pyg-team/pytorch_geometric/releases/tag/2.7.0) for PyTorch 2.6–2.8 compatibility tables. `torch_geometric.distributed` is deprecated — use standard `torch.distributed` DDP (see `references/scaling.md`).
 
 ## Core Concepts
 
@@ -198,8 +235,8 @@ for epoch in range(200):
     loss.backward()
     optimizer.step()
 
-# Evaluation
-model.eval()
+# Evaluation — train(False) puts the model in inference mode (disables dropout/BN)
+model.train(False)
 pred = model(data.x, data.edge_index).argmax(dim=1)
 acc = (pred[data.test_mask] == data.y[data.test_mask]).float().mean()
 ```

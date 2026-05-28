@@ -412,22 +412,44 @@ custom_mask = TissueMask(filters=aggressive_filters)
 
 ## Stain Normalization
 
-While histolab doesn't have built-in stain normalization, filters can be used for basic normalization:
+Histolab 0.6.0+ includes built-in stain normalization via `histolab.stain_normalizer`. Both methods follow the standard fit-on-target, transform-source pattern:
+
+```python
+from histolab.stain_normalizer import MacenkoStainNormalizer, ReinhardStainNormalizer
+from PIL import Image
+
+target_image = Image.open("reference_stain.png")
+source_image = Image.open("source_stain.png")
+
+# Macenko (H&E stain matrix decomposition)
+macenko = MacenkoStainNormalizer()
+macenko.fit(target_image)
+normalized = macenko.transform(source_image)
+
+# Reinhard (color transfer in LAB space)
+reinhard = ReinhardStainNormalizer()
+reinhard.fit(target_image)
+normalized = reinhard.transform(source_image)
+```
+
+See the [stain normalizer docs](https://histolab.readthedocs.io/en/latest/api/stain_normalizer.html) for examples and comparison images.
+
+### Filter-based alternatives
+
+For lightweight preprocessing without full stain normalization, combine HED decomposition with custom filters:
 
 ```python
 from histolab.filters.image_filters import RgbToHed, Lambda
 import numpy as np
 
 def normalize_hed(hed_image, target_means=[0.65, 0.70], target_stds=[0.15, 0.13]):
-    """Simple H&E normalization."""
+    """Simple H&E channel normalization in HED space."""
     h_channel = hed_image[:, :, 0]
     e_channel = hed_image[:, :, 1]
 
-    # Normalize hematoxylin
     h_normalized = (h_channel - h_channel.mean()) / h_channel.std()
     h_normalized = h_normalized * target_stds[0] + target_means[0]
 
-    # Normalize eosin
     e_normalized = (e_channel - e_channel.mean()) / e_channel.std()
     e_normalized = e_normalized * target_stds[1] + target_means[1]
 
@@ -439,7 +461,6 @@ def normalize_hed(hed_image, target_means=[0.65, 0.70], target_stds=[0.15, 0.13]
 normalization_pipeline = Compose([
     RgbToHed(),
     Lambda(normalize_hed)
-    # Convert back to RGB if needed
 ])
 ```
 
@@ -464,6 +485,7 @@ import numpy as np
 
 def laplacian_blur_score(gray_image):
     """Calculate Laplacian variance (blur metric)."""
+    # cv2.CV_64F is an OpenCV constant, not Python eval()
     return cv2.Laplacian(np.array(gray_image), cv2.CV_64F).var()
 
 blur_detector = Lambda(lambda img: laplacian_blur_score(
@@ -509,6 +531,7 @@ coverage_filter = Lambda(tissue_coverage)
 
 ### Issue: Variable staining quality
 **Solutions:**
+- Apply `MacenkoStainNormalizer` or `ReinhardStainNormalizer` (histolab 0.6.0+)
 - Apply histogram equalization
 - Use adaptive thresholding
-- Implement stain normalization pipeline
+- Implement filter-based normalization pipeline

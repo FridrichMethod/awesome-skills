@@ -201,6 +201,14 @@ times = start + TimeDelta(np.linspace(0, 365, 100), format='jd')
 
 ## Observing-Related Features
 
+Some high-precision time and coordinate operations use IERS Earth-rotation data. Astropy uses `astropy-iers-data` by default, but may auto-download fresher IERS-A data when required for UT1 or polar-motion values. Disable auto-download for offline or privacy-sensitive runs:
+
+```python
+from astropy.utils import iers
+
+iers.conf.auto_download = False
+```
+
 ### Sidereal Time
 
 ```python
@@ -392,13 +400,13 @@ ltt_bary = times.light_travel_time(target, kind='barycentric')
 # Apply correction to get barycentric times
 times_bary = times.tdb + ltt_bary
 
-# For radial velocity correction
-rv_correction = ltt_bary.to(u.km, equivalencies=u.dimensionless_angles())
+# For radial velocity work, use the coordinate helper instead
+rv_correction = target.radial_velocity_correction(obstime=times, location=location)
 ```
 
 ## Performance Considerations
 
 1. **Array operations are fast**: Process multiple times as arrays
 2. **Format conversions are cached**: Repeated access is efficient
-3. **Scale conversions may require IERS data**: Downloads automatically
+3. **Scale conversions may require IERS data**: Update `astropy-iers-data` before offline runs, or set `iers.conf.auto_download = False` to prevent network access
 4. **High precision maintained**: Sub-nanosecond accuracy across astronomical timescales

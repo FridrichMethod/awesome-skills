@@ -10,11 +10,12 @@ polars-bio provides `read_*`, `scan_*`, `write_*`, and `sink_*` functions for co
 |--------|------|------|-----------------|-------|------|
 | BED | `read_bed` | `scan_bed` | `register_bed` | — | — |
 | VCF | `read_vcf` | `scan_vcf` | `register_vcf` | `write_vcf` | `sink_vcf` |
+| VCF Zarr | `read_vcf_zarr` | `scan_vcf_zarr` | — | — | — |
 | BAM | `read_bam` | `scan_bam` | `register_bam` | `write_bam` | `sink_bam` |
 | CRAM | `read_cram` | `scan_cram` | `register_cram` | `write_cram` | `sink_cram` |
 | GFF | `read_gff` | `scan_gff` | `register_gff` | — | — |
 | GTF | `read_gtf` | `scan_gtf` | `register_gtf` | — | — |
-| FASTA | `read_fasta` | `scan_fasta` | — | — | — |
+| FASTA | `read_fasta` | `scan_fasta` | — | `write_fasta` | `sink_fasta` |
 | FASTQ | `read_fastq` | `scan_fastq` | `register_fastq` | `write_fastq` | `sink_fastq` |
 | SAM | `read_sam` | `scan_sam` | `register_sam` | `write_sam` | `sink_sam` |
 | Hi-C pairs | `read_pairs` | `scan_pairs` | `register_pairs` | — | — |
@@ -107,6 +108,8 @@ df = pb.read_vcf("variants.vcf.gz", samples=["SAMPLE1", "SAMPLE2"])
 | `filter` | String | Filter status |
 | `info` | String | INFO field (raw, unless `info_fields` specified) |
 
+**Genotype columns:** In single-sample VCFs, requested `format_fields` (e.g., `GT`, `DP`, `GQ`) appear as top-level columns. In multi-sample VCFs, per-sample FORMAT data is nested in a `genotypes` column.
+
 ### write_vcf / sink_vcf
 
 ```python
@@ -118,6 +121,35 @@ rows_written = pb.write_vcf(df, "output.vcf")
 # Stream LazyFrame to VCF
 pb.sink_vcf(lf, "output.vcf")
 ```
+
+## VCF Zarr Format
+
+### read_vcf_zarr / scan_vcf_zarr
+
+Read analysis-ready [VCF Zarr](https://github.com/sgkit-dev/vcf-zarr-spec) stores (local directory paths). Supports the same INFO/FORMAT projection and predicate pushdown as VCF readers.
+
+```python
+import polars_bio as pb
+
+# Eager read from a Zarr store directory
+df = pb.read_vcf_zarr("/path/to/vcf.zarr")
+
+# Lazy scan (preferred for large stores)
+lf = pb.scan_vcf_zarr(
+    "/path/to/vcf.zarr",
+    info_fields=["AF", "END"],
+    format_fields=["GT", "DP"],
+)
+
+# Disable INFO/FORMAT discovery explicitly
+lf = pb.scan_vcf_zarr("/path/to/vcf.zarr", info_fields=[], format_fields=[])
+```
+
+### Additional Parameters
+
+Same as VCF where applicable: `info_fields`, `format_fields`, `samples`, `projection_pushdown`, `predicate_pushdown`, `use_zero_based`, `genotype_encoding_raw`.
+
+**Note:** VCF Zarr is currently local-path only (no cloud URI support). There is no `register_vcf_zarr` SQL helper yet — use `scan_vcf_zarr` + `from_polars` if needed.
 
 ## BAM Format
 
@@ -264,6 +296,19 @@ df = pb.read_fasta("reference.fasta")
 | `description` | String | Description line |
 | `sequence` | String | Nucleotide sequence |
 
+### write_fasta / sink_fasta
+
+Write sequences from DataFrames with `name` and `sequence` columns (optional `description`):
+
+```python
+import polars_bio as pb
+
+rows_written = pb.write_fasta(df, "output.fasta")
+rows_written = pb.write_fasta(df, "output.fasta.gz")
+
+pb.sink_fasta(lf, "output.fasta.bgz")
+```
+
 ## FASTQ Format
 
 ### read_fastq / scan_fastq
@@ -385,7 +430,15 @@ df = pb.read_vcf("gs://bucket/variants.vcf.gz", allow_anonymous=True)
 df = pb.read_bam("az://container/aligned.bam", allow_anonymous=False)
 ```
 
-**Note:** For authenticated access, configure credentials via environment variables or cloud SDK configuration (e.g., `AWS_ACCESS_KEY_ID`, `GOOGLE_APPLICATION_CREDENTIALS`).
+**Cloud credential usage:** Cloud paths (`s3://`, `gs://`, `az://`) trigger reads through Apache OpenDAL using your environment's cloud SDK credentials. Credentials are read only when a cloud URI is accessed — not from broad `.env` scanning.
+
+| Provider | Example path | Typical env vars |
+|----------|--------------|------------------|
+| AWS S3 | `s3://bucket/file.bed` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION` |
+| GCS | `gs://bucket/file.vcf.gz` | `GOOGLE_APPLICATION_CREDENTIALS` |
+| Azure | `az://container/file.bam` | Azure SDK defaults (`AZURE_STORAGE_ACCOUNT`, etc.) |
+
+Set `allow_anonymous=True` (default) for public buckets; set `allow_anonymous=False` when authenticated access is required.
 
 ## Compression Support
 
@@ -412,3 +465,5 @@ schema_df = pb.describe_bam("aligned.bam")
 schema_df = pb.describe_sam("alignments.sam")
 schema_df = pb.describe_cram("aligned.cram", reference_path="ref.fasta")
 ```
+
+Use `describe_bam`/`describe_sam` to auto-discover optional SAM tags before specifying `tag_fields`.

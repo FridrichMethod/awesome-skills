@@ -64,10 +64,12 @@ sequence_only = "".join(seq_lines[1:])  # Skip FASTA header
 ### Step 3: BLAST Similarity Search
 
 ```python
-from bioservices import NCBIblast
+import os
 import time
+from bioservices import NCBIblast
 
 s = NCBIblast(verbose=False)
+email = os.environ["NCBI_EMAIL"]  # export NCBI_EMAIL=you@lab.org
 
 # Submit BLAST job
 jobid = s.run(
@@ -75,7 +77,7 @@ jobid = s.run(
     sequence=sequence_only,
     stype="protein",
     database="uniprotkb",
-    email="your.email@example.com"
+    email=email,
 )
 
 print(f"BLAST Job ID: {jobid}")

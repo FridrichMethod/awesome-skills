@@ -1,9 +1,12 @@
 ---
 name: dask
 description: Distributed computing for larger-than-RAM pandas/NumPy workflows. Use when you need to scale existing pandas/NumPy code beyond memory or across clusters. Best for parallel file processing, distributed ML, integration with existing pandas code. For out-of-core analytics on single machine use vaex; for in-memory speed use polars.
+allowed-tools: Read Write Edit Bash
 license: BSD-3-Clause license
+compatibility: Requires Python 3.10+ and dask 2025.1+. DataFrame workflows need pandas 2+ and PyArrow 16+. Cloud paths (s3://, gcs://) need s3fs or gcsfs. Cluster deployment uses dask.distributed (included with dask[complete]).
 metadata:
-    skill-author: K-Dense Inc.
+  version: "1.1"
+  skill-author: K-Dense Inc.
 ---
 
 # Dask
@@ -16,6 +19,31 @@ Dask is a Python library for parallel and distributed computing that enables thr
 - **Distributed computation** supporting terabyte-scale datasets across multiple machines
 
 Dask scales from laptops (processing ~100 GiB) to clusters (processing ~100 TiB) while maintaining familiar Python APIs.
+
+**Current upstream:** dask **2026.3.0** (PyPI, March 2026). Docs: [docs.dask.org](https://docs.dask.org/en/stable/). Since **2025.1.0**, the expression-based DataFrame API with query planning is the only implementation — do not install `dask-expr` separately or set `dataframe.query-planning: False`.
+
+## Quick Start
+
+### Installation
+
+```bash
+uv pip install "dask>=2025.1"
+```
+
+For a typical pandas/NumPy workflow with the distributed scheduler and dashboard:
+
+```bash
+uv pip install "dask[complete]"
+```
+
+Remote object storage (S3, GCS, Azure):
+
+```bash
+uv pip install s3fs    # s3:// paths
+uv pip install gcsfs   # gs:// paths
+```
+
+Requires **Python 3.10+** (3.9 support dropped in 2024.12). DataFrame I/O requires **PyArrow 16+** (as of dask 2026.1.2).
 
 ## When to Use This Skill
 
@@ -328,8 +356,8 @@ x = da.from_zarr('large_dataset.zarr')
 # Process in chunks
 normalized = (x - x.mean()) / x.std()
 
-# Save result
-da.to_zarr(normalized, 'normalized.zarr')
+# Save result (use mode= for overwrite; zarr_array_kwargs for compression)
+da.to_zarr(normalized, 'normalized.zarr', mode='w')
 ```
 
 ### Custom Parallel Workflow

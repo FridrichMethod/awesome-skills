@@ -183,6 +183,8 @@ For multiple discrete variables.
 self.action_space = spaces.MultiDiscrete([3, 4])
 ```
 
+**Important (SB3 2.8+ env checker):** If your `MultiDiscrete` space uses multi-dimensional arrays (not a flat vector), the env checker will warn you. Use a wrapper to flatten the space or reshape observations/actions to match SB3's expected 1D layout. See the [SB3 custom env guide](https://stable-baselines3.readthedocs.io/en/master/guide/custom_env.html) for the recommended wrapper pattern.
+
 ### MultiBinary
 
 For binary vectors.

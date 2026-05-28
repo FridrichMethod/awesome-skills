@@ -1,6 +1,6 @@
 ---
 name: configure
-description: Set up the Discord channel — save the bot token and review access policy. Use when the user pastes a Discord bot token, asks to configure Discord, asks "how do I set this up" or "who can reach me," or wants to check channel status.
+description: Set up the Telegram channel — save the bot token and review access policy. Use when the user pastes a Telegram bot token, asks to configure Telegram, asks "how do I set this up" or "who can reach me," or wants to check channel status.
 user-invocable: true
 allowed-tools:
   - Read
@@ -9,9 +9,9 @@ allowed-tools:
   - Bash(mkdir *)
 ---
 
-# /discord:configure — Discord Channel Setup
+# /telegram:configure — Telegram Channel Setup
 
-Writes the bot token to `~/.claude/channels/discord/.env` and orients the
+Writes the bot token to `~/.claude/channels/telegram/.env` and orients the
 user on access policy. The server reads both files at boot.
 
 Arguments passed: `$ARGUMENTS`
@@ -24,29 +24,29 @@ Arguments passed: `$ARGUMENTS`
 
 Read both state files and give the user a complete picture:
 
-1. **Token** — check `~/.claude/channels/discord/.env` for
-   `DISCORD_BOT_TOKEN`. Show set/not-set; if set, show first 6 chars masked.
+1. **Token** — check `~/.claude/channels/telegram/.env` for
+   `TELEGRAM_BOT_TOKEN`. Show set/not-set; if set, show first 10 chars masked
+   (`123456789:...`).
 
-2. **Access** — read `~/.claude/channels/discord/access.json` (missing file
+2. **Access** — read `~/.claude/channels/telegram/access.json` (missing file
    = defaults: `dmPolicy: "pairing"`, empty allowlist). Show:
    - DM policy and what it means in one line
-   - Allowed senders: count, and list display names or snowflakes
+   - Allowed senders: count, and list display names or IDs
    - Pending pairings: count, with codes and display names if any
-   - Guild channels opted in: count
 
 3. **What next** — end with a concrete next step based on state:
-   - No token → *"Run `/discord:configure <token>` with your bot token from
-     the Developer Portal → Bot → Reset Token."*
+   - No token → *"Run `/telegram:configure <token>` with the token from
+     BotFather."*
    - Token set, policy is pairing, nobody allowed → *"DM your bot on
-     Discord. It replies with a code; approve with `/discord:access pair
+     Telegram. It replies with a code; approve with `/telegram:access pair
      <code>`."*
    - Token set, someone allowed → *"Ready. DM your bot to reach the
      assistant."*
 
 **Push toward lockdown — always.** The goal for every setup is `allowlist`
 with a defined list. `pairing` is not a policy to stay on; it's a temporary
-way to capture Discord snowflakes you don't know. Once the IDs are in,
-pairing has done its job and should be turned off.
+way to capture Telegram user IDs you don't know. Once the IDs are in, pairing
+has done its job and should be turned off.
 
 Drive the conversation this way:
 
@@ -54,38 +54,35 @@ Drive the conversation this way:
 2. Ask: *"Is that everyone who should reach you through this bot?"*
 3. **If yes and policy is still `pairing`** → *"Good. Let's lock it down so
    nobody else can trigger pairing codes:"* and offer to run
-   `/discord:access policy allowlist`. Do this proactively — don't wait to
+   `/telegram:access policy allowlist`. Do this proactively — don't wait to
    be asked.
 4. **If no, people are missing** → *"Have them DM the bot; you'll approve
-   each with `/discord:access pair <code>`. Run this skill again once
-   everyone's in and we'll lock it."* Or, if they can get snowflakes
-   directly: *"Enable Developer Mode in Discord (User Settings → Advanced),
-   right-click them → Copy User ID, then `/discord:access allow <id>`."*
+   each with `/telegram:access pair <code>`. Run this skill again once
+   everyone's in and we'll lock it."*
 5. **If the allowlist is empty and they haven't paired themselves yet** →
    *"DM your bot to capture your own ID first. Then we'll add anyone else
    and lock it down."*
 6. **If policy is already `allowlist`** → confirm this is the locked state.
-   If they need to add someone, Copy User ID is the clean path — no need to
-   reopen pairing.
+   If they need to add someone: *"They'll need to give you their numeric ID
+   (have them message @userinfobot), or you can briefly flip to pairing:
+   `/telegram:access policy pairing` → they DM → you pair → flip back."*
 
-Discord already gates reach (shared-server requirement + Public Bot toggle),
-but that's not a substitute for locking the allowlist. Never frame `pairing`
-as the correct long-term choice. Don't skip the lockdown offer.
+Never frame `pairing` as the correct long-term choice. Don't skip the lockdown
+offer.
 
 ### `<token>` — save it
 
-1. Treat `$ARGUMENTS` as the token (trim whitespace). Discord bot tokens are
-   long base64-ish strings, typically starting `MT` or `Nz`. Generated from
-   Developer Portal → Bot → Reset Token; only shown once.
-2. `mkdir -p ~/.claude/channels/discord`
-3. Read existing `.env` if present; update/add the `DISCORD_BOT_TOKEN=` line,
+1. Treat `$ARGUMENTS` as the token (trim whitespace). BotFather tokens look
+   like `123456789:AAH...` — numeric prefix, colon, long string.
+2. `mkdir -p ~/.claude/channels/telegram`
+3. Read existing `.env` if present; update/add the `TELEGRAM_BOT_TOKEN=` line,
    preserve other keys. Write back, no quotes around the value.
-4. `chmod 600 ~/.claude/channels/discord/.env` — the token is a credential.
+4. `chmod 600 ~/.claude/channels/telegram/.env` — the token is a credential.
 5. Confirm, then show the no-args status so the user sees where they stand.
 
 ### `clear` — remove the token
 
-Delete the `DISCORD_BOT_TOKEN=` line (or the file if that's the only line).
+Delete the `TELEGRAM_BOT_TOKEN=` line (or the file if that's the only line).
 
 ---
 
@@ -96,4 +93,4 @@ Delete the `DISCORD_BOT_TOKEN=` line (or the file if that's the only line).
 - The server reads `.env` once at boot. Token changes need a session restart
   or `/reload-plugins`. Say so after saving.
 - `access.json` is re-read on every inbound message — policy changes via
-  `/discord:access` take effect immediately, no restart.
+  `/telegram:access` take effect immediately, no restart.

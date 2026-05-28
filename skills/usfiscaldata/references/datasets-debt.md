@@ -40,7 +40,7 @@ df["tot_pub_debt_out_amt"] = df["tot_pub_debt_out_amt"].astype(float)
 
 ## Historical Debt Outstanding
 
-**Endpoint:** `/v2/accounting/od/historical_debt_outstanding`  
+**Endpoint:** `/v2/accounting/od/debt_outstanding`  
 **Frequency:** Annual  
 **Date Range:** 1790 to present
 
@@ -55,7 +55,7 @@ Annual record of U.S. national debt going back to the founding of the republic.
 ```python
 # Full historical debt series
 resp = requests.get(
-    "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/historical_debt_outstanding",
+    "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_outstanding",
     params={"sort": "-record_date", "page[size]": 10000}
 )
 df = pd.DataFrame(resp.json()["data"])
@@ -79,11 +79,14 @@ Monthly breakdown of federal debt by security type and component.
 
 ## Schedules of Federal Debt by Day
 
-**Endpoint:** `/v1/accounting/od/schedules_fed_debt_daily`  
-**Frequency:** Daily  
-**Date Range:** September 2006 to present
+Two daily data tables under `/v1/accounting/od/`:
 
-Daily version of federal debt schedules with two data tables.
+| Table | Endpoint | Description |
+|-------|----------|-------------|
+| Daily Activity | `/v1/accounting/od/schedules_fed_debt_daily_activity` | Daily debt activity |
+| Daily Summary | `/v1/accounting/od/schedules_fed_debt_daily_summary` | Daily debt summary |
+
+**Related:** `/v1/accounting/od/schedules_fed_debt_fytd` — fiscal year-to-date schedules.
 
 ## Treasury Report on Receivables (TROR)
 

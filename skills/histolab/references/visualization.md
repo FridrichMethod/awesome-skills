@@ -25,9 +25,10 @@ plt.show()
 ### Save Thumbnail to Disk
 
 ```python
-# Save thumbnail as image file
-slide.save_thumbnail()
-# Saves to processed_path/thumbnails/slide_name_thumb.png
+from pathlib import Path
+
+Path(slide.processed_path).mkdir(parents=True, exist_ok=True)
+slide.thumbnail.save(Path(slide.processed_path) / f"{slide.name}_thumbnail.png")
 ```
 
 ### Scaled Images

@@ -130,7 +130,7 @@ from torch_geometric.explain import CaptumExplainer
 algorithm = CaptumExplainer('IntegratedGradients')
 ```
 
-Requires `pip install captum` (or `uv add captum`).
+Requires `uv pip install captum` (or `uv add captum`).
 
 ### AttentionExplainer
 

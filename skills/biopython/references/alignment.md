@@ -18,10 +18,16 @@ from Bio import Align
 # Create aligner with default parameters
 aligner = Align.PairwiseAligner()
 
-# Default scores (as of Biopython 1.85+):
+# Default scores (as of Biopython 1.86+):
 # - Match score: +1.0
 # - Mismatch score: 0.0
-# - All gap scores: -1.0
+# - All gap scores: -1.0  (changed from 0 in 1.86 to avoid trivial tie alignments)
+```
+
+**Note (1.86+):** The default gap score changed from 0 to -1. Previously, mismatches and gap combinations could score 0, producing many logically equivalent alignments. To restore pre-1.86 behavior:
+
+```python
+aligner.gap_score = 0
 ```
 
 ### Customizing Alignment Parameters

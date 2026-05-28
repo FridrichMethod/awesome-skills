@@ -42,6 +42,8 @@ hdul = fits.open('large_file.fits', memmap=True)
 
 Access cloud-hosted FITS files:
 
+**Network note:** Remote FITS reads disclose the target URI to the storage provider and may use credentials from the configured filesystem backend. Use anonymous reads only for public data, and prefer local files for proprietary observations.
+
 ```python
 uri = "s3://bucket-name/image.fits"
 with fits.open(uri, use_fsspec=True, fsspec_kwargs={"anon": True}) as hdul:

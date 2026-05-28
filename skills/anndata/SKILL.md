@@ -3,7 +3,8 @@ name: anndata
 description: Data structure for annotated matrices in single-cell analysis. Use when working with .h5ad files or integrating with the scverse ecosystem. This is the data format skill—for analysis workflows use scanpy; for probabilistic models use scvi-tools; for population-scale queries use cellxgene-census.
 license: BSD-3-Clause license
 metadata:
-    skill-author: K-Dense Inc.
+  version: "1.0"
+  skill-author: K-Dense Inc.
 ---
 
 # AnnData
@@ -25,11 +26,16 @@ Use this skill when:
 
 ## Installation
 
+Requires Python 3.11+ (anndata 0.11+ dropped 3.9). Current stable release: 0.12.x.
+
 ```bash
 uv pip install anndata
 
-# With optional dependencies
-uv pip install anndata[dev,test,doc]
+# Lazy I/O and dask-backed operations
+uv pip install "anndata[dask,lazy]"
+
+# Development / docs (contributors)
+uv pip install "anndata[dev,test,doc]"
 ```
 
 ## Quick Start
@@ -59,16 +65,21 @@ adata = ad.AnnData(X=X, obs=obs, var=var)
 
 ### Reading data
 ```python
-# Read h5ad file
+# Native formats (read_h5ad/read_zarr remain at top-level)
 adata = ad.read_h5ad('data.h5ad')
+adata = ad.read_h5ad('large_data.h5ad', backed='r')  # lazy load for large files
+adata = ad.read_zarr('data.zarr')
 
-# Read with backed mode (for large files)
-adata = ad.read_h5ad('large_data.h5ad', backed='r')
+# Other formats: prefer anndata.io (top-level imports are deprecated)
+from anndata.io import read_csv, read_loom, read_mtx
 
-# Read other formats
-adata = ad.read_csv('data.csv')
-adata = ad.read_loom('data.loom')
-adata = ad.read_10x_h5('filtered_feature_bc_matrix.h5')
+adata = read_csv('data.csv')
+adata = read_loom('data.loom')
+
+# 10X Genomics: use scanpy (not anndata) — see scanpy skill
+import scanpy as sc
+adata = sc.read_10x_h5('filtered_feature_bc_matrix.h5')
+adata = sc.read_10x_mtx('filtered_feature_bc_matrix/')
 ```
 
 ### Writing data
@@ -126,15 +137,18 @@ Read and write data in various formats with support for compression, backed mode
 
 Common commands:
 ```python
+from anndata.io import read_mtx
+
 # Read/write h5ad
 adata = ad.read_h5ad('data.h5ad', backed='r')
 adata.write_h5ad('output.h5ad', compression='gzip')
 
-# Read 10X data
-adata = ad.read_10x_h5('filtered_feature_bc_matrix.h5')
+# 10X Genomics (via scanpy)
+import scanpy as sc
+adata = sc.read_10x_h5('filtered_feature_bc_matrix.h5')
 
 # Read MTX format
-adata = ad.read_mtx('matrix.mtx').T
+adata = read_mtx('matrix.mtx').T
 ```
 
 ### 3. Concatenation
@@ -287,8 +301,8 @@ for batch in dataloader:
 import anndata as ad
 import scanpy as sc
 
-# 1. Load data
-adata = ad.read_10x_h5('filtered_feature_bc_matrix.h5')
+# 1. Load data (10X via scanpy; anndata handles h5ad/zarr natively)
+adata = sc.read_10x_h5('filtered_feature_bc_matrix.h5')
 
 # 2. Quality control
 adata.obs['n_genes'] = (adata.X > 0).sum(axis=1)
@@ -375,7 +389,9 @@ Use compression and appropriate formats:
 adata.strings_to_categoricals()
 adata.write_h5ad('file.h5ad', compression='gzip')
 
-# Use Zarr for cloud storage
+# Use Zarr for cloud storage (v3 optional since anndata 0.12)
+import anndata
+anndata.settings.zarr_write_format = 3  # default is 2
 adata.write_zarr('file.zarr', chunks=(1000, 1000))
 ```
 

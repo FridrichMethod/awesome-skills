@@ -105,9 +105,15 @@ euro_df["record_date"] = pd.to_datetime(euro_df["record_date"])
 
 ## TIPS and CPI Data
 
-**Endpoint:** `/v1/accounting/od/tips_cpi_data`  
+Two data tables under `/v1/accounting/od/`:
+
+| Table | Endpoint | Description |
+|-------|----------|-------------|
+| Summary | `/v1/accounting/od/tips_cpi_data_summary` | Reference CPI numbers and daily index ratios (summary) |
+| Detail | `/v1/accounting/od/tips_cpi_data_detail` | Reference CPI numbers and daily index ratios (detail) |
+
 **Frequency:** Monthly  
-**Date Range:** April 1998 to present (2 data tables)
+**Date Range:** April 1998 to present
 
 Treasury Inflation-Protected Securities (TIPS) reference CPI data and index ratios used to calculate TIPS values.
 
@@ -123,10 +129,10 @@ Treasury Inflation-Protected Securities (TIPS) reference CPI data and index rati
 ## FRN Daily Indexes
 
 **Endpoint:** `/v1/accounting/od/frn_daily_indexes`  
-**Frequency:** Daily  
+**Frequency:** Monthly release (daily index rows per CUSIP)  
 **Date Range:** April 2024 to present
 
-Daily index values for Treasury Floating Rate Notes (FRNs). The rate is based on the 13-week Treasury bill auction rate.
+Daily index values for Treasury Floating Rate Notes (FRNs). The rate is based on the 13-week Treasury bill auction rate. Data is published monthly with daily index rows for each CUSIP.
 
 ---
 
@@ -156,7 +162,7 @@ These certified interest rates are used for federal loans, financing programs, a
 
 ## Federal Credit Similar Maturity Rates
 
-**Endpoint:** `/v1/accounting/od/fed_credit_similar_maturity_rates`  
+**Endpoint:** `/v1/accounting/od/federal_maturity_rates`  
 **Frequency:** Annual  
 **Date Range:** September 1992 to present
 

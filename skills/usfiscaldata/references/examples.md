@@ -151,13 +151,13 @@ pivot = df.pivot_table(index="date", columns="security_desc", values="rate")
 print(pivot.tail(5))
 
 # I Bond rates history
-result = fetch("/v2/accounting/od/i_bond_interest_rates",
-               sort="-effective_date", **{"page[size]": 20})
+result = fetch("/v1/accounting/od/i_bonds_interest_rates",
+               sort="-earning_period_start", **{"page[size]": 20})
 df = pd.DataFrame(result["data"])
-df["total_rate"] = df["earnings_rate_i_bonds"].astype(float)
+df["combined_rate"] = df["combined_rate"].astype(float)
 df["fixed_rate"] = df["fixed_rate"].astype(float)
 print("I Bond rate history:")
-print(df[["effective_date", "fixed_rate", "total_rate"]].head(10))
+print(df[["earning_period_start", "fixed_rate", "combined_rate"]].head(10))
 ```
 
 ### Fiscal Year Summary
@@ -253,6 +253,6 @@ for field, label in meta["labels"].items():
 
 ## Finding Datasets
 
-Browse the full list of 54 datasets and 182 endpoints at:
-- `https://fiscaldata.treasury.gov/datasets/` — searchable dataset catalog
-- `https://fiscaldata.treasury.gov/api-documentation/#list-of-endpoints-table` — full endpoint table
+Browse the full list of 54 datasets and 179 data tables at:
+- [Dataset Search](https://fiscaldata.treasury.gov/datasets/) — searchable dataset catalog
+- [API endpoint table](https://fiscaldata.treasury.gov/api-documentation/#list-of-endpoints-table) — full endpoint list

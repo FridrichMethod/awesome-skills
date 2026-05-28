@@ -157,7 +157,7 @@ if __name__ == "__main__":
     # Example: Train DQN on discrete task
     # from stable_baselines3 import DQN
     # train_agent(
-    #     env_id="LunarLander-v2",
+    #     env_id="LunarLander-v3",
     #     algorithm=DQN,
     #     policy="MlpPolicy",
     #     n_envs=1,  # DQN typically uses single env

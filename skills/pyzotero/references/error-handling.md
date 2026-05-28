@@ -28,8 +28,13 @@ Common exceptions:
 ```python
 from pyzotero import Zotero
 from pyzotero import zotero_errors
+import os
 
-zot = Zotero('123456', 'user', 'APIKEY')
+zot = Zotero(
+    os.environ['ZOTERO_LIBRARY_ID'],
+    os.environ.get('ZOTERO_LIBRARY_TYPE', 'user'),
+    os.environ['ZOTERO_API_KEY'],
+)
 
 try:
     item = zot.item('BADKEY')

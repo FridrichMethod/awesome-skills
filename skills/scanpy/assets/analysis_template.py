@@ -37,6 +37,7 @@ LEIDEN_RESOLUTION = 0.5  # Clustering resolution
 sc.settings.verbosity = 3
 sc.settings.set_figure_params(dpi=80, facecolor='white')
 sc.settings.figdir = FIGURES_DIR
+sc.settings.autosave = True
 
 # ============================================================================
 # 1. LOAD DATA
@@ -83,6 +84,11 @@ sc.pp.filter_genes(adata, min_cells=MIN_CELLS)
 adata = adata[adata.obs.pct_counts_mt < MT_THRESHOLD, :]
 
 print(f"After filtering: {adata.n_obs} cells, {adata.n_vars} genes")
+
+# Optional: doublet detection (uncomment; run before normalization)
+# sc.pp.scrublet(adata)
+# adata = adata[~adata.obs['predicted_doublet'], :].copy()
+# print(f"After doublet removal: {adata.n_obs} cells")
 
 # ============================================================================
 # 3. NORMALIZATION
@@ -176,7 +182,7 @@ print("\n" + "=" * 80)
 print("MARKER GENE IDENTIFICATION")
 print("=" * 80)
 
-# Find marker genes
+# Find marker genes (exploratory — pseudobulk + pydeseq2 for rigorous DE)
 sc.tl.rank_genes_groups(adata, 'leiden', method='wilcoxon')
 
 # Visualize top markers

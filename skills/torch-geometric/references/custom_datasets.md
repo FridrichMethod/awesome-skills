@@ -38,6 +38,7 @@ class MyDataset(InMemoryDataset):
 
     def download(self):
         # Download raw files to self.raw_dir
+        # Use trusted sources only; verify checksums or signatures before loading.
         download_url('https://example.com/data.csv', self.raw_dir)
 
     def process(self):

@@ -2,6 +2,15 @@
 
 This document provides detailed step-by-step workflows for common COBRApy tasks in metabolic modeling.
 
+**Operational notes (cobra 0.31.1):**
+- Confirm with the user before writing CSV/PNG files; set `OUTDIR` to a user-approved path.
+- `load_model("ecoli")` and `load_model("universal")` no longer work — use `textbook` / `e_coli_core`, `iJO1366`, or BiGG IDs such as `iML1515`.
+- Double deletions, loopless FVA, and large sampling runs can take hours on genome-scale models — use `textbook` for exploration, lower `n`/`processes`, or subset `gene_list1`.
+
+```python
+OUTDIR = "cobrapy_output"  # set with user approval before running workflows
+```
+
 ## Workflow 1: Complete Knockout Study with Visualization
 
 This workflow demonstrates how to perform a comprehensive gene knockout study and visualize the results.
@@ -12,8 +21,8 @@ import matplotlib.pyplot as plt
 from cobra.io import load_model
 from cobra.flux_analysis import single_gene_deletion, double_gene_deletion
 
-# Step 1: Load model
-model = load_model("ecoli")
+# Step 1: Load model (textbook = core tutorial; use iJO1366 for genome-scale)
+model = load_model("textbook")
 print(f"Loaded model: {model.id}")
 print(f"Model contains {len(model.reactions)} reactions, {len(model.metabolites)} metabolites, {len(model.genes)} genes")
 
@@ -48,7 +57,7 @@ ax.set_ylabel("Number of genes")
 ax.set_title("Distribution of Growth Rates After Single Gene Deletions")
 ax.legend()
 plt.tight_layout()
-plt.savefig("single_deletion_distribution.png", dpi=300)
+plt.savefig(f"{OUTDIR}/single_deletion_distribution.png", dpi=300)
 
 # Step 6: Identify gene pairs for double deletions
 # Focus on non-essential genes to find synthetic lethals
@@ -56,10 +65,11 @@ target_genes = single_results[single_results["growth"] >= 0.5 * baseline].index.
 target_genes = [list(gene)[0] for gene in target_genes[:50]]  # Limit for performance
 
 print(f"\nPerforming double deletions on {len(target_genes)} genes...")
+# Double deletions scale poorly — use processes=1 on large models unless user approves
 double_results = double_gene_deletion(
     model,
     gene_list1=target_genes,
-    processes=4
+    processes=1
 )
 
 # Step 7: Find synthetic lethal pairs
@@ -73,10 +83,10 @@ print(f"Found {len(synthetic_lethals)} synthetic lethal gene pairs")
 print("\nTop 10 synthetic lethal pairs:")
 print(synthetic_lethals.head(10))
 
-# Step 8: Export results
-single_results.to_csv("single_gene_deletions.csv")
-double_results.to_csv("double_gene_deletions.csv")
-synthetic_lethals.to_csv("synthetic_lethals.csv")
+# Step 8: Export results (confirm OUTDIR with user first)
+single_results.to_csv(f"{OUTDIR}/single_gene_deletions.csv")
+double_results.to_csv(f"{OUTDIR}/double_gene_deletions.csv")
+synthetic_lethals.to_csv(f"{OUTDIR}/synthetic_lethals.csv")
 ```
 
 ## Workflow 2: Media Design and Optimization
@@ -89,7 +99,7 @@ from cobra.medium import minimal_medium
 import pandas as pd
 
 # Step 1: Load model and check current medium
-model = load_model("ecoli")
+model = load_model("textbook")
 current_medium = model.medium
 print("Current medium composition:")
 for exchange, bound in current_medium.items():
@@ -121,7 +131,7 @@ for fraction in growth_targets:
 
 # Step 4: Compare media compositions
 media_df = pd.DataFrame(minimal_media).fillna(0)
-media_df.to_csv("minimal_media_comparison.csv")
+media_df.to_csv(f"{OUTDIR}/minimal_media_comparison.csv")
 
 # Step 5: Test aerobic vs anaerobic conditions
 print("\n--- Aerobic vs Anaerobic Comparison ---")
@@ -192,11 +202,11 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # Step 1: Load model
-model = load_model("ecoli")
+model = load_model("textbook")
 baseline = model.slim_optimize()
 print(f"Baseline growth: {baseline:.3f} /h")
 
-# Step 2: Perform FVA at optimal growth
+# Step 2: Perform FVA at optimal growth (loopless=True is much slower)
 print("\nPerforming FVA at optimal growth...")
 fva_optimal = flux_variability_analysis(model, fraction_of_optimum=1.0)
 
@@ -224,9 +234,9 @@ comparison["range_increase"] = comparison["range_90"] - comparison["range_100"]
 print("\nReactions with largest increase in flexibility at suboptimality:")
 print(comparison.sort_values("range_increase", ascending=False).head(10))
 
-# Step 6: Perform flux sampling
+# Step 6: Perform flux sampling (reduce n/processes on genome-scale models)
 print("\nPerforming flux sampling (1000 samples)...")
-samples = sample(model, n=1000, method="optgp", processes=4)
+samples = sample(model, n=500, method="optgp", processes=1)
 
 # Step 7: Analyze sampling results for key reactions
 key_reactions = ["PFK", "FBA", "TPI", "GAPD", "PGK", "PGM", "ENO", "PYK"]
@@ -253,7 +263,7 @@ if available_key_reactions:
             ax.legend()
 
     plt.tight_layout()
-    plt.savefig("flux_distributions.png", dpi=300)
+    plt.savefig(f"{OUTDIR}/flux_distributions.png", dpi=300)
 
 # Step 8: Calculate correlation between reactions
 print("\nCalculating flux correlations...")
@@ -264,7 +274,7 @@ sns.heatmap(correlation_matrix, annot=True, fmt=".2f", cmap="coolwarm",
             center=0, ax=ax, square=True)
 ax.set_title("Flux Correlations Between Key Glycolysis Reactions")
 plt.tight_layout()
-plt.savefig("flux_correlations.png", dpi=300)
+plt.savefig(f"{OUTDIR}/flux_correlations.png", dpi=300)
 
 # Step 9: Identify reaction modules (highly correlated groups)
 print("\nHighly correlated reaction pairs (|r| > 0.9):")
@@ -275,10 +285,10 @@ for i in range(len(correlation_matrix)):
             print(f"  {correlation_matrix.index[i]} <-> {correlation_matrix.columns[j]}: {corr:.3f}")
 
 # Step 10: Export all results
-fva_optimal.to_csv("fva_optimal.csv")
-fva_suboptimal.to_csv("fva_suboptimal.csv")
-samples.to_csv("flux_samples.csv")
-correlation_matrix.to_csv("flux_correlations.csv")
+fva_optimal.to_csv(f"{OUTDIR}/fva_optimal.csv")
+fva_suboptimal.to_csv(f"{OUTDIR}/fva_suboptimal.csv")
+samples.to_csv(f"{OUTDIR}/flux_samples.csv")
+correlation_matrix.to_csv(f"{OUTDIR}/flux_correlations.csv")
 ```
 
 ## Workflow 4: Production Strain Design
@@ -299,8 +309,9 @@ import matplotlib.pyplot as plt
 TARGET_METABOLITE = "EX_ac_e"  # Acetate production
 CARBON_SOURCE = "EX_glc__D_e"  # Glucose uptake
 
-# Step 2: Load model
-model = load_model("ecoli")
+# Step 2: Load model (textbook has acetate exchange; use iJO1366 for genome-scale)
+model = load_model("textbook")
+biomass_id = list(model.objective.variables)[0].name  # e.g. Biomass_Ecoli_core
 print(f"Designing strain for {TARGET_METABOLITE} production")
 
 # Step 3: Calculate baseline production envelope
@@ -321,51 +332,41 @@ ax.set_title("Wild-type Production Envelope")
 ax.legend()
 ax.grid(True, alpha=0.3)
 plt.tight_layout()
-plt.savefig("production_envelope_wildtype.png", dpi=300)
+plt.savefig(f"{OUTDIR}/production_envelope_wildtype.png", dpi=300)
 
 # Step 4: Maximize production while maintaining growth
 print("\nOptimizing for production...")
 
-# Set minimum growth constraint
-MIN_GROWTH = 0.1  # Maintain at least 10% of max growth
+max_growth = model.slim_optimize()
+MIN_GROWTH = 0.1 * max_growth  # Maintain at least 10% of max growth
 
 with model:
-    # Change objective to product formation
-    model.objective = TARGET_METABOLITE
-    model.objective_direction = "max"
-
-    # Add growth constraint
-    growth_reaction = model.reactions.get_by_id(model.objective.name) if hasattr(model.objective, 'name') else list(model.objective.variables.keys())[0].name
-    max_growth = model.slim_optimize()
-
-model.reactions.BIOMASS_Ecoli_core_w_GAM.lower_bound = MIN_GROWTH
-
-with model:
+    model.reactions.get_by_id(biomass_id).lower_bound = MIN_GROWTH
     model.objective = TARGET_METABOLITE
     model.objective_direction = "max"
     production_solution = model.optimize()
 
     max_production = production_solution.objective_value
     print(f"Maximum production: {max_production:.3f} mmol/gDW/h")
-    print(f"Growth rate: {production_solution.fluxes['BIOMASS_Ecoli_core_w_GAM']:.3f} /h")
+    print(f"Growth rate: {production_solution.fluxes[biomass_id]:.3f} /h")
 
 # Step 5: Identify beneficial gene knockouts
 print("\nScreening for beneficial knockouts...")
-
-# Reset model
-model.reactions.BIOMASS_Ecoli_core_w_GAM.lower_bound = MIN_GROWTH
 model.objective = TARGET_METABOLITE
 model.objective_direction = "max"
 
 knockout_results = []
 for gene in model.genes:
     with model:
+        model.reactions.get_by_id(biomass_id).lower_bound = MIN_GROWTH
+        model.objective = TARGET_METABOLITE
+        model.objective_direction = "max"
         gene.knock_out()
         try:
             solution = model.optimize()
             if solution.status == "optimal":
                 production = solution.objective_value
-                growth = solution.fluxes["BIOMASS_Ecoli_core_w_GAM"]
+                growth = solution.fluxes[biomass_id]
 
                 if production > max_production * 1.05:  # >5% improvement
                     knockout_results.append({
@@ -382,7 +383,7 @@ if len(knockout_df) > 0:
     knockout_df = knockout_df.sort_values("improvement", ascending=False)
     print(f"\nFound {len(knockout_df)} beneficial knockouts:")
     print(knockout_df.head(10))
-    knockout_df.to_csv("beneficial_knockouts.csv", index=False)
+    knockout_df.to_csv(f"{OUTDIR}/beneficial_knockouts.csv", index=False)
 else:
     print("No beneficial single knockouts found")
 
@@ -392,13 +393,16 @@ if len(knockout_df) > 0:
     top_genes = knockout_df.head(3)["gene"].tolist()
 
     with model:
+        model.reactions.get_by_id(biomass_id).lower_bound = MIN_GROWTH
+        model.objective = TARGET_METABOLITE
+        model.objective_direction = "max"
         for gene_id in top_genes:
             model.genes.get_by_id(gene_id).knock_out()
 
         solution = model.optimize()
         if solution.status == "optimal":
             combined_production = solution.objective_value
-            combined_growth = solution.fluxes["BIOMASS_Ecoli_core_w_GAM"]
+            combined_growth = solution.fluxes[biomass_id]
             combined_improvement = (combined_production / max_production - 1) * 100
 
             print(f"\nCombined knockout results:")
@@ -412,12 +416,15 @@ if len(knockout_df) > 0:
     best_gene = knockout_df.iloc[0]["gene"]
 
     with model:
+        model.reactions.get_by_id(biomass_id).lower_bound = MIN_GROWTH
+        model.objective = TARGET_METABOLITE
+        model.objective_direction = "max"
         model.genes.get_by_id(best_gene).knock_out()
         solution = model.optimize()
 
         # Get active pathways
         active_fluxes = solution.fluxes[solution.fluxes.abs() > 0.1]
-        active_fluxes.to_csv(f"production_strain_fluxes_{best_gene}_knockout.csv")
+        active_fluxes.to_csv(f"{OUTDIR}/production_strain_fluxes_{best_gene}_knockout.csv")
 
         print(f"\nActive reactions in production strain: {len(active_fluxes)}")
 ```
@@ -432,7 +439,7 @@ from cobra.flux_analysis import flux_variability_analysis
 import pandas as pd
 
 # Step 1: Load model
-model = load_model("ecoli")  # Or read_sbml_model("your_model.xml")
+model = load_model("textbook")  # Or read_sbml_model("your_model.xml")
 print(f"Model: {model.id}")
 print(f"Reactions: {len(model.reactions)}")
 print(f"Metabolites: {len(model.metabolites)}")
@@ -546,10 +553,10 @@ if orphan_genes:
 else:
     print("No orphan genes found")
 
-# Step 7: Check for thermodynamically infeasible loops
+# Step 7: Check for thermodynamically infeasible loops (loopless FVA is slow on large models)
 print("\n--- Thermodynamic Loop Check ---")
-fva_loopless = flux_variability_analysis(model, loopless=True)
 fva_standard = flux_variability_analysis(model)
+fva_loopless = flux_variability_analysis(model, loopless=True)
 
 loop_reactions = []
 for reaction_id in fva_standard.index:
@@ -586,8 +593,8 @@ validation_report = {
 }
 
 validation_df = pd.DataFrame([validation_report])
-validation_df.to_csv("model_validation_report.csv", index=False)
-print("Validation report saved to model_validation_report.csv")
+validation_df.to_csv(f"{OUTDIR}/model_validation_report.csv", index=False)
+print(f"Validation report saved to {OUTDIR}/model_validation_report.csv")
 ```
 
 These workflows provide comprehensive templates for common COBRApy tasks. Adapt them as needed for specific research questions and models.

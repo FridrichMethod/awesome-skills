@@ -13,7 +13,38 @@ Vaex excels at visualizing datasets with billions of rows through efficient binn
 - Integration with matplotlib
 - Interactive widgets for Jupyter
 
-## Basic Plotting
+## Recommended: `df.viz` Accessor
+
+Since vaex 4.0, plotting methods live on the `df.viz` accessor. This is the preferred API in current docs.
+
+```python
+import vaex
+
+df = vaex.open('data.hdf5')
+
+# 2D heatmap (most common)
+df.viz.heatmap(df.x, df.y, limits='99.7%', show=True)
+
+# 1D histogram via heatmap on a single axis
+df.viz.heatmap(df.age, what='count(*)', shape=64, show=True)
+
+# Multiple panels and selections
+import numpy as np
+df.viz.heatmap(
+    [['x', 'y'], ['x', 'z']],
+    limits='99.7%',
+    what=np.log(vaex.stat.count() + 1),
+    selection=[None, df.x < df.y],
+    figsize=(10, 4),
+    show=True,
+)
+```
+
+The `df.viz.heatmap()` method supports subplots, selections, layers, and custom statistics via the `what` argument. See the [vaex tutorial](https://vaex.io/docs/tutorial.html) for advanced `visual` layout options.
+
+## Legacy DataFrame Methods
+
+`df.plot1d()` and `df.plot()` still work on the DataFrame (they delegate to the viz accessor). Existing code using these methods does not need to change, but prefer `df.viz.heatmap()` for new code.
 
 ### 1D Histograms
 

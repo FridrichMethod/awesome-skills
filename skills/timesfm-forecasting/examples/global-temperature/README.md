@@ -138,7 +138,7 @@ TimesFM forecasts a mean temperature anomaly of **1.19°C** for 2025, slightly b
 uv pip install "timesfm[torch]" matplotlib pandas numpy
 
 # Run the complete example
-cd scientific-skills/timesfm-forecasting/examples/global-temperature
+cd skills/timesfm-forecasting/examples/global-temperature
 ./run_example.sh
 ```
 

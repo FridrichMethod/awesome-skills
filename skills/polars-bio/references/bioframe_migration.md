@@ -206,7 +206,7 @@ import polars_bio as pb
 
 # Lazy scan, streaming execution
 lf = pb.scan_bed("huge_intervals.bed")
-result = pb.merge(lf).collect(streaming=True)
+result = pb.merge(lf).collect(engine="streaming")
 ```
 
 ## pandas Compatibility Mode
@@ -214,7 +214,7 @@ result = pb.merge(lf).collect(streaming=True)
 For gradual migration, install with pandas support:
 
 ```bash
-pip install polars-bio[pandas]
+uv pip install "polars-bio[pandas]==0.31.0"
 ```
 
 This enables conversion between pandas and Polars DataFrames:

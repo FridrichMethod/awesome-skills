@@ -1,9 +1,12 @@
 ---
 name: sympy
-description: Use this skill when working with symbolic mathematics in Python. This skill should be used for symbolic computation tasks including solving equations algebraically, performing calculus operations (derivatives, integrals, limits), manipulating algebraic expressions, working with matrices symbolically, physics calculations, number theory problems, geometry computations, and generating executable code from mathematical expressions. Apply this skill when the user needs exact symbolic results rather than numerical approximations, or when working with mathematical formulas that contain variables and parameters.
+description: Use when you need exact symbolic math in Python — algebra, calculus, equation solving, symbolic linear algebra, or code generation via lambdify/LaTeX. Prefer NumPy or SciPy when floating-point approximations are sufficient.
 license: https://github.com/sympy/sympy/blob/master/LICENSE
+allowed-tools: Read Write Edit Bash
+compatibility: Requires Python 3.9+ and SymPy 1.14+. Optional NumPy/SciPy/Matplotlib for lambdify examples; C/Fortran compiler for autowrap/codegen.
 metadata:
-    skill-author: K-Dense Inc.
+  version: "1.1"
+  skill-author: K-Dense Inc.
 ---
 
 # SymPy - Symbolic Mathematics in Python
@@ -11,6 +14,25 @@ metadata:
 ## Overview
 
 SymPy is a Python library for symbolic mathematics that enables exact computation using mathematical symbols rather than numerical approximations. This skill provides comprehensive guidance for performing symbolic algebra, calculus, linear algebra, equation solving, physics calculations, and code generation using SymPy.
+
+## Installation
+
+Tested against **SymPy 1.14.0** (stable; April 2025). Requires **Python 3.9+**.
+
+```bash
+# Install SymPy using uv
+uv pip install "sympy>=1.14"
+
+# Optional: for lambdify and plotting examples
+uv pip install numpy scipy matplotlib
+```
+
+Check your version:
+
+```python
+import sympy
+print(sympy.__version__)
+```
 
 ## When to Use This Skill
 
@@ -160,9 +182,9 @@ cross(v1, v2)  # Cross product
 
 **Quantum mechanics:**
 ```python
-from sympy.physics.quantum import Ket, Bra, Commutator
+from sympy.physics.quantum import Ket, Bra, Operator, Commutator
+A, B = Operator('A'), Operator('B')
 psi = Ket('psi')
-A = Operator('A')
 comm = Commutator(A, B).doit()
 ```
 

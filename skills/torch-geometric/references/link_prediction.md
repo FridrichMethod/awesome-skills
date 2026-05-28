@@ -92,7 +92,7 @@ def train(train_data):
 
 @torch.no_grad()
 def test(data_split):
-    model.eval()
+    model.train(False)  # Inference mode (disables dropout; not Python eval)
     z = model(data_split.x, data_split.edge_index)
     pred = decode(z, data_split.edge_label_index).sigmoid()
     # AUC is the standard metric for link prediction
@@ -135,7 +135,7 @@ def train():
 
 @torch.no_grad()
 def test(data_split):
-    model.eval()
+    model.train(False)  # Inference mode (disables dropout; not Python eval)
     z = model.encode(data_split.x, data_split.edge_index)
     return model.test(z, data_split.edge_label_index[0],  # positive edges
                          data_split.edge_label_index[1])   # negative edges

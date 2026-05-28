@@ -326,9 +326,9 @@ gd_diagram.write("genome_diagram.pdf", "PDF")
 
 ## Sequence Comparison with Bio.pairwise2
 
-**Note**: Bio.pairwise2 is deprecated. Use Bio.Align.PairwiseAligner instead (see alignment.md).
+**Note**: `Bio.pairwise2` is deprecated — use `Bio.Align.PairwiseAligner` instead (see `alignment.md`). For HMM workflows, `Bio.HMM` and `Bio.MarkovModel` were removed in Biopython 1.86; use [hmmlearn](https://pypi.org/project/hmmlearn/) instead.
 
-However, for legacy code:
+Legacy `pairwise2` example (avoid in new code):
 
 ```python
 from Bio import pairwise2

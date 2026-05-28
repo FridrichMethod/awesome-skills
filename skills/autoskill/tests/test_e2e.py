@@ -31,7 +31,7 @@ def _write_skill(root: Path, name: str, description: str) -> None:
 
 
 def _seed_skills_dir(root: Path) -> None:
-    """A tiny but representative slice of the real scientific-skills/ layout."""
+    """A tiny but representative slice of the real skills/ layout."""
     _write_skill(root, "literature-review",
                  "Systematic literature reviews across PubMed arXiv bioRxiv with citations.")
     _write_skill(root, "citation-management",
@@ -144,7 +144,7 @@ def _base_config():
 # ---------- tests ----------
 
 def test_full_pipeline_produces_report_and_drafts(tmp_path):
-    skills_dir = tmp_path / "scientific-skills"
+    skills_dir = tmp_path / "skills"
     _seed_skills_dir(skills_dir)
 
     fake_lmstudio = _FakeLMStudioHandler()
@@ -200,7 +200,7 @@ def test_full_pipeline_produces_report_and_drafts(tmp_path):
 
 
 def test_pipeline_redaction_prevents_secrets_leaving_the_host(tmp_path):
-    skills_dir = tmp_path / "scientific-skills"
+    skills_dir = tmp_path / "skills"
     _seed_skills_dir(skills_dir)
 
     # Plant secrets in every OCR event.
@@ -235,7 +235,7 @@ def test_pipeline_redaction_prevents_secrets_leaving_the_host(tmp_path):
 
 def test_auth_token_threads_through_run_into_fetch_window(tmp_path):
     """Integration: config's screenpipe.token reaches the outgoing HTTP request."""
-    skills_dir = tmp_path / "scientific-skills"
+    skills_dir = tmp_path / "skills"
     _seed_skills_dir(skills_dir)
 
     seen_auth = []
@@ -269,7 +269,7 @@ def test_cli_dry_run_writes_plan_without_backend_or_embedding_model(tmp_path, mo
     --dry-run is the only path that avoids loading sentence-transformers and
     instantiating a backend, so we can smoke-test the CLI offline.
     """
-    skills_dir = tmp_path / "scientific-skills"
+    skills_dir = tmp_path / "skills"
     _seed_skills_dir(skills_dir)
 
     # Minimal config.yaml pointing at our fake screenpipe (via localhost base_url

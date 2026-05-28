@@ -113,6 +113,10 @@ obs = env.reset()  # Returns only observations (numpy array)
 infos = env.reset_infos
 ```
 
+**Seeding and options:** Call `vec_env.seed(seed=seed)` and/or `vec_env.set_options(options)` before the initial `reset()`. Seed and options are discarded after each `reset()` call.
+
+**Truncation vs termination:** When an episode ends, check `infos[env_idx]["TimeLimit.truncated"]` to distinguish timeout/truncation from natural termination. Bootstrap value targets when `TimeLimit.truncated` is True or when the episode has not ended.
+
 ### step()
 
 **Standard Gym:**
@@ -381,6 +385,14 @@ env.set_attr("difficulty", "hard")
 
 # Set attribute on specific environments
 env.set_attr("max_steps", 1000, indices=[1, 3])
+```
+
+### Checking Attributes
+
+```python
+# Check if attribute exists on all sub-environments (added SB3 2.6.0)
+if env.has_attr("current_level"):
+    levels = env.get_attr("current_level")
 ```
 
 ## Performance Optimization

@@ -441,8 +441,8 @@ model = MyModel.load_from_checkpoint(
     learning_rate=0.0001  # Override saved value
 )
 
-# Use for inference
-model.eval()
+# Use for inference — disable training mode on the module
+model.train(False)
 predictions = model(data)
 ```
 

@@ -12,7 +12,7 @@ Logs to local or remote file system in TensorBoard format.
 
 **Installation:**
 ```bash
-pip install tensorboard
+uv pip install tensorboard
 ```
 
 **Usage:**
@@ -40,7 +40,7 @@ Weights & Biases integration for cloud-based experiment tracking.
 
 **Installation:**
 ```bash
-pip install wandb
+uv pip install wandb
 ```
 
 **Usage:**
@@ -70,7 +70,7 @@ MLflow tracking integration.
 
 **Installation:**
 ```bash
-pip install mlflow
+uv pip install mlflow
 ```
 
 **Usage:**
@@ -92,7 +92,7 @@ Comet.ml experiment tracking.
 
 **Installation:**
 ```bash
-pip install comet-ml
+uv pip install comet-ml
 ```
 
 **Usage:**
@@ -108,27 +108,9 @@ comet_logger = pl_loggers.CometLogger(
 trainer = L.Trainer(logger=comet_logger)
 ```
 
-### NeptuneLogger
+### NeptuneLogger (removed in 2.6.4+)
 
-Neptune.ai integration.
-
-**Installation:**
-```bash
-pip install neptune
-```
-
-**Usage:**
-```python
-from lightning.pytorch import loggers as pl_loggers
-
-neptune_logger = pl_loggers.NeptuneLogger(
-    api_key="YOUR_API_KEY",
-    project="username/project-name",
-    name="experiment-1"
-)
-
-trainer = L.Trainer(logger=neptune_logger)
-```
+`NeptuneLogger` was removed in lightning 2.6.4 ([release notes](https://github.com/Lightning-AI/pytorch-lightning/releases/tag/2.6.4)). Use WandbLogger, MLFlowLogger, or TensorBoardLogger instead.
 
 ### CSVLogger
 

@@ -4,7 +4,8 @@ description: MATLAB and GNU Octave numerical computing for matrix operations, da
 license: For MATLAB (https://www.mathworks.com/pricing-licensing.html) and for Octave (GNU General Public License version 3)
 compatibility: Requires either MATLAB or Octave to be installed for testing, but not required for just generating scripts.
 metadata:
-    skill-author: K-Dense Inc.
+  version: "1.0"
+  skill-author: K-Dense Inc.
 ---
 
 # MATLAB/Octave Scientific Computing

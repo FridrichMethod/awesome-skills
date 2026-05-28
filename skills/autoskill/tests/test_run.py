@@ -63,7 +63,7 @@ def _events_two_sessions(app="Chrome"):
 
 
 def test_run_writes_report_into_timestamped_proposed_dir(tmp_path):
-    skills_dir = tmp_path / "scientific-skills"
+    skills_dir = tmp_path / "skills"
     _write_skill(skills_dir, "literature-review", "literature pubmed papers")
 
     backend = StubBackend(lambda prompt, n: json.dumps({"verdict": "reuse", "target": "literature-review"}))
@@ -87,7 +87,7 @@ def test_run_writes_report_into_timestamped_proposed_dir(tmp_path):
 
 
 def test_run_writes_new_skill_draft_for_novel_verdict(tmp_path):
-    skills_dir = tmp_path / "scientific-skills"
+    skills_dir = tmp_path / "skills"
     _write_skill(skills_dir, "unrelated", "totally unrelated")
 
     body = "---\nname: new-thing\ndescription: new\n---\n# new"
@@ -108,7 +108,7 @@ def test_run_writes_new_skill_draft_for_novel_verdict(tmp_path):
 
 
 def test_run_writes_composition_recipe_for_compose_verdict(tmp_path):
-    skills_dir = tmp_path / "scientific-skills"
+    skills_dir = tmp_path / "skills"
     _write_skill(skills_dir, "literature-review", "literature")
 
     body = "---\nname: lit-flow\ndescription: chain\n---\n# chain"
@@ -129,7 +129,7 @@ def test_run_writes_composition_recipe_for_compose_verdict(tmp_path):
 
 
 def test_run_dry_run_does_not_call_backend(tmp_path):
-    skills_dir = tmp_path / "scientific-skills"
+    skills_dir = tmp_path / "skills"
     _write_skill(skills_dir, "literature-review", "literature")
     backend = StubBackend(lambda *a: pytest.fail("backend must not be called in dry-run"))
 
@@ -150,7 +150,7 @@ def test_run_dry_run_does_not_call_backend(tmp_path):
 
 
 def test_run_redacts_secrets_from_event_text_before_any_llm_call(tmp_path):
-    skills_dir = tmp_path / "scientific-skills"
+    skills_dir = tmp_path / "skills"
     _write_skill(skills_dir, "unrelated", "unrelated")
 
     events = [{"ts": f"2026-04-17T10:{m:02d}:00Z", "app": "Chrome",
@@ -186,7 +186,7 @@ def test_run_redacts_secrets_from_event_text_before_any_llm_call(tmp_path):
 
 
 def test_run_raises_actionable_error_when_screenpipe_unreachable(tmp_path):
-    skills_dir = tmp_path / "scientific-skills"
+    skills_dir = tmp_path / "skills"
     _write_skill(skills_dir, "any", "any")
 
     def handler(request):
@@ -208,7 +208,7 @@ def test_run_raises_actionable_error_when_screenpipe_unreachable(tmp_path):
 
 
 def test_run_skips_clusters_below_min_cluster_size(tmp_path):
-    skills_dir = tmp_path / "scientific-skills"
+    skills_dir = tmp_path / "skills"
     _write_skill(skills_dir, "any", "any")
     # only one session => no cluster meets min_cluster_size=2
     events = [{"ts": f"2026-04-17T10:{m:02d}:00Z", "app": "Lonely",

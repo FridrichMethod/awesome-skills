@@ -1,8 +1,9 @@
 ---
 name: hugging-science
-description: "Use when the user is doing AI/ML work in a scientific domain — biology, chemistry, physics, astronomy, climate, genomics, materials science, medicine, ecology, energy, conservation, engineering, mathematics, scientific reasoning, drug discovery, protein design, weather modeling, theorem proving, single-cell, PDE solving, or anything similar. Hugging Science (huggingscience.co) is a curated catalog of scientific datasets, models, blog posts, and interactive Spaces; the `hugging-science` org on Hugging Face hosts community datasets, models, and demo Spaces. This skill helps you discover the right resource AND actually use it — loading datasets via `datasets`, running models via `transformers` or the HF Inference API, calling Spaces like BoltzGen via `gradio_client`, and citing blog posts for methodology."
+description: Use when the user is doing AI/ML work in a scientific domain such as biology, chemistry, physics, astronomy, climate, genomics, materials, medicine, ecology, energy, engineering, math, drug discovery, protein design, weather modeling, theorem proving, single-cell, or PDE solving. Hugging Science is a curated catalog of scientific datasets, models, blog posts, and interactive Spaces. This skill helps discover and use resources via `datasets`, `transformers`, the HF Inference API, `gradio_client`, and methodology citations.
 metadata:
-    skill-author: K-Dense Inc.
+  version: "1.1"
+  skill-author: K-Dense Inc.
 ---
 
 # Hugging Science

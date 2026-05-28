@@ -4,7 +4,8 @@ description: DNAnexus cloud genomics platform. Build apps/applets, manage data (
 license: Unknown
 compatibility: Requires a DNAnexus account
 metadata:
-    skill-author: K-Dense Inc.
+  version: "1.0"
+  skill-author: K-Dense Inc.
 ---
 
 # DNAnexus Integration

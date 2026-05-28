@@ -41,7 +41,8 @@ model.learn(total_timesteps=100000, callback=eval_callback)
 - Logs evaluation metrics to TensorBoard
 - Can stop training if reward threshold reached
 
-**Important:** When using vectorized training environments, adjust `eval_freq`:
+**Important:** Callback frequencies (`eval_freq`, `save_freq`) are measured in **environment steps per sub-environment**, not total timesteps across all parallel envs. Divide by `n_envs` to align with total training timesteps:
+
 ```python
 # With 4 parallel environments, divide eval_freq by n_envs
 eval_freq = 10000 // 4  # Evaluate every 10000 total environment steps
@@ -71,7 +72,21 @@ model.learn(total_timesteps=100000, callback=checkpoint_callback)
 - `rl_model_20000_steps.zip` - Model at 20k steps
 - etc.
 
-**Important:** Adjust `save_freq` for vectorized environments (divide by n_envs).
+**Important:** `save_freq` is in **environment steps per sub-environment**; divide by `n_envs` for total-timestep alignment (same as `EvalCallback` above).
+
+### LogEveryNTimesteps
+
+Dumps training logs every N timesteps (added SB3 2.6.0). Useful when the algorithm's built-in `log_interval` is too coarse.
+
+```python
+from stable_baselines3.common.callbacks import LogEveryNTimesteps
+
+log_callback = LogEveryNTimesteps(n_steps=1000)
+
+# Pass log_interval=None to avoid interference with the algorithm's default logging
+model = PPO("MlpPolicy", env, log_interval=None, verbose=1)
+model.learn(total_timesteps=100000, callback=log_callback)
+```
 
 ### StopTrainingOnRewardThreshold
 

@@ -51,6 +51,7 @@ for batch in loader:
 - `batch.n_id` maps local indices back to original node IDs
 - Sampling >2-3 hops is generally infeasible (exponential neighborhood growth)
 - Keep `len(num_neighbors) == num_gnn_layers` for efficiency
+- PyG 2.7 adds `BidirectionalSampler` and forward+reverse edge sampling on `NeighborSampler` for undirected graphs
 
 ### LinkNeighborLoader (for link prediction)
 
@@ -130,6 +131,8 @@ loader = ShaDowKHopSampler(
 
 ## 3. Multi-GPU / Distributed Training
 
+`torch_geometric.distributed` is deprecated as of PyG 2.7 — use standard PyTorch DDP below.
+
 ### DistributedDataParallel (DDP)
 
 Standard PyTorch DDP works with PyG. Each GPU gets a partition of the seed nodes:
@@ -200,9 +203,10 @@ if __name__ == '__main__':
 
 ### PyTorch Lightning Integration
 
-PyG provides Lightning wrappers for minimal boilerplate:
+PyG provides Lightning wrappers for minimal boilerplate. PyG 2.7 supports the `lightning` package (not only legacy `pytorch-lightning`):
 
 ```python
+import lightning as L
 from torch_geometric.data import LightningNodeData
 
 datamodule = LightningNodeData(

@@ -34,6 +34,24 @@ with open('expression_data.tsv') as f:
 assert expression_matrix.shape[1] == len(gene_names)
 ```
 
+### Sparse CSC Matrix (arboreto 0.1.6+)
+- **Format**: `scipy.sparse.csc_matrix` with shape (observations, genes)
+- **Requirement**: Provide `gene_names` matching column order (same as NumPy)
+- **Use case**: Large single-cell matrices; also used by pySCENIC 0.11+ when `--sparse` is enabled
+
+Example:
+```python
+import scipy.sparse as sp
+from arboreto.algo import grnboost2
+
+# expression_sparse: csc_matrix, cells x genes
+network = grnboost2(
+    expression_data=expression_sparse,
+    gene_names=gene_names,
+    tf_names=tf_names,
+)
+```
+
 ## Transcription Factors (TFs)
 
 Optionally provide a list of transcription factor names to restrict regulatory inference:
@@ -48,7 +66,7 @@ tf_names = load_tf_names('transcription_factors.txt')
 tf_names = ['TF1', 'TF2', 'TF3']
 ```
 
-If not provided, all genes are considered potential regulators.
+If `tf_names` is `None` or `'all'`, all `gene_names` are treated as potential regulators.
 
 ## Basic Inference Workflow
 
@@ -124,13 +142,25 @@ TF1    gene8    0.621
 
 ## Setting Random Seed
 
-For reproducible results, provide a seed parameter:
+For reproducible results, pass an explicit `seed` (`None` uses random seeds per regressor):
 
 ```python
 network = grnboost2(
     expression_data=expression_matrix,
     tf_names=tf_names,
     seed=777
+)
+```
+
+## Limiting Output Size
+
+Return only the top N regulatory links globally:
+
+```python
+network = grnboost2(
+    expression_data=expression_matrix,
+    tf_names=tf_names,
+    limit=5000,
 )
 ```
 

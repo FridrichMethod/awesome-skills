@@ -4,6 +4,8 @@
 
 Dask DataFrames enable parallel processing of large tabular data by distributing work across multiple pandas DataFrames. As described in the documentation, "Dask DataFrames are a collection of many pandas DataFrames" with identical APIs, making the transition from pandas straightforward.
 
+Since **dask 2025.1.0**, the expression-based implementation with logical query planning is the only DataFrame backend. Import from `dask.dataframe` only — avoid legacy submodule paths. DataFrame I/O requires **PyArrow 16+** (dask 2026.1.2+).
+
 ## Core Concept
 
 A Dask DataFrame is divided into multiple pandas DataFrames (partitions) along the index:
@@ -54,10 +56,10 @@ ddf = dd.read_parquet('data.parquet')
 ```python
 # Read multiple files using glob patterns
 ddf = dd.read_csv('data/*.csv')
-ddf = dd.read_parquet('s3://mybucket/data/*.parquet')
-
-# Read with path structure
 ddf = dd.read_parquet('data/year=*/month=*/day=*.parquet')
+
+# Remote Parquet (requires s3fs: uv pip install s3fs)
+ddf = dd.read_parquet('s3://mybucket/data/*.parquet', storage_options={'anon': False})
 ```
 
 ### Optimizations
@@ -304,8 +306,8 @@ ddf = dd.read_parquet('timeseries/*.parquet')
 # Set timestamp index
 ddf = ddf.set_index('timestamp', sorted=True)
 
-# Resample (if available in Dask version)
-hourly = ddf.resample('1H').mean()
+# Resample time series (requires sorted datetime index)
+hourly = ddf.resample('1h').mean()
 
 # Compute statistics
 result = hourly.compute()

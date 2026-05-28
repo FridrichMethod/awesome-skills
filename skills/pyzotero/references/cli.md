@@ -1,6 +1,8 @@
 # Command-Line Interface
 
-The pyzotero CLI connects to your **local Zotero installation** (not the remote API). It requires a running local Zotero desktop app.
+The pyzotero CLI connects to your **local Zotero 7 installation** (not the remote Web API). It requires a running Zotero desktop app with local API access enabled:
+
+**Zotero → Settings → Advanced → Allow other applications on this computer to communicate with Zotero**
 
 ## Installation
 

@@ -19,11 +19,14 @@ Entrez.email = "your.email@example.com"
 
 ### API Key (Recommended)
 
-Using an API key increases rate limits from 3 to 10 requests per second:
+Using an API key increases rate limits from 3 to 10 requests per second. Register at https://www.ncbi.nlm.nih.gov/account/settings/ and read the key from the environment — do not hardcode it:
 
 ```python
-# Get API key from: https://www.ncbi.nlm.nih.gov/account/settings/
-Entrez.api_key = "your_api_key_here"
+import os
+
+# Check NCBI_API_KEY from the environment (or export it before running)
+if api_key := os.environ.get("NCBI_API_KEY"):
+    Entrez.api_key = api_key
 ```
 
 ### Rate Limiting
@@ -393,7 +396,7 @@ handle.close()
 ## Best Practices
 
 1. **Always set Entrez.email** - Required by NCBI
-2. **Use API key** for higher rate limits (10 req/s vs 3 req/s)
+2. **Use `NCBI_API_KEY` from the environment** for higher rate limits (10 req/s vs 3 req/s); never hardcode keys
 3. **Close handles** after reading to free resources
 4. **Batch large requests** - Use retstart and retmax for pagination
 5. **Use WebEnv for large downloads** - Store results on server

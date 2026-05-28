@@ -40,6 +40,8 @@ adata.write_zarr(filename)                  # Write to zarr format
 sc.pp.calculate_qc_metrics(adata, qc_vars=['mt'], inplace=True)
 sc.pp.filter_cells(adata, min_genes=200)
 sc.pp.filter_genes(adata, min_cells=3)
+sc.pp.scrublet(adata)                              # Doublet detection (core since 1.10)
+sc.pp.scrublet_simulate_doublets(adata)            # Simulate doublets for benchmarking
 ```
 
 ### Normalization and Transformation
@@ -55,6 +57,7 @@ sc.pp.sqrt(adata)                                # Square root transformation
 ```python
 sc.pp.highly_variable_genes(adata, min_mean=0.0125, max_mean=3, min_disp=0.5)
 sc.pp.highly_variable_genes(adata, flavor='seurat_v3', n_top_genes=2000)
+# seurat, cell_ranger, seurat_v3 flavors support dask arrays (scanpy 1.10+)
 ```
 
 ### Scaling and Regression
@@ -69,6 +72,7 @@ sc.pp.regress_out(adata, ['total_counts', 'pct_counts_mt'])  # Regress out unwan
 ```python
 sc.pp.pca(adata, n_comps=50)                     # Principal component analysis
 sc.pp.neighbors(adata, n_neighbors=10, n_pcs=40) # Compute neighborhood graph
+sc.pp.neighbors(adata, method='jaccard')         # Jaccard connectivities (scanpy 1.12)
 ```
 
 ### Batch Correction
@@ -93,7 +97,7 @@ sc.tl.draw_graph(adata, layout='fa')             # Force-directed graph
 
 ```python
 sc.tl.leiden(adata, resolution=0.5)              # Leiden clustering (recommended)
-sc.tl.louvain(adata, resolution=0.5)             # Louvain clustering
+# sc.tl.louvain(adata, resolution=0.5)           # Deprecated in scanpy 1.12 — use leiden
 sc.tl.kmeans(adata, n_clusters=10)               # K-means clustering
 ```
 
@@ -106,6 +110,15 @@ sc.tl.rank_genes_groups(adata, groupby='leiden', method='logreg')
 
 # Get results as dataframe
 sc.get.rank_genes_groups_df(adata, group='0')
+# Exploratory only — per-cell tests inflate p-values; pseudobulk for rigorous DE
+```
+
+### Aggregation (Pseudobulk)
+
+```python
+sc.get.aggregate(adata, by='cell_type', func='sum', layer='counts')
+sc.get.aggregate(adata, by=['sample', 'cell_type'], func=['sum', 'mean'])
+# Dask-compatible for sum/mean/count (scanpy 1.12); use pydeseq2 for DE on pseudobulk
 ```
 
 ### Trajectory Inference
@@ -203,8 +216,8 @@ sc.pl.tracksplot(adata, var_names=genes, groupby='leiden')
 - `alpha`: Point transparency
 
 ### Saving Parameters
-- `save`: Filename to save plot
 - `show`: Whether to show plot
+- Prefer `sc.settings.autosave` + `sc.settings.figdir` over deprecated `save=`
 
 ## AnnData Structure
 
@@ -235,11 +248,14 @@ adata[adata.obs['leiden'] == '0', :]
 sc.settings.verbosity = 3              # 0=error, 1=warning, 2=info, 3=hint
 sc.settings.set_figure_params(dpi=80, facecolor='white')
 sc.settings.autoshow = False           # Don't show plots automatically
-sc.settings.autosave = True            # Autosave figures
+sc.settings.autosave = True            # Save figures to figdir (preferred over save=)
 sc.settings.figdir = './figures/'      # Figure directory
+sc.settings.file_format_figs = 'pdf'   # Output format when autosave is True
 sc.settings.cachedir = './cache/'      # Cache directory
 sc.settings.n_jobs = 8                 # Number of parallel jobs
 ```
+
+Note: the `save=` parameter on individual `sc.pl.*` functions is deprecated in scanpy 1.12. Use `sc.settings.autosave` and `sc.settings.figdir` instead.
 
 ## Useful Utilities
 

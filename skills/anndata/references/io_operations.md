@@ -2,6 +2,13 @@
 
 AnnData provides comprehensive I/O functionality for reading and writing data in various formats.
 
+Since anndata 0.11, most `read_*` and `write_*` functions live in `anndata.io`. Top-level `read_h5ad` and `read_zarr` remain at `anndata` without deprecation warnings; other top-level imports still work but emit `FutureWarning`.
+
+```python
+import anndata as ad
+from anndata.io import read_csv, read_mtx, read_loom, read_elem, write_elem
+```
+
 ## Native Formats
 
 ### H5AD (HDF5-based)
@@ -71,6 +78,17 @@ adata.write_zarr('data.zarr', chunks=(100, 100))
 adata = ad.read_zarr('data.zarr')
 ```
 
+#### Zarr v3 (anndata 0.12+)
+```python
+import anndata
+
+# Default writes Zarr v2; opt into v3 and optional auto-sharding
+anndata.settings.zarr_write_format = 3
+anndata.settings.auto_shard_zarr_v3 = True  # shards="auto" for v3 arrays
+
+adata.write_zarr('data.zarr', chunks=(1000, 1000))
+```
+
 #### Remote Zarr access
 ```python
 import fsspec
@@ -88,35 +106,41 @@ adata = ad.read_zarr(store)
 
 ### CSV/TSV
 ```python
+from anndata.io import read_csv
+
 # Read CSV (genes as columns, cells as rows)
-adata = ad.read_csv('data.csv')
+adata = read_csv('data.csv')
 
 # Read with custom delimiter
-adata = ad.read_csv('data.tsv', delimiter='\t')
+adata = read_csv('data.tsv', delimiter='\t')
 
 # Specify that first column is row names
-adata = ad.read_csv('data.csv', first_column_names=True)
+adata = read_csv('data.csv', first_column_names=True)
 ```
 
 ### Excel
 ```python
+from anndata.io import read_excel
+
 # Read Excel file
-adata = ad.read_excel('data.xlsx')
+adata = read_excel('data.xlsx')
 
 # Read specific sheet
-adata = ad.read_excel('data.xlsx', sheet='Sheet1')
+adata = read_excel('data.xlsx', sheet='Sheet1')
 ```
 
 ### Matrix Market (MTX)
 Common format for sparse matrices in genomics.
 
 ```python
+from anndata.io import read_mtx
+
 # Read MTX with associated files
 # Requires: matrix.mtx, genes.tsv, barcodes.tsv
-adata = ad.read_mtx('matrix.mtx')
+adata = read_mtx('matrix.mtx')
 
 # Read with custom gene and barcode files
-adata = ad.read_mtx(
+adata = read_mtx(
     'matrix.mtx',
     var_names='genes.tsv',
     obs_names='barcodes.tsv'
@@ -127,24 +151,30 @@ adata = adata.T
 ```
 
 ### 10X Genomics formats
+10X readers are provided by **scanpy**, not anndata. After loading, the result is a standard `AnnData` object.
+
 ```python
+import scanpy as sc
+
 # Read 10X h5 format
-adata = ad.read_10x_h5('filtered_feature_bc_matrix.h5')
+adata = sc.read_10x_h5('filtered_feature_bc_matrix.h5')
 
 # Read 10X MTX directory
-adata = ad.read_10x_mtx('filtered_feature_bc_matrix/')
+adata = sc.read_10x_mtx('filtered_feature_bc_matrix/')
 
 # Specify genome if multiple present
-adata = ad.read_10x_h5('data.h5', genome='GRCh38')
+adata = sc.read_10x_h5('data.h5', genome='GRCh38')
 ```
 
 ### Loom
 ```python
+from anndata.io import read_loom
+
 # Read Loom file
-adata = ad.read_loom('data.loom')
+adata = read_loom('data.loom')
 
 # Read with specific observation and variable annotations
-adata = ad.read_loom(
+adata = read_loom(
     'data.loom',
     obs_names='CellID',
     var_names='Gene'
@@ -153,11 +183,13 @@ adata = ad.read_loom(
 
 ### Text files
 ```python
+from anndata.io import read_text
+
 # Read generic text file
-adata = ad.read_text('data.txt', delimiter='\t')
+adata = read_text('data.txt', delimiter='\t')
 
 # Read with custom parameters
-adata = ad.read_text(
+adata = read_text(
     'data.txt',
     delimiter=',',
     first_column_names=True,
@@ -167,14 +199,18 @@ adata = ad.read_text(
 
 ### UMI tools
 ```python
+from anndata.io import read_umi_tools
+
 # Read UMI tools format
-adata = ad.read_umi_tools('counts.tsv')
+adata = read_umi_tools('counts.tsv')
 ```
 
 ### HDF5 (generic)
 ```python
+from anndata.io import read_hdf
+
 # Read from HDF5 file (not h5ad format)
-adata = ad.read_hdf('data.h5', key='dataset')
+adata = read_hdf('data.h5', key='dataset')
 ```
 
 ## Alternative Output Formats
@@ -202,25 +238,23 @@ adata.write_loom('output.loom')
 
 ## Reading Specific Elements
 
-For fine-grained control, read specific elements from storage:
+For fine-grained control, read specific elements from an open store:
 
 ```python
-from anndata import read_elem
+import h5py
+from anndata.io import read_elem
 
-# Read just observation annotations
-obs = read_elem('data.h5ad/obs')
-
-# Read specific layer
-layer = read_elem('data.h5ad/layers/normalized')
-
-# Read unstructured data element
-params = read_elem('data.h5ad/uns/pca_params')
+# Read just observation annotations from an h5ad file
+with h5py.File('data.h5ad', 'r') as f:
+    obs = read_elem(f['obs'])
+    layer = read_elem(f['layers/normalized'])
+    params = read_elem(f['uns/pca'])
 ```
 
 ## Writing Specific Elements
 
 ```python
-from anndata import write_elem
+from anndata.io import write_elem
 import h5py
 
 # Write element to existing file
@@ -233,25 +267,27 @@ with h5py.File('data.h5ad', 'a') as f:
 For very large datasets, use lazy reading to avoid loading entire datasets:
 
 ```python
+import h5py
 from anndata.experimental import read_elem_lazy
 
-# Lazy read (returns dask array or similar)
-X_lazy = read_elem_lazy('large_data.h5ad/X')
-
-# Compute only when needed
-subset = X_lazy[:100, :100].compute()
+# Lazy read from an open store (returns dask-backed array)
+with h5py.File('large_data.h5ad', 'r') as f:
+    X_lazy = read_elem_lazy(f['X'])
+    subset = X_lazy[:100, :100].compute()
 ```
 
 ## Common I/O Patterns
 
 ### Convert between formats
 ```python
+from anndata.io import read_mtx, read_csv
+
 # MTX to H5AD
-adata = ad.read_mtx('matrix.mtx').T
+adata = read_mtx('matrix.mtx').T
 adata.write_h5ad('data.h5ad')
 
 # CSV to H5AD
-adata = ad.read_csv('data.csv')
+adata = read_csv('data.csv')
 adata.write_h5ad('data.h5ad')
 
 # H5AD to Zarr

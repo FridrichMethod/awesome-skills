@@ -1,9 +1,11 @@
 ---
 name: histolab
-description: Lightweight WSI tile extraction and preprocessing. Use for basic slide processing tissue detection, tile extraction, stain normalization for H&E images. Best for simple pipelines, dataset preparation, quick tile-based analysis. For advanced spatial proteomics, multiplexed imaging, or deep learning pipelines use pathml.
+description: Lightweight WSI tile extraction and preprocessing. Use for basic slide processing, tissue detection, tile extraction, and stain normalization for H&E images. Best for simple pipelines, dataset preparation, and quick tile-based analysis. For advanced spatial proteomics, multiplexed imaging, or deep learning pipelines use pathml.
 license: Apache-2.0 license
+compatibility: Requires Python 3.8–3.11 (histolab 0.7.0), OpenSlide system libraries, and Linux or macOS. Sample data via histolab.data requires pooch.
 metadata:
-    skill-author: K-Dense Inc.
+  version: "1.1"
+  skill-author: K-Dense Inc.
 ---
 
 # Histolab
@@ -14,9 +16,19 @@ Histolab is a Python library for processing whole slide images (WSI) in digital 
 
 ## Installation
 
+Install OpenSlide system libraries first ([OpenSlide download](https://openslide.org/download/)), then install histolab:
+
 ```bash
 uv pip install histolab
 ```
+
+For built-in TCGA sample slides via `histolab.data`, also install pooch:
+
+```bash
+uv pip install pooch
+```
+
+Histolab 0.7.0 (latest stable) supports Python 3.8–3.11 on Linux and macOS. Windows is not supported as of 0.7.0.
 
 ## Quick Start
 
@@ -83,8 +95,10 @@ print(f"Dimensions: {slide.dimensions}")
 print(f"Levels: {slide.levels}")
 print(f"Magnification: {slide.properties.get('openslide.objective-power')}")
 
-# Save thumbnail
-slide.save_thumbnail()
+# Save thumbnail to processed_path
+from pathlib import Path
+Path(slide.processed_path).mkdir(parents=True, exist_ok=True)
+slide.thumbnail.save(Path(slide.processed_path) / f"{slide.name}_thumbnail.png")
 ```
 
 ### 2. Tissue Detection and Masks
@@ -261,7 +275,28 @@ from histolab.tile import Tile
 filtered_tile = tile.apply_filters(tissue_detection)
 ```
 
-### 5. Visualization
+### 5. Stain Normalization
+
+Standardize staining appearance across slides for deep learning (added in histolab 0.6.0).
+
+**Key classes:** `MacenkoStainNormalizer`, `ReinhardStainNormalizer`
+
+```python
+from histolab.stain_normalizer import MacenkoStainNormalizer, ReinhardStainNormalizer
+from PIL import Image
+
+target = Image.open("reference_stain.png")  # Style reference slide/tile
+source = Image.open("slide_to_normalize.png")
+
+normalizer = MacenkoStainNormalizer()
+normalizer.fit(target)
+normalized = normalizer.transform(source)
+normalized.save("normalized.png")
+```
+
+Use `ReinhardStainNormalizer()` for Reinhard color transfer. Fit on a representative target image, then transform source tiles or thumbnails. See `references/filters_preprocessing.md` for filter-based alternatives.
+
+### 6. Visualization
 
 Visualize slides, masks, tile locations, and extraction quality.
 
@@ -331,6 +366,7 @@ Quick sampling of diverse tissue regions for initial analysis.
 ```python
 from histolab.slide import Slide
 from histolab.tiler import RandomTiler
+from pathlib import Path
 import logging
 
 # Enable logging for progress tracking
@@ -342,7 +378,8 @@ slide = Slide("slide.svs", processed_path="output/random_tiles/")
 # Inspect slide
 print(f"Dimensions: {slide.dimensions}")
 print(f"Levels: {slide.levels}")
-slide.save_thumbnail()
+Path(slide.processed_path).mkdir(parents=True, exist_ok=True)
+slide.thumbnail.save(Path(slide.processed_path) / f"{slide.name}_thumbnail.png")
 
 # Configure random tiler
 random_tiler = RandomTiler(
@@ -467,7 +504,8 @@ for slide_path in slide_dir.glob("*.svs"):
     slide = Slide(slide_path, processed_path=output_dir)
 
     # Save thumbnail for review
-    slide.save_thumbnail()
+    Path(slide.processed_path).mkdir(parents=True, exist_ok=True)
+    slide.thumbnail.save(Path(slide.processed_path) / f"{slide.name}_thumbnail.png")
 
     # Extract tiles
     tiler.extract(slide)
@@ -514,7 +552,7 @@ tiler.extract(slide, extraction_mask=custom_mask)
 
 ### Slide Loading and Inspection
 1. Always inspect slide properties before processing
-2. Save thumbnails for quick visual review
+2. Save thumbnails with `slide.thumbnail.save()` for quick visual review
 3. Check pyramid levels and dimensions
 4. Verify tissue is present using thumbnails
 
@@ -610,7 +648,7 @@ tiler.extract(slide, extraction_mask=custom_mask)
 
 ### Inconsistent results across slides
 - Use same seed for RandomTiler
-- Normalize staining with preprocessing filters
+- Normalize staining with `MacenkoStainNormalizer` or `ReinhardStainNormalizer`
 - Adjust `tissue_percent` per staining quality
 - Implement slide-specific mask customization
 
@@ -654,6 +692,7 @@ Complete filter reference and preprocessing guide:
 - Image filters (color conversion, thresholding, contrast)
 - Morphological filters (dilation, erosion, opening, closing)
 - Filter composition and chaining
+- Built-in stain normalization (Macenko, Reinhard) and filter-based alternatives
 - Common preprocessing pipelines
 - Applying filters to tiles
 - Custom mask filters

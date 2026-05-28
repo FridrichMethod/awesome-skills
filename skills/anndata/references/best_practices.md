@@ -7,7 +7,7 @@ Guidelines for efficient and effective use of AnnData.
 ### Use sparse matrices for sparse data
 ```python
 import numpy as np
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, csc_matrix
 import anndata as ad
 
 # Check data sparsity
@@ -15,7 +15,7 @@ data = np.random.rand(1000, 2000)
 sparsity = 1 - np.count_nonzero(data) / data.size
 print(f"Sparsity: {sparsity:.2%}")
 
-# Convert to sparse if >50% zeros
+# Convert to sparse if >50% zeros (anndata 0.12+ requires csr or csc)
 if sparsity > 0.5:
     adata = ad.AnnData(X=csr_matrix(data))
 else:
@@ -107,10 +107,15 @@ adata.write_h5ad('data.h5ad', compression='gzip')
 
 **Zarr - Cloud and parallel access**
 ```python
+import anndata
+
+# Default is Zarr v2; opt into v3 for cloud workflows (anndata 0.12+)
+anndata.settings.zarr_write_format = 3
+anndata.settings.auto_shard_zarr_v3 = True
 adata.write_zarr('data.zarr', chunks=(100, 100))
 ```
 - Excellent for cloud storage (S3, GCS)
-- Supports parallel I/O
+- Supports parallel I/O and Zarr v3 sharding (0.12+)
 - Good compression
 - Best for: Large datasets, cloud workflows, parallel processing
 
@@ -329,16 +334,15 @@ adata.uns['neighbors'] = {
 
 ### Version tracking
 ```python
-import anndata
-import scanpy
-import numpy
+import sys
+from importlib.metadata import version
 
-# Store versions
+# Store package versions (anndata.__version__ deprecated in 0.12.3)
 adata.uns['versions'] = {
-    'anndata': anndata.__version__,
-    'scanpy': scanpy.__version__,
-    'numpy': numpy.__version__,
-    'python': sys.version
+    'anndata': version('anndata'),
+    'scanpy': version('scanpy'),
+    'numpy': version('numpy'),
+    'python': sys.version,
 }
 ```
 
@@ -486,7 +490,7 @@ Complete best-practices workflow:
 ```python
 import anndata as ad
 import numpy as np
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, issparse
 
 # 1. Load with backed mode if large
 adata = ad.read_h5ad('data.h5ad', backed='r')
@@ -500,7 +504,7 @@ high_quality = adata[adata.obs['quality_score'] > 0.8]
 # 4. Load filtered subset to memory
 adata = high_quality.to_memory()
 
-# 5. Convert to optimal storage types
+# 5. Convert to optimal storage types (csr/csc sparse only since 0.12)
 adata.strings_to_categoricals()
 if not issparse(adata.X):
     density = np.count_nonzero(adata.X) / adata.X.size

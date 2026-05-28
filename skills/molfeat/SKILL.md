@@ -2,8 +2,11 @@
 name: molfeat
 description: Molecular featurization for ML (100+ featurizers). ECFP, MACCS, descriptors, pretrained models (ChemBERTa), convert SMILES to features, for QSAR and molecular ML.
 license: Apache-2.0 license
+allowed-tools: Read Write Edit Bash
+compatibility: Requires Python 3.9–3.10 (molfeat 0.11.0 does not support 3.11+). Requires datamol, PyTorch, and optional extras for GNN/transformer models.
 metadata:
-    skill-author: K-Dense Inc.
+  version: "1.0"
+  skill-author: K-Dense Inc.
 ---
 
 # Molfeat - Molecular Featurization Hub
@@ -11,6 +14,8 @@ metadata:
 ## Overview
 
 Molfeat is a comprehensive Python library for molecular featurization that unifies 100+ pre-trained embeddings and hand-crafted featurizers. Convert chemical structures (SMILES strings or RDKit molecules) into numerical representations for machine learning tasks including QSAR modeling, virtual screening, similarity searching, and deep learning applications. Features fast parallel processing, scikit-learn compatible transformers, and built-in caching.
+
+**Version note:** Examples target **molfeat 0.11.0** (PyPI stable, May 2025). Requires **Python 3.9–3.10** (`requires-python` caps below 3.11). Depends on **datamol ≥0.8.0** and **PyTorch ≥1.13**. Since 0.8.7, prefer datamol `Mol` objects over raw `rdkit.Chem.Mol`. Since 0.10.1, fingerprint calculators use RDKit's `rdFingerprintGenerator` API internally. Since 0.11.0, pretrained models load in memory and base models are set to PyTorch evaluation mode automatically.
 
 ## When to Use This Skill
 
@@ -25,19 +30,24 @@ This skill should be used when working with:
 
 ## Installation
 
-```bash
-uv pip install molfeat
+Use a Python 3.9 or 3.10 environment (molfeat does not install on 3.11+ as of 0.11.0):
 
-# With all optional dependencies
-uv pip install "molfeat[all]"
+```bash
+uv pip install "molfeat==0.11.0"
+
+# With all pip-installable optional dependencies
+uv pip install "molfeat[all]==0.11.0"
 ```
 
-**Optional dependencies for specific featurizers:**
-- `molfeat[dgl]` - GNN models (GIN variants)
-- `molfeat[graphormer]` - Graphormer models
-- `molfeat[transformer]` - ChemBERTa, ChemGPT, MolT5
-- `molfeat[fcd]` - FCD descriptors
-- `molfeat[map4]` - MAP4 fingerprints
+**Optional dependency extras (PyPI):**
+- `molfeat[dgl]` — GNN models (GIN variants); upstream recommends `dgl<=2.0` (graphbolt issues in newer DGL)
+- `molfeat[graphormer]` — Graphormer models
+- `molfeat[transformer]` — ChemBERTa, ChemGPT, MolT5
+- `molfeat[fcd]` — FCD descriptors
+- `molfeat[pyg]` — PyTorch Geometric featurizers
+- `molfeat[viz]` — NGLView visualization widgets
+
+**External featurizers:** MAP4 is not bundled in molfeat extras — install from [reymond-group/map4](https://github.com/reymond-group/map4) separately. Some heavy deps (DGL, dgllife, graphormer-pretrained) are easier via conda-forge; see [optional dependencies](https://molfeat-docs.datamol.io/stable/).
 
 ## Core Concepts
 
@@ -323,7 +333,7 @@ for name, feat in featurizers.items():
     transformer = MoleculeTransformer(feat, n_jobs=-1)
     X = transformer(smiles)
     # Evaluate with your ML model
-    score = evaluate_model(X, y)
+    score = score_model(X, y)
     results[name] = score
 ```
 
@@ -373,6 +383,8 @@ transformer = CustomTransformer(FPCalculator("ecfp"), n_jobs=-1)
 ### Batch Processing Large Datasets
 
 ```python
+import numpy as np
+
 def featurize_in_chunks(smiles_list, transformer, chunk_size=10000):
     """Process large datasets in chunks to manage memory"""
     all_features = []
@@ -385,19 +397,20 @@ def featurize_in_chunks(smiles_list, transformer, chunk_size=10000):
 
 ### Caching Expensive Embeddings
 
-```python
-import pickle
+Prefer molfeat's built-in pretrained-model cache when possible. For custom embedding caches, use NumPy arrays instead of pickle (pickle can execute arbitrary code when loading untrusted files):
 
-cache_file = "embeddings_cache.pkl"
+```python
+import numpy as np
+from pathlib import Path
+
+cache_file = Path("embeddings_cache.npz")  # fixed path under your project
 transformer = PretrainedMolTransformer("ChemBERTa-77M-MLM", n_jobs=-1)
 
-try:
-    with open(cache_file, "rb") as f:
-        embeddings = pickle.load(f)
-except FileNotFoundError:
+if cache_file.exists():
+    embeddings = np.load(cache_file)["embeddings"]
+else:
     embeddings = transformer(smiles_list)
-    with open(cache_file, "wb") as f:
-        pickle.dump(embeddings, f)
+    np.savez(cache_file, embeddings=embeddings)
 ```
 
 ## Performance Tips
@@ -486,10 +499,11 @@ transformer = MoleculeTransformer(
 Process in chunks or use streaming approaches for datasets > 100K molecules.
 
 ### Pretrained Model Dependencies
-Some models require additional packages. Install specific extras:
+Some models require additional packages. Install specific extras (pin version for reproducibility):
 ```bash
-uv pip install "molfeat[transformer]"  # For ChemBERTa/ChemGPT
-uv pip install "molfeat[dgl]"          # For GIN models
+uv pip install "molfeat[transformer]==0.11.0"  # For ChemBERTa/ChemGPT
+uv pip install "molfeat[dgl]==0.11.0"          # For GIN models
+uv pip install "molfeat[graphormer]==0.11.0"   # For Graphormer
 ```
 
 ### Reproducibility

@@ -1,6 +1,6 @@
 # BioServices: Complete Services Reference
 
-This document provides a comprehensive reference for all major services available in BioServices, including key methods, parameters, and use cases.
+This document provides a comprehensive reference for all major services available in BioServices, including key methods, parameters, and use cases. Targets **bioservices 1.16.0** ([Read the Docs](https://bioservices.readthedocs.io/), [GitHub](https://github.com/cokelaer/bioservices)).
 
 ## Protein & Gene Resources
 
@@ -38,6 +38,8 @@ u = UniProt(verbose=False)
   - Returns: Tab-separated values
 
 **Common columns:** id, entry name, genes, organism, protein names, length, sequence, go-id, ec, pathway, interactor
+
+**UniProt API note (≥1.10):** UniProt updated its REST API in June 2022. User-facing methods are largely unchanged, but tabular `columns` names may differ from older examples. If column parsing fails, check upstream `_legacy_names` in the UniProt module docs.
 
 **Use cases:**
 - Protein sequence retrieval for BLAST
@@ -269,7 +271,7 @@ s = NCBIblast(verbose=False)
   - `program`: "blastp", "blastn", "blastx", "tblastn", "tblastx"
   - `stype`: "protein" or "dna"
   - `database`: "uniprotkb", "pdb", "refseq_protein", etc.
-  - `email`: Required by NCBI
+  - `email`: Required by NCBI — set `NCBI_EMAIL` in the environment or pass explicitly
   - Returns: Job ID
 
 - `getStatus(jobid)`

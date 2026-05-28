@@ -196,8 +196,8 @@ test = sol_df[sol_df['split'] == 'test']
 X_train = dm.to_fp(train['mol'])
 X_test = dm.to_fp(test['mol'])
 
-# Model training (example)
-from sklearn.ensemble import RandomForestRegressor
+# Model training (example; scikit-learn is a PyPI dependency, not a bundled skill script)
+from sklearn.ensemble import RandomForestRegressor  # third-party library
 model = RandomForestRegressor()
 model.fit(X_train, train['solubility'])
 predictions = model.predict(X_test)

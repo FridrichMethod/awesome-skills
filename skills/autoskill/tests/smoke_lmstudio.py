@@ -3,7 +3,7 @@
 Not part of the pytest suite — requires LM Studio running on localhost:1234
 with Gemma-4-31B-it loaded. Run manually:
 
-    pipenv run python scientific-skills/autoskill/tests/smoke_lmstudio.py
+    pipenv run python skills/autoskill/tests/smoke_lmstudio.py
 """
 
 import json

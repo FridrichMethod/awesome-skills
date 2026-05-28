@@ -4,6 +4,8 @@
 
 Generate text with language models using the `generate()` method. Control output quality and style through generation strategies and parameters.
 
+For quick prototyping, the [Pipeline API](pipelines.md) wraps tokenization and `generate()`; use `model.generate()` directly when you need custom preprocessing or decoding control.
+
 ## Basic Generation
 
 ```python
