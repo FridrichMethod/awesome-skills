@@ -65,15 +65,26 @@ inside a larger *Nature*-style result figure.
 
 ## File structure
 
+The skill uses a router/static-dynamic split (like `nature-writing`, `nature-polishing`, `nature-reader`, and `nature-paper2ppt`): a short `SKILL.md` router plus a `manifest.yaml` that loads the always-on core, the selected backend fragment, and references on demand.
+
 ```
 nature-figure/
-├── SKILL.md                     ← skill trigger & overview (loaded by Claude automatically)
+├── SKILL.md                     ← short router: backend gate, load fragments
+├── manifest.yaml                ← always_load core + backend axis + on-demand references
 ├── README.md                    ← this file
+├── static/
+│   ├── core/                    ← always loaded
+│   │   ├── contract.md          ← figure contract, backend gate, exclusivity, missing-runtime
+│   │   └── stance.md            ← color policy, default stance, privacy, when-to-load
+│   └── fragments/
+│       └── backend/             ← loaded after the Python-or-R gate is resolved
+│           ├── python.md        ← Python-only rule + matplotlib quick-start
+│           └── r.md             ← R-only rule + ggplot2 quick-start
 ├── assets/
 │   ├── gallery/                 ← result-figure preview PNGs
 │   ├── chart-atlas/             ← chart-type taxonomy preview PNGs
 │   └── figures4papers/          ← original demo scripts and preview assets
-└── references/
+└── references/                  ← opened on demand
     ├── figure-contract.md       ← core conclusion, evidence hierarchy, panel map
     ├── backend-selection.md     ← Python vs R decision rules
     ├── r-workflow.md            ← R scaffold, patchwork, ComplexHeatmap, export

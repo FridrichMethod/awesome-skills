@@ -2,14 +2,10 @@
 
 ## Installation
 
-Install Modal using uv (recommended) or pip:
+Install Modal with uv (recommended). The SDK supports Python 3.10–3.14:
 
 ```bash
-# Recommended
 uv pip install modal
-
-# Alternative
-pip install modal
 ```
 
 ## Authentication

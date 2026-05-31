@@ -75,8 +75,8 @@ scvi.model.SCVI.setup_anndata(
     continuous_covariate_keys=["percent_mito", "n_counts"]
 )
 
-# Check registration
-adata.uns['_scvi']['summary_stats']
+# Check registration (inspect the AnnData setup recorded by the model)
+scvi.model.SCVI.view_anndata_setup(adata)
 ```
 
 ### 5. Model Training
@@ -104,6 +104,19 @@ model.train(
 # View training history
 train_history = model.history["elbo_train"]
 val_history = model.history["elbo_validation"]
+```
+
+To keep the best checkpoint during training, enable checkpointing (the legacy
+`SaveBestState` callback was removed in v1.3; use `scvi.train.SaveCheckpoint`):
+
+```python
+from scvi.train import SaveCheckpoint
+
+model.train(
+    max_epochs=400,
+    enable_checkpointing=True,
+    callbacks=[SaveCheckpoint(monitor="elbo_validation", load_best_on_end=True)],
+)
 ```
 
 ### 6. Extract Results

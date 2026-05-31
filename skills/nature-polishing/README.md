@@ -27,7 +27,8 @@ nature-polishing/
     ├── phrasebank-playbook.md
     ├── section-moves.md
     ├── style-guardrails.md
-    └── writing-strategy.md
+    ├── writing-strategy.md
+    └── latex-layout.md
 ```
 
 ## When to use
@@ -38,6 +39,7 @@ nature-polishing/
 - tightening section logic before submission
 - softening overclaims and fixing evidence-weighted language
 - making prose read more like strong journal English without inventing content
+- fixing LaTeX layout/typesetting (排版): loose or sparse pages, stranded section headings, figures that don't fill the page or split across pages, "Float too large", multi-panel arrangement, sparse Supplementary Information
 
 ## Design intent
 
@@ -57,6 +59,7 @@ The skill should:
 - `phrasebank-playbook.md`: hedging, transitions, evidence, limitations, future work
 - `style-guardrails.md`: British style, articles, abbreviations, units, register, overclaim control
 - `writing-strategy.md`: paragraph- and section-level argument logic
+- `latex-layout.md`: LaTeX float/page typesetting — top-aligned float glue, the `\clearpage`+`[H]` heading-figure unit, `placeins` caveats, regenerating wide-and-short figures taller at the source, multi-panel stacking, and a render-and-contact-sheet diagnosis workflow
 
 ## Notes
 

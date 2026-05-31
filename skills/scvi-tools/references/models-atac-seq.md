@@ -95,19 +95,19 @@ da_results = model.differential_accessibility(
 - Fragment count matrix (cells × genomic regions)
 - Count data (not binary)
 
-**Basic Usage**:
+**Basic Usage** (PoissonVI lives in `scvi.external`):
 ```python
-scvi.model.POISSONVI.setup_anndata(
+scvi.external.POISSONVI.setup_anndata(
     adata,
     batch_key="batch"
 )
 
-model = scvi.model.POISSONVI(adata)
+model = scvi.external.POISSONVI(adata)
 model.train()
 
 # Get results
 latent = model.get_latent_representation()
-accessibility = model.get_accessibility_estimates()
+accessibility = model.get_normalized_accessibility()
 ```
 
 **Key Differences from PeakVI**:
@@ -143,27 +143,24 @@ accessibility = model.get_accessibility_estimates()
 - Peak accessibility matrix
 - Genome reference (for sequence extraction)
 
-**Basic Usage**:
+**Basic Usage** (scBasset lives in `scvi.external`):
 ```python
-# scBasset requires sequence information
-# First, extract sequences for peaks
-from scbasset import utils
-sequences = utils.fetch_sequences(adata, genome="hg38")
-
-# Setup and train
-scvi.model.SCBASSET.setup_anndata(
+# scBasset needs per-peak DNA sequences. Add them to the AnnData first;
+# this downloads the genome (once) and stores one-hot codes in adata.varm.
+scvi.data.add_dna_sequence(
     adata,
-    batch_key="batch"
+    genome_name="hg38",
+    install_genome=True,
 )
 
-model = scvi.model.SCBASSET(adata, sequences=sequences)
+# Register the per-peak sequence code, then train
+scvi.external.SCBASSET.setup_anndata(adata, dna_code_key="dna_code")
+
+model = scvi.external.SCBASSET(adata)
 model.train()
 
-# Get latent representation
+# Cell embeddings (low-dimensional latent representation)
 latent = model.get_latent_representation()
-
-# Interpret model: which sequences/motifs are important
-importance_scores = model.get_feature_importance()
 ```
 
 **Key Parameters**:
@@ -179,12 +176,16 @@ importance_scores = model.get_feature_importance()
 - **Transfer learning**: Fine-tune on new datasets
 
 **Interpretability Tools**:
-```python
-# Get importance scores for sequences
-importance = model.get_sequence_importance(region_indices=[0, 1, 2])
 
-# Predict accessibility for new sequences
-predictions = model.predict_accessibility(new_sequences)
+scBasset learns sequence-aware cell and peak embeddings. Transcription-factor
+activity is assessed by scoring motif sequences against the trained model rather
+than calling a single importance function. See the
+[scBasset user guide](https://docs.scvi-tools.org/en/stable/user_guide/models/scbasset.html)
+for the current motif-injection / TF-activity workflow.
+
+```python
+# Cell embeddings for clustering / visualization
+cell_embedding = model.get_latent_representation()
 ```
 
 ## Model Selection for ATAC-seq
@@ -275,14 +276,21 @@ model.save("peakvi_model")
 For paired multimodal data (RNA+ATAC from same cells), use **MultiVI** instead:
 
 ```python
-# For 10x Multiome or similar paired data
-scvi.model.MULTIVI.setup_anndata(
-    adata,
+from mudata import MuData
+
+# MultiVI is configured from a MuData object (setup_anndata was removed in v1.3)
+mdata = MuData({"rna": rna_adata, "atac": atac_adata})
+scvi.model.MULTIVI.setup_mudata(
+    mdata,
     batch_key="sample",
-    modality_key="modality"  # "RNA" or "ATAC"
+    modalities={"rna_layer": "rna", "atac_layer": "atac"},
 )
 
-model = scvi.model.MULTIVI(adata)
+model = scvi.model.MULTIVI(
+    mdata,
+    n_genes=rna_adata.n_vars,
+    n_regions=atac_adata.n_vars,
+)
 model.train()
 
 # Get joint latent space

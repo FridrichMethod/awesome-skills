@@ -13,8 +13,7 @@ Before using code patterns, verify installed versions match. If versions differ:
 - Python: `pip show requests pandas networkx`
 - API surface: confirm endpoint URLs match each resource's current docs
 
-STRING URL is version-pinned (`version-12-0` as of 2024); older URLs (`version-11-5`) were deprecated 2023.
-The Cytoscape/Cytoscape.js ecosystem uses different version semantics; check the docs for the targeted version.
+STRING URL is version-pinned (`version-12-0` as of 2024); older URLs (`version-11-5`) were deprecated 2023. The Cytoscape/Cytoscape.js ecosystem uses different version semantics; check the docs for the targeted version.
 
 # Interaction Databases
 
@@ -116,7 +115,7 @@ Direct REST API has changed multiple times; the most stable access is via OmniPa
 
 SIGNOR (Lo Surdo et al. 2023 *Nucleic Acids Res* 51:D631) is **the only major curated database with signed, directed, mechanism-typed interactions**. Each edge has:
 
-- `direction`: A→B
+- `direction`: A->B
 - `effect`: `up-regulates`, `down-regulates`, `unknown`
 - `mechanism`: `phosphorylation`, `dephosphorylation`, `ubiquitination`, `binding`, etc.
 

@@ -157,6 +157,11 @@ def serve():
 
 The application must bind to `0.0.0.0` (not `127.0.0.1`).
 
+> **Security:** The command above uses a fixed argument list. Do not interpolate
+> unsanitized user input (model names, paths, flags) into `subprocess` arguments —
+> validate against an allowlist or pass untrusted values as data, not as command
+> arguments, to avoid command injection.
+
 ## WebSockets
 
 Supported with `@modal.asgi_app`, `@modal.wsgi_app`, and `@modal.web_server`:

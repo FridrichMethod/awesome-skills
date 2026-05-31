@@ -46,13 +46,11 @@ gpu="A100-80GB"    # Single A100 80GB
 gpu="H100:4"       # Four H100s
 ```
 
-### GPU Object (Advanced)
+### Case-Insensitive Strings
 
-```python
-@app.function(gpu=modal.gpu.H100(count=2))
-def multi_gpu():
-    ...
-```
+GPU strings are case-insensitive, so `gpu="h100"` and `gpu="H100"` are equivalent.
+
+> **Deprecation:** The legacy `modal.gpu.*` objects (e.g. `modal.gpu.H100(count=2)`) are deprecated as of v0.73.31. Always configure GPUs with strings — use `gpu="H100:2"` for multiple GPUs and `gpu="A100-80GB"` for the 80 GB A100.
 
 ## GPU Selection Guide
 
@@ -172,3 +170,8 @@ def finetune():
         "train.py"
     ], check=True)
 ```
+
+> **Security:** These launchers use fixed, hardcoded argument lists. Never build the
+> `subprocess` argument list from unsanitized user input. If a workload needs
+> user-supplied values (e.g. hyperparameters), validate them against an allowlist or
+> pass them as files / environment variables rather than as command arguments.

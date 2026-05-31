@@ -25,41 +25,33 @@ This document covers models for analyzing spatially-resolved transcriptomics dat
 - **Single-cell reference**: scRNA-seq with cell type annotations
 - Both datasets should share genes
 
-**Basic Usage**:
+**Basic Usage** (DestVI requires a `CondSCVI` reference model, not plain `SCVI`):
 ```python
-import scvi
+from scvi.model import CondSCVI, DestVI
 
-# Step 1: Train scVI on single-cell reference
-scvi.model.SCVI.setup_anndata(sc_adata, layer="counts")
-sc_model = scvi.model.SCVI(sc_adata)
-sc_model.train()
+# Step 1: Train the single-cell LVM (CondSCVI) on the labeled reference
+CondSCVI.setup_anndata(sc_adata, layer="counts", labels_key="cell_type")
+sc_model = CondSCVI(sc_adata, weight_obs=False)
+sc_model.train(max_epochs=300)
 
-# Step 2: Setup spatial data
-scvi.model.DESTVI.setup_anndata(
-    spatial_adata,
-    layer="counts"
-)
+# Step 2: Set up the spatial data and build DestVI from the trained reference
+DestVI.setup_anndata(spatial_adata, layer="counts")
+st_model = DestVI.from_rna_model(spatial_adata, sc_model)
+st_model.train(max_epochs=2500)
 
-# Step 3: Train DestVI using reference
-model = scvi.model.DESTVI.from_rna_model(
-    spatial_adata,
-    sc_model,
-    cell_type_key="cell_type"  # Cell type labels in reference
-)
-model.train(max_epochs=2500)
-
-# Step 4: Get cell type proportions
-proportions = model.get_proportions()
+# Step 3: Get cell type proportions per spot
+proportions = st_model.get_proportions()
 spatial_adata.obsm["proportions"] = proportions
 
-# Step 5: Get cell type-specific expression
+# Step 4: Get cell type-specific expression
 # Expression of genes specific to each cell type at each spot
-ct_expression = model.get_scale_for_ct("T cells")
+ct_expression = st_model.get_scale_for_ct("T cells")
 ```
 
 **Key Parameters**:
+- `weight_obs` (CondSCVI): downweight common cell types when training the reference
 - `amortization`: Amortization strategy ("both", "latent", "proportion")
-- `n_latent`: Latent dimensionality (inherited from scVI model)
+- `n_latent`: Latent dimensionality (inherited from the CondSCVI reference)
 
 **Outputs**:
 - `get_proportions()`: Cell type proportions at each spot
@@ -103,29 +95,21 @@ for ct in cell_types:
 - Deconvolving spatial data with reference
 - Faster alternative for basic deconvolution
 
-**Basic Usage**:
+**Basic Usage** (Stereoscope is split into two `scvi.external` models):
 ```python
-scvi.model.STEREOSCOPE.setup_anndata(
-    sc_adata,
-    labels_key="cell_type",
-    layer="counts"
-)
+from scvi.external import RNAStereoscope, SpatialStereoscope
 
-# Train on reference
-ref_model = scvi.model.STEREOSCOPE(sc_adata)
-ref_model.train()
+# Train the single-cell reference model
+RNAStereoscope.setup_anndata(sc_adata, labels_key="cell_type", layer="counts")
+sc_model = RNAStereoscope(sc_adata)
+sc_model.train(max_epochs=100)
 
-# Setup spatial data
-scvi.model.STEREOSCOPE.setup_anndata(spatial_adata, layer="counts")
+# Build the spatial model from the trained reference
+SpatialStereoscope.setup_anndata(spatial_adata, layer="counts")
+spatial_model = SpatialStereoscope.from_rna_model(spatial_adata, sc_model)
+spatial_model.train(max_epochs=2000)
 
-# Transfer to spatial
-spatial_model = scvi.model.STEREOSCOPE.from_reference_model(
-    spatial_adata,
-    ref_model
-)
-spatial_model.train()
-
-# Get proportions
+# Get cell-type proportions per spot
 proportions = spatial_model.get_proportions()
 ```
 
@@ -149,6 +133,10 @@ proportions = spatial_model.get_proportions()
 - Single-cell RNA-seq data with annotations
 - Spatial transcriptomics data
 - Shared genes between modalities
+
+> scvi-tools wraps the Tangram method as `scvi.external.Tangram`. The example
+> below uses the standalone `tangram-sc` package, whose helper functions
+> (annotation/gene projection) are convenient for downstream analysis.
 
 **Basic Usage**:
 ```python
@@ -204,19 +192,16 @@ sc.pl.spatial(
 
 **Basic Usage**:
 ```python
-# Combine datasets
-combined_adata = sc.concat([sc_adata, spatial_adata])
+# gimVI (scvi.external) jointly models a single-cell and a spatial dataset
+scvi.external.GIMVI.setup_anndata(sc_adata, layer="counts")
+scvi.external.GIMVI.setup_anndata(spatial_adata, layer="counts")
 
-scvi.model.GIMVI.setup_anndata(
-    combined_adata,
-    layer="counts"
-)
-
-model = scvi.model.GIMVI(combined_adata)
+model = scvi.external.GIMVI(sc_adata, spatial_adata)
 model.train()
 
-# Impute genes in spatial data
-imputed = model.get_imputed_values(spatial_indices)
+# Per-dataset latent representations and imputed expression
+sc_latent, spatial_latent = model.get_latent_representation()
+_, imputed_spatial = model.get_imputed_values(normalized=True)
 ```
 
 ## scVIVA (Variation in Variational Autoencoders for Spatial)
@@ -239,23 +224,32 @@ imputed = model.get_imputed_values(spatial_indices)
 - Spatial transcriptomics with coordinates
 - Cell type annotations (optional)
 
-**Basic Usage**:
+**Basic Usage** (scVIVA lives in `scvi.external`):
 ```python
-scvi.model.SCVIVA.setup_anndata(
+# scVIVA jointly models each cell and its niche. Precompute neighborhood
+# composition / embeddings first, then register the resulting keys.
+scvi.external.SCVIVA.preprocess_anndata(
     spatial_adata,
-    layer="counts",
-    spatial_key="spatial"  # Coordinates in .obsm
+    sample_key="sample",
+    labels_key="cell_type",
+    cell_coordinates_key="spatial",  # coordinates in .obsm
 )
 
-model = scvi.model.SCVIVA(spatial_adata)
+scvi.external.SCVIVA.setup_anndata(
+    spatial_adata,
+    labels_key="cell_type",
+    sample_key="sample",
+)
+
+model = scvi.external.SCVIVA(spatial_adata)
 model.train()
 
-# Get environment representations
-env_latent = model.get_environment_representation()
-
-# Identify environment-associated genes
-env_genes = model.get_environment_specific_genes()
+# Latent representation capturing cell state in its spatial context
+spatial_adata.obsm["X_scVIVA"] = model.get_latent_representation()
 ```
+
+See the [scVIVA user guide](https://docs.scvi-tools.org/en/stable/user_guide/models/scviva.html)
+for the exact preprocessing keys and niche/environment outputs.
 
 ## ResolVI
 
@@ -273,19 +267,18 @@ env_genes = model.get_environment_specific_genes()
 - Need denoising before analysis
 - Improving data quality
 
-**Basic Usage**:
+**Basic Usage** (ResolVI lives in `scvi.external`):
 ```python
-scvi.model.RESOLVI.setup_anndata(
+scvi.external.RESOLVI.setup_anndata(
     spatial_adata,
     layer="counts",
-    spatial_key="spatial"
 )
 
-model = scvi.model.RESOLVI(spatial_adata)
+model = scvi.external.RESOLVI(spatial_adata)
 model.train()
 
-# Get denoised expression
-denoised = model.get_denoised_expression()
+# Denoised / corrected expression
+denoised = model.get_normalized_expression()
 ```
 
 ## Model Selection for Spatial Transcriptomics
@@ -355,15 +348,17 @@ sc_adata = sc.read_h5ad("reference_scrna.h5ad")
 sc.pp.filter_genes(sc_adata, min_cells=10)
 sc.pp.highly_variable_genes(sc_adata, n_top_genes=4000)
 
-# Train scVI on reference
-scvi.model.SCVI.setup_anndata(
+# Train the CondSCVI reference model (labels_key carries cell types)
+from scvi.model import CondSCVI, DestVI
+
+CondSCVI.setup_anndata(
     sc_adata,
     layer="counts",
-    batch_key="batch"
+    labels_key="cell_type",
 )
 
-sc_model = scvi.model.SCVI(sc_adata)
-sc_model.train(max_epochs=400)
+sc_model = CondSCVI(sc_adata, weight_obs=False)
+sc_model.train(max_epochs=300)
 
 # ===== Part 2: Load spatial data =====
 spatial_adata = sc.read_visium("path/to/visium")
@@ -373,15 +368,14 @@ spatial_adata.var_names_make_unique()
 sc.pp.filter_genes(spatial_adata, min_cells=10)
 
 # ===== Part 3: Run DestVI =====
-scvi.model.DESTVI.setup_anndata(
+DestVI.setup_anndata(
     spatial_adata,
     layer="counts"
 )
 
-destvi_model = scvi.model.DESTVI.from_rna_model(
+destvi_model = DestVI.from_rna_model(
     spatial_adata,
     sc_model,
-    cell_type_key="cell_type"
 )
 
 destvi_model.train(max_epochs=2500)

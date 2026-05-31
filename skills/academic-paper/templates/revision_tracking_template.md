@@ -26,11 +26,11 @@ This template works with both:
 
 ## Revision Tracking Table
 
-| # | Issue Description | Reviewer | Type | Section | Resolution Summary | Location of Change | Status | Reason (if not resolved) |
-|---|-------------------|----------|------|---------|-------------------|-------------------|--------|--------------------------|
-| 1 | [description] | [R1/R2/R3/DA] | [Major/Minor/Editorial] | [section] | [what was done] | [page/paragraph] | [status] | [if applicable] |
-| 2 | [description] | [R1/R2/R3/DA] | [Major/Minor/Editorial] | [section] | [what was done] | [page/paragraph] | [status] | [if applicable] |
-| 3 | [description] | [R1/R2/R3/DA] | [Major/Minor/Editorial] | [section] | [what was done] | [page/paragraph] | [status] | [if applicable] |
+| # | Issue Description | Reviewer | Type | Section | Resolution Summary | Location of Change | Status | Reason (if not resolved) | Commitments | Fulfillment | Unfulfilled Rationale |
+|---|-------------------|----------|------|---------|-------------------|-------------------|--------|--------------------------|-------------|-------------|----------------------|
+| 1 | [description] | [R1/R2/R3/DA] | [Major/Minor/Editorial] | [section] | [what was done] | [page/paragraph] | [status] | [if applicable] | 1. [commitment_text]<br>2. [commitment_text] | 1. [fulfillment_status]<br>2. [fulfillment_status] | 1. [rationale or ""]<br>2. [rationale or ""] |
+| 2 | [description] | [R1/R2/R3/DA] | [Major/Minor/Editorial] | [section] | [what was done] | [page/paragraph] | [status] | [if applicable] | 1. [commitment_text] | 1. [fulfillment_status] | 1. [rationale or ""] |
+| 3 | [description] | [R1/R2/R3/DA] | [Major/Minor/Editorial] | [section] | [what was done] | [page/paragraph] | [status] | [if applicable] | _(empty — positive comment, no commitment)_ | _(omit)_ | _(omit)_ |
 
 ---
 
@@ -59,6 +59,36 @@ Respectful disagreement with the reviewer's suggestion on methodological or theo
 - **Must provide**: evidence-based rebuttal with citations
 - **Must demonstrate**: that the reviewer's concern was carefully considered
 - **Example**: "We respectfully maintain our analytical approach. Smith (2022) and Chen (2023) both validate this method for our sample size and data structure. Response letter includes detailed justification."
+
+---
+
+## Commitment Ledger (Kong A1 / v3.11)
+
+Per Schema 11 v3.11, each row of the Revision Tracking Table may carry an extracted commitment list. Each commitment has a `fulfillment_status` chosen from:
+
+### fulfilled
+The commitment was addressed. Required evidence (per `required_evidence_type`) is present and substantively addresses the `commitment_text`. The verification site depends on the evidence type:
+- For the seven **manuscript-evidence** types (`new_section` / `new_figure` / `new_table` / `new_citation` / `methods_paragraph` / `discussion_paragraph` / `prose_edit`), the evidence lives at `revision_location` in the revised manuscript. `prose_edit` covers sentence- or paragraph-level changes (typo fixes, terminology clarifications, equation formatting, citation-style corrections) too granular for the other categories.
+- For `acknowledgment_only`, the evidence lives in the Response to Reviewers (Schema 8); the manuscript does NOT need to change. `revision_location` may be empty or point to the response letter.
+- For `other` (escape hatch for uncategorizable evidence), re-review surfaces an `EVIDENCE_TYPE_UNSPECIFIED` advisory prompting the author to specify the actual evidence location; verify at `revision_location` if populated.
+
+### partial
+Evidence exists but does not fully address the commitment. Example: reviewer asked for ablation on dataset X; revision adds ablation on dataset Y. Author must populate `unfulfilled_rationale` with the gap explanation.
+
+### not-fulfilled
+Required evidence is absent. Author must populate `unfulfilled_rationale` with one of:
+- "done elsewhere, see §X" pointer
+- "rejected, reasons: …" rationale
+- "deferred to future work" acknowledgment
+
+Silent omission triggers `COMMITMENT_GAP` advisory at re-review.
+
+### explicitly-rejected-with-rationale
+Author has decided not to address the commitment and has provided one of the three rationale forms above. This is **not** a failure — it is a documented, defensible decision. Re-review records it without raising `COMMITMENT_GAP`.
+
+**Authoring guidance:** Fill in `commitment_extracted` first (typically via `revision_coach_agent` Step 3.5 output); fill `fulfillment_status` + `unfulfilled_rationale` as revision execution progresses. By final submission, every non-fulfilled commitment must have a rationale.
+
+**Parallel-list alignment (Kong A1 / v3.11):** When a row carries multiple commitments, the three cells (Commitments / Fulfillment / Unfulfilled Rationale) MUST contain index-aligned lists of the same length. Use **numbered prefixes** (`1. `, `2. `, …) in each cell so index alignment is visually verifiable; a `<br>` (or actual newline inside `|` cell, depending on Markdown flavor) separates entries. A missing entry in any of the three cells breaks per-commitment traceability — re-reviewers will flag the row. For positive comments (no extractable commitment), leave all three cells with `_(empty)_` or `_(omit)_` to mark the absence explicitly rather than silently.
 
 ---
 

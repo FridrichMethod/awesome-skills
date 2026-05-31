@@ -245,6 +245,22 @@ large_effect = de_results[
 
 ## Advanced Usage
 
+### Differential Abundance
+
+In addition to differential *expression*, models exposing the `VAEMixin` API
+provide `differential_abundance()` and `get_aggregated_posterior()` (added in
+v1.4.2) to test how cell-state abundance shifts between conditions in the
+learned latent space:
+
+```python
+# Compare the latent-space abundance of two conditions
+da = model.differential_abundance(
+    groupby="condition",
+    group1="disease",
+    group2="healthy",
+)
+```
+
 ### DE Within Specific Cells
 
 ```python

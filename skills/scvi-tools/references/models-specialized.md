@@ -29,13 +29,13 @@ This document covers models for specialized single-cell data modalities in scvi-
 import scvi
 
 # Setup methylation data
-scvi.model.METHYLVI.setup_anndata(
+scvi.external.METHYLVI.setup_anndata(
     adata,
     layer="methylation_counts",  # Methylation data
     batch_key="batch"
 )
 
-model = scvi.model.METHYLVI(adata)
+model = scvi.external.METHYLVI(adata)
 model.train()
 
 # Get latent representation
@@ -50,7 +50,7 @@ normalized_meth = model.get_normalized_methylation()
 **Basic Usage**:
 ```python
 # Setup with cell type labels
-scvi.model.METHYLANVI.setup_anndata(
+scvi.external.METHYLANVI.setup_anndata(
     adata,
     layer="methylation_counts",
     batch_key="batch",
@@ -58,7 +58,7 @@ scvi.model.METHYLANVI.setup_anndata(
     unlabeled_category="Unknown"
 )
 
-model = scvi.model.METHYLANVI(adata)
+model = scvi.external.METHYLANVI(adata)
 model.train()
 
 # Predict cell types
@@ -98,13 +98,13 @@ predictions = model.predict()
 
 **Basic Usage**:
 ```python
-scvi.model.CYTOVI.setup_anndata(
+scvi.external.CYTOVI.setup_anndata(
     adata,
     protein_expression_obsm_key="protein_expression",
     batch_key="batch"
 )
 
-model = scvi.model.CYTOVI(adata)
+model = scvi.external.CYTOVI(adata)
 model.train()
 
 # Get batch-corrected representation
@@ -126,12 +126,12 @@ import scanpy as sc
 adata = sc.read_h5ad("cytof_data.h5ad")
 
 # 2. Train CytoVI
-scvi.model.CYTOVI.setup_anndata(
+scvi.external.CYTOVI.setup_anndata(
     adata,
     protein_expression_obsm_key="protein",
     batch_key="experiment"
 )
-model = scvi.model.CYTOVI(adata)
+model = scvi.external.CYTOVI(adata)
 model.train()
 
 # 3. Get batch-corrected values
@@ -163,13 +163,13 @@ sc.pl.umap(adata, color=["batch", "leiden"])
 
 **Basic Usage**:
 ```python
-scvi.model.SYSVI.setup_anndata(
+scvi.external.SysVI.setup_anndata(
     adata,
     layer="counts",
     batch_key="batch"
 )
 
-model = scvi.model.SYSVI(adata)
+model = scvi.external.SysVI(adata)
 model.train()
 
 latent = model.get_latent_representation()
@@ -191,62 +191,25 @@ latent = model.get_latent_representation()
 - Understanding cell state transitions
 - Identifying branching points in development
 
-**Basic Usage**:
+**Basic Usage** (Decipher lives in `scvi.external`):
 ```python
-# Typically used after scVI for embeddings
-scvi_model = scvi.model.SCVI(adata)
-scvi_model.train()
-
-# Decipher for trajectory
-scvi.model.DECIPHER.setup_anndata(adata)
-decipher_model = scvi.model.DECIPHER(adata, scvi_model)
+# Decipher learns its own interpretable low-dimensional representation
+scvi.external.Decipher.setup_anndata(adata, layer="counts")
+decipher_model = scvi.external.Decipher(adata)
 decipher_model.train()
 
-# Get pseudotime
-pseudotime = decipher_model.get_pseudotime()
-adata.obs["pseudotime"] = pseudotime
+# Interpretable Decipher representation for trajectory/structure analysis
+adata.obsm["X_decipher"] = decipher_model.get_latent_representation()
 ```
 
 **Visualization**:
 ```python
 import scanpy as sc
 
-# Plot pseudotime on UMAP
-sc.pl.umap(adata, color="pseudotime", cmap="viridis")
-
-# Gene expression along pseudotime
-sc.pl.scatter(adata, x="pseudotime", y="gene_of_interest")
-```
-
-## peRegLM (Peak Regulatory Linear Model)
-
-**Purpose**: Linking chromatin accessibility to gene expression for regulatory analysis.
-
-**Key Features**:
-- Links ATAC-seq peaks to gene expression
-- Identifies regulatory relationships
-- Works with paired multiome data
-
-**When to Use**:
-- Multiome data (RNA + ATAC from same cells)
-- Understanding gene regulation
-- Linking peaks to target genes
-- Regulatory network construction
-
-**Basic Usage**:
-```python
-# Requires paired RNA + ATAC data
-scvi.model.PEREGLM.setup_anndata(
-    multiome_adata,
-    rna_layer="counts",
-    atac_layer="atac_counts"
-)
-
-model = scvi.model.PEREGLM(multiome_adata)
-model.train()
-
-# Get peak-gene links
-peak_gene_links = model.get_regulatory_links()
+# Build a neighborhood graph on the Decipher representation, then embed
+sc.pp.neighbors(adata, use_rep="X_decipher")
+sc.tl.umap(adata)
+sc.pl.umap(adata, color="cell_type")
 ```
 
 ## Model-Specific Best Practices
@@ -281,7 +244,7 @@ Many specialized models work well in combination:
 **Methylation + Expression**:
 ```python
 # Analyze separately, then integrate
-methylvi_model = scvi.model.METHYLVI(meth_adata)
+methylvi_model = scvi.external.METHYLVI(meth_adata)
 scvi_model = scvi.model.SCVI(rna_adata)
 
 # Integrate results at analysis level
@@ -291,7 +254,7 @@ scvi_model = scvi.model.SCVI(rna_adata)
 **Cytometry + CITE-seq**:
 ```python
 # CytoVI for flow/CyTOF
-cyto_model = scvi.model.CYTOVI(cyto_adata)
+cyto_model = scvi.external.CYTOVI(cyto_adata)
 
 # totalVI for CITE-seq
 cite_model = scvi.model.TOTALVI(cite_adata)
@@ -301,11 +264,16 @@ cite_model = scvi.model.TOTALVI(cite_adata)
 
 **ATAC + RNA (Multiome)**:
 ```python
-# MultiVI for joint analysis
-multivi_model = scvi.model.MULTIVI(multiome_adata)
+from mudata import MuData
 
-# peRegLM for regulatory links
-pereglm_model = scvi.model.PEREGLM(multiome_adata)
+# MultiVI for joint analysis (configured from a MuData object; see models-multimodal.md)
+mdata = MuData({"rna": rna_adata, "atac": atac_adata})
+scvi.model.MULTIVI.setup_mudata(
+    mdata, modalities={"rna_layer": "rna", "atac_layer": "atac"}
+)
+multivi_model = scvi.model.MULTIVI(
+    mdata, n_genes=rna_adata.n_vars, n_regions=atac_adata.n_vars
+)
 ```
 
 ## Choosing Specialized Models
@@ -317,7 +285,6 @@ pereglm_model = scvi.model.PEREGLM(multiome_adata)
    - Flow/CyTOF → CytoVI
    - Trajectory → Decipher
    - Multi-batch integration → SysVI
-   - Regulatory links → peRegLM
 
 2. **Do you have labels?**
    - Yes → MethylANVI (methylation)
@@ -326,7 +293,6 @@ pereglm_model = scvi.model.PEREGLM(multiome_adata)
 3. **What's your main goal?**
    - Batch correction → CytoVI, SysVI
    - Trajectory/pseudotime → Decipher
-   - Peak-gene links → peRegLM
    - Methylation patterns → MethylVI/ANVI
 
 ## Example: Complete Methylation Analysis
@@ -342,14 +308,14 @@ meth_adata = sc.read_h5ad("methylation_data.h5ad")
 sc.pp.filter_genes(meth_adata, min_cells=10)
 
 # 3. Setup MethylVI
-scvi.model.METHYLVI.setup_anndata(
+scvi.external.METHYLVI.setup_anndata(
     meth_adata,
     layer="methylation",
     batch_key="batch"
 )
 
 # 4. Train model
-model = scvi.model.METHYLVI(meth_adata, n_latent=15)
+model = scvi.external.METHYLVI(meth_adata, n_latent=15)
 model.train(max_epochs=400)
 
 # 5. Get latent representation
@@ -386,11 +352,14 @@ solo.train()
 doublets = solo.predict()
 ```
 
-**scArches** (reference mapping):
+**scArches** (reference mapping): scArches-style surgery is built into the
+core models via `ArchesMixin`, not a separate `SCARCHES` class. Train a
+reference model, then map a query with `load_query_data`:
 ```python
-from scvi.external import SCARCHES
-
-# For transfer learning and query-to-reference mapping
+# Reference model already trained and saved to "./reference_model"
+query_model = scvi.model.SCVI.load_query_data(query_adata, "./reference_model")
+query_model.train(max_epochs=200, plan_kwargs={"weight_decay": 0.0})
+query_latent = query_model.get_latent_representation()
 ```
 
 These external tools extend scvi-tools functionality for specific use cases.
@@ -404,5 +373,4 @@ These external tools extend scvi-tools functionality for specific use cases.
 | CytoVI | Cytometry | Batch correction | No |
 | SysVI | scRNA-seq | Large-scale integration | No |
 | Decipher | scRNA-seq | Trajectory inference | No |
-| peRegLM | Multiome | Peak-gene links | No |
 | SOLO | scRNA-seq | Doublet detection | Semi |

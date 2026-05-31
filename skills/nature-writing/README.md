@@ -45,6 +45,7 @@ nature-writing/
     ├── experiments.md
     ├── introduction.md
     ├── method.md
+    ├── nature-summary-paragraph.md
     ├── paper-review.md
     ├── paragraph-flow.md
     ├── related-work.md
@@ -57,7 +58,7 @@ nature-writing/
 |---|---|
 | Evidence first | Do not invent data, mechanisms, statistics, sample sizes or novelty |
 | Abstract | Context, gap, approach, key result, implication, boundary |
-| Introduction | Field scale, bottleneck, prior attempts, unresolved gap, present study |
+| Introduction | Field scale, bottleneck, prior attempts, unresolved gap, present study; for `Nature`, use a staged summary-paragraph funnel |
 | Method | Explain module motivation, design, forward process, and technical advantage |
 | Results | Build an evidence ladder, not a chronological lab diary |
 | Experiments | Tie every major claim to comparison, ablation, metric, or stress-test evidence |

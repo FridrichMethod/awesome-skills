@@ -25,12 +25,20 @@ submission-ready English with Chinese action notes for the author.
 
 ## File structure
 
+The skill uses a router/static-dynamic split (like the other nature-* skills): a short `SKILL.md` router plus a `manifest.yaml`. nature-data is a linear workflow with no content axis, so the split is core (always loaded) plus on-demand references.
+
 ```text
 nature-data/
-├── SKILL.md
+├── SKILL.md                     # short router
+├── manifest.yaml                # always_load core + on-demand references (no axis)
 ├── README.md
 ├── agents/
 │   └── openai.yaml
+├── static/
+│   └── core/                    # always loaded
+│       ├── stance.md            # default stance + source hierarchy
+│       ├── chinese-mode.md      # Chinese-user operating mode
+│       └── workflow.md          # the 8-step workflow + output format
 └── references/
     ├── fair-metadata-checklist.md
     ├── chinese-author-alignment.md

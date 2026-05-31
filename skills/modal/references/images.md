@@ -47,10 +47,10 @@ image = modal.Image.from_dockerfile("./Dockerfile")
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .uv_pip_install(
-        "torch==2.8.0",
-        "transformers>=4.40",
-        "accelerate",
-        "scipy",
+        "torch==2.12.0",
+        "transformers==5.9.0",
+        "accelerate==1.13.0",
+        "scipy==1.17.1",
     )
 )
 ```
@@ -163,6 +163,12 @@ image = modal.Image.debian_slim().add_local_python_source("my_module")
 
 This uses Python's import system to find and include the module.
 
+> As of v1.0, Modal no longer "automounts" imported local modules. You must explicitly
+> include local dependencies with `add_local_python_source` (the App's own source is
+> still included automatically; set `include_source=False` on the App/Function to opt
+> out). The deprecated `modal.Mount` object and the `mount=`/`context_mount=` parameters
+> have been replaced by these `Image.add_local_*` methods.
+
 ### Individual Files
 
 ```python
@@ -193,10 +199,11 @@ Build from existing Dockerfiles:
 
 ```python
 image = modal.Image.from_dockerfile("./Dockerfile")
-
-# With build context
-image = modal.Image.from_dockerfile("./Dockerfile", context_mount=modal.Mount.from_local_dir("."))
 ```
+
+The build context is now inferred automatically from the Dockerfile's commands. The
+old `context_mount=` parameter — along with the `modal.Mount` object it relied on — is
+deprecated and was enforced as removed in v1.0; do not pass it.
 
 ## Alternative Package Managers
 

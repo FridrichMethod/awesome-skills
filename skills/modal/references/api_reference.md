@@ -27,7 +27,13 @@ A serverless function backed by an autoscaling container pool.
 | `.spawn(*args)` | Execute async, returns `FunctionCall` |
 | `.map(inputs)` | Parallel execution over inputs |
 | `.starmap(inputs)` | Parallel execution with multiple args |
-| `.from_name(app, fn)` | Reference a deployed function |
+| `.for_each(inputs)` | Like `.map()` but discards outputs |
+| `.spawn_map(inputs)` | Spawn a parallel map without waiting |
+| `.from_name(app, fn)` | Reference a deployed function (replaces deprecated `.lookup`) |
+| `.hydrate()` | Force-fetch server metadata (replaces deprecated `.resolve()`) |
+| `.with_options(gpu=, ...)` | New autoscaling variant with overridden config |
+| `.with_concurrency(max_inputs=, target_inputs=)` | Override input concurrency at invocation |
+| `.with_batching(max_batch_size=, wait_ms=)` | Override dynamic batching at invocation |
 | `.update_autoscaler(**kwargs)` | Dynamic scaling update |
 
 ### modal.Cls
@@ -54,6 +60,10 @@ class MyClass:
 | `@modal.method()` | Expose as callable method |
 | `@modal.parameter()` | Class-level parameter |
 
+Look up a deployed Cls with `Model = modal.Cls.from_name("app", "Model")`, then
+instantiate before calling: `Model().method.remote(...)`. Override config at invocation
+with `Model.with_options(gpu="H200", max_containers=10)`.
+
 ## Image
 
 ### modal.Image
@@ -76,7 +86,12 @@ Defines the container environment.
 | `.add_local_file(local, remote)` | Add single file |
 | `.add_local_python_source(module)` | Add Python module |
 | `.env(dict)` | Set environment variables |
+| `.pipe(recipe_fn)` | Apply a reusable Image recipe |
 | `.imports()` | Context manager for remote imports |
+
+> `add_local_dir`/`add_local_file`/`add_local_python_source` replace the deprecated
+> `copy_local_*` methods and the removed `modal.Mount` object / `mount=` / `context_mount=`
+> parameters.
 
 ## Storage
 
@@ -93,12 +108,35 @@ vol = modal.Volume.from_name("name", create_if_missing=True)
 | `.from_name(name)` | Reference or create a volume |
 | `.commit()` | Force immediate commit |
 | `.reload()` | Refresh to see other containers' writes |
+| `.with_mount_options(read_only=, sub_path=)` | Read-only or subdirectory mount |
 
 Mount: `@app.function(volumes={"/path": vol})`
 
 ### modal.NetworkFileSystem
 
 Legacy shared storage (superseded by Volume).
+
+## Sandboxes
+
+### modal.Sandbox
+
+Isolated, programmatically controlled containers for running untrusted or
+dynamically generated code.
+
+```python
+app = modal.App.lookup("my-app", create_if_missing=True)
+sb = modal.Sandbox.create(app=app, image=modal.Image.debian_slim())
+```
+
+| Method | Description |
+|--------|-------------|
+| `.create(app=, image=, ...)` | Launch a sandbox |
+| `.exec(*cmd)` | Run a command, returns a process handle |
+| `.filesystem.read_text/write_text(...)` | Filesystem API (beta) |
+| `.snapshot_filesystem()` | Snapshot the filesystem to an Image |
+| `.terminate()` | Stop the sandbox |
+
+Restrict connectivity with `inbound_cidr_allowlist=[...]` / `outbound_cidr_allowlist=[...]`.
 
 ## Secrets
 

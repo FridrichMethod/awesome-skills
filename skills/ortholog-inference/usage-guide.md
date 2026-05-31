@@ -1,97 +1,83 @@
-# Ortholog Inference - Usage Guide
+# Ortholog Inference (Database Access) Usage Guide
 
 ## Overview
 
-Ortholog inference distinguishes genes whose history reflects speciation (orthologs) from genes derived from duplication (paralogs). **HOGs** (Hierarchical Orthologous Groups; Altenhoff 2013) are the modern unit of analysis -- a maximal cluster of genes descended from a single ancestral gene at a defined taxonomic level. **OrthoFinder3** (Emms & Kelly 2025 bioRxiv) is the current Quest-for-Orthologs benchmark leader; its HOG output is 12% more accurate than v2 orthogroups (+20% with outgroup). For prokaryote-eukaryote scale, **TOGA** (Kirilenko 2023 Science) integrates whole-genome-alignment-based orthology with gene-loss classification.
-
-The "ortholog conjecture" (orthologs more functionally similar than paralogs) is supported but weakly (Altenhoff 2012; Stamboulian 2020). Don't treat 1:1 ortholog labeling as automatic functional equivalence.
+Pull pre-computed ortholog calls from public databases (OrthoDB, Ensembl Compara, OMA, eggNOG, PANTHER, KEGG Orthology, HomoloGene). This skill is the database-access view: how to query each resource programmatically, what their confidence semantics mean (and why they're not comparable across resources), the orthology-conjecture caveat, when to defect to de novo computation in `comparative-genomics/ortholog-inference`, and how to handle symbol-renaming, rate limits, and stale snapshots.
 
 ## Prerequisites
 
 ```bash
-# Modern tools
-conda install -c bioconda orthofinder=3.0
-conda install -c bioconda sonicparanoid broccoli proteinortho
-
-# OMA / FastOMA
-wget https://omabrowser.org/standalone/OMA.tgz && tar xf OMA.tgz
-pip install fastoma
-
-# eggNOG-mapper
-conda install -c bioconda eggnog-mapper
-
-# JustOrthologs (close species, fast)
-git clone https://github.com/ridgelab/justOrthologs
-
-# TOGA (WGA-anchored orthology + gene loss)
-conda env create -f https://raw.githubusercontent.com/hillerlab/TOGA/master/toga_env.yml
-
-# Quality control
-conda install -c bioconda busco compleasm
+pip install requests pandas
 ```
+
+No API keys required for the listed resources (as of 2026). Rate limits: Ensembl REST is 15 req/sec / 55K/hour; others vary.
 
 ## Quick Start
 
-Tell the AI agent what to do:
-- "Run OrthoFinder3 on these proteomes with outgroup for HOG inference"
-- "Cross-validate with SonicParanoid2 for consensus single-copy orthologs"
-- "Identify ortholog vs paralog (in-paralog vs co-ortholog) for gene X across vertebrates"
-- "Project annotations from human to chimp using TOGA with intactness classification"
+- "Get the mouse ortholog of human BRCA1 from Ensembl Compara, with confidence score"
+- "Pull orthologs of TP53 across all vertebrate species in OrthoDB"
+- "Compare Compara, OMA, and OrthoDB calls for the same gene and flag disagreements"
+- "Batch-fetch mouse orthologs for 500 human genes, respecting Compara's 15-req/sec limit"
+- "Resolve the human/yeast ortholog of MARCHF1 -- remember the symbol was MARCH1 before 2020"
 
 ## Example Prompts
 
-### Standard HOG Inference
+### Single-gene cross-species lookup
 
-> "Run OrthoFinder3 on these 30 proteomes (vertebrates with outgroup invertebrate). Pre-filter to longest isoform per gene. Extract single-copy HOGs for phylogenomic concatenation. Cross-validate with SonicParanoid2 and report consensus single-copy set."
+> "Get the high-confidence 1:1 ortholog of human BRCA1 in mouse via Ensembl Compara REST. Filter type='ortholog_one2one' and confidence=1. Return the Ensembl Mouse Gene ID plus identity percentages."
 
-### Functional Annotation Transfer
+### Cross-resource consensus
 
-> "Transfer functional annotations from human Ensembl release 113 to a newly sequenced primate genome. Use eggNOG-mapper for primary annotation + OrthoFinder3 HOGs for cross-validation. Apply ortholog-conjecture-aware confidence stratification: 1:1 ortholog + low dN/dS + EXP evidence = high confidence."
+> "For TP53, pull orthologs in mouse from Ensembl Compara, OMA, and OrthoDB. Convert all to a common namespace (UniProt accession) and intersect. Report which resources agree on the 1:1 call vs which include co-orthologs."
 
-### Vertebrate-Scale Orthology with Gene Loss
+### Batch with rate-limit awareness
 
-> "Identify orthology and gene-loss across 100 mammal genomes using TOGA + CESAR. First build Cactus WGA. Then TOGA Nextflow pipeline. Report per-genome intactness distribution (I/PI/UL/L/M/PM). Identify mammalian lineages with notable gene loss."
+> "I have 500 human gene symbols. Get their zebrafish orthologs from Ensembl Compara. Use sleep=0.07 between calls to stay under 15 req/sec; handle 429 with Retry-After. Cache the results in a DataFrame."
+
+### Symbol renaming
+
+> "Get the mouse ortholog of MARCH1. Don't use the symbol directly -- it was renamed to MARCHF1 in 2020. First resolve via Ensembl /lookup/symbol/human/MARCHF1 to get the Ensembl Gene ID, then use the ID-based homology endpoint."
+
+### Functional annotation transfer
+
+> "I have an unannotated bacterial proteome. Annotate via eggNOG-mapper (not the REST API -- mapper is the right tool for batches). Cross-validate single-copy orthologs from eggNOG with KEGG Orthology assignments."
+
+### When to give up on pre-computed
+
+> "My species isn't in any ortholog database (just-sequenced non-model). Pre-computed resources won't have it. Switch to comparative-genomics/ortholog-inference for de novo OrthoFinder on my proteomes vs reference proteomes."
 
 ## What the Agent Will Do
 
-1. **Validate inputs**: BUSCO/Compleasm completeness per species; consistent annotation pipeline
-2. **Pre-filter** to longest isoform per gene (AGAT or OrthoFinder primary_transcript.py)
-3. **Include outgroup** at next-higher taxonomic level (essential for HOG rooting)
-4. **Run primary tool**: OrthoFinder3 default for most cases; SonicParanoid2 for cross-validation
-5. **Extract HOG at appropriate level**: N0 root for phylogenomic; per-clade levels for clade-specific
-6. **Filter single-copy** for concatenation: present in >= 90% species, 1 copy each
-7. **Classify orthology**: 1:1, 1:many, many:many; in-paralog vs out-paralog
-8. **For functional transfer**: eggNOG-mapper + 1:1 + dN/dS < 0.2 + EXP evidence
-9. **For WGA-anchored** (vertebrate-scale): TOGA + CESAR
-10. **Report**: per-species classification, orthogroup statistics, consensus single-copy set
-11. **Caveats**: WGD effects, ortholog conjecture, annotation heterogeneity, hidden paralogy
+1. Pick the right resource based on the (source species, target species, scale) tuple:
+   - Vertebrates, 1-100 genes: Ensembl Compara
+   - All species, broad coverage: OrthoDB
+   - High precision, conservative: OMA
+   - Functional groups: eggNOG
+   - Pathway-centric: KEGG Orthology
+2. Resolve gene symbols to canonical IDs before symbol-based lookups (HGNC symbols are unstable).
+3. Use the right confidence field per resource; don't compare confidence across resources.
+4. For batches >100, throttle to per-resource rate limits; respect Retry-After.
+5. For batches >5000, use BioMart bulk export instead of REST loops.
+6. When resources disagree, intersect; surface disagreement as a signal not an error.
+7. Document the resource + release version for reproducibility.
+8. Recommend de novo computation when species isn't in any database.
 
 ## Tips
 
-- OrthoFinder3 (2025 bioRxiv) is the modern Quest-for-Orthologs leader
-- HOG output (v3) is at `Phylogenetic_Hierarchical_Orthogroups/N0.tsv`; v2 layout differs
-- Include >= 1 outgroup at next-higher taxonomic level for STRIDE rooting (+20% HOG accuracy)
-- Pre-filter to longest isoform per gene; otherwise isoforms inflate co-ortholog counts
-- For WGD-affected lineages, use synteny-aware methods (GENESPACE, ProteinOrtho-synteny)
-- Cross-validate with 2+ methods (OrthoFinder3 + SonicParanoid2 or OrthoFinder3 + OMA)
-- BUSCO/Compleasm completeness >= 90% required for inclusion
-- TOGA (Kirilenko 2023) for vertebrate-scale orthology with explicit gene-loss classification
-- Annotation pipeline normalization across species; mixing pipelines inflates accessory
-- Ortholog conjecture is weakly supported; treat 1:1 ortholog functional transfer with care
-- For HGT-affected lineages, OrthoFinder may return "vertical orthologs" that aren't real; use ALE
-- eggNOG-mapper integrates orthology + functional annotation; current eggNOG database mandatory
-- JustOrthologs is fastest for closely related species (same family); OrthoFinder3 for broader
+- Ensembl REST has a 15 req/sec rate limit (55K/hour). Sleep 0.07s between calls; check `Retry-After` on 429.
+- HomoloGene is frozen at 2014 -- use only for legacy comparisons; switch live workflows to Compara or OrthoDB.
+- For thousands of genes, BioMart bulk export beats REST loops by 100x -- see `biomart-queries`.
+- HGNC gene-symbol renames break symbol-based queries. The big ones: MARCH1->MARCHF1, SEPT1->SEPTIN1 (Excel autocorrect drove the renaming in 2020). Always resolve to Ensembl Gene IDs first.
+- KEGG license is academic-free, commercial-paid. eggNOG and OrthoDB licenses are more permissive for commercial use.
+- Resource disagreement is informative. If Ensembl says 1:1 but OMA gives no call, the gene tree is probably ambiguous -- flag this for review.
+- The orthology conjecture (orthologs share function) is supported but weakly (Studer & Robinson-Rechavi 2009). For drug-target or clinical questions, cross-validate orthology with shared catalytic residues or expression conservation.
+- eggNOG-mapper (Cantalapiedra 2021) is the right tool for batch annotation; the eggNOG REST API is for ad hoc lookup only.
+- KEGG returns text TSV by default (not JSON) -- parse with `line.split('\t')`.
 
 ## Related Skills
 
-comparative-genomics/synteny-analysis - Synteny-anchored disambiguation in WGD lineages
-comparative-genomics/whole-genome-duplication - Distinguishing ohnologs from orthologs
-comparative-genomics/gene-family-evolution - CAFE5 birth-death on OG counts
-comparative-genomics/gene-tree-species-tree-reconciliation - DTL-aware orthology for prokaryotes
-comparative-genomics/positive-selection - Selection on single-copy alignments
-comparative-genomics/comparative-annotation-projection - TOGA / CESAR uses orthology
-phylogenetics/modern-tree-inference - Single-copy concatenation phylogenomics
-phylogenetics/species-trees - Coalescent species tree from gene trees
-alignment/multiple-alignment - MSA quality affects HOG output
-genome-annotation/functional-annotation - eggNOG / orthology-based annotation
-read-qc/quality-reports - BUSCO / Compleasm completeness
+- comparative-genomics/ortholog-inference - De novo orthology (OrthoFinder, OMA standalone, SonicParanoid)
+- ensembl-rest - Broader Ensembl REST workflows
+- biomart-queries - Bulk export of ortholog tables via BioMart
+- uniprot-access - Namespace conversion for OMA queries
+- pathway-analysis/kegg-pathways - KO to pathway mapping

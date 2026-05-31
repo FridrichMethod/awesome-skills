@@ -80,7 +80,7 @@ class Model:
         """Runs once when the container starts."""
         import torch
         self.model = torch.load("/weights/model.pt")
-        self.model.eval()
+        self.model.eval()  # PyTorch inference mode — not Python's built-in eval()
 
     @modal.method()
     def predict(self, text: str) -> dict:

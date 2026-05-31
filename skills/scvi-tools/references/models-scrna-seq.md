@@ -153,9 +153,9 @@ import scvelo as scv
 scv.pp.filter_and_normalize(adata)
 scv.pp.moments(adata)
 
-# Train VeloVI
-scvi.model.VELOVI.setup_anndata(adata, spliced_layer="Ms", unspliced_layer="Mu")
-model = scvi.model.VELOVI(adata)
+# Train VeloVI (lives in scvi.external)
+scvi.external.VELOVI.setup_anndata(adata, spliced_layer="Ms", unspliced_layer="Mu")
+model = scvi.external.VELOVI(adata)
 model.train()
 
 # Get velocity estimates
@@ -179,25 +179,26 @@ velocities = model.get_velocity()
 - Separating treatment effects from background variation
 - Comparing control vs. perturbed conditions
 
-**Basic Usage**:
+**Basic Usage** (contrastiveVI lives in `scvi.external`):
 ```python
-scvi.model.CONTRASTIVEVI.setup_anndata(
+import numpy as np
+
+scvi.external.ContrastiveVI.setup_anndata(adata, layer="counts")
+
+model = scvi.external.ContrastiveVI(
     adata,
-    layer="counts",
-    batch_key="batch",
-    categorical_covariate_keys=["condition"]  # control vs treated
+    n_background_latent=10,  # Shared/background variation
+    n_salient_latent=10,     # Target-specific (salient) variation
 )
 
-model = scvi.model.CONTRASTIVEVI(
-    adata,
-    n_latent=10,        # Shared variation
-    n_latent_target=5   # Target-specific variation
-)
-model.train()
+# Train with explicit background (control) and target (perturbed) cell indices
+background_idx = np.where(adata.obs["condition"] == "control")[0]
+target_idx = np.where(adata.obs["condition"] == "treated")[0]
+model.train(background_indices=background_idx, target_indices=target_idx)
 
 # Extract representations
-shared = model.get_latent_representation(representation="shared")
-target_specific = model.get_latent_representation(representation="target")
+background = model.get_latent_representation(representation_kind="background")
+salient = model.get_latent_representation(representation_kind="salient")
 ```
 
 ## CellAssign
@@ -224,8 +225,10 @@ marker_gene_mat = pd.DataFrame({
     "B cells": [0, 0, 0, 1]
 }, index=["CD3D", "CD4", "CD8A", "CD19"])
 
-scvi.model.CELLASSIGN.setup_anndata(adata, layer="counts")
-model = scvi.model.CELLASSIGN(adata, marker_gene_mat)
+# CellAssign lives in scvi.external and needs a size factor per cell
+adata.obs["size_factor"] = adata.X.sum(axis=1)
+scvi.external.CellAssign.setup_anndata(adata, size_factor_key="size_factor")
+model = scvi.external.CellAssign(adata, marker_gene_mat)
 model.train()
 
 predictions = model.predict()
@@ -281,15 +284,15 @@ adata.obs["doublet_score"] = doublet_scores
 
 **Basic Usage**:
 ```python
-scvi.model.AMORTIZEDLDA.setup_anndata(adata, layer="counts")
-model = scvi.model.AMORTIZEDLDA(adata, n_topics=10)
+scvi.model.AmortizedLDA.setup_anndata(adata, layer="counts")
+model = scvi.model.AmortizedLDA(adata, n_topics=10)
 model.train()
 
-# Get topic compositions per cell
+# Get topic compositions per cell (Monte Carlo estimate of topic proportions)
 topic_proportions = model.get_latent_representation()
 
-# Get gene loadings per topic
-topic_gene_loadings = model.get_topic_distribution()
+# Get gene-by-topic loadings
+topic_gene_loadings = model.get_feature_by_topic()
 ```
 
 ## Model Selection Guidelines

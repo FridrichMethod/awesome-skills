@@ -141,3 +141,7 @@ def health_check():
     if not status["healthy"]:
         requests.post(os.environ["SLACK_URL"], json={"text": f"Alert: {status}"})
 ```
+
+> The webhook URL is read from a Modal Secret (`SLACK_URL`), not hardcoded or taken
+> from untrusted input. Keep notification endpoints in Secrets and avoid POSTing to
+> URLs constructed from user-supplied data.

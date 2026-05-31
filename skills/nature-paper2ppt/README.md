@@ -32,11 +32,34 @@ speaker notes, builds a real `.pptx`, and performs lightweight package QA.
 
 ## File structure
 
+The skill uses a router/static-dynamic split (like `nature-writing`, `nature-polishing`, and `nature-reader`): a short `SKILL.md` router plus a `manifest.yaml` that loads only the fragments a given job needs.
+
 ```text
 nature-paper2ppt/
-├── SKILL.md
-└── README.md
+├── SKILL.md                     # short router: detect paper_type, load fragments
+├── manifest.yaml                # always_load core + paper_type axis + on-demand references
+├── README.md
+├── static/
+│   ├── core/                    # always loaded
+│   │   ├── principles.md        # purpose, core principle, lean mode, inputs, language
+│   │   ├── toolchain.md         # cross-platform Python stack + default fast path
+│   │   ├── workflow.md          # the 9-step spine
+│   │   └── output-and-quality.md# output package, citation, quality, fallback rules
+│   └── fragments/
+│       └── paper_type/          # one presentation arc per type (loaded on match)
+│           ├── discovery.md     # question-to-evidence
+│           ├── methods.md       # problem-to-solution
+│           ├── resource.md      # workflow-to-validation
+│           ├── clinical.md      # design-to-inference
+│           ├── materials.md     # property-to-mechanism / design-to-performance
+│           └── review.md        # evidence-map
+└── references/                  # opened on demand
+    ├── design-and-layout.md     # composition, layout, typography, anti-template, archetypes
+    ├── figure-assets.md         # figure selection, extraction, crop self-check
+    └── self-review.md           # self-review loop, severity, programmatic checks, verification
 ```
+
+The shared Terminology Ledger (`../../_shared/core/terminology-ledger.md`) is loaded on every job so technical terms stay consistent across slides.
 
 ## When to use
 

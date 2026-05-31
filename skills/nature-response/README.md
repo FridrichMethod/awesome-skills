@@ -60,10 +60,17 @@ The source basis is summarized in `references/source-basis.md` with URLs, rule s
 
 ## File structure
 
+The skill uses a router/static-dynamic split (like the other nature-* skills): a short `SKILL.md` router plus a `manifest.yaml`. nature-response is a linear workflow with no content axis, so the split is core (always loaded) plus on-demand references.
+
 ```text
 nature-response/
 ├── README.md
-├── SKILL.md
+├── SKILL.md                     # short router
+├── manifest.yaml                # always_load core + on-demand references (no axis)
+├── static/
+│   └── core/                    # always loaded
+│       ├── stance.md            # purpose, default stance, red lines, source hierarchy
+│       └── workflow.md          # accepted inputs, 10-step workflow, output format
 ├── references/
 │   ├── source-basis.md
 │   ├── response-structure.md

@@ -1,5 +1,10 @@
 # Modal Common Examples
 
+> **Pin dependencies in production.** The version pins below were current at the time of
+> writing; bump them to the versions you have validated. For reproducible builds, pin
+> every package (and ideally use a lockfile) — unpinned installs can pull in breaking or
+> compromised releases.
+
 ## LLM Inference Service (vLLM)
 
 ```python
@@ -9,7 +14,7 @@ app = modal.App("vllm-service")
 
 image = (
     modal.Image.debian_slim(python_version="3.11")
-    .uv_pip_install("vllm>=0.6.0")
+    .uv_pip_install("vllm==0.21.0")
 )
 
 @app.cls(gpu="H100", image=image, min_containers=1)
@@ -41,7 +46,12 @@ app = modal.App("image-gen")
 
 image = (
     modal.Image.debian_slim(python_version="3.11")
-    .uv_pip_install("diffusers", "torch", "transformers", "accelerate")
+    .uv_pip_install(
+        "diffusers==0.38.0",
+        "torch==2.12.0",
+        "transformers==5.9.0",
+        "accelerate==1.13.0",
+    )
 )
 
 vol = modal.Volume.from_name("flux-weights", create_if_missing=True)
@@ -77,7 +87,7 @@ app = modal.App("transcription")
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .apt_install("ffmpeg")
-    .uv_pip_install("openai-whisper", "torch")
+    .uv_pip_install("openai-whisper==20250625", "torch==2.12.0")
 )
 
 @app.cls(gpu="T4", image=image)
@@ -209,7 +219,7 @@ app = modal.App("api-with-gpu")
 
 image = (
     modal.Image.debian_slim(python_version="3.11")
-    .uv_pip_install("fastapi", "sentence-transformers", "torch")
+    .uv_pip_install("fastapi==0.136.3", "sentence-transformers==5.5.1", "torch==2.12.0")
 )
 
 @app.cls(gpu="L40S", image=image, min_containers=1)
