@@ -8,9 +8,24 @@ Multi-source literature search, citation verification, citation format conversio
 
 | Tool | Source | Best For |
 |------|--------|----------|
-| `pubmed_search_articles` | PubMed MCP | Biomedical, MeSH, clinical trials |
-| `search_crossref` | paper-search MCP | Cross-disciplinary, citation counts |
-| `search_arxiv` | paper-search MCP | Preprints (physics, math, CS, biology) |
+| `search_papers` | academic-search MCP | Default concurrent search across CrossRef, PubMed, arXiv; accepts opt-in Scopus / ScienceDirect sources |
+| `get_paper_by_id` | academic-search MCP | DOI / PMID / arXiv ID details |
+| `get_citation` | academic-search MCP | DOI-based formatted citation |
+| `lookup_mesh` | academic-search MCP | MeSH term exploration |
+
+### Scopus / ScienceDirect tools
+
+| Tool | Source | Best For |
+|------|--------|----------|
+| `search_scopus` | academic-search MCP | Scopus advanced document search |
+| `get_scopus_abstract` | academic-search MCP | Scopus abstract and document metadata |
+| `get_scopus_citation_overview` | academic-search MCP | Scopus citation overview |
+| `search_scopus_authors` / `get_scopus_author` | academic-search MCP | Author profile search and retrieval |
+| `search_scopus_affiliations` / `get_scopus_affiliation` | academic-search MCP | Affiliation search and retrieval |
+| `search_scopus_serial_titles` / `get_scopus_serial_title` | academic-search MCP | Journal/source metadata |
+| `get_scopus_plumx_metrics` | academic-search MCP | PlumX metrics |
+| `search_sciencedirect` | academic-search MCP | ScienceDirect article search |
+| `get_sciencedirect_article_metadata` | academic-search MCP | ScienceDirect article metadata |
 
 ### Extended search
 

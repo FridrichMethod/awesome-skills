@@ -1,55 +1,64 @@
-# Differential Analysis - Usage Guide
+# IMC Differential Analysis - Usage Guide
 
 ## Overview
-Differential analysis identifies cell populations that differ in abundance (DA) or marker expression (DS) between conditions. The defining principle this skill encodes is that the SAMPLE/subject - not the cell - is the experimental unit: diffcyt aggregates cells to per-sample-per-cluster counts (DA) and arcsinh-medians (DS), then tests across biological replicates with edgeR/limma/GLMM. It also covers the compositionality of cluster proportions (a real expansion forces apparent depletion elsewhere), mixed models for paired designs, modeling batch rather than cleaning it, and when to reach for simplex-aware compositional methods.
+
+Compares cell-type composition and spatial features across conditions in an IMC/MIBI cohort. The load-bearing point: the replicate is the patient, not the cell or the image -- testing at the cell level over millions of correlated cells manufactures significance, so every differential question follows one spine (per-image summary, aggregate to patient, test across patients), with cell-type proportions treated as compositional and acquisition batch as a covariate.
 
 ## Prerequisites
+
 ```bash
-# R/Bioconductor
-BiocManager::install(c('diffcyt', 'CATALYST', 'edgeR', 'limma'))
-# Compositional alternatives (optional)
-BiocManager::install(c('sccomp'))
+# Python
+pip install statsmodels scanpy sccoda pandas numpy
+
+# R / Bioconductor (diffcyt; mixed models; SpaceANOVA)
+# BiocManager::install('diffcyt'); install.packages(c('lme4', 'SpaceANOVA'))
 ```
 
 ## Quick Start
+
 Tell your AI agent what you want to do:
-- "Test which clusters differ in abundance between treatment and control"
-- "Test Ki67 expression within each cluster between conditions"
-- "Run a paired differential analysis for my pre/post samples"
-- "Check whether my depletion result is a compositional artifact"
+- "Test whether Tregs differ between responders and non-responders, at the patient level"
+- "Compare cell-type composition with a method that handles the sum-to-one constraint"
+- "Test whether CD8-tumor contact differs between groups, aggregated to patients"
+- "Set up a mixed model with patient as a random effect and batch as a covariate"
+- "Tell me my real sample size given 4 patients and 2 million cells"
 
 ## Example Prompts
-### Differential abundance and state
-> "Run diffcyt DA with edgeR on my clustered SCE comparing treatment to control, and remind me how many biological replicates I need for this to be valid."
-> "Run diffcyt DS with limma on the state markers within each cluster and show me which marker/cluster combinations change."
 
-### Design
-> "Set up a paired DA using a GLMM with patient as a random effect for my pre/post-treatment samples."
-> "I have two batches confounded-ish with condition - put batch in the design matrix and explain when this can and can't be rescued."
+### Differential abundance
+> "I have per-cell type labels for 30 patients in two groups. Compare cell-type proportions, accounting for multiple ROIs per patient and the fact that proportions sum to one."
 
-### Compositionality
-> "My regulatory-T cluster expanded a lot and now everything else looks depleted - re-test with a compositional method before I believe the depletion."
+### Differential spatial feature
+> "I computed per-image neighborhood enrichment z-scores. Test whether the CD8-tumor interaction differs between conditions, aggregating to the patient and correcting across all cell-type pairs."
+
+### Power and unit
+> "My collaborator ran a Wilcoxon over 500,000 cells and got p < 1e-50. Why is that wrong, and what is the correct test?"
+
+### Compositional
+> "Several of my cell types shift between groups. Use scCODA so I don't get spurious opposite-direction changes."
 
 ## What the Agent Will Do
-1. Confirm biological replicates exist (>= 2-3 per group) and the sample is the unit.
-2. Build a design + contrast (or a mixed-model formula for paired designs) from sample metadata.
-3. Run diffcyt DA (edgeR/voom/GLMM) and/or DS (limma/LMM) via the `diffcyt()` wrapper on the SCE.
-4. Apply FDR across clusters (and clusters x markers for DS).
-5. Flag compositional artifacts and recommend simplex-aware re-testing when one population dominates.
+
+1. Aggregate the cell table to per-image summaries, then to one value per patient.
+2. Choose the test from the decision tree (mixed model for nested ROIs; scCODA for compositional abundance; diffcyt-DA for cluster counts; pseudobulk for within-type marker expression).
+3. Enter batch as a covariate and check it is not confounded with condition.
+4. For spatial differences, treat the per-image spatial statistic as the summary and test it at the patient unit with FDR across pairs.
+5. Report the patient sample size and honest power, never rescuing significance with cell count.
 
 ## Tips
-- The cell is not the unit - never run a per-cell test for a between-group claim; aggregate to per-sample summaries.
-- Need >= 2-3 biological replicates per group; one sample per condition has no valid test.
-- DA tests cluster frequency (type markers); DS tests within-cluster expression (state markers).
-- Cluster proportions are compositional - a real expansion forces apparent depletion elsewhere; re-check dominant shifts with sccomp/scCODA/DCATS.
-- Model batch in the design matrix; don't normalize it out then test naively. Fully confounded batch can't be rescued.
-- Use `diffcyt-DA-GLMM` / `diffcyt-DS-LMM` with a random effect for paired/repeated-measures designs.
-- diffcyt reuses edgeR/limma, so output semantics (logFC, p_adj) match differential-expression.
+
+- Cell count is not replication; the effective n is the number of patients.
+- Proportions are compositional -- a real rise in one type mechanically depresses others; use scCODA or a CLR transform with a reference type.
+- Multiple ROIs per patient are nested, not independent; use a mixed model with patient random effect.
+- Over-correcting batch can erase the disease signal; correct minimally and keep integration out of the inference path.
+- Randomize acquisition order against condition so run drift does not confound the comparison.
+- Apply BH-FDR across all cell-type pairs and radii tested.
 
 ## Related Skills
-- clustering-phenotyping - Cluster (on type markers) before testing
-- gating-analysis - Compare manually gated population frequencies
-- differential-expression/de-results - Shared edgeR/limma output semantics
-- differential-expression/edger-basics - The count-model engine diffcyt reuses
-- experimental-design/multiple-testing - FDR across clusters and clusters x markers
-- experimental-design/batch-design - Model batch in the design, don't clean it out
+
+- phenotyping - supplies the cell-type labels whose proportions are compared
+- spatial-analysis - supplies the per-image spatial statistics that become patient-level summaries
+- quality-metrics - batch must be diagnosed and entered as a covariate
+- experimental-design/randomization-blocking - the experimental-unit and pseudoreplication foundation
+- clinical-biostatistics/subgroup-analysis - multiplicity and effect estimation in clinical cohorts
+- flow-cytometry/differential-analysis - diffcyt-DA/DS for suspension cytometry

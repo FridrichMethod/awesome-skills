@@ -293,6 +293,7 @@ Before emitting any final converted artifact (LaTeX / DOCX / PDF), scan the inpu
 8. A literal `[HIGH-WARN-FABRICATED-REFERENCE]` annotation (v3.8 §3.6; RETRIEVAL_FAILED + retrieval_existence + not_found). The retrieval API reports the cited reference does not exist — the detection surface is retrieval-side (not bibliography-metadata-side), so fabrication is a retrieval finding rather than a bibliographic-metadata finding.
 9. A literal `[HIGH-WARN-CLAIM-AUDIT-ANCHORLESS` annotation (v3.8 §3.6; RETRIEVAL_FAILED + not_applicable + not_attempted). Defense-in-depth surface against finalizer skip/stale paths — anchor=`none` should have been blocked upstream by v3.7.3 R-L3-1-A; this row catches the cases where it slipped through.
 10. A literal `[HIGH-WARN-CONSTRAINT-VIOLATION-UNCITED` annotation (v3.8 §3.6; uncited sentence triggered VIOLATED against an MNC/NC). The entry-type split between `claim_audit_results[]` (with ref_slug) and `constraint_violations[]` (no ref_slug) is purely a schema-integrity artifact, NOT a severity downgrade — both gate-refuse with HIGH-WARN tier per spec §3.5 + §5. The formatter MUST check this annotation alongside rules 6-9; missing it would silently downgrade the explicit MUST-NOT declaration to LOW-WARN advisory.
+11. **Any unresolved `severity=HIGH-BLOCK` token inside a `<!--ref:...-->` marker** (v3.10 terminal policy layer; spec §3 PR-B item 10, D2). This is a GENERIC severity rule — it fires on the `severity=HIGH-BLOCK` token regardless of which `policy=` produced it (`contamination_triangulation`, the v3.11 `citation_existence` strict gate per C-V6, or a future `temporal_integrity` strict), so the formatter never needs a per-subtype refusal list. The token is emitted by the finalizer (the sole policy evaluator) when a strict `terminal_policies` promotes a signal to a terminal block. **A `HIGH-BLOCK` token in plain prose, outside any `<!--ref:...-->` comment, is NOT a refusal trigger** (anti-false-refuse, Invariant 12). `HIGH-BLOCK` is terminal: `/ars-mark-read` does NOT clear it. See the v3.10 two-gate subsection below for the freshness guard that gates rule 11.
 
 External motivation for rule 3: Zhao et al. arXiv:2605.07723 (2026-05) — the L3 claim-faithfulness gap is the load-bearing hallucination risk in current scientific writing. Spec: `docs/design/2026-05-12-ars-v3.7.3-claim-faithfulness-and-contaminated-source-spec.md` §3.1.
 
@@ -308,7 +309,23 @@ When refusing, surface the unresolved markers to the user with their per-section
 - v3.8 HIGH-WARN-CLAIM-AUDIT-ANCHORLESS (rule 9): defense-in-depth surface — the v3.7.3 finalizer should have caught this upstream. Remediation: same as MED-WARN-NO-LOCATOR (rule 3) — emit a `<!--anchor:<kind>:<value>-->` with `<kind>` ≠ `none`. `/ars-mark-read` does NOT clear this.
 - v3.8 HIGH-WARN-CONSTRAINT-VIOLATION-UNCITED (rule 10): same remediation as rule 7 (revise / drop / re-issue manifest). The entry-type split between cited (rule 7, claim_audit_result) and uncited (rule 10, constraint_violation) is a schema-integrity artifact only; the user-facing fix is identical.
 
-**Contamination annotations (`CONTAMINATED-PREPRINT`, `CONTAMINATED-UNMATCHED`, `CONTAMINATED-PREPRINT+UNMATCHED`, `CONTAMINATED-COVERAGE-NOISE`, `CONTAMINATED-PARTIAL-UNMATCH`, `CONTAMINATED-TRIANGULATION-UNMATCHED`, `CONTAMINATED-PREPRINT+COVERAGE-NOISE`, `CONTAMINATED-PREPRINT+PARTIAL-UNMATCH`, `CONTAMINATED-PREPRINT+TRIANGULATION-UNMATCHED`) on `ok` or `LOW-WARN` markers DO NOT trigger refusal.** They are advisory per v3.5 Collaboration Depth Observer precedent + v3.7.3 R-L3-2-A + v3.9.0 R-L3-2-E — surface them in the output package's `provenance_summary.md`, but do not block the conversion. v3.9.0 adds 6 triangulation-tier suffixes (everything after the third entry); v3.7.3 added the first three. Refusal rules 1-10 (above) remain unchanged — no v3.9.0 marker triggers gate refusal.
+**Contamination annotations (`CONTAMINATED-PREPRINT`, `CONTAMINATED-UNMATCHED`, `CONTAMINATED-PREPRINT+UNMATCHED`, `CONTAMINATED-COVERAGE-NOISE`, `CONTAMINATED-PARTIAL-UNMATCH`, `CONTAMINATED-TRIANGULATION-UNMATCHED`, `CONTAMINATED-PREPRINT+COVERAGE-NOISE`, `CONTAMINATED-PREPRINT+PARTIAL-UNMATCH`, `CONTAMINATED-PREPRINT+TRIANGULATION-UNMATCHED`, `CONTAMINATED-ARXIV-UNMATCHED`, `CONTAMINATED-QUADRANGULATION-UNMATCHED`, `CONTAMINATED-PREPRINT+ARXIV-UNMATCHED`, `CONTAMINATED-PREPRINT+QUADRANGULATION-UNMATCHED`) on `ok` or `LOW-WARN` markers DO NOT trigger refusal.** They are advisory per v3.5 Collaboration Depth Observer precedent + v3.7.3 R-L3-2-A + v3.9.0 R-L3-2-E — surface them in the output package's `provenance_summary.md`, but do not block the conversion. v3.7.3 added the first three; v3.9.0 added the next 6 triangulation-tier suffixes; the v3.10/v3.11 Delta-1 arXiv four-index extension adds the final 4 (`CONTAMINATED-ARXIV-UNMATCHED`, `CONTAMINATED-QUADRANGULATION-UNMATCHED`, and their two PREPRINT compositions). The advisory **suffix** never triggers refusal — the pass-through allowlist grows in lockstep with the finalizer (3 → 9 → 13), but the **refusal semantics are unchanged**: no contamination suffix has ever been or will be added to the refusal list (R-L3-2-E). (v3.10 separately adds rule 11, a generic `severity=HIGH-BLOCK` refusal: when a strict `terminal_policies` promotes a k=3 signal, the finalizer co-emits a `TERMINAL-BLOCK` token ALONGSIDE the advisory suffix; rule 11 refuses on that token, NOT on the suffix. The suffix stays on the advisory pass-through allowlist; the refusal-list is extended only by the one generic rule, never per-suffix — R-L3-2-E.)
+
+## Cite-Time Terminal Policy Gate (v3.10) — STAMP-ONLY freshness + rule 11
+
+Per spec §3 PR-B item 10 (R1 P0-C + R2-P0). The finalizer is the SOLE policy evaluator; the formatter is a **dumb stamp-checking gate** — it MUST NOT re-evaluate `strict_articles_only` DOI/venue/provenance logic (that would duplicate the finalizer and invite drift, Invariant 13). It only (1) recomputes the passport's current `terminal_policies` slug and compares stamps, and (2) refuses on `severity=HIGH-BLOCK` tokens.
+
+First determine whether the passport's CURRENT `terminal_policies` is all-advisory (absent block, or every key `advisory`) or non-advisory. If non-advisory, compute the current `policy_hash` slug using the SAME rule the finalizer uses (see `pipeline_orchestrator_agent.md` § Cite-Time Provenance Finalizer — v3.10 extension, "policy_hash stamp"): the sorted `key.value` join of the non-advisory keys. **Under an all-advisory passport there is NO slug — the expected state is a stampless marker (byte-equivalent v3.9.0), so there is nothing to compare and gate 1 passes any stampless marker.**
+
+**Two independent gates, evaluated in order, NEVER short-circuited (R4-P1 — passing gate 1 is NOT passing the formatter):**
+
+- **Gate 1 — freshness guard** (decides only whether the marker's policy evaluation is fresh):
+  - **Stamp present + MISMATCH** ⇒ REFUSE `[STALE-POLICY-EVALUATION: re-run finalizer under current terminal_policies]`. The draft was finalized under a different policy.
+  - **Stamp missing (legacy v3.9.0 marker, no `policy_hash`):** REFUSE `[STALE-POLICY-EVALUATION]` when the passport's current policy requests a non-advisory mode (ANY `terminal_policies` key carries a non-`advisory` value — in v3.10 that is `contamination_triangulation ∈ {strict, strict_articles_only}`; a future temporal-strict key would be covered by the same generic condition without re-touching this rule) — the user opted into hard-block, so the legacy draft must be re-finalized. **PASS-GATE-1** when the passport has NO `terminal_policies` OR all keys are `advisory` (legacy/default state — Invariant 7 byte-equivalence; a v3.9.0 draft under an advisory passport behaves exactly as in v3.9.0).
+  - **Stamp present + MATCH** ⇒ PASS-GATE-1.
+- **Gate 2 — HIGH-BLOCK refusal (rule 11), applied to EVERY marker that passes gate 1 — including legacy missing-stamp-under-advisory markers (R4-P1 bypass fix):** refuse iff a `severity=HIGH-BLOCK` token is present inside the `<!--ref:...-->`. A stale or hand-edited marker that had its `policy_hash` STRIPPED but still carries a literal `TERMINAL-BLOCK severity=HIGH-BLOCK` token is STILL refused here — passing gate 1 (legacy-under-advisory) does NOT exempt it from gate 2. Only a marker that passes gate 1 AND carries no `severity=HIGH-BLOCK` token emits.
+
+When refusing under rule 11, the formatter echoes the `reason` token (e.g. `reason=k3_all_indexes_unmatched` for contamination, `reason=lookup_verified_false` for citation_existence) plus any co-emitted advisory suffix when one is present (contamination co-emits a `CONTAMINATED-*` suffix; `citation_existence` co-emits none — its "why" is the `reason` token + the `citation_verification_summary[]` aggregate; note this is the `strict` refusal path — a default-`advisory` `false` does not refuse, it lists in the `provenance_summary.md` `Citation Existence Advisories` section per the subsection above) so the user gets remediation context (R1 P1). Remediation for a HIGH-BLOCK: resolve the underlying signal (verify the source against the original, replace the citation with a matched reference, or — if the user accepts the risk — switch the firing policy (`policy=<...>`) back to `advisory` and re-finalize). `/ars-mark-read` does NOT clear it.
 
 ## Citation Version-Family Advisory (Kong #258)
 
@@ -332,6 +349,23 @@ Do not auto-standardize the reference. Do not rewrite the manuscript during form
 
 This advisory is separate from #127 strict triangulation policy: #127 asks whether a reference meets existence / venue policy; Kong #258 asks whether an existing work's citation metadata and quoted claim come from the same concrete version.
 
+## Citation Existence Advisory (v3.11 / C-V6(b))
+
+Under default `terminal_policies.citation_existence == advisory` (the byte-equivalent-to-v3.9.x default most users run), a `lookup_verified == false` row is NOT a refusal and the ref **marker stays byte-equivalent to v3.9.x** — it carries no `citation_existence` advisory suffix (the marker advisory slot is reserved for the contamination `CONTAMINATED-*` suffix; adding a second advisory token would break the v3.7.3 marker grammar's one-advisory-token cap). The `false` "why" lives in the always-populated `citation_verification_summary[]` aggregate.
+
+So that an advisory `false` (a **provably-bogus DOI/arXiv ID** under the narrowed C-V6(a) definition) is not buried in an aggregate the user must open separately, the output package's `provenance_summary.md` MUST carry a **`Citation Existence Advisories` section** listing every advisory `false` row. This makes the warning travel with the deliverable a human reviews, satisfying the C-V6(b) safety intent without touching marker grammar. The section is **mandatory and non-empty iff** any `citation_verification_summary[]` row has `lookup_verified == false` under advisory; absent the gate firing, the section is omitted (or rendered empty — "No citation-existence advisories").
+
+For each advisory `false` row, surface one entry with:
+
+- `ref_slug` (joins to the `<!--ref:slug-->` in the manuscript)
+- `citation_key`
+- the falsifiable identifier (DOI or arXiv ID) that failed to resolve
+- `resolvers_unmatched` — the list of resolver names that returned `status=unmatched`
+
+Like the Kong #258 and contamination advisories: do NOT auto-correct the citation, do NOT rewrite the manuscript, do NOT block the conversion. Report and ask the scholar to verify the source against the original, replace the citation with a matched reference, or — if the user accepts the risk — leave it (advisory is ack-able via `/ars-mark-read` on the aggregate). Promoting a `false` to a hard block is the `citation_existence == strict` opt-in (rule 11 terminal token), not this advisory.
+
+This advisory is the default-mode complement to the `strict`-mode terminal block: detection is unconditional (C-V6(e)), only terminality is policy-gated. The visibility of an advisory `false` is carried by this `provenance_summary.md` section, NOT by a marker suffix.
+
 ## Output Format
 
 ```markdown
@@ -344,6 +378,7 @@ This advisory is separate from #127 strict triangulation policy: #127 asks wheth
 | paper.tex | LaTeX | LaTeX source (if requested) |
 | references.bib | BibTeX | Bibliography (if LaTeX) |
 | cover_letter.md | Markdown | Journal cover letter (if applicable) |
+| provenance_summary.md | Markdown | Advisory provenance report — MUST be delivered whenever any advisory fires (contamination, version-family, or the mandatory `Citation Existence Advisories` section for advisory `lookup_verified == false` rows per C-V6(b)). The only deliverable-visible carrier for an advisory false, so it cannot be dropped when one exists. |
 
 ### Format Specifications Applied
 | Spec | Value |

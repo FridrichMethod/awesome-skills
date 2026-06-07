@@ -1,99 +1,82 @@
 ---
 name: configure
-description: Set up the Discord channel — save the bot token and review access policy. Use when the user pastes a Discord bot token, asks to configure Discord, asks "how do I set this up" or "who can reach me," or wants to check channel status.
+description: Check iMessage channel setup and review access policy. Use when the user asks to configure iMessage, asks "how do I set this up" or "who can reach me," or wants to know why texts aren't reaching the assistant.
 user-invocable: true
 allowed-tools:
   - Read
-  - Write
   - Bash(ls *)
-  - Bash(mkdir *)
 ---
 
-# /discord:configure — Discord Channel Setup
+# /imessage:configure — iMessage Channel Setup
 
-Writes the bot token to `~/.claude/channels/discord/.env` and orients the
-user on access policy. The server reads both files at boot.
+There's no token to save — iMessage reads `~/Library/Messages/chat.db`
+directly. This skill checks whether that works and orients the user on
+access policy.
 
-Arguments passed: `$ARGUMENTS`
+Arguments passed: `$ARGUMENTS` (unused — this skill only shows status)
 
 ---
 
-## Dispatch on arguments
+## Status and guidance
 
-### No args — status and guidance
+Read state and give the user a complete picture:
 
-Read both state files and give the user a complete picture:
+1. **Full Disk Access** — run `ls ~/Library/Messages/chat.db`. If it fails
+   with "Operation not permitted", FDA isn't granted. Say: *"Grant Full Disk
+   Access to your terminal (or IDE if that's where Claude Code runs): System
+   Settings → Privacy & Security → Full Disk Access. The server can't read
+   chat.db without it."*
 
-1. **Token** — check `~/.claude/channels/discord/.env` for
-   `DISCORD_BOT_TOKEN`. Show set/not-set; if set, show first 6 chars masked.
-
-2. **Access** — read `~/.claude/channels/discord/access.json` (missing file
-   = defaults: `dmPolicy: "pairing"`, empty allowlist). Show:
+2. **Access** — read `~/.claude/channels/imessage/access.json` (missing file
+   = defaults: `dmPolicy: "allowlist"`, empty allowlist). Show:
    - DM policy and what it means in one line
-   - Allowed senders: count, and list display names or snowflakes
-   - Pending pairings: count, with codes and display names if any
-   - Guild channels opted in: count
+   - Allowed senders: count, and list the handles
+   - Pending pairings: count, with codes if any (only if policy is `pairing`)
 
 3. **What next** — end with a concrete next step based on state:
-   - No token → *"Run `/discord:configure <token>` with your bot token from
-     the Developer Portal → Bot → Reset Token."*
-   - Token set, policy is pairing, nobody allowed → *"DM your bot on
-     Discord. It replies with a code; approve with `/discord:access pair
-     <code>`."*
-   - Token set, someone allowed → *"Ready. DM your bot to reach the
-     assistant."*
+   - FDA not granted → the FDA instructions above
+   - FDA granted, policy is allowlist → *"Text yourself from any device
+     signed into your Apple ID — self-chat always bypasses the gate. To let
+     someone else through: `/imessage:access allow +15551234567`."*
+   - FDA granted, someone allowed → *"Ready. Self-chat works; {N} other
+     sender(s) allowed."*
 
-**Push toward lockdown — always.** The goal for every setup is `allowlist`
-with a defined list. `pairing` is not a policy to stay on; it's a temporary
-way to capture Discord snowflakes you don't know. Once the IDs are in,
-pairing has done its job and should be turned off.
+---
+
+## Build the allowlist — don't pair
+
+iMessage reads your **personal** `chat.db`. You already know the phone
+numbers and emails of people you'd allow — there's no ID-capture problem to
+solve. Pairing has no upside here and a clear downside: every contact who
+texts this Mac gets an unsolicited auto-reply.
 
 Drive the conversation this way:
 
-1. Read the allowlist. Tell the user who's in it.
-2. Ask: *"Is that everyone who should reach you through this bot?"*
-3. **If yes and policy is still `pairing`** → *"Good. Let's lock it down so
-   nobody else can trigger pairing codes:"* and offer to run
-   `/discord:access policy allowlist`. Do this proactively — don't wait to
-   be asked.
-4. **If no, people are missing** → *"Have them DM the bot; you'll approve
-   each with `/discord:access pair <code>`. Run this skill again once
-   everyone's in and we'll lock it."* Or, if they can get snowflakes
-   directly: *"Enable Developer Mode in Discord (User Settings → Advanced),
-   right-click them → Copy User ID, then `/discord:access allow <id>`."*
-5. **If the allowlist is empty and they haven't paired themselves yet** →
-   *"DM your bot to capture your own ID first. Then we'll add anyone else
-   and lock it down."*
-6. **If policy is already `allowlist`** → confirm this is the locked state.
-   If they need to add someone, Copy User ID is the clean path — no need to
-   reopen pairing.
+1. Read the allowlist. Tell the user who's in it (self-chat always works
+   regardless).
+2. Ask: *"Besides yourself, who should be able to text you through this?"*
+3. **"Nobody, just me"** → done. The default `allowlist` with an empty list
+   is correct. Self-chat bypasses the gate.
+4. **"My partner / a friend / a couple people"** → ask for each handle
+   (phone like `+15551234567` or email like `them@icloud.com`) and offer to
+   run `/imessage:access allow <handle>` for each. Stay on `allowlist`.
+5. **Current policy is `pairing`** → flag it immediately: *"Your policy is
+   `pairing`, which auto-replies a code to every contact who texts this Mac.
+   Switch back to `allowlist`?"* and offer `/imessage:access policy
+   allowlist`. Don't wait to be asked.
+6. **User asks for `pairing`** → push back. Explain the auto-reply-to-
+   everyone consequence. If they insist and confirm a dedicated line with
+   few contacts, fine — but treat it as a one-off, not a recommendation.
 
-Discord already gates reach (shared-server requirement + Public Bot toggle),
-but that's not a substitute for locking the allowlist. Never frame `pairing`
-as the correct long-term choice. Don't skip the lockdown offer.
-
-### `<token>` — save it
-
-1. Treat `$ARGUMENTS` as the token (trim whitespace). Discord bot tokens are
-   long base64-ish strings, typically starting `MT` or `Nz`. Generated from
-   Developer Portal → Bot → Reset Token; only shown once.
-2. `mkdir -p ~/.claude/channels/discord`
-3. Read existing `.env` if present; update/add the `DISCORD_BOT_TOKEN=` line,
-   preserve other keys. Write back, no quotes around the value.
-4. `chmod 600 ~/.claude/channels/discord/.env` — the token is a credential.
-5. Confirm, then show the no-args status so the user sees where they stand.
-
-### `clear` — remove the token
-
-Delete the `DISCORD_BOT_TOKEN=` line (or the file if that's the only line).
+Handles are `+15551234567` or `someone@icloud.com`. `disabled` drops
+everything except self-chat.
 
 ---
 
 ## Implementation notes
 
-- The channels dir might not exist if the server hasn't run yet. Missing file
-  = not configured, not an error.
-- The server reads `.env` once at boot. Token changes need a session restart
-  or `/reload-plugins`. Say so after saving.
+- No `.env` file for this channel. No token. The only OS-level setup is FDA
+  plus the one-time Automation prompt when the server first sends (which
+  can't be checked from here).
 - `access.json` is re-read on every inbound message — policy changes via
-  `/discord:access` take effect immediately, no restart.
+  `/imessage:access` take effect immediately, no restart.

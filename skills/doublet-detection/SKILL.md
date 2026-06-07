@@ -1,118 +1,362 @@
 ---
-name: bio-flow-cytometry-doublet-detection
-description: Detects and removes doublets/aggregates from flow, spectral, and mass cytometry before clustering or quantification. Covers FSC-A vs FSC-H singlet discrimination (the Area-Height non-proportionality, not a 1D area gate), FSC-W/SSC width gating, CyTOF Gaussian discrimination parameters (Center/Offset/Width/Residual/Event_length) and DNA intercalator gating, and the residual heterotypic conjugates that survive scatter gating and masquerade as double-positive populations. Use when filtering aggregates before phenotyping, choosing a doublet method for flow vs CyTOF, or diagnosing a suspicious double-positive cluster.
-tool_type: r
-primary_tool: flowCore
+name: bio-single-cell-doublet-detection
+description: Detect and remove doublets (multiple cells captured in one droplet) from single-cell RNA-seq data. Uses Scrublet (Python), DoubletFinder (R), and scDblFinder (R). Essential QC step before clustering to avoid artificial cell populations. Use when identifying and removing doublets from scRNA-seq data.
+tool_type: mixed
+primary_tool: Scrublet
 ---
 
 ## Version Compatibility
 
-Reference examples tested with: flowCore 2.14+, CATALYST 1.26+, ggplot2 3.5+.
+Reference examples tested with: matplotlib 3.8+, numpy 1.26+, scanpy 1.10+
 
 Before using code patterns, verify installed versions match. If versions differ:
+- Python: `pip show <package>` then `help(module.function)` to check signatures
 - R: `packageVersion('<pkg>')` then `?function_name` to verify parameters
 
-If code throws an error, introspect the installed package and adapt rather than retrying.
+If code throws ImportError, AttributeError, or TypeError, introspect the installed
+package and adapt the example to match the actual API rather than retrying.
 
 # Doublet Detection
 
-**"Remove doublets from my cytometry data"** -> Discriminate single cells from aggregates using pulse geometry (flow) or ion-cloud parameters (CyTOF), before any clustering or quantification.
-- R (flow/spectral): `flowCore` gate on the FSC-A vs FSC-H diagonal (+ FSC-W/SSC-W)
-- R (mass/CyTOF): gate on DNA intercalator + Gaussian/Event_length parameters
+Doublets are droplets containing two or more cells. They appear as artificial intermediate cell populations and must be removed before analysis.
 
-## The Single Most Important Modern Insight -- Doublets Are Caught by Area-vs-Height Non-Proportionality, and Scatter Gating Is Necessary but Not Sufficient
+## Scrublet (Python)
 
-A doublet has roughly double the pulse AREA of a singlet but NOT double the Height, and a longer Width/transit time - so singlets fall on a tight FSC-A vs FSC-H diagonal and doublets deflect above it. A 1D area histogram therefore does NOT remove doublets; the discriminating signal is the Area-Height relationship (plus Width). This matters because an unremoved doublet of a CD3+ and a CD19+ cell reads as an artifactual CD3+CD19+ "double-positive," and clustering will faithfully (and wrongly) carve it out as a real population. Crucially, scatter gating is necessary but NOT sufficient: heterotypic conjugates (e.g. a CD3+CD14+ T:monocyte) survive standard FSC-A/H gates and present as genuine double-positives whose lineage-marker levels look COMPARABLE to true single-positives - the tell is an ELEVATED shared marker (e.g. CD45) and a high bright-field aspect ratio, so the definitive resolver is imaging flow cytometry, not a lineage-intensity check (Stadinski 2020 *Cytometry A* 97:1102). On CyTOF there is no scatter at all - doublets are removed by ion-cloud Gaussian parameters and DNA intercalator content (Bagwell 2020 *Cytometry A* 97:184).
+**Goal:** Detect and score doublets in scRNA-seq data using simulated doublet profiles.
 
-## Method Taxonomy
+**Approach:** Simulate artificial doublets by combining random cell pairs, embed real and simulated cells together, and score each cell's similarity to simulated doublets.
 
-| Method | Instrument | Principle | Caveat |
-|--------|-----------|-----------|--------|
-| FSC-A vs FSC-H | flow/spectral | singlets on the A-H diagonal | the standard; the discriminator is non-proportionality, not area |
-| FSC-W / SSC-W | flow/spectral | doublets have longer pulse Width | complementary to A-vs-H |
-| DNA intercalator (Ir191/193) | CyTOF | doublets show ~2N+ DNA | also separates cells from beads/debris |
-| Gaussian params + Event_length | CyTOF | ion-cloud fit residual/length flags fusions | catches fusions DNA alone misses (Bagwell 2020) |
-| imaging cytometry | imaging flow | bright-field aspect ratio | the only clean resolver of heterotypic conjugates |
+**"Remove doublets from my data"** -> Identify droplets containing multiple cells by comparing each cell's profile to computationally simulated doublets, then filter flagged cells.
 
-Note: cytometry doublet removal is GATING-based. DoubletFinder/Scrublet/scDblFinder are scRNA-seq DROPLET methods (they simulate artificial doublets) - limited transfer, because cytometry has direct physical doublet signals.
+### Basic Usage
 
-## FSC-A vs FSC-H Singlet Gating (flow/spectral)
+```python
+import scrublet as scr
+import scanpy as sc
+import numpy as np
 
-**Goal:** Keep events on the singlet diagonal.
+adata = sc.read_10x_mtx('filtered_feature_bc_matrix/')
 
-**Approach:** A polygon along the A=H diagonal (preferred over a rectangle, which keeps off-diagonal doublets); visualize with the gate overlaid.
+scrub = scr.Scrublet(adata.X, expected_doublet_rate=0.06)
+doublet_scores, predicted_doublets = scrub.scrub_doublets()
 
-```r
-library(flowCore); library(ggcyto)
+adata.obs['doublet_score'] = doublet_scores
+adata.obs['predicted_doublet'] = predicted_doublets
 
-# matrix dimnames preserve 'FSC-A'/'FSC-H'; data.frame() would mangle them to FSC.A
-singlet <- polygonGate(filterId = 'singlets', .gate = matrix(
-  c(20000, 10000, 250000, 200000, 250000, 260000, 20000, 40000), ncol = 2, byrow = TRUE,
-  dimnames = list(NULL, c('FSC-A', 'FSC-H'))))
-singlets <- Subset(fs, singlet)
-autoplot(fs[[1]], 'FSC-A', 'FSC-H') + ggcyto::geom_gate(singlet)
+print(f'Detected {predicted_doublets.sum()} doublets ({100*predicted_doublets.mean():.1f}%)')
 ```
 
-## CyTOF Doublet Removal
+### Adjust Parameters
 
-**Goal:** Keep intercalator-positive single ion clouds.
-
-**Approach:** Gate DNA intercalator (nucleated, ~2N) and Event_length/Gaussian residual; CATALYST exposes these as channels in the SCE.
-
-```r
-library(CATALYST)
-# prepData moves Time/Event_length to int_colData by default - keep them in the assay with FACS=TRUE
-sce <- prepData(fs, panel, md, transform = TRUE, cofactor = 5, FACS = TRUE)
-e <- assay(sce, 'exprs')
-
-dna <- e['DNA1', ]                                   # intercalator-positive = nucleated single cells
-keep <- dna > quantile(dna, 0.05) & dna < quantile(dna, 0.95)
-if ('Event_length' %in% rownames(sce))               # retained by FACS=TRUE (now on the arcsinh scale)
-  keep <- keep & e['Event_length', ] <= quantile(e['Event_length', ], 0.99)   # quantile-relative, so scale is fine
-sce_singlets <- sce[, keep]
+```python
+scrub = scr.Scrublet(adata.X, expected_doublet_rate=0.06)
+doublet_scores, predicted_doublets = scrub.scrub_doublets(
+    min_counts=2,
+    min_cells=3,
+    min_gene_variability_pctl=85,
+    n_prin_comps=30,
+    synthetic_doublet_umi_subsampling=1.0
+)
 ```
 
-## Per-Method Failure Modes
+### Visualize Doublet Scores
 
-### 1D area gate leaves doublets
-**Trigger:** gating only FSC-A. **Mechanism:** doublets overlap singlets in area. **Symptom:** double-positive clusters persist. **Fix:** gate the FSC-A vs FSC-H diagonal (+ Width).
+```python
+import matplotlib.pyplot as plt
 
-### Heterotypic conjugate survives scatter gating
-**Trigger:** a surprising double-positive between two single-positive clusters. **Mechanism:** T:monocyte conjugate is scatter-normal, lineage markers comparable to singlets. **Symptom:** "novel" DP population with an elevated shared marker (e.g. CD45). **Fix:** treat as suspected doublet; check the shared-marker signal; confirm/resolve by imaging flow (bright-field aspect ratio) when load-bearing.
+scrub.plot_histogram()
+plt.savefig('doublet_histogram.pdf')
 
-### CyTOF "doublet gate" using scatter
-**Trigger:** porting flow logic to CyTOF. **Mechanism:** no FSC/SSC exists. **Symptom:** no scatter channels. **Fix:** use DNA + Gaussian/Event_length.
+# UMAP with doublet scores
+sc.pp.normalize_total(adata, target_sum=1e4)
+sc.pp.log1p(adata)
+sc.pp.highly_variable_genes(adata)
+sc.pp.pca(adata)
+sc.pp.neighbors(adata)
+sc.tl.umap(adata)
 
-## Quantitative Thresholds
+sc.pl.umap(adata, color=['doublet_score', 'predicted_doublet'], save='_doublets.pdf')
+```
 
-| Threshold | Source | Rationale |
-|-----------|--------|-----------|
-| expected doublet rate ~1-5% (PBMC), higher in tissue | community | flag samples far above as prep issues - not a removal cutoff |
-| Gaussian + DNA gating improves CV (3.45 -> ~2.04) | Bagwell 2020 *Cytometry A* 97:184 | combined DNA + Gaussian over baseline (Gaussian alone ~2.41) |
+### Filter Doublets
 
-Note: a fixed "95th-percentile residual" cutoff is arbitrary; prefer a visual diagonal gate or the instrument's Gaussian parameters over an unjustified quantile.
+```python
+adata_filtered = adata[~adata.obs['predicted_doublet']].copy()
+print(f'Kept {adata_filtered.n_obs} cells after doublet removal')
+```
 
-## Common Errors
+### Set Manual Threshold
 
-| Error / symptom | Cause | Solution |
-|-----------------|-------|----------|
-| double-positive cluster that "shouldn't" exist | residual heterotypic doublets | check for an elevated shared marker (CD45); confirm by imaging flow |
-| no FSC/SSC channels (CyTOF) | mass data has no scatter | use DNA/Gaussian/Event_length |
-| over-removal of large cells | rectangle gate clips real large singlets | use a diagonal polygon, not a box |
+```python
+scrub = scr.Scrublet(adata.X)
+doublet_scores, _ = scrub.scrub_doublets()
 
-## References
+threshold = 0.25
+predicted_doublets = doublet_scores > threshold
+adata.obs['predicted_doublet'] = predicted_doublets
+```
 
-- Stadinski 2020 *Cytometry A* 97(11):1102-1104 — heterotypic doublets survive scatter gating.
-- Bagwell 2020 *Cytometry A* 97(2):184-198 — automated CyTOF cleanup via Gaussian/Event_length.
-- Finck 2013 *Cytometry A* 83(5):483-494 — CyTOF DNA/event parameters in normalization context.
+## DoubletFinder (R)
+
+**Goal:** Detect doublets in Seurat objects using DoubletFinder's pANN-based classification.
+
+**Approach:** Optimize the pK neighborhood parameter via parameter sweep, compute artificial nearest neighbor proportions, and classify cells as singlets or doublets.
+
+### Basic Usage
+
+```r
+library(Seurat)
+library(DoubletFinder)
+
+seurat_obj <- Read10X(data.dir = 'filtered_feature_bc_matrix/')
+seurat_obj <- CreateSeuratObject(counts = seurat_obj, min.cells = 3, min.features = 200)
+
+seurat_obj <- NormalizeData(seurat_obj)
+seurat_obj <- FindVariableFeatures(seurat_obj)
+seurat_obj <- ScaleData(seurat_obj)
+seurat_obj <- RunPCA(seurat_obj)
+seurat_obj <- RunUMAP(seurat_obj, dims = 1:20)
+seurat_obj <- FindNeighbors(seurat_obj, dims = 1:20)
+seurat_obj <- FindClusters(seurat_obj, resolution = 0.5)
+
+sweep.res <- paramSweep(seurat_obj, PCs = 1:20, sct = FALSE)
+sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
+bcmvn <- find.pK(sweep.stats)
+
+optimal_pk <- as.numeric(as.character(bcmvn$pK[which.max(bcmvn$BCmetric)]))
+
+nExp_poi <- round(0.06 * nrow(seurat_obj@meta.data))
+seurat_obj <- doubletFinder(seurat_obj, PCs = 1:20, pN = 0.25, pK = optimal_pk,
+                             nExp = nExp_poi, reuse.pANN = FALSE, sct = FALSE)
+
+colnames(seurat_obj@meta.data)
+```
+
+### With SCTransform
+
+```r
+seurat_obj <- SCTransform(seurat_obj)
+seurat_obj <- RunPCA(seurat_obj)
+seurat_obj <- RunUMAP(seurat_obj, dims = 1:30)
+seurat_obj <- FindNeighbors(seurat_obj, dims = 1:30)
+seurat_obj <- FindClusters(seurat_obj, resolution = 0.5)
+
+sweep.res <- paramSweep(seurat_obj, PCs = 1:30, sct = TRUE)
+sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
+bcmvn <- find.pK(sweep.stats)
+
+optimal_pk <- as.numeric(as.character(bcmvn$pK[which.max(bcmvn$BCmetric)]))
+nExp_poi <- round(0.06 * nrow(seurat_obj@meta.data))
+
+seurat_obj <- doubletFinder(seurat_obj, PCs = 1:30, pN = 0.25, pK = optimal_pk,
+                             nExp = nExp_poi, reuse.pANN = FALSE, sct = TRUE)
+```
+
+### Filter Doublets
+
+```r
+df_col <- grep('DF.classifications', colnames(seurat_obj@meta.data), value = TRUE)
+seurat_obj$doublet <- seurat_obj@meta.data[[df_col]]
+
+DimPlot(seurat_obj, group.by = 'doublet')
+
+seurat_obj <- subset(seurat_obj, subset = doublet == 'Singlet')
+```
+
+### Adjust Expected Doublet Rate
+
+```r
+n_cells <- ncol(seurat_obj)
+doublet_rate <- n_cells / 1000 * 0.008
+nExp_poi <- round(doublet_rate * n_cells)
+```
+
+## scDblFinder (R/Bioconductor)
+
+**Goal:** Detect doublets using scDblFinder's gradient-boosted classifier for fast, accurate identification.
+
+**Approach:** Simulate doublets, train a gradient boosting classifier on real vs simulated profiles, and score each cell.
+
+### Basic Usage
+
+```r
+library(scDblFinder)
+library(SingleCellExperiment)
+
+sce <- SingleCellExperiment(assays = list(counts = counts_matrix))
+sce <- scDblFinder(sce)
+
+table(sce$scDblFinder.class)
+```
+
+### From Seurat Object
+
+```r
+library(scDblFinder)
+library(Seurat)
+
+sce <- as.SingleCellExperiment(seurat_obj)
+
+sce <- scDblFinder(sce)
+
+seurat_obj$scDblFinder_class <- sce$scDblFinder.class
+seurat_obj$scDblFinder_score <- sce$scDblFinder.score
+
+DimPlot(seurat_obj, group.by = 'scDblFinder_class')
+
+seurat_obj <- subset(seurat_obj, subset = scDblFinder_class == 'singlet')
+```
+
+### Multi-Sample Processing
+
+```r
+sce <- scDblFinder(sce, samples = 'sample_id')
+```
+
+### Adjust Parameters
+
+```r
+sce <- scDblFinder(sce,
+    dbr = 0.06,
+    dbr.sd = 0.015,
+    nfeatures = 1500,
+    dims = 20,
+    k = 30
+)
+```
+
+## Expected Doublet Rates
+
+| Cells Loaded | Expected Rate |
+|--------------|---------------|
+| 1,000 | ~0.8% |
+| 2,000 | ~1.6% |
+| 5,000 | ~4.0% |
+| 10,000 | ~8.0% |
+| 15,000 | ~12% |
+
+Formula: `rate ≈ cells_loaded / 1000 * 0.008`
+
+## Compare Methods
+
+```r
+library(scDblFinder)
+
+seurat_obj$scrublet <- scrublet_results
+sce <- as.SingleCellExperiment(seurat_obj)
+sce <- scDblFinder(sce)
+seurat_obj$scDblFinder <- sce$scDblFinder.class
+
+DimPlot(seurat_obj, group.by = c('doublet', 'scDblFinder', 'scrublet'), ncol = 3)
+
+table(seurat_obj$doublet, seurat_obj$scDblFinder)
+```
+
+## Handling Heterotypic vs Homotypic Doublets
+
+### Heterotypic Doublets
+- Two different cell types
+- Easier to detect (intermediate expression)
+- All methods handle well
+
+### Homotypic Doublets
+- Same cell type
+- Harder to detect (no intermediate signature)
+- May have higher total counts
+
+```python
+adata.obs['log_counts'] = np.log1p(adata.obs['total_counts'])
+sc.pl.violin(adata, 'log_counts', groupby='predicted_doublet')
+```
+
+## Scanpy Integration Pipeline
+
+**Goal:** Run doublet detection as part of a complete Scanpy preprocessing workflow.
+
+**Approach:** Detect and remove doublets with Scrublet before QC filtering, then proceed through normalization, HVG selection, and clustering.
+
+```python
+import scanpy as sc
+import scrublet as scr
+
+adata = sc.read_10x_mtx('filtered_feature_bc_matrix/')
+
+adata.var['mt'] = adata.var_names.str.startswith('MT-')
+sc.pp.calculate_qc_metrics(adata, qc_vars=['mt'], inplace=True)
+
+scrub = scr.Scrublet(adata.X, expected_doublet_rate=0.06)
+doublet_scores, predicted_doublets = scrub.scrub_doublets()
+adata.obs['doublet_score'] = doublet_scores
+adata.obs['is_doublet'] = predicted_doublets
+
+print(f'Before filtering: {adata.n_obs} cells')
+adata = adata[~adata.obs['is_doublet']].copy()
+adata = adata[adata.obs['pct_counts_mt'] < 20].copy()
+print(f'After filtering: {adata.n_obs} cells')
+
+sc.pp.normalize_total(adata, target_sum=1e4)
+sc.pp.log1p(adata)
+sc.pp.highly_variable_genes(adata)
+sc.pp.pca(adata)
+sc.pp.neighbors(adata)
+sc.tl.umap(adata)
+sc.tl.leiden(adata)
+```
+
+## Seurat Integration Pipeline
+
+**Goal:** Run DoubletFinder as part of a complete Seurat preprocessing workflow.
+
+**Approach:** Preprocess and cluster, run DoubletFinder parameter sweep and classification, filter doublets, then re-preprocess clean singlets.
+
+```r
+library(Seurat)
+library(DoubletFinder)
+
+seurat_obj <- Read10X('filtered_feature_bc_matrix/')
+seurat_obj <- CreateSeuratObject(counts = seurat_obj, min.cells = 3, min.features = 200)
+
+seurat_obj[['percent.mt']] <- PercentageFeatureSet(seurat_obj, pattern = '^MT-')
+
+seurat_obj <- NormalizeData(seurat_obj)
+seurat_obj <- FindVariableFeatures(seurat_obj)
+seurat_obj <- ScaleData(seurat_obj)
+seurat_obj <- RunPCA(seurat_obj)
+seurat_obj <- RunUMAP(seurat_obj, dims = 1:20)
+seurat_obj <- FindNeighbors(seurat_obj, dims = 1:20)
+seurat_obj <- FindClusters(seurat_obj, resolution = 0.5)
+
+sweep.res <- paramSweep(seurat_obj, PCs = 1:20)
+sweep.stats <- summarizeSweep(sweep.res)
+bcmvn <- find.pK(sweep.stats)
+pk <- as.numeric(as.character(bcmvn$pK[which.max(bcmvn$BCmetric)]))
+nExp <- round(0.06 * ncol(seurat_obj))
+
+seurat_obj <- doubletFinder(seurat_obj, PCs = 1:20, pN = 0.25, pK = pk, nExp = nExp)
+
+df_col <- grep('DF.classifications', colnames(seurat_obj@meta.data), value = TRUE)
+seurat_obj <- subset(seurat_obj, cells = colnames(seurat_obj)[seurat_obj@meta.data[[df_col]] == 'Singlet'])
+seurat_obj <- subset(seurat_obj, subset = percent.mt < 20)
+
+seurat_obj <- NormalizeData(seurat_obj)
+seurat_obj <- FindVariableFeatures(seurat_obj)
+seurat_obj <- ScaleData(seurat_obj)
+seurat_obj <- RunPCA(seurat_obj)
+seurat_obj <- RunUMAP(seurat_obj, dims = 1:20)
+seurat_obj <- FindNeighbors(seurat_obj, dims = 1:20)
+seurat_obj <- FindClusters(seurat_obj)
+```
+
+## Method Comparison
+
+| Method | Speed | Accuracy | Language |
+|--------|-------|----------|----------|
+| Scrublet | Fast | Good | Python |
+| DoubletFinder | Slow | Good | R |
+| scDblFinder | Fast | Excellent | R |
 
 ## Related Skills
 
-Workflow order (CyTOF): EQ-bead drift normalization (raw, FIRST) -> cytometry-qc -> doublet-detection -> clustering -> CytoNorm cross-batch (LAST)
-
-- cytometry-qc - Run first: flow-rate/signal/margin cleaning
-- bead-normalization - CyTOF drift correction after doublet removal
-- fcs-handling - Load FCS files
-- gating-analysis - Where singlet discrimination sits in the hierarchy
-- clustering-phenotyping - Downstream analysis after doublet removal
-- single-cell/doublet-detection - Droplet scRNA-seq doublet methods (different principle)
+- preprocessing - QC before doublet detection
+- clustering - Run after filtering doublets
+- data-io - Load data before processing

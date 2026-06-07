@@ -459,15 +459,19 @@ To ensure the verification process is reproducible:
 
 When the environment variable `ARS_CROSS_MODEL` is set, this agent enables cross-model verification as an additional layer. See `shared/cross_model_verification.md` for full protocol, setup guide, and API call patterns.
 
-**Summary of behavior when enabled:**
+**Consent gate (required before any upload):** When `ARS_CROSS_MODEL` is set, do not send the sampled references automatically. First ask for explicit user consent (if not already granted in this session) and identify the external provider, model, and content class (citation/reference metadata drawn from the user's manuscript) that would be sent. If consent is not granted, log `[CROSS-MODEL-SKIPPED]` and continue with single-model verification. The environment variable alone is not consent to upload user-derived material. See `shared/cross_model_verification.md` for the consent boundary.
+
+**Summary of behavior when enabled (and consent granted):**
 - After Phase A completes, randomly sample 30% of references (min 5, max 15; if total < 5, sample all)
-- Send each to the cross-model for independent verification (the cross-model does NOT see Claude's result)
-- Disagreements → `[CROSS-MODEL-DISAGREEMENT]` → prioritized for human review
-- Add "Cross-Model Verification Results" section to the integrity report
+- Send **one API call per reference** (not a batch) to the cross-model for independent verification — the cross-model does NOT see Claude's result, and the call patterns enable the provider's web-search/grounding tool so "search the web to confirm" is actually executable
+- Each cross-model verdict is one of `VERIFIED` / `MISMATCH` / `NOT_FOUND` / `NOT_SEARCHED`. A `VERIFIED` with no supporting source URL/DOI, or a **successful (2xx)** response that carries no grounding evidence, is treated as `NOT_SEARCHED` (a non-2xx response is a transport error, not `NOT_SEARCHED` — see Graceful degradation)
+- Disagreements (Claude `VERIFIED` vs cross-model `NOT_FOUND` / `MISMATCH`) → `[CROSS-MODEL-DISAGREEMENT]` → prioritized for human review
+- `NOT_SEARCHED` / ungrounded results **never count as agreement** with a Claude `VERIFIED`: count them separately and surface them for re-run or human review — an ungrounded cross-model verdict carries no evidence and must not be laundered into a confirmation
+- Add "Cross-Model Verification Results" section to the integrity report (with the per-reference Source column and a `NOT_SEARCHED` count)
 
 **When not enabled:** Standard single-model verification. No behavioral change.
 
-**Graceful degradation:** If cross-model API fails, log error and continue single-model. Never block the pipeline.
+**Graceful degradation:** If cross-model verification fails **at the transport level** (API error, rate limit, key expired), log `[CROSS-MODEL-ERROR]` and continue single-model — never block the pipeline. A `NOT_SEARCHED` is **not** a transport failure: the call succeeded but produced no grounded evidence, so do not fall back to single-model on its account — record it as `NOT_SEARCHED` and surface it (see `shared/cross_model_verification.md` § Graceful Degradation).
 
 ---
 
@@ -480,4 +484,4 @@ When the environment variable `ARS_CROSS_MODEL` is set, this agent enables cross
 | Transparency | Audit Trail fully documented, available for third-party review |
 | Efficiency | Do existence batch checks first, then deep investigation on NOT_FOUND / MISMATCH items |
 | No overstepping | Do not make paper quality judgments, only factual verification |
-| Cross-model (optional) | When `ARS_CROSS_MODEL` is set, 30% sample (min 5, max 15) cross-verified by second model in batches of 5 |
+| Cross-model (optional) | When `ARS_CROSS_MODEL` is set, 30% sample (min 5, max 15) cross-verified by second model, **one grounded API call per reference**; ungrounded (`NOT_SEARCHED`) verdicts never count as agreement |

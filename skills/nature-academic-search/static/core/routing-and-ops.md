@@ -23,8 +23,9 @@ Quick guide:
 |---------|---------|-------------|-----------|
 | Semantic Scholar | `SEMANTIC_SCHOLAR_API_KEY` | [api.semanticscholar.org](https://api.semanticscholar.org/) | 100 req/s with key (1/s without) |
 | NCBI E-utilities | `NCBI_API_KEY` | [ncbi.nlm.nih.gov/account](https://www.ncbi.nlm.nih.gov/account/) | 10 req/s with key (3/s without) |
+| Elsevier / Scopus / ScienceDirect | pybliometrics config | [dev.elsevier.com](https://dev.elsevier.com/) | Depends on API entitlement |
 
-Set via `export` or `.env` file.
+Set Semantic Scholar / NCBI keys via `export` or `.env` file. Elsevier keys are read from the local pybliometrics config, normally `~/.config/pybliometrics.cfg`; do not copy API keys into this plugin.
 
 ### Proxy (if behind firewall)
 
@@ -44,6 +45,16 @@ Run before batch operations to verify API endpoints are reachable.
 ### Format converter dependencies
 
 The format converter (`scripts/format-converter.py`) uses Python stdlib only — no extra dependencies. Run `python scripts/format-converter.py --test` to verify the conversion pipeline.
+
+### MCP server runtime
+
+Use uv to start the MCP server in an isolated dependency environment:
+
+```bash
+uv run --no-project --directory <mcp-server> --with "mcp>=1.0.0,<2.0.0" --with "requests>=2.28.0,<3.0.0" --with "toml>=0.10.2,<2.0.0" --with "lxml>=4.9.0,<6.0.0" --with "pybliometrics>=4.4.1,<5.0.0" python academic_search_server.py
+```
+
+`search_papers` defaults to CrossRef, PubMed, and arXiv. Scopus / ScienceDirect are opt-in providers: include `scopus` / `sciencedirect` in `sources`, or call their dedicated tools. These calls use the local pybliometrics config at `~/.config/pybliometrics.cfg` and may consume Elsevier API quota.
 
 ## Error handling
 

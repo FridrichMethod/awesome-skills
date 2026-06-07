@@ -1,9 +1,9 @@
 ---
 name: scanpy
-description: Standard single-cell RNA-seq analysis pipeline. Use for QC, normalization, dimensionality reduction (PCA/UMAP/t-SNE), clustering, differential expression, and visualization. Best for exploratory scRNA-seq analysis with established workflows. For deep learning models use scvi-tools; for data format questions use anndata.
+description: Standard single-cell RNA-seq analysis pipeline. Use for QC, normalization, dimensionality reduction (PCA/UMAP/t-SNE), clustering, differential expression, visualization, and converting R-friendly single-cell formats such as Seurat or SingleCellExperiment RDS files into h5ad for Scanpy. Best for exploratory scRNA-seq analysis with established workflows. For deep learning models use scvi-tools; for data format questions use anndata.
 license: BSD-3-Clause
 metadata:
-  version: "1.1"
+  version: "1.2"
   skill-author: K-Dense Inc.
 ---
 
@@ -31,12 +31,15 @@ uv pip install "scanpy[leiden]" dask
 
 See the [Using dask with Scanpy](https://scanpy.scverse.org/en/stable/tutorials/experimental/dask.html) tutorial. For GPU-accelerated scanpy-like operations, use [rapids-singlecell](https://rapids-singlecell.readthedocs.io/) as a separate package.
 
+If the input is an R-native single-cell object (`.rds`, `.RData`, Seurat, or SingleCellExperiment), first convert it to `.h5ad` with R tooling, then load it with Scanpy. Read `references/r_interop.md` for agent-run installation and conversion instructions across macOS, Linux, and Windows.
+
 For AnnData structure and I/O details, use the **anndata** skill. For probabilistic models and batch correction, use **scvi-tools**.
 
 ## When to Use This Skill
 
 This skill should be used when:
 - Analyzing single-cell RNA-seq data (.h5ad, 10X, CSV formats)
+- Working with R-friendly single-cell datasets (`.rds`, `.RData`, Seurat, SingleCellExperiment) that need conversion to `.h5ad`
 - Performing quality control on scRNA-seq datasets
 - Creating UMAP, t-SNE, or PCA visualizations
 - Identifying cell clusters and finding marker genes
@@ -72,6 +75,17 @@ adata = sc.read_h5ad('path/to/data.h5ad')
 
 # From CSV
 adata = sc.read_csv('path/to/data.csv')
+```
+
+For R-native files, do not try to parse Seurat `.rds` directly in Python. Convert first:
+
+```bash
+# See references/r_interop.md for installing R and conversion packages.
+Rscript convert_rds_to_h5ad.R input.rds output.h5ad
+```
+
+```python
+adata = sc.read_h5ad('output.h5ad')
 ```
 
 ### Understanding AnnData Structure
@@ -353,6 +367,7 @@ sc.pp.combat(adata, key='batch')
 8. **Save intermediate results**: Long workflows can fail partway through
 9. **Pseudobulk for DE**: Do not treat `rank_genes_groups` p-values as rigorous DE between conditions
 10. **Save plots via settings**: Use `sc.settings.autosave` instead of deprecated `save=` on plot functions
+11. **Convert R objects before Scanpy**: Use R packages to convert Seurat or SingleCellExperiment `.rds` files to `.h5ad`, preserving counts, metadata, and gene identifiers
 
 ## Bundled Resources
 
@@ -404,6 +419,9 @@ Comprehensive visualization guide including:
 
 Consult this when creating publication-ready figures.
 
+### references/r_interop.md
+Agent runbook for installing R on macOS, Linux, and Windows, installing CRAN/Bioconductor conversion packages, inspecting `.rds`/`.RData` inputs, converting Seurat or SingleCellExperiment objects to `.h5ad`, and validating the result in Scanpy.
+
 ### assets/analysis_template.py
 Complete analysis template providing a full workflow from data loading through cell type annotation. Copy and customize this template for new analyses:
 
@@ -421,6 +439,7 @@ The template includes all standard steps with configurable parameters and helpfu
 - **Scanpy tutorials**: https://scanpy.scverse.org/en/stable/tutorials/index.html
 - **Release notes**: https://scanpy.scverse.org/en/stable/release-notes/index.html
 - **scverse ecosystem**: https://scverse.org/ (related tools: squidpy, scvi-tools, cellrank)
+- **R interoperability**: https://www.bioconductor.org/packages/release/bioc/html/zellkonverter.html and https://mojaveazure.github.io/seurat-disk/
 - **Best practices**: Luecken & Theis (2019) "Current best practices in single-cell RNA-seq"
 
 ## Tips for Effective Analysis
