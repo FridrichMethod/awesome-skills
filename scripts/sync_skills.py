@@ -25,6 +25,12 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SKILLS_DEST = REPO_ROOT / "skills"
+README_PATH = REPO_ROOT / "README.md"
+
+# README headline figures are derived from the live tree on every sync so they
+# never drift between runs. Badge/prose use a rounded "<floor>+" figure; the
+# repo-layout tree line shows the exact count. See `update_readme_counts`.
+SKILL_COUNT_FLOOR_STEP = 100
 
 # Codex skill loader caps `description` at 1024 chars and rejects any
 # top-level frontmatter value containing an unquoted mid-line `: ` (which
@@ -60,6 +66,7 @@ UPSTREAMS = [
     ("https://github.com/lishix520/academic-paper-skills.git", "lishix-paper", "lishix academic-paper"),
     ("https://github.com/Imbad0202/academic-research-skills.git", "imbad-academic", "Imbad academic-research"),
     ("https://github.com/Yuan1z0825/nature-skills.git", "nature-skills", "Nature journal writing & figures (13k ⭐)"),
+    ("https://github.com/google-deepmind/science-skills.git", "gdm-science", "Google DeepMind Science Skills — genomics, structural bio, cheminformatics, literature DBs"),
     ("https://github.com/adaptyvbio/protein-design-skills.git", "adaptyv-protein", "Adaptyv protein-design [P0]"),
     # --- general-purpose dev/productivity collections ---
     ("https://github.com/wshobson/agents.git", "wshobson-agents", "wshobson agents (155 dev skills, 35.5k ⭐)"),
@@ -637,6 +644,50 @@ def write_summary(stats: dict, before: int, after: int) -> str:
     return "\n".join(lines)
 
 
+def update_readme_counts(readme: Path, skill_count: int, source_count: int) -> bool:
+    """Rewrite the skill/source count figures in README.md to match the live tree.
+
+    Keeps the README's headline numbers dynamic so they never drift between
+    weekly syncs. Each substitution is anchored to stable surrounding text and
+    is idempotent — a no-op run leaves the file byte-identical.
+
+    Figures updated:
+      - Skills shield badge + intro/bootstrap prose: rounded ``<floor>+``
+        (e.g. 1973 -> ``1,900+``), since those read as "at least".
+      - Repo-layout tree comment: the exact live count (e.g. ``1,973``).
+      - Sources shield badge + intro + heading: the exact ``source_count``.
+
+    Returns True if the file changed.
+    """
+    if not readme.exists():
+        return False
+    text = original = readme.read_text(encoding="utf-8")
+
+    floor = (skill_count // SKILL_COUNT_FLOOR_STEP) * SKILL_COUNT_FLOOR_STEP
+    floor_str = f"{floor:,}"
+    exact_str = f"{skill_count:,}"
+
+    substitutions = [
+        # Skills "+floor" figures (the badge URL-encodes "+" as "%2B").
+        (r"(badge/skills-)[\d,]+(?:%2B|\+)(-brightgreen)", rf"\g<1>{floor}%2B\g<2>"),
+        (r"(collection of )[\d,]+\+( agent skills)", rf"\g<1>{floor_str}+\g<2>"),
+        (r"(with \*\*)[\d,]+\+( vetted skills\*\*)", rf"\g<1>{floor_str}+\g<2>"),
+        # Repo-layout tree comment: exact count.
+        (r"(← )[\d,]+\+?( skill dirs)", rf"\g<1>{exact_str}\g<2>"),
+        # Source count: badge, intro sentence, and Sources heading.
+        (r"(badge/upstream%20sources-)\d+(-blue)", rf"\g<1>{source_count}\g<2>"),
+        (r"(from )\d+( upstream curated collections)", rf"\g<1>{source_count}\g<2>"),
+        (r"(Currently \*\*)\d+( sources\*\*)", rf"\g<1>{source_count}\g<2>"),
+    ]
+    for pattern, repl in substitutions:
+        text = re.sub(pattern, repl, text)
+
+    if text != original:
+        readme.write_text(text, encoding="utf-8")
+        return True
+    return False
+
+
 def sanitize_only(target: Path) -> int:
     """Walk `target` and apply `sanitize_skill_frontmatter` to every SKILL.md.
 
@@ -702,6 +753,8 @@ def main(argv: list[str] | None = None) -> int:
         for url, name, desc in UPSTREAMS:
             sync_upstream(url, name, desc, staging, stats)
     after = sum(1 for p in SKILLS_DEST.iterdir() if p.is_dir())
+    if update_readme_counts(README_PATH, after, len(UPSTREAMS)):
+        print(f"Updated README counts: {after:,} skills, {len(UPSTREAMS)} sources")
     print()
     summary = write_summary(stats, before, after)
     print(summary)
