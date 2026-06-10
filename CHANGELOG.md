@@ -5,9 +5,16 @@ All notable changes to this project are documented here. The format is based on 
 ## [Unreleased]
 
 ### Added
+- New upstream source: [google-deepmind/science-skills](https://github.com/google-deepmind/science-skills) (1.8k ⭐, Apache 2.0, 37 skills — genomics, structural biology, cheminformatics, literature search, and biological databases such as AlphaFold DB, AlphaGenome, ChEMBL, ClinVar, Ensembl, Foldseek, gnomAD, GTEx, PDB, PubChem, PubMed, UniProt, plus `pymol`, `uv`, and a workflow-skill-creator).
+- Placed in the bio/scientific tier in `scripts/sync_skills.py`, before `adaptyv-protein` (protein-design retains its last-wins position). GDM skill directories use underscore names (e.g. `pdb_database`), so they add cleanly alongside the existing hyphenated database skills with **zero name collisions**.
+- Skill count after adding the source: 1,936 → **1,973** (+37 new, 0 conflicts). All 37 `SKILL.md` frontmatter blocks were folded-scalar-normalized by the sync sanitizer, parse cleanly under `yaml.safe_load`, and pass the idempotency check.
+- README: source table, intro, repo-layout count, acknowledgements, and badges updated (15 → 16 sources; skills badge 1800+ → 1900+).
 - New upstream source: [Yuan1z0825/nature-skills](https://github.com/Yuan1z0825/nature-skills) (13k ⭐, 9 skills — Nature journal writing, polishing, figures, citations, peer-review response, paper-to-PPT, academic search).
 - Placed in the academic/writing tier in `scripts/sync_skills.py`, before `adaptyv-protein` (protein-design wins on conflict).
 - README: source table, highlights, acknowledgements, badge updated (14 → 15 sources).
+
+### Changed
+- README headline counts are now **derived dynamically** from the live skill tree on every sync instead of hand-maintained. `scripts/sync_skills.py` gained `update_readme_counts()`, which rewrites the skills badge + intro/bootstrap prose (rounded `<floor>+`, e.g. `1,900+`), the repo-layout tree line (exact count, e.g. `1,973`), and the sources badge/intro/heading (`len(UPSTREAMS)`). The substitution is idempotent; `main()` calls it after each sync and the `sync-skills` workflow now stages `README.md` alongside `skills/`. Covered by `tests/test_readme_counts.py` (5 cases).
 
 ## [0.3.1] — 2026-05-20
 

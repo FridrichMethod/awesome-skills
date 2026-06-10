@@ -59,7 +59,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add skills/
+          # README headline counts are regenerated from the live tree by the
+          # sync script — stage it alongside skills/ so they stay in lockstep.
+          git add skills/ README.md
           today=$(date -u +%Y-%m-%d)
           git commit -m "chore: weekly upstream skill sync (${today})
 
