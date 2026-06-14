@@ -2,9 +2,7 @@
 name: bids
 description: "Use this skill when working with Brain Imaging Data Structure (BIDS) datasets: organizing neuroscience and biomedical data (MRI, EEG, MEG, iEEG, PET, microscopy, NIRS, motion capture, EMG, MR spectroscopy, behavioral), querying BIDS layouts, validating compliance, converting DICOM to BIDS, writing metadata sidecars, or creating BIDS derivatives."
 license: https://creativecommons.org/licenses/by/4.0/
-metadata:
-  version: "1.0"
-  skill-author: Yaroslav Halchenko
+metadata: {"version": "1.0", "skill-author": "Yaroslav Halchenko"}
 ---
 
 # Brain Imaging Data Structure (BIDS)

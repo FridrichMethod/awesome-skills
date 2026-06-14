@@ -1,129 +1,59 @@
 # Fragment Analysis - Usage Guide
 
 ## Overview
-Predict and analyze DNA fragments produced by restriction enzyme digestion.
+Extracts cfDNA fragmentomics features (DELFI genome-wide short/long ratios, WPS nucleosome positioning, Griffin GC-corrected accessibility, end-motifs/MDS, OCF) from plasma WGS for cancer detection and tissue-of-origin. The features are four views of one nucleosome-footprint object, so GC correction and protocol-matching are non-negotiable.
 
 ## Prerequisites
 ```bash
-pip install biopython
+pip install finaletoolkit pysam numpy pandas matplotlib
+# Griffin: clone github.com/adoebley/Griffin and run its Snakemake pipeline (not pip-installable)
+# DELFI is a methodology + company, not a package -- compute its features via finaletoolkit
 ```
 
 ## Quick Start
 Tell your AI agent what you want to do:
-- "Predict the fragment sizes from an EcoRI digest"
-- "What bands will I see on a gel after cutting with BamHI?"
+- "Compute a genome-wide DELFI short/long fragment ratio profile for cancer detection"
+- "Profile nucleosome accessibility around TF binding sites for tissue of origin"
+- "Calculate end-motif frequencies and the Motif Diversity Score for my sample"
+- "GC-correct my fragmentomic features before comparing samples across batches"
+- "Apply in-silico size selection to enrich tumor fraction at low ctDNA"
 
 ## Example Prompts
 
-### Single Digest
-> "What fragment sizes will I get from an EcoRI digest of my plasmid?"
+### Detection (genome-wide ratios)
+> "Run a GC-corrected DELFI score across 5 Mb bins for my plasma BAM and flag bins deviating from a healthy reference."
 
-> "Predict the gel pattern for HindIII digestion of sequence.fasta"
+> "Compute a custom short(100-150 bp)/long(151-220 bp) ratio profile and explain why it is not comparable across sequencing batches."
 
-### Double Digest
-> "Calculate fragment sizes for an EcoRI + BamHI double digest"
+### Tissue of origin (nucleosome profiling)
+> "Set up the Griffin Snakemake pipeline to profile nucleosome accessibility around a TF site list for subtype calling."
 
-> "What bands will I see from digesting with both PstI and SalI?"
+> "Compute WPS over a promoter region and identify nucleosome positions and TF footprints."
 
-### Gel Comparison
-> "Compare my predicted fragments to a 1kb ladder"
+### Nuclease signal (end motifs)
+> "Extract 4-mer end-motif frequencies and compute the Motif Diversity Score, and interpret a raised MDS in the context of DNASE1L3 biology."
 
-> "My gel shows bands at 3000, 2000, and 1000 bp - does this match EcoRI digestion?"
-
-### Verification
-> "Verify my digest worked by comparing observed vs expected fragments"
+### Low tumor fraction
+> "My sample has tumor fraction below 0.03 -- recommend a feature family and whether to apply 90-150 bp size selection."
 
 ## What the Agent Will Do
-1. Load your DNA sequence
-2. Find enzyme cut positions
-3. Calculate fragment sizes
-4. Sort fragments for gel comparison
-5. Optionally compare to observed gel results
-
-## Code Patterns
-
-### Basic Fragment Prediction
-```python
-from Bio import SeqIO
-from Bio.Restriction import EcoRI
-
-record = SeqIO.read('plasmid.fasta', 'fasta')
-fragments = EcoRI.catalyze(record.seq)[0]
-sizes = sorted([len(f) for f in fragments], reverse=True)
-print(f'Fragment sizes: {sizes}')
-```
-
-### Understanding catalyze()
-```python
-# catalyze() returns a tuple
-five_prime_frags, three_prime_frags = EcoRI.catalyze(seq)
-# [0]: 5' fragments (most common use)
-# [1]: 3' fragments (for asymmetric cuts)
-```
-
-### Linear vs Circular DNA
-
-| DNA Type | n cuts | Fragments |
-|----------|--------|-----------|
-| Linear | n | n + 1 |
-| Circular | n | n |
-
-```python
-# Plasmid (circular)
-fragments = EcoRI.catalyze(seq, linear=False)[0]
-```
-
-### Double Digest
-```python
-from Bio.Restriction import EcoRI, BamHI
-
-ecori_sites = EcoRI.search(seq)
-bamhi_sites = BamHI.search(seq)
-all_sites = sorted(set(ecori_sites + bamhi_sites))
-
-def calc_fragments(seq_len, positions, linear=True):
-    if not positions:
-        return [seq_len]
-    positions = sorted(positions)
-    frags = []
-    if linear:
-        frags.append(positions[0])
-        for i in range(len(positions) - 1):
-            frags.append(positions[i + 1] - positions[i])
-        frags.append(seq_len - positions[-1])
-    else:
-        for i in range(len(positions) - 1):
-            frags.append(positions[i + 1] - positions[i])
-        frags.append((seq_len - positions[-1]) + positions[0])
-    return frags
-
-sizes = calc_fragments(len(seq), all_sites, linear=True)
-```
-
-### Gel Simulation
-```python
-def gel_pattern(sizes, ladder=[10000, 5000, 3000, 2000, 1500, 1000, 500]):
-    all_bands = sorted(set(sizes + ladder), reverse=True)
-    for band in all_bands:
-        marker = 'L' if band in ladder else ' '
-        sample = '=' * (sizes.count(band) * 4) if band in sizes else ''
-        print(f'{band:>6} {marker} | {sample}')
-```
-
-### Comparing Predicted vs Observed
-```python
-predicted = [3000, 2000, 1000]
-observed = [3050, 1980, 1020]  # From gel image
-tolerance = 100  # bp
-
-for pred in predicted:
-    matches = [obs for obs in observed if abs(pred - obs) <= tolerance]
-    if matches:
-        print(f'{pred} bp matches {matches[0]} bp')
-```
+1. Choose a feature family from the question (detection vs tissue-of-origin vs nuclease signal)
+2. Extract fragments from BAM/CRAM or a tabix-indexed `.frag.gz` file
+3. Apply GC correction (FinaleToolkit `delfi`, Griffin, or a standalone corrector)
+4. Compute the chosen features (DELFI ratios, WPS, Griffin profiles, end-motifs/MDS)
+5. Compare to a co-processed healthy reference and flag protocol/batch confounders
 
 ## Tips
-- Check linear vs circular setting if fragment count is wrong
-- For linear DNA: sum of fragments should equal sequence length
-- Small fragments (<100 bp) may run off the gel
-- Allow ~5-10% tolerance when comparing to gel measurements
+- GC correction is the point - an uncorrected DELFI plot is a GC plot, not a tumor signal
+- Never mix ssDNA and dsDNA libraries; the prep sets the size floor and moves every feature
+- DELFI ratios are entangled with copy-number alterations - treat them as a hybrid, not pure fragmentation
+- Griffin is the robust choice at low tumor fraction because its GC correction removes the dominant technical signal
+- The 10.4 bp periodicity below 167 bp is the cleanest check that the data are genuine nucleosome footprints
+- Size selection (90-150 bp) trades tumor fraction for depth; skip it when already depth-limited
+- The FinaleToolkit filter subcommand is `filter-file`, not `filter-bam`
+
+## Related Skills
+- cfdna-preprocessing - library prep determines which fragments (and features) are recoverable
+- tumor-fraction-estimation - fragmentomics enables signal below the CNA-based TF floor
+- methylation-based-detection - orthogonal genome-wide cfDNA signal
+- atac-seq/nucleosome-positioning - shared nucleosome-footprint biology

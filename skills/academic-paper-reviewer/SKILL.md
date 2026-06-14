@@ -153,9 +153,15 @@ User: "Review this paper"
      +-> [eic_agent] guides the user through Socratic dialogue:
          1. Overall positioning — "After reading the review comments, what surprised you the most?"
          2. Core issue focus — Guides user to understand consensus issues
-         3. Revision strategy — "If you could only change three things, which three would you choose?"
-         4. Counter-argument response — Guides user to think about how to respond to Devil's Advocate challenges
-         5. Implementation planning — Helps prioritize revisions
+         3. Contribution framing probe — ask the Layer-5 later-stage anchored forms
+            L5-W1 / L5-W2 / L5-W3 (single-sourced under Layer 5 in
+            deep-research/agents/socratic_mentor_agent.md — read the question text
+            there), anchored to what the manuscript already claims ("the revised
+            paper"). Questions only — never propose, substitute, rank, expand, or
+            select a contribution claim (Kong L2 verb test); the user answers.
+         4. Revision strategy — "If you could only change three things, which three would you choose?"
+         5. Counter-argument response — Guides user to think about how to respond to Devil's Advocate challenges
+         6. Implementation planning — Helps prioritize revisions
      |
      +-> After dialogue ends, produces:
          - User's self-formulated revision strategy

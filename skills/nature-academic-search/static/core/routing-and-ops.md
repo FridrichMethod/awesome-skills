@@ -46,6 +46,21 @@ Run before batch operations to verify API endpoints are reachable.
 
 The format converter (`scripts/format-converter.py`) uses Python stdlib only — no extra dependencies. Run `python scripts/format-converter.py --test` to verify the conversion pipeline.
 
+### No-MCP fallback (standalone search)
+
+When the MCP server is not mounted (plain CLI use, skill auto-discovery, CI), the search workflow still runs via two stdlib-only scripts that hit public HTTP APIs directly — the same pattern `nature-citation/scripts/nature_citation.py` uses for CrossRef:
+
+- **Discovery** — `scripts/academic_search.py` queries OpenAlex (free, no API key). OpenAlex indexes CrossRef, PubMed and arXiv-deposited works, so one endpoint covers journals and preprints for keyword/author search, with relevance re-ranking and author disambiguation (`--affiliation` / `--orcid` / `--list-authors`). Returns ranked JSON (title, DOI, authors, year, citations, abstract).
+- **Download / convert** — `scripts/format-converter.py` turns the chosen DOIs/PMIDs/arXiv IDs into `.ris`/`.bib`/`.enw`/`.nbib` (CrossRef + PubMed + arXiv, also stdlib-only).
+
+```bash
+# discover, then export the picks
+python scripts/academic_search.py "graph neural network potentials" --limit 10 --sort cited_by_count --mailto you@example.com
+python scripts/format-converter.py --doi 10.1103/physrevlett.120.143001 --format ris
+```
+
+Be polite to the OpenAlex pool: pass `--mailto` or set `OPENALEX_MAILTO` / `CROSSREF_MAILTO`. Each script reports per-source failures (HTTP 429, timeout, network) on stderr and exits non-zero, so a caller treats each source independently and continues with another tool. This fallback covers the same T1→T2→T3 sources for *discovery* via OpenAlex; the MCP path remains preferred when available (per-source tool selection, Semantic Scholar / Scopus providers).
+
 ### MCP server runtime
 
 Use uv to start the MCP server in an isolated dependency environment:
@@ -58,7 +73,7 @@ uv run --no-project --directory <mcp-server> --with "mcp>=1.0.0,<2.0.0" --with "
 
 ## Error handling
 
-- **MCP tool unavailable**: report specific failure, continue with remaining tools.
+- **MCP tool unavailable**: report specific failure, continue with remaining tools. If the whole MCP server is absent, switch to the No-MCP fallback (`scripts/academic_search.py` + `scripts/format-converter.py`) above.
 - **No results**: broaden terms, try alternative sources, suggest user refine query.
 - **Script failure (2x)**: fall back to manual generation from MCP-fetched metadata.
 

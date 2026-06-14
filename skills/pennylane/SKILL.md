@@ -6,9 +6,7 @@ allowed-tools:
   - Read
   - Bash
   - Python
-metadata:
-  version: "1.1"
-  skill-author: K-Dense Inc.
+metadata: {"version": "1.1", "skill-author": "K-Dense Inc."}
 ---
 
 # PennyLane

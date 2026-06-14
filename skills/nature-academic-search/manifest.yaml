@@ -46,6 +46,8 @@ references:
       path: references/search-strategy.md
     - condition: RIS/BibTeX format specifications and field mappings
       path: references/ris-bibtex-format.md
+    - condition: no-MCP fallback discovery search (OpenAlex, stdlib) when the MCP server is unavailable
+      path: scripts/academic_search.py
     - condition: multi-source .nbib/.ris/.bib downloading and conversion
       path: scripts/format-converter.py
     - condition: pre-flight check that API endpoints are reachable before batch operations
