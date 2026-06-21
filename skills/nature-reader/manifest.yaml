@@ -8,7 +8,7 @@ description: >
 
 always_load:
   # Shared layer — common to the nature-* skills
-  - ../../_shared/core/terminology-ledger.md
+  - ../_shared/core/terminology-ledger.md
   # Skill-local core
   - static/core/principles.md
   - static/core/workflow.md
@@ -41,3 +41,5 @@ references:
       path: references/output-spec.md
     - condition: answering follow-up questions with source-grounded citations
       path: references/grounding-rules.md
+    - condition: labelling the argumentative function of each section (gap/contribution/result/limits) and genre tells as a reading aid
+      path: references/article-anatomy.md

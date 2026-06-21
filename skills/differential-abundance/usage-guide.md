@@ -1,108 +1,82 @@
 # Differential Abundance - Usage Guide
 
 ## Overview
-Identify proteins with significantly different abundance between experimental conditions using statistical testing, multiple testing correction, and fold change shrinkage. Covers the full pipeline from raw intensities through preprocessing, statistical modeling, and accurate effect size estimation.
+
+Differential abundance (DA) testing identifies which individual taxa differ between groups on an amplicon ASV/feature table while respecting the compositional, relative nature of the counts. The headline workflow is a CONSENSUS of two or more compositionally-aware tools: which taxa come out "significant" depends more on the DA tool than on the biology (Nearing 2022, across 38 datasets), so a single tool's hit list is not a defensible deliverable. Run at least two of ALDEx2, ANCOM-BC2, MaAsLin2/3, LinDA, or ZicoSeq, report the intersection as high-confidence and the union as exploratory, name every tool, and disclose disagreement. A relative-abundance increase is also not an absolute increase without an external load anchor (spike-in / flow cytometry / qPCR).
+
+This skill owns per-taxon DA on an amplicon table. Whole-community alpha/beta diversity and PERMANOVA live in diversity-analysis; the same DA math on shotgun profiler tables lives in metagenomics/metagenome-visualization; the shared compositional/closure/CLR/zero theory lives in metagenomics/abundance-estimation.
 
 ## Prerequisites
-```bash
-pip install numpy pandas scipy statsmodels
-```
+
 ```r
-BiocManager::install(c("limma", "DEqMS", "ashr", "proDA"))
+BiocManager::install(c('ALDEx2', 'ANCOMBC', 'Maaslin2'))
+install.packages(c('MicrobiomeStat', 'GUniFrac'))   # LinDA, ZicoSeq
 ```
 
+Conceptual prerequisites:
+- A feature table of integer COUNTS (ASVs or taxa collapsed to genus/species), plus sample metadata - typically a phyloseq object. ALDEx2, ANCOM-BC2, LinDA, and ZicoSeq expect counts; MaAsLin2 TSS-normalizes internally and expects features in COLUMNS.
+- Answer the whole-community question first (diversity-analysis): knowing whether the communities differ at all frames the per-taxon hits.
+- Decide the DA-tool panel (>=2 tools) a priori, before seeing any result, to avoid cherry-picking.
+- Decide and declare a prevalence filter; it is a modeling knob that reshapes the FDR landscape.
+- Know whether the design has repeated/paired samples; if so, a random effect is required.
+- Remove host organelle (Mitochondria/Chloroplast) features and, for low-biomass samples, reagent contaminants upstream (taxonomy-assignment / amplicon-processing) before testing - they otherwise surface as spurious hits or skew the closure.
+
 ## Quick Start
+
 Tell your AI agent what you want to do:
-- "Find differentially abundant proteins between treatment and control in my intensity matrix"
-- "Run limma analysis on my protein data with log2 transformation and median normalization"
-- "Identify significant proteins with shrunk fold change estimates"
-- "Perform differential abundance testing on my label-free proteomics data"
+- "Find differentially abundant taxa between treatment and control with two methods and give me the consensus"
+- "Run ALDEx2 and report effect sizes with BH-adjusted q-values"
+- "Run ANCOM-BC2 with age and sex as covariates and only keep hits that pass the sensitivity analysis"
+- "Analyze a longitudinal study with a subject random effect using LinDA or MaAsLin2"
+- "Filter taxa present in fewer than 10% of samples before testing and check the result is not sensitive to that cutoff"
 
 ## Example Prompts
 
-### Full Pipeline
-> "I have raw protein intensities in a TSV file with samples as columns. Log2 transform, median normalize, and run differential abundance testing between case and control groups. Report fold changes with shrinkage applied."
+### Consensus across tools
+> "I have an ASV table and metadata with two treatment groups. Run at least two compositionally-aware DA methods, report the intersection as high-confidence and the union as exploratory, and tell me which tools found each taxon."
 
-> "Analyze my TMT proteomics data for differential abundance between treatment and control. I have PSM counts per protein, so use DEqMS for the analysis."
+### Conservative two-group test
+> "Run ALDEx2 to compare taxon abundance between healthy and diseased samples, gate on both BH-adjusted q below 0.05 and an effect-size floor, and explain the effect-size metric."
 
-### Statistical Testing
-> "Run limma differential analysis comparing treatment vs control groups on my normalized protein matrix"
+### Covariates and sensitivity
+> "Run ANCOM-BC2 with age and sex as covariates, set the p-adjust method to BH, and only report hits that pass the pseudo-count sensitivity analysis (passed_ss)."
 
-> "Use proDA for differential testing on my label-free data that has about 30% missing values"
+### Repeated measures
+> "My samples are repeated within subjects over time. Use a DA method with a subject random effect so I do not pseudo-replicate, and cross-check the mixed-model hits across tools."
 
-### Complex Designs
-> "Set up a limma model with treatment and batch as covariates in the design matrix"
-
-> "Run paired differential analysis for my before/after samples"
-
-### Results and Visualization
-> "Create a volcano plot of the differential abundance results"
-
-> "Filter to proteins with adjusted p-value below 0.05 and absolute log2FC above 1"
+### Relative vs absolute
+> "Is this taxon's increase relative or absolute? I do not have load data - explain what I can and cannot claim, and what a spike-in or qPCR anchor would add."
 
 ## What the Agent Will Do
-1. Load raw protein intensity matrix and sample metadata
-2. Preprocess: log2 transform raw intensities, apply normalization (median centering, cyclic loess, or VSN depending on data characteristics)
-3. Select statistical method based on sample size, data type, and available metadata (limma for small n, DEqMS with PSM counts, proDA for extensive missing values, Welch's t-test for large n in Python)
-4. Define experimental design and contrasts
-5. Fit statistical model with empirical Bayes moderation
-6. Apply Benjamini-Hochberg multiple testing correction
-7. Choose fold change reporting strategy based on downstream use (raw for GSEA/meta-analysis, ashr-shrunk for effect size recovery)
-8. Generate results table and optional visualizations
 
-## Statistical Methods
-
-| Method | Best for | Key advantage |
-|--------|----------|---------------|
-| limma | Small n (3-5), general purpose | Borrows variance across proteins; ~10-20 extra effective df |
-| DEqMS | When PSM/peptide counts available | Weights variance by quantification depth |
-| proDA | Label-free with >20% missing values | Models dropout without imputation |
-| Welch's t-test | Large n (>10), Python-only | Simple, reliable with sufficient samples |
-| MSstats | Complex designs, technical replicates | Feature-level mixed models |
-
-## Normalization Methods
-
-| Method | When to use | Key assumption |
-|--------|-------------|----------------|
-| Median centering | Default starting point; robust to missing values | Majority of proteins unchanged |
-| Cyclic loess | Unbalanced DE (asymmetric up/down regulation) | Majority of proteins unchanged |
-| VSN | Heteroscedastic data; input is raw (not log2) | Parametric variance model holds |
-| Quantile | TMT with complete data | Identical sample distributions |
-
-Median normalization subtracts each sample's median log2 value and optionally re-centers to the global median, ensuring all samples share a common center. This removes systematic loading differences while preserving biological signal.
-
-## Fold Change Reporting
-
-Raw fold changes are noisy but unbiased estimates of the true biological effect. How to handle them depends on what comes next:
-
-- **GSEA / pathway analysis**: Use raw fold changes for all proteins. These methods rank by effect size and rely on the full continuous distribution, including small non-significant effects. Do not zero or threshold FCs before GSEA.
-- **Effect size recovery** (e.g., "which proteins truly changed and by how much?"): Apply ashr shrinkage in R to produce posterior mean estimates. ashr smoothly shrinks uncertain effects toward zero while preserving well-supported ones. This is the principled Bayesian approach.
-- **Reporting tables**: Report raw FC with adjusted p-value and confidence interval. The p-value communicates uncertainty; the FC communicates magnitude. Downstream consumers can threshold as needed.
-- **Cross-study comparison / meta-analysis**: Use raw FCs with standard errors as input. Shrinkage is study-specific and should not be applied before pooling.
-
-Avoid hard-thresholding FCs at a p-value cutoff (e.g., zeroing non-significant FCs). This creates artificial discontinuities and discards information that downstream methods may need.
-
-## Significance Thresholds
-
-Typical thresholds for proteomics:
-- **Adjusted p-value**: < 0.05 (or 0.01 for stringent)
-- **Log2 fold change**: > 1 (2-fold) or > 0.58 (1.5-fold)
-- Use `treat()` + `topTreat()` in limma for minimum-effect-size testing rather than post-hoc FC filtering, which can inflate FDR
+1. Confirm the input is integer counts with matching metadata and check feature orientation per tool.
+2. Apply and declare a prevalence/abundance filter (e.g. taxa present in >=10% of samples).
+3. Run the first compositionally-aware tool (default ALDEx2) and extract BH-adjusted q plus effect size.
+4. Run at least one more tool (ANCOM-BC2, LinDA, MaAsLin2/3, or ZicoSeq), adding covariates or a random effect as the design requires.
+5. For ANCOM-BC2, set p_adj_method to BH and require passed_ss for confident hits.
+6. Intersect the per-tool significant sets: report the intersection as high-confidence, the union as exploratory, and tabulate which tools agree per taxon.
+7. State whether claims are relative or absolute and whether a load anchor exists.
+8. Produce a results table and an effect-size plot; never pool p-values across tools.
 
 ## Tips
-- Always log2-transform raw intensities before normalization and testing
-- Always use adjusted p-values (not raw) for significance calls
-- Use `equal_var=False` in `scipy.stats.ttest_ind` for Welch's t-test (the default is Student's)
-- Pass `method='fdr_bh'` explicitly to `statsmodels.stats.multitest.multipletests` (the default is Holm-Sidak, not BH)
-- Include batch as a covariate in the design matrix if samples were processed separately; do not use `removeBatchEffect()` before testing
-- Consider ashr fold change shrinkage in R when effect size accuracy matters; for GSEA or meta-analysis, use raw FCs
-- Check volcano plot symmetry. Strongly asymmetric patterns may indicate normalization issues
-- Report: number tested, normalization method, statistical method, thresholds, and number significant
+
+- The deliverable is a consensus, not one tool's list. Decide the panel a priori and report all tools, including the ones that disagree.
+- Gate on effect size AND q-value, not p alone - large n makes trivially small differences "significant."
+- ANCOM-BC2 defaults to Holm, not BH; set p_adj_method to BH deliberately if FDR is wanted, and require passed_ss.
+- Repeated/paired samples need a random effect (ANCOM-BC2 rand_formula, MaAsLin2 random_effects, LinDA mixed formula); ignoring it inflates significance.
+- The prevalence filter is a modeling choice. Declare the threshold and confirm the headline result survives moving it from 10% to 25%.
+- A relative increase is not an absolute increase without a spike-in / flow / qPCR anchor or MaAsLin3's absolute-abundance mode.
+- DESeq2/edgeR are RNA-seq-native and misfire on sparse zero-heavy tables (the geometric-mean size factor collapses) - treat as a caveat, not a recipe.
+- An uncorrected Wilcoxon/t-test on relative abundances is wrong twice (closure and multiple testing). A BH-corrected simple test honestly labelled as relative is defensible, ideally alongside a compositional tool.
+- There is no settled best tool: Nearing favors conservative ALDEx2/ANCOM-II, Yang and Chen favor ZicoSeq/LinDA for power, Pelto finds elementary methods most replicable. Verify current best practice against the latest docs.
+- Filter host organelle features and decontaminate low-biomass samples before DA (taxonomy-assignment, amplicon-processing); contaminant ASVs otherwise appear among the hits.
 
 ## Related Skills
 
-- quantification - Protein-level abundance estimation and normalization before testing
-- proteomics-qc - Quality control and batch effect assessment
-- differential-expression/deseq2-basics - Analogous empirical Bayes concepts for RNA-seq
-- data-visualization/volcano-and-ma-plots - Volcano and MA plots with LFC shrinkage
-- data-visualization/heatmaps-clustering - Clustered heatmaps with annotation tracks
+- diversity-analysis - Whole-community alpha/beta/PERMANOVA; answer "do the communities differ" first
+- taxonomy-assignment - Collapse ASVs to genus/species before per-taxon testing
+- amplicon-processing - Produces the ASV feature table tested here
+- qiime2-workflow - The qiime composition ancombc CLI route
+- metagenomics/abundance-estimation - Shared compositional/closure/CLR/zero/load-anchor theory
+- metagenomics/metagenome-visualization - The same DA mechanics on shotgun profiler tables
+- experimental-design/multiple-testing - FDR control and multiplicity across taxa

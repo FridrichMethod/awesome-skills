@@ -100,6 +100,63 @@ Common journal requirements to check:
 - Add required sections (COI, data availability, etc.)
 - Ensure word count compliance
 
+## Format Profile (#439) — declared layout, NOT-DECLARED → current default
+
+**Guard (FIRST — load-bearing for byte-equivalence, design §5a):** if the Paper
+Configuration Record has **no `Format Profile` row**, **skip this entire section** — do not
+read, mention, or branch on any format profile, and render exactly as a pre-#439 run for
+that output. **Row absence is the ONE not-declared signal** (intake writes no row when the
+follow-up is declined, never an empty/`absent` row); a present-but-empty or no-path row is
+therefore **malformed**, not a second "not declared" state — treat it as the fail-closed
+"path present, file missing" case below (STOP), not as a silent skip. A run with no declared
+profile is byte-identical to before this feature existed.
+
+When the PCR **does** carry a `Format Profile` path, the profile is a scholar-declared
+layout the renderer follows. It validates against
+`shared/contracts/submission/format_profile.schema.json`.
+
+### Read it — fail closed BEFORE formatting (design §5b)
+
+Resolve the path and load the profile *before* producing any output. Do not half-format
+then discover the profile is broken. For each bad-path case, **STOP and ask the scholar to
+fix the profile** rather than rendering under an ambiguous contract:
+
+| Case | Behavior |
+|---|---|
+| PCR row absent / no path | NOT-DECLARED — use current defaults (the guard above). |
+| Path present, file missing / unreadable | STOP; report the missing path. Do NOT silently fall back to defaults (a declared-then-vanished profile is a scholar error worth surfacing). |
+| File present, invalid YAML | STOP; report the parse error + path. |
+| YAML valid, schema-INVALID | STOP; report the schema violation (same contract CI enforces). |
+| Path escaping the run workspace | STOP; reject — a format-profile path must resolve inside the run workspace. |
+
+### Apply it — declared fields only, best-effort per target (design §5c)
+
+- Apply each declared field; for any field **not** declared, keep the formatter's current
+  prose default for that aspect (NOT-DECLARED ≠ "reset to some baseline").
+- **Never infer a missing layout field** from the venue name, the institution, the
+  language/locale, or the filename (declared-only, design §3 — for reproducibility, not
+  integrity).
+- Each field is **best-effort per output target** (DOCX / PDF / LaTeX). When the chosen
+  target cannot faithfully honor a declared field, **say so in the Final Quality Checklist**
+  (field + target + reason) rather than silently dropping it.
+- Field map: `body_font` → body text family/size; `caption` → figure/table caption
+  font/size/placement/alignment, with `latin_font_family` applied to Latin-script tokens
+  (e.g. "Fig.") inside an otherwise-CJK caption; `line_spacing` → single/onehalf/double, or
+  a fixed point value when `mode == fixed_pt`; `margins_cm` → page margins (centimeters);
+  `table_border_style` → `three_line` (booktabs-style) / `full_grid` / `none`.
+
+### Conflict precedence — venue compliance wins (design §3a)
+
+The layout profile is a **rendering preference** — the same class as any user preference
+under the existing "journal requirement > user preference" rule (see Template conflict
+handling below); this is that one principle applied to layout. Where a declared layout field
+would push the manuscript past a declared `venue_profile` limit (e.g. larger font / wider
+spacing / bigger margins inflating page count past a page limit), apply the
+**venue-compliant** value,
+not the format_profile value, and emit a **loud note in the Final Quality Checklist** naming
+the field, the venue constraint it would have violated, and the overridden format_profile
+value. NEVER silently produce a noncompliant package to honor a layout preference.
+
 ## Cover Letter Generation
 
 When the user is submitting to a journal, generate a cover letter:
@@ -266,6 +323,9 @@ Before delivering the output, verify:
 - [ ] Font/spacing/margin specifications (if applicable)
 - [ ] Page numbers (if applicable)
 - [ ] Journal-specific requirements (if applicable)
+- [ ] Format profile applied (if declared): declared fields reflected; any field the target
+      could not honor noted (field + target + reason); any venue-compliance override noted
+      (field + violated venue constraint + overridden value) — #439 §3a/§5c
 
 ### Required Elements
 - [ ] Title page with all required information
@@ -426,7 +486,9 @@ INPUT: Final Reviewed Draft + Paper Configuration Record + Citation Audit Report
 OUTPUT: Output Package (multi-format)
 
 Step 1: Confirm Output Requirements
-  1.1 Read from Paper Configuration Record: output_format, target_journal, language
+  1.1 Read from Paper Configuration Record: output_format, target_journal, language,
+      and the Format Profile row IF PRESENT (absent row = no profile, render as pre-#439;
+      present = load + fail-closed validate per the Format Profile section before formatting)
   1.2 Determine which files to generate:
       ├── Markdown -> always generated (as base format)
       ├── LaTeX -> if output_format includes LaTeX or Combined

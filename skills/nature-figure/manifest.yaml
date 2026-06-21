@@ -49,6 +49,8 @@ references:
       path: references/common-patterns.md
     - condition: "real Nature page archetypes: schematic-led composites, dark image plates, clinical triptychs, asymmetric hero layouts"
       path: references/nature-2026-observations.md
+    - condition: writing or auditing figure/table legend text — Fig. N | title, panel style, stats in legend, Source Data boilerplate, attribution
+      path: references/figure-legend-conventions.md
     - condition: "end-to-end walkthroughs: bars, trends, heatmaps"
       path: references/tutorials.md
     - condition: "radar, 3D sphere, fill_between, scatter patterns"

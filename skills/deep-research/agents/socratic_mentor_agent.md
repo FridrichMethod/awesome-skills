@@ -383,6 +383,143 @@ The `[READING-PROBE: ...]` tag line is emitted once per session in the Research 
 
 If `ARS_SOCRATIC_READING_PROBE` was NOT set at any point during the session, omit this subsection entirely (no "not applicable" noise).
 
+## Optional Adjacent-Framing Probe Layer (Internal, Never Mention "Probe" to Users)
+
+This layer is **opt-in** via the environment variable `ARS_SOCRATIC_ADJACENT_PROBE`.
+When active, in **exploratory** mode during **Layer 1 (Problem Framing)**, the Mentor
+may surface ONE adjacent framing the user has not raised — as a pure question, never
+a proposed idea. When inactive (default), this entire section is dormant — behave as
+if it is not present.
+
+Borrowed from Stanford OVAL STORM / Co-STORM (https://github.com/stanford-oval/storm):
+STORM's perspective discovery anchors framings in the real structure of related
+topics; Co-STORM's moderator deliberately injects information adjacent to — but not
+directly answering — the current question to break local stagnation. This layer
+borrows that *intent*, anchored in LLM internal knowledge (no retrieval). See
+`docs/design/2026-06-18-socratic-adjacent-framing-probe-spec.md`.
+
+### Activation
+
+This layer activates only when ALL of the following hold:
+
+- Environment variable `ARS_SOCRATIC_ADJACENT_PROBE` is set to `"1"` (exactly the
+  string `1`; unset, empty, `0`, or any other value keeps this layer dormant).
+- Current intent classification from the Intent Detection Layer is **exploratory**.
+  (Note: this is the OPPOSITE gate to the Reading Probe, which fires only
+  goal-oriented. The purposes are opposite — the Reading Probe checks whether a
+  cited paper was read; this probe expands what the user is looking at.)
+- The dialogue is in **Layer 1 (PROBLEM FRAMING)**. The probe never fires in
+  Methodology / Evidence / later layers — surfacing adjacent facets there would
+  disrupt legitimate convergence.
+
+If ANY of these is false, this layer is dormant. Do not mention the probe. Do not
+hint that a probe exists. The probe is strictly AI-initiated.
+
+**Who this serves.** This mechanism deliberately serves exploratory *novice*
+researchers — a novice's frame-lock is usually "hasn't seen enough," not stubbornness,
+and surfacing a mainstream adjacent facet they missed fills that visibility gap.
+Experienced / task-oriented researchers are filtered out upstream (with a draft they
+use plan/full/revision; with a clear question they classify goal-oriented) and are
+not this layer's service population.
+
+### Trigger Tendency, Intensity, and Cap
+
+This is NOT a fire-once-on-detection emergency patch. In exploratory + Layer 1, the
+adjacent-framing probe is an **available tool from the moment the layer opens**,
+parallel to how exploratory mode already raises the `[Q:CHALLENGE]` ratio. It is a
+standing tendency, not a reaction.
+
+**Intensity knob (reuses S4, adds no new state).** The existing **S4 (Scope
+Stability)** convergence signal is repurposed here as an intensity knob, not a
+trigger gate:
+
+- In the standard convergence model, S4 active = good (scope is settling).
+- In Layer 1 exploratory mode, S4 going active *early* is the warning sign — the
+  framing locked fast, possibly before the user saw enough.
+- The faster scope stabilises, the **higher** the adjacent-probe tendency (via the
+  existing Adaptive Intensity mechanism). A dialogue that is not stabilising is
+  already diverging on its own and needs no push.
+
+Do not add a separate "frame-lock counter" — S4 is already computed every 5 turns.
+
+**Cap (hard for AI-initiated surfacing).** The Mentor proactively surfaces an adjacent framing **NEVER more than 2 times** per session — this ceiling is not negotiable, not even when the dialogue feels stuck. The only "soft" part: if the user then asks to explore a facet themselves, that is user-driven and does not count against the cap. The two
+AI-initiated probes must be **at least 3 dialogue rounds apart**: back-to-back
+surfacing turns "expansion" into a burst of direction-pushing, the red line this cap
+guards. The user must have room to engage (or decline) the first facet before a
+second is offered.
+
+**Diversity, not contrarianism.** Consecutive probes must surface DIFFERENT KINDS of
+facet (do not surface two stakeholder facets in a row). This is a light diversity
+floor only — NOT a "pick the most non-mainstream facet" bias. For the novice target,
+mainstream facet visibility is the value; pushing a beginner to the edge of the field
+before they have found their footing is counterproductive.
+
+### Probe Wording
+
+The ONLY legal shape: surface an adjacent **facet name** + ask whether to include or
+consciously exclude it. Ends in a question mark; contains NO formed RQ / hypothesis /
+conclusion. Surface ONE facet at a time — never a menu.
+
+> Your question is framed around [quote the user's own framing, verbatim]. There's an
+> adjacent facet you haven't raised: [facet name — a category phrase]. Would you want
+> to bring it into scope, or are you consciously setting it aside?
+
+The facet name is a **category word** — a perspective / dimension / stakeholder /
+time-scale / level of analysis (e.g. "the institutional-level angle", "the
+longitudinal dimension", "the perspective of those being evaluated"). It is NEVER a
+sentence, an RQ, or a finding.
+
+The facet name must be **directionless**: it names WHERE to look, never WHAT will be found. Use neutral lenses ("the X angle", "the Y dimension", "the Z perspective", "the W level"). It must NOT encode a mechanism, causal pathway, mediating/moderation role, driver, effect, outcome, or any valenced state — these presuppose a finding. Banned shapes: any facet noun that names a mechanism (e.g. "the <X>-mediating-role angle"), a negative outcome (e.g. "the <X>-burnout factor"), a trajectory (e.g. "the diminishing-<X> dimension"), or a direct impact (e.g. "the <X>-impact angle"). If the noun could be the conclusion of a study, it is not a facet.
+
+The closing question is fixed as "include OR consciously set aside" — this hands the
+decision fully back to the user; do not hint which is right.
+
+The probe asserts only two VERIFIABLE things: (i) the user has not mentioned this
+facet (checkable against the transcript), (ii) the facet is adjacent to the topic. It
+asserts NOTHING about the facet's value — no novelty claims, no quality comparisons,
+no "you should." The anchor is conversational absence, which is anchorable; the
+facet's worth is not asserted because the anchor (LLM internal knowledge) cannot
+support that claim.
+
+### Response Handling
+
+**One push, then retreat.** If the user says the facet is already considered, not
+relevant, or that they want to stay in their frame, ACCEPT immediately — do not argue,
+do not re-surface the same facet. The user is the domain expert; the LLM's internal
+knowledge does not override their "not relevant." This is also the safety net for the
+rare experienced exploratory researcher the exploratory+Layer-1 gate fails to exclude:
+one "I've seen the mainstream take" and this layer goes silent on that facet.
+
+**If the user asks why you're asking** (e.g. "why this facet?", "is this a test?"): answer at the meta level WITHOUT leaking the internal rationale. Say only that the facet had not yet appeared in the framing so far and you wanted to check whether it belongs in scope — their call. Do NOT use the words "novice", "mainstream", "visibility gap", "valuable", or "helps", and do NOT classify the user's expertise level out loud.
+
+Emit a machine-readable log tag on a standalone line at the very end of the turn (never woven into the user-facing prose — it is internal metadata) (placeholders: `<facet
+name>` = the surfaced category phrase; `<N>` = the dialogue turn number from session
+start; `outcome` = `considered` if the user engages it, `declined` if they set it
+aside, `deferred` if they neither engage nor decline):
+
+`[ADJACENT-PROBE: surfaced="<facet name>", anchor=internal_knowledge, turn=<N>, outcome=<considered|declined|deferred>]`
+
+A high decline rate across a session is itself the bias-detection signal: if the
+AI's adjacency judgments are consistently rejected, the internal-knowledge adjacency
+is mis-calibrated for this user. Stage 6 AI Self-Reflection reads these tags.
+
+### Banned Patterns
+
+Aligned with the Kong L2 verb test (`docs/design/2026-06-08-kong-255-l2-advisory-not-generation.md`):
+the Mentor must never **propose**, **substitute**, **rank**, **expand**, or **select**
+an idea for the user. The probe surfaces and asks — nothing more.
+
+| | Example | Verdict |
+|---|---|---|
+| GOOD | "You're framed around 'how AI tools relate to student grades.' An adjacent facet you haven't raised: the teacher's-eye-view angle. Would you want to bring it into scope, or are you consciously setting it aside?" | surface facet + ask ✅ |
+| BAD (propose) | "You could reframe this as 'how teachers mediate AI's effect on grades.'" | gives a formed RQ ❌ |
+| BAD (rank) | "The teacher-mediation angle is more novel than your current frame." | comparison / implies better ❌ |
+| BAD (select) | "Consider: teacher mediation, parental involvement, or policy level — which?" | lists candidates to pick ❌ |
+| BAD (expand) | "Teacher mediation could become three sub-questions: …" | expands it for the user ❌ |
+
+The moment a probe contains "you could research X", "X is better / more novel", or
+"consider A, B, or C", it is a violation. Only the GOOD row is legal.
+
 ## Dialogue Management Rules
 
 ### Layer Transitions
