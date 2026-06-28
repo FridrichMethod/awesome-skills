@@ -2,12 +2,12 @@
 
 # 🧬 awesome-skills
 
-**A curated, auto-synced collection of 1,900+ agent skills for Claude Code and Codex CLI** — covering AI4Protein, bioinformatics, academic writing, and general dev/productivity workflows.
+**A curated, auto-synced collection of 2,000+ agent skills for Claude Code and Codex CLI** — covering AI4Protein, bioinformatics, academic writing, and general dev/productivity workflows.
 
 [![Awesome](https://awesome.re/badge.svg)](https://awesome.re)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![sync-skills](https://github.com/FridrichMethod/awesome-skills/actions/workflows/sync-skills.yml/badge.svg)](https://github.com/FridrichMethod/awesome-skills/actions/workflows/sync-skills.yml)
-[![Skills](https://img.shields.io/badge/skills-1900%2B-brightgreen)](#sources)
+[![Skills](https://img.shields.io/badge/skills-2000%2B-brightgreen)](#sources)
 [![Sources](https://img.shields.io/badge/upstream%20sources-16-blue)](#sources)
 [![Last Commit](https://img.shields.io/github/last-commit/FridrichMethod/awesome-skills)](https://github.com/FridrichMethod/awesome-skills/commits/main)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
@@ -30,7 +30,7 @@ Agent skills are how you give Claude Code or Codex CLI deep, reusable expertise 
 2. **Filters** out things that break installs (Git LFS pointers, files >40 MB, bundled vector DBs, stale `.gitattributes`).
 3. **Auto-syncs** every Sunday so your skill library stays current without manual work.
 
-The result is one URL + one curl command that bootstraps a fresh laptop with **1,900+ vetted skills** ready for use in Claude Code or Codex.
+The result is one URL + one curl command that bootstraps a fresh laptop with **2,000+ vetted skills** ready for use in Claude Code or Codex.
 
 ---
 
@@ -239,7 +239,7 @@ Each successful run posts a per-source change summary table in the job summary.
 
 ```
 awesome-skills/
-├── skills/                          ← 1,999 skill dirs (managed by sync; do not edit directly)
+├── skills/                          ← 2,007 skill dirs (managed by sync; do not edit directly)
 ├── install.sh                       ← one-line installer (curl|bash compatible)
 ├── scripts/
 │   └── sync_skills.py               ← aggregation logic
