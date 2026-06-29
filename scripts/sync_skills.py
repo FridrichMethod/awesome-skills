@@ -71,6 +71,7 @@ UPSTREAMS = [
     # --- general-purpose dev/productivity collections ---
     ("https://github.com/wshobson/agents.git", "wshobson-agents", "wshobson agents (155 dev skills, 35.5k ⭐)"),
     ("https://github.com/anthropics/claude-plugins-official.git", "anthropics-plugins", "Anthropic official plugins (19.5k ⭐)"),
+    ("https://github.com/Xquik-dev/x-twitter-scraper.git", "xquik-twitter", "Xquik x-twitter-scraper skill (X data API, MCP, monitors, webhooks)"),
     # --- foundational / highest-authority (win last on conflict) ---
     ("https://github.com/forrestchang/andrej-karpathy-skills.git", "karpathy-skills", "Andrej Karpathy CLAUDE.md skill (133.3k ⭐)"),
     ("https://github.com/anthropics/skills.git", "anthropics-skills", "Anthropic official skills (136.1k ⭐)"),

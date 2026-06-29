@@ -5,6 +5,9 @@ All notable changes to this project are documented here. The format is based on 
 ## [Unreleased]
 
 ### Added
+- New upstream source: [Xquik-dev/x-twitter-scraper](https://github.com/Xquik-dev/x-twitter-scraper) (126 stars, MIT, 1 skill for X data REST API, MCP setup, monitors, webhooks, bulk extraction, media download, and confirmation-gated publishing workflows).
+- Placed in the general-purpose tier in `scripts/sync_skills.py`, before the foundational sources so official Anthropic, Superpowers, and Karpathy guidance still win generic name collisions.
+- README: source table, acknowledgements, and sources badge updated (16 to 17 sources).
 - New upstream source: [google-deepmind/science-skills](https://github.com/google-deepmind/science-skills) (1.8k ⭐, Apache 2.0, 37 skills — genomics, structural biology, cheminformatics, literature search, and biological databases such as AlphaFold DB, AlphaGenome, ChEMBL, ClinVar, Ensembl, Foldseek, gnomAD, GTEx, PDB, PubChem, PubMed, UniProt, plus `pymol`, `uv`, and a workflow-skill-creator).
 - Placed in the bio/scientific tier in `scripts/sync_skills.py`, before `adaptyv-protein` (protein-design retains its last-wins position). GDM skill directories use underscore names (e.g. `pdb_database`), so they add cleanly alongside the existing hyphenated database skills with **zero name collisions**.
 - Skill count after adding the source: 1,936 → **1,973** (+37 new, 0 conflicts). All 37 `SKILL.md` frontmatter blocks were folded-scalar-normalized by the sync sanitizer, parse cleanly under `yaml.safe_load`, and pass the idempotency check.

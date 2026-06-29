@@ -8,7 +8,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![sync-skills](https://github.com/FridrichMethod/awesome-skills/actions/workflows/sync-skills.yml/badge.svg)](https://github.com/FridrichMethod/awesome-skills/actions/workflows/sync-skills.yml)
 [![Skills](https://img.shields.io/badge/skills-2000%2B-brightgreen)](#sources)
-[![Sources](https://img.shields.io/badge/upstream%20sources-16-blue)](#sources)
+[![Sources](https://img.shields.io/badge/upstream%20sources-17-blue)](#sources)
 [![Last Commit](https://img.shields.io/github/last-commit/FridrichMethod/awesome-skills)](https://github.com/FridrichMethod/awesome-skills/commits/main)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
@@ -26,7 +26,7 @@ Agent skills are how you give Claude Code or Codex CLI deep, reusable expertise 
 
 **awesome-skills** does three things:
 
-1. **Aggregates** the best Claude Code / Codex skills from 16 upstream curated collections — bio/scientific, academic writing, official Anthropic, Google DeepMind, Superpowers, Karpathy, and major community libraries.
+1. **Aggregates** the best Claude Code / Codex skills from 17 upstream curated collections - bio/scientific, academic writing, official Anthropic, Google DeepMind, Superpowers, Karpathy, X data automation, and major community libraries.
 2. **Filters** out things that break installs (Git LFS pointers, files >40 MB, bundled vector DBs, stale `.gitattributes`).
 3. **Auto-syncs** every Sunday so your skill library stays current without manual work.
 
@@ -133,7 +133,7 @@ If you already have the repo cloned, `./install.sh` detects the adjacent `skills
 
 ## Sources
 
-Skills are aggregated from these upstream repositories — credit and gratitude to the original authors. Sources are grouped by scope; within `scripts/sync_skills.py` they are listed in install order (later = wins on name collision). Currently **16 sources**.
+Skills are aggregated from these upstream repositories - credit and gratitude to the original authors. Sources are grouped by scope; within `scripts/sync_skills.py` they are listed in install order (later = wins on name collision). Currently **17 sources**.
 
 ### Bio / scientific / medical
 
@@ -162,6 +162,7 @@ Skills are aggregated from these upstream repositories — credit and gratitude 
 |---|---:|---:|---|
 | [wshobson/agents](https://github.com/wshobson/agents) | 35.5k | 155 | Production dev workflows — accessibility, code review, deployment, testing across many plugin domains |
 | [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official) | 19.5k | 28 | **Official Anthropic** plugin skills — Discord, iMessage, Slack, Telegram, GitHub messaging & access |
+| [Xquik-dev/x-twitter-scraper](https://github.com/Xquik-dev/x-twitter-scraper) | 126 | 1 | X data REST API, MCP setup, monitors, webhooks, bulk extraction, media download, confirmation-gated publishing |
 | [forrestchang/andrej-karpathy-skills](https://github.com/forrestchang/andrej-karpathy-skills) | 133.3k | 1 | Andrej Karpathy's CLAUDE.md packaged — guidance for fixing common LLM coding pitfalls |
 | [anthropics/skills](https://github.com/anthropics/skills) | 136.1k | 18 | **Official Anthropic** skills — algorithmic-art, brand-guidelines, canvas-design, claude-api, doc-coauthoring, mcp-builder, pdf, pptx, xlsx, etc. |
 | [obra/superpowers](https://github.com/obra/superpowers) | 194.6k | 14 | Anthropic-blessed methodology framework — brainstorming, TDD, debugging, planning, code review, subagent-driven dev |
@@ -318,6 +319,7 @@ This project would not exist without the work of:
 - [Anthropic](https://github.com/anthropics) for the [official skills](https://github.com/anthropics/skills) and [plugins-official](https://github.com/anthropics/claude-plugins-official) directories
 - [Andrej Karpathy](https://karpathy.ai/) (via [forrestchang](https://github.com/forrestchang/andrej-karpathy-skills)) for the famous CLAUDE.md
 - [wshobson](https://github.com/wshobson) for the [agents](https://github.com/wshobson/agents) multi-plugin collection
+- [Xquik](https://github.com/Xquik-dev/x-twitter-scraper) for the x-twitter-scraper skill
 - The [Anthropic Claude Code](https://docs.claude.com/en/docs/claude-code) team for designing the SKILL.md format
 
 If you use this repo and find it useful, ⭐ the upstream sources, not just this one.
