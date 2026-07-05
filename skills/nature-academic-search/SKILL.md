@@ -1,8 +1,6 @@
 ---
 name: nature-academic-search
-description: "Multi-source literature search, citation verification, MeSH search strategy, citation file management (.nbib/.ris/.bib conversion), and reference management (BibTeX, related articles, ID conversion) via MCP tools (PubMed, CrossRef, arXiv, Scopus, ScienceDirect). Use when the user needs coordinated multi-step literature workflows beyond a single MCP call. Also trigger on general literature-search needs during academic writing even without the word \"Nature\", such as searching for papers/literature, doing a literature review, verifying a citation, converting citation files, and Chinese phrasings like 文献检索、查文献、找文献、 文献综述检索、查论文、引文核对、参考文献管理、文献去重."
-version: 2.0.0
-author: Community contribution, refactored into static/dynamic layers
+description: "Multi-source literature search, citation verification, strict independent other-citation audits, article-level citation metric tables, influential citer profiling with citation-context extraction, MeSH search strategy, citation file management (.nbib/.ris/.bib conversion), and reference management (BibTeX, related articles, ID conversion) via MCP tools (PubMed, CrossRef, arXiv, Scopus, ScienceDirect). Use for coordinated literature workflows beyond one MCP call, including 文献检索、 查文献、找文献、文献综述检索、查论文、引文核对、参考文献管理、文献去重、 严格他引、他引判定、排除自引、谁引用了我的文章、引用我的文章的人有没有大牛、 院士引用、校长引用、院长引用、杰青引用、长江学者引用、Fellow引用、文章引用表、 指定文章引用数、严格他引数、整理成表格."
 ---
 
 # Academic Search — Router
@@ -36,6 +34,7 @@ Map the user's need to one or more `workflow` values:
 - `mesh-strategy` — build a MeSH/PubMed search strategy.
 - `citation-file-mgmt` — convert/manage `.nbib`/`.ris`/`.bib` files.
 - `reference-mgmt` — BibTeX, related-article discovery, ID conversion.
+- `strict-other-citation-impact-audit` — determine strict independent other-citations, build article-level citation metric tables, identify high-profile citers (academy members, presidents/deans, talent-award holders, fellows, field leaders), and extract how they cited the target paper.
 
 A combined request (for example search then export) may need more than one. State the detected workflow(s) in one short line before proceeding.
 
@@ -60,6 +59,6 @@ The files under `references/` (and `scripts/`) are deep references, not defaults
 ## Why this split
 
 - The static layer is versioned and reviewable; the workflow files and shared modules were already factored this way.
-- The dynamic layer keeps each invocation cheap: only the workflow the user needs enters context, instead of all five plus every module.
+- The dynamic layer keeps each invocation cheap: only the workflow the user needs enters context, instead of all six plus every module.
 - The router itself is short on purpose. Update fragments and references, not this file, when adding scope.
 - This structure mirrors the other nature-* skills (`nature-writing`, `nature-polishing`, `nature-reader`, `nature-paper2ppt`, `nature-figure`, `nature-citation`, `nature-response`, `nature-data`).

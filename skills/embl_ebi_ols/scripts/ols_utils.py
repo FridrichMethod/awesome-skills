@@ -15,10 +15,8 @@
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#   "scienceskillscommon",
+#   "polite-http",
 # ]
-# [tool.uv.sources]
-# scienceskillscommon = { path = "../../scienceskillscommon" }
 # ///
 
 """Shared utilities for OLS skill scripts.
@@ -34,7 +32,7 @@ import sys
 from typing import Any
 import urllib.parse
 
-from science_skills.skills.scienceskillscommon import http_client
+from polite_http import http_client
 
 RATE_LIMIT_DELAY = 0.2
 MAX_RETRIES = 10

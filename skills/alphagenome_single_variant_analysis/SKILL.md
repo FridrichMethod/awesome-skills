@@ -9,32 +9,17 @@ description: "Analyzes genetic variant effects on gene expression (RNA-seq), chr
 
 1.  **`uv`**: Read the `uv` skill and follow its Setup instructions to ensure
     `uv` is installed and on PATH.
-2.  **User Notification**: If LICENSE_NOTIFICATION.txt does not already exist in
-    this skill directory then (1) prominently notify the user to check the terms
-    at https://deepmind.google.com/science/alphagenome/, then (2) create the
-    file recording the notification text and timestamp.
+2.  **User Notification**: If
+    .licenses/alphagenome_single_variant_analysis_LICENSE.txt does not already
+    exist in the workspace root directory then (1) prominently notify the user
+    to check the terms at https://deepmind.google.com/science/alphagenome/, then
+    (2) create the file recording the notification text and timestamp.
 3.  **`.env` file**: Make sure the `.env` file exists in your home directory.
     Create one if it does not exist.
 4.  **`ALPHAGENOME_API_KEY`**: This skill requires an API key to function.
-    You must ask the user for an API key if this skill looks relevant to their
-    request and you do not have one in .env. The user can sign up at
-    https://deepmind.google.com/science/alphagenome/. Do NOT ask the user to
-    paste their key into the chat (this would leak the key into the agent's
-    context). Instead, explain that a key is necessary to use AlphaGenome and
-    give the user this command **substituting `ENV_FILE` with the resolved
-    literal path to the `.env` file**:
-
-    ```bash
-    printf "Enter AlphaGenome API key (typing hidden): " && read -s key && echo && echo "ALPHAGENOME_API_KEY=$key" >> "ENV_FILE" && echo "Saved."
-    ```
-
-    The scripts load credentials automatically via `dotenv`. **NEVER** read,
-    print, or inspect the `.env` file or its variables (e.g. no `cat`, `grep`,
-    `echo`, `printenv`, or `os.environ.get` on keys). Credentials must stay out
-    of the agent's context.
-
-    When running in sandbox, `dotenv.load_dotenv()` will be a no-op, and instead
-    the sandbox will read credentials and inject them directly.
+    You can register for a key at https://deepmind.google.com/science/alphagenome/.
+    You **MUST** use the safe credentials protocol in the `credentials` skill to
+    check for and request this key if this skill looks relevant to the user's request.
 
 ## Core Rules
 
@@ -47,7 +32,7 @@ description: "Analyzes genetic variant effects on gene expression (RNA-seq), chr
     for gene/transcript lookup. Use `lookup_gene_info.py` with the local GTF. If
     it fails, fix the environment/paths, do not switch to external APIs.
 -   **API Key is required**: `ALPHAGENOME_API_KEY` must be set before running
-    any script (in sandbox, credentials are injected automatically).
+    any script.
 -   **Notification**: If this skill is used, ensure this is mentioned in the
     output.
 -   **Report Format**: Always use the templates in `docs/report-templates.md`
@@ -163,6 +148,10 @@ from alphagenome.models import variant_scorers
 from alphagenome.data import genome
 import os
 import pandas as pd
+import dotenv
+
+# Load environment variables from ~/.env
+dotenv.load_dotenv(os.path.expanduser('~/.env'))
 
 # Setup API Key and Client
 dna_model = dna_client.create(api_key=os.environ.get('ALPHAGENOME_API_KEY'),

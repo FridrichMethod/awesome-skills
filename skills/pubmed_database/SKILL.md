@@ -9,39 +9,25 @@ description: "Search PubMed for scientific literature, including published clini
 
 1.  **`uv`**: Read the `uv` skill and follow its Setup instructions to ensure
     `uv` is installed and on PATH.
-2.  **User Notification**: If LICENSE_NOTIFICATION.txt does not already exist in
-    this skill directory then (1) prominently notify the user to check the terms
-    at https://pubmed.ncbi.nlm.nih.gov/disclaimer/ and
-    https://www.ncbi.nlm.nih.gov/home/about/policies/ and to always check the
-    license of the papers retrieved by the skill for any restrictions, then (2)
-    create the file recording the notification text and timestamp.
+2.  **User Notification**: If .licenses/pubmed_database_LICENSE.txt does not
+    already exist in the workspace root directory then (1) prominently notify
+    the user to check the terms at https://pubmed.ncbi.nlm.nih.gov/disclaimer/
+    and https://www.ncbi.nlm.nih.gov/home/about/policies/ and to always check
+    the license of the papers retrieved by the skill for any restrictions, then
+    (2) create the file recording the notification text and timestamp.
 3.  **`.env` file**: Make sure the `.env` file exists in your home directory.
     Create one if it does not exist.
 4.  **`NCBI_API_KEY`** (optional): Raises the NCBI E-utilities rate limit from 3
     to 10 requests/second. The skill works without it, but a key is recommended
-    if the user plans many queries or encounters a 429 error. The user can
-    obtain one for free by registering at
-    https://www.ncbi.nlm.nih.gov/account/settings/
-5.  **`USER_EMAIL`** (optional but recommended): Identifies the caller to NCBI
-    (recommended by their Terms of Use).
-
-If the variables are missing from `.env`, do NOT ask the user to paste them into
-the chat (this would leak keys into the agent's context). Instead, give the user
-these commands — **substituting `ENV_FILE` with the resolved literal path to the
-`.env` file**:
-
-```bash
-printf "Enter NCBI API key (typing hidden): " && read -s key && echo && echo "NCBI_API_KEY=$key" >> "ENV_FILE" && echo "Saved."
-```
-
-```bash
-printf "Enter contact email: " && read email && echo "USER_EMAIL=$email" >> "ENV_FILE" && echo "Saved."
-```
-
-The scripts load credentials automatically via `dotenv`. **NEVER** read,
-print, or inspect the `.env` file or its variables (e.g. no `cat`, `grep`,
-`echo`, `printenv`, or `os.environ.get` on keys). Credentials must stay
-out of the agent's context.
+    if the user plans many queries or encounters a 429 error. You can register
+    for a key for free at https://www.ncbi.nlm.nih.gov/account/settings/. You
+    **MUST** use the safe credentials protocol in the `credentials` skill to
+    check for and request this key if this skill looks relevant to the user's
+    request.
+5.  **`USER_EMAIL`** (optional): Identifies the caller to NCBI (recommended by
+    their Terms of Use). You **MUST** use the safe credentials protocol in the
+    `credentials` skill to check for and request this credential if this skill
+    looks relevant to the user's request.
 
 This skill provides CLI access to the NCBI PubMed and PubMed Central APIs via
 `scripts/pubmed_api.py` — a single CLI with 10 functions covering search, fetch,

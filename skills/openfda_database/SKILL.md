@@ -9,29 +9,19 @@ description: "Query, search, and download data from the openFDA API for drugs, d
 
 1.  **`uv`**: Read the `uv` skill and follow its Setup instructions to ensure
     `uv` is installed and on PATH.
-2.  **User Notification**: If LICENSE_NOTIFICATION.txt does not already exist in
-    this skill directory then (1) prominently notify the user to check the terms
-    at https://open.fda.gov/apis/ and https://open.fda.gov/license, then (2)
-    create the file recording the notification text and timestamp.
+2.  **User Notification**: If .licenses/openfda_database_LICENSE.txt does not
+    already exist in the workspace root directory then (1) prominently notify
+    the user to check the terms at https://open.fda.gov/apis/ and
+    https://open.fda.gov/license, then (2) create the file recording the
+    notification text and timestamp.
 3.  **`.env` file**: Make sure the `.env` file exists in your home directory.
     Create one if it does not exist.
 4.  **`FDA_API_KEY`** (optional but recommended): Raises the daily request limit
     from 1,000 to 120,000. The skill works without it, but an agent can easily
-    exhaust the keyless limit in a single session. The user can register for a
-    free key at https://open.fda.gov/apis/authentication/. If the variable is
-    missing from `.env`, do NOT ask the user to paste it into the chat (this
-    would leak the key into the agent's context). Instead, give the user this
-    command — **substituting `ENV_FILE` with the resolved literal path to the
-    `.env` file**:
-
-    ```bash
-    printf "Enter openFDA API key (typing hidden): " && read -s key && echo && echo "FDA_API_KEY=$key" >> "ENV_FILE" && echo "Saved."
-    ```
-
-    The scripts load credentials automatically via `dotenv`. **NEVER** read,
-    print, or inspect the `.env` file or its variables (e.g. no `cat`, `grep`,
-    `echo`, `printenv`, or `os.environ.get` on keys). Credentials must stay
-    out of the agent's context.
+    exhaust the keyless limit in a single session. You can register for a free
+    key at https://open.fda.gov/apis/authentication/. You **MUST** use the safe
+    credentials protocol in the `credentials` skill to check for and request
+    this key if this skill looks relevant to the user's request.
 
 ## Core Rules
 
@@ -48,10 +38,10 @@ description: "Query, search, and download data from the openFDA API for drugs, d
 > limit in a single research session. Always set an API key before running
 > multi-query workflows.
 
-> Instruct the user to register for a free key at
-> https://open.fda.gov/apis/authentication/ and follow the prerequisite
-> instructions above to add `FDA_API_KEY` to the `.env` file. The script will
-> emit a warning to stderr if no API key is detected.
+> You **MUST** use the safe credentials protocol in the `credentials` skill to
+> help the user add `FDA_API_KEY` to their `.env` file if this skill looks
+> relevant to the user's request. The script will emit a warning to stderr if no
+> API key is detected.
 
 -   **Always Use `--output`**: All subcommands require `--output <file>` to
     write results to a file. This prevents large output becoming overwhelming.

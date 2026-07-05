@@ -17,17 +17,15 @@
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#   "scienceskillscommon",
+#   "polite-http",
 # ]
-# [tool.uv.sources]
-# scienceskillscommon = { path = "../../scienceskillscommon" }
 # ///
 
 import argparse
 import json
 import os
 import sys
-from science_skills.skills.scienceskillscommon import http_client
+from polite_http import http_client
 
 CLIENT = http_client.HttpClient("https://alphafold.ebi.ac.uk", qps=1.0)
 

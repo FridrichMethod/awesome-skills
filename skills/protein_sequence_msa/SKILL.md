@@ -7,28 +7,18 @@ description: "Performs multiple sequence alignment of proteins with EBI Clustal 
 
 1.  **`uv`**: Read the `uv` skill and follow its Setup instructions to ensure
     `uv` is installed and on PATH.
-2.  **User Notification**: If LICENSE_NOTIFICATION.txt does not already exist in
-    this skill directory then (1) prominently notify the user to check the terms
-    at https://www.ebi.ac.uk/jdispatcher/msa/clustalo and
+2.  **User Notification**: If .licenses/protein_sequence_msa_LICENSE.txt does
+    not already exist in the workspace root directory then (1) prominently
+    notify the user to check the terms at
+    https://www.ebi.ac.uk/jdispatcher/msa/clustalo and
     https://www.ebi.ac.uk/about/terms-of-use/, then (2) create the file
     recording the notification text and timestamp.
 3.  **`.env` file**: Make sure the `.env` file exists in your home directory.
     Create one if it does not exist.
-4.  **`USER_EMAIL`** (optional but recommended): Recommended by the EBI for
-    Clustal Omega job tracking, but the skill works without it. If the variable
-    is missing from `.env`, do NOT ask the user to paste it into the chat (this
-    would leak the value into the agent's context). Instead, give the user this
-    command — **substituting `ENV_FILE` with the resolved literal path to the
-    `.env` file**:
-
-    ```bash
-    printf "Enter contact email: " && read email && echo "USER_EMAIL=$email" >> "ENV_FILE" && echo "Saved."
-    ```
-
-    The scripts load credentials automatically via `dotenv`. **NEVER** read,
-    print, or inspect the `.env` file or its variables (e.g. no `cat`, `grep`,
-    `echo`, `printenv`, or `os.environ.get` on keys). Credentials must stay out
-    of the agent's context.
+4.  **`USER_EMAIL`**: Required by the wrapper script for Clustal Omega job
+    tracking (recommended by the EBI). You **MUST** use the safe credentials
+    protocol in the `credentials` skill to check for and request this credential
+    if this skill looks relevant to the user's request.
 
 ## Core Rules
 

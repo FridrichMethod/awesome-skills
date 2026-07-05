@@ -11,6 +11,9 @@ user is asking for, whether the supplied information is enough, and what output 
 | `audit` | User provides an existing response draft and asks whether it is good enough | Response draft; reviewer comments when available | Findings first, then revised or annotated response sections |
 | `revise` | User wants a draft rewritten for tone, traceability, or Nature-style response | Existing draft plus target change request | Revised response text plus changed-risk notes |
 | `triage-only` | User wants strategy, action list, or missing inputs before writing prose | Reviewer comments or editor letter | Tracker, action map, missing-input list, no final letter |
+| `cover-letter` | User asks for a revision cover letter only | Manuscript metadata plus revision summary or change notes | Concise editor-facing cover letter |
+| `revision-package` | User asks for a complete revision package or pastes a decision email and wants the agent to begin | Decision email or reviewer/editor comments plus available author actions | Response letter, cover letter when useful, change checklist, and placeholders |
+| `latex-template` | User asks for LaTeX templates or filled `.tex` files | Desired output type; manuscript metadata if filling templates | Template paths or filled `.tex` content |
 | `appeal-like` | User wants to challenge rejection or process rather than revise | Decision letter and disputed points | Route out of default workflow and explain separate appeal handling |
 
 If the mode is unclear, infer the safest useful mode. Prefer `triage-only` when drafting would
@@ -49,6 +52,24 @@ R2.1: Soften unsupported causal language.
 
 The response strategy should explain that the editor's constraint and the observational design
 support claim softening rather than stronger causal language.
+
+## Pasted editorial email handling
+
+When the user pastes an editorial decision email or revision invitation, do not ask them to
+separate the email manually. Start by extracting:
+
+- journal name;
+- manuscript title and manuscript ID;
+- decision type and revision deadline;
+- required files, such as clean manuscript, marked manuscript, response to reviewers, cover letter, graphical abstract, data availability update, or supplementary files;
+- editor instructions and portal-specific constraints;
+- reviewer-report boundaries and comment numbering.
+
+Ignore boilerplate only after checking it for required files, deadlines, formatting constraints,
+and resubmission instructions. If the email contains reviewer reports, enter `revision-package`
+or `draft` mode automatically depending on whether the user requested a full package or only a
+response letter. If reviewer boundaries are ambiguous, keep the original ordering visible and flag
+the ambiguity instead of inventing identities.
 
 ## Minimum information by output type
 
@@ -105,3 +126,4 @@ and whether Fig. 5 is a main or supplementary figure.
 - Reviewer asks for impossible new work -> normal revision mode with `PARTIAL` or `OUT_OF_SCOPE`, not appeal.
 - Rejection challenge -> `appeal-like`.
 - User asks only "what should we do?" -> `triage-only`.
+- Pasted decision/revision email with reviewer reports -> auto-parse the email and begin `draft` or `revision-package`; do not wait for the user to reformat the email.

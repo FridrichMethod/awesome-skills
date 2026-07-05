@@ -1,17 +1,23 @@
 # `nature-response` 技能
 
-`nature-response` 用于起草、审查和修改逐点回复审稿人的 response letter，适用于 Nature 系列和其他高影响力期刊的返修场景。
+`nature-response` 用于起草、审查和修改返修通信材料，包括逐点回复审稿人的 response letter、返修 cover letter、标红修改稿和可编辑 LaTeX 模板，适用于 Nature 系列和其他高影响力期刊的返修场景。
 
-该技能支持中英文输入。它可以接收中文或英文审稿意见、编辑决定信、作者修改说明和 rebuttal 草稿，并生成英文回复包；需要作者确认的信息会用中文提示。
+该技能支持中英文输入。它可以接收中文或英文审稿意见、编辑决定信、编辑部返修邮件、作者修改说明和 rebuttal 草稿，并生成英文回复包；需要作者确认的信息会用中文提示。
 
 ## 功能
 
 - 将审稿意见拆分为稳定编号，例如 `R1.1`、`R1.2`、`R2.1`。
+- 直接解析粘贴进来的编辑部返修邮件，抽取稿件号、题名、decision type、截止日期、必须提交的文件、editor instruction 和 reviewer reports，并自动进入回复包流程。
 - 按类型、严重程度、所需行动、证据需求和风险对每条意见分类。
 - 在正式起草前生成 response strategy summary。
 - 根据任务需要路由到起草、审查、修改、只做分诊或类似 appeal 的处理。
 - 如果决定信包含编辑要求，先生成 `E.1` 等 editor instruction ID，再处理 reviewer ID。
 - 起草编辑可读的逐点回复信。
+- 起草返修 cover letter，概述主要修改并指向逐点回复文件。
+- 提供 `templates/cover-letter.tex`、`templates/response-to-reviewers.tex` 和 `templates/revised-manuscript-redline.tex`。
+- 修改稿必须基于备份/复制的原稿件制作，修改处用红色标出。
+- 回复信中回答完意见后，如需粘贴修改后的原文，原文必须用斜体显示。
+- 在 LaTeX 或面向 PDF/打印的回复信中，切换到下一位审稿人的回复时必须换页。
 - 将每条回复映射到手稿修改动作、修改位置或缺失信息标记。
 - 把防御性或含糊的作者笔记改写成专业回复语言。
 - 处理困难情况，例如超出范围的实验、审稿人事实错误、审稿人意见冲突、统计质疑和合规问题。
@@ -20,11 +26,14 @@
 ## 适用场景
 
 - 准备 Nature、Nature Portfolio、Springer Nature 或类似高影响力期刊返修。
+- 将编辑部邮件内容直接交给 agent，自动拆出返修要求并开始生成回复包。
 - 回复大修或小修意见。
 - 将审稿意见转化为手稿修改清单。
 - 审查 rebuttal 草稿中遗漏回复、语气问题或无支撑声称。
 - 将中文作者笔记转成可提交的英文逐点回复。
+- 将中文作者笔记转成可提交的英文 cover letter 或 LaTeX response package。
 - 判断如何礼貌反驳审稿人，或解释研究范围边界。
+- 需要 LaTeX 格式的 cover letter、rebuttal letter、response to reviewers 或标红修改稿。
 
 ## 默认返回内容
 
@@ -33,9 +42,12 @@
 1. response strategy summary
 2. comment-response tracker
 3. draft point-by-point response letter
-4. manuscript change checklist
-5. missing information / risk flags
-6. 用户使用中文时的中文确认说明
+4. draft revision cover letter（如用户要求）
+5. marked manuscript changes（如用户要求修改原稿）
+6. LaTeX 文件或模板路径（如用户要求）
+7. manuscript change checklist
+8. missing information / risk flags
+9. 用户使用中文时的中文确认说明
 
 ## 核心规则
 
@@ -45,6 +57,10 @@
 - 不得编造实验、分析、引用、行号、图版、补充材料、审稿人身份、编辑要求或手稿修改。
 - 使用合作、证据优先、非防御性的语言。
 - 将 response letter 视为给编辑核查的验证文件，而不只是礼貌文本。
+- 将 cover letter 视为给编辑看的返修摘要，不能替代逐点回复。
+- 修改原稿时在备份稿上标红，不直接覆盖干净稿。
+- 回复信中粘贴的修改后原文必须是斜体。
+- 换审稿人回复时换页；LaTeX 模板通过 `\ReviewerSection{...}` 执行。
 
 ## 来源层级
 
@@ -67,10 +83,11 @@ nature-response/
 ├── static/
 │   └── core/                    # 始终加载
 │       ├── stance.md            # 目的、默认立场、红线、来源层级
-│       └── workflow.md          # 输入类型、10 步工作流、输出格式
+│       └── workflow.md          # 输入类型、返修通信工作流、输出格式
 ├── references/
 │   ├── source-basis.md
 │   ├── response-structure.md
+│   ├── latex-templates.md
 │   ├── comment-taxonomy.md
 │   ├── action-mapping.md
 │   ├── tone-and-stance.md
@@ -78,6 +95,10 @@ nature-response/
 │   ├── difficult-cases.md
 │   ├── intake-and-routing.md
 │   └── qa-checklist.md
+├── templates/
+│   ├── cover-letter.tex
+│   ├── response-to-reviewers.tex
+│   └── revised-manuscript-redline.tex
 ├── tests/
     ├── conflicting-reviewers.md
     ├── defensive-draft-audit.md

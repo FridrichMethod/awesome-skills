@@ -20,10 +20,8 @@ Provides access to STRING API v12.0 endpoints.
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#   "scienceskillscommon",
+#   "polite-http",
 # ]
-# [tool.uv.sources]
-# scienceskillscommon = { path = "../../scienceskillscommon" }
 # ///
 
 import argparse
@@ -33,9 +31,8 @@ import sys
 import time
 from typing import Any
 import urllib.parse
-import urllib.request
 
-from science_skills.skills.scienceskillscommon import http_client
+from polite_http import http_client
 
 CALLER_IDENTITY = 'google-science-skills'
 URL_TEMPLATE = (
@@ -68,7 +65,12 @@ def call_api(url: str, params: dict[str, Any], output_file: str):
   params['caller_identity'] = CALLER_IDENTITY
   data = urllib.parse.urlencode(params).encode('utf-8')
   assert _CLIENT is not None
-  content = _CLIENT.fetch_bytes(url, method='POST', data=data)
+  content = None
+  try:
+    content = _CLIENT.fetch_bytes(url, method='POST', data=data)
+  except http_client.HttpError as e:
+    print(f'API Error (HTTP {e.status_code}): {e}', file=sys.stderr)
+    sys.exit(1)
 
   os.makedirs(os.path.dirname(os.path.abspath(output_file)), exist_ok=True)
   with open(output_file, 'wb') as f:
@@ -363,9 +365,14 @@ def main():
           print(
               f'Job success. Downloading from {download_url} to {args.output}'
           )
-          req = urllib.request.Request(download_url)
-          with urllib.request.urlopen(req) as dl_resp:
-            content = dl_resp.read()
+          try:
+            content = _CLIENT.fetch_bytes(download_url)
+          except http_client.HttpError as e:
+            print(
+                f'Download Error (HTTP {e.status_code}): {e}',
+                file=sys.stderr,
+            )
+            sys.exit(1)
           with open(args.output, 'wb') as f:
             f.write(content)
           break

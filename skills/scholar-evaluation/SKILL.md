@@ -1,6 +1,10 @@
 ---
 name: scholar-evaluation
-description: "Apply the ScholarEval framework to systematically evaluate scholarly and research work. This skill provides structured evaluation methodology based on peer-reviewed research assessment criteria, enabling comprehensive analysis of academic papers, research proposals, literature reviews, and scholarly writing across multiple quality dimensions."
+description: Systematically evaluate scholarly and research work using the ScholarEval framework. Use when evaluating research papers, proposals, or literature reviews for quality and rigor, scoring methodology and analysis, assessing publication readiness for target venues, or providing structured quantitative feedback to complement qualitative peer review.
+allowed-tools: Read Write Edit Bash
+license: MIT license
+metadata:
+    skill-author: K-Dense Inc.
 ---
 
 # Scholar Evaluation
@@ -35,7 +39,7 @@ If your document does not already contain schematics or diagrams:
 
 **How to generate schematics:**
 ```bash
-python scripts/generate_schematic.py "your diagram description" -o figures/output.png
+python <path-to-scientific-schematics-skill>/scripts/generate_schematic.py "your diagram description" -o figures/output.png
 ```
 
 The AI will automatically:

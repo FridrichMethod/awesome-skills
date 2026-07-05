@@ -64,11 +64,17 @@ Pass when:
 - The author can see what to change in the manuscript.
 - Missing information is listed as concrete author questions.
 - Blocking or high-risk issues are visible before the draft letter.
+- If manuscript text is edited, changes are shown in red on a backed-up/copy version of the original manuscript.
+- If revised manuscript text is pasted after a response, that excerpt is italic.
+- In LaTeX or print-oriented response letters, switching from one reviewer to another starts a new page.
 
 Fail when:
 
 - The output only produces prose and no action checklist.
 - The author cannot identify what evidence is still needed.
+- The output overwrites the clean manuscript without a marked backup/copy.
+- The response letter pastes revised manuscript text as plain non-italic body text.
+- Reviewer sections run together without page breaks in a LaTeX or print-oriented response letter.
 
 ## Nature-fit
 

@@ -1,8 +1,6 @@
 ---
 name: nature-reviewer
 description: "Simulate a Nature-style reviewer assessment from the referee perspective rather than an author rebuttal. Use when the user wants a pre-submission review, reviewer report, peer-review style critique, novelty/significance/technical soundness assessment, reviewer-style manuscript evaluation, 审稿人视角评估, 预审稿意见, or Nature reviewer report. Return 3 reviewer reports plus a cross-review synthesis, grounded only in the local Nature reviewer source basis. Also trigger on general pre-submission review requests during academic writing even without the word \"Nature\", such as getting a mock peer review for any journal, critiquing a draft as a reviewer would, assessing novelty/rigor before submission, and Chinese phrasings like 审稿人视角、模拟审稿、预审、帮我审一下论文、投稿前自审、审稿意见模拟、找论文问题."
-version: 0.1.0
-status: Draft
 ---
 
 # Nature Reviewer Assessment Skill
@@ -22,6 +20,7 @@ response. If the user wants rebuttal writing, route to `nature-response`.
 - Identify who would be interested in the results and why.
 - Identify technical failings that must be addressed before the authors' case is established.
 - Distinguish clearly between what is supported, what is weak, and what is not assessable from the provided material.
+- When the manuscript has a clear technical domain, use claim-dependent domain gates as supporting checks, but keep the output inside the same 3-reviewer `nature-reviewer` structure.
 - Do not claim the editor's final decision or certainty about fit to `Nature`.
 
 ## Accepted inputs
@@ -43,9 +42,10 @@ If the provided material is partial, perform a bounded review and mark the asses
 2. Extract a shared manuscript fact base: main claim, visible evidence, claimed significance, likely readership, and visible limitations.
 3. Check readiness and label missing evidence or missing sections instead of inventing them.
 4. Assess the manuscript using the source-grounded axes.
-5. Generate `Reviewer 1`, `Reviewer 2`, and `Reviewer 3` using shared facts but different emphasis.
-6. Generate a `Cross-review synthesis` that captures consensus and weighting differences.
-7. Run QA for groundedness, coverage, role boundaries, and non-invention.
+5. If the manuscript clearly falls into a technical domain covered by `references/domain-specific-review-gates.md`, load only the relevant domain section and use it to sharpen the technical-soundness critique.
+6. Generate `Reviewer 1`, `Reviewer 2`, and `Reviewer 3` using shared facts but different emphasis.
+7. Generate a `Cross-review synthesis` that captures consensus and weighting differences.
+8. Run QA for groundedness, coverage, role boundaries, and non-invention.
 
 ## Output format
 
@@ -101,6 +101,7 @@ Risk / unsupported claims
 | [references/source-basis.md](references/source-basis.md) | You need source provenance, local rule summaries, or source-vs-implementation boundaries |
 | [references/reviewer-workflow.md](references/reviewer-workflow.md) | You need the invocation order, fact-base extraction flow, or synthesis rules |
 | [references/review-axes.md](references/review-axes.md) | You need the evaluation axes or reviewer weighting logic |
+| [references/domain-specific-review-gates.md](references/domain-specific-review-gates.md) | The manuscript has clear chemistry, engineering, materials, atmospheric, climate-ecology, hydrology, or remote-sensing evidence chains |
 | [references/report-structure.md](references/report-structure.md) | You need the default output contract or section anatomy |
 | [references/role-boundaries.md](references/role-boundaries.md) | You need constraints on reviewer differences and editor-versus-reviewer boundaries |
 | [references/qa-checklist.md](references/qa-checklist.md) | You are finalizing an output and need groundedness / non-invention checks |
@@ -113,5 +114,6 @@ Use sources in this order:
 1. `references/editorial criteria and processes.md`
 2. manuscript facts supplied by the user
 3. conservative local implementation rules documented in `references/source-basis.md`
+4. domain-specific supporting gates in `references/domain-specific-review-gates.md`
 
 If a user asks for policy-level certainty beyond this local source, state the limit instead of improvising broader journal policy.

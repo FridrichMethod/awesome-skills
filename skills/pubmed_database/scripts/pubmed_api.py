@@ -27,11 +27,9 @@ Usage:
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#   "scienceskillscommon",
+#   "polite-http",
 #   "python-dotenv",
 # ]
-# [tool.uv.sources]
-# scienceskillscommon = { path = "../../scienceskillscommon" }
 # ///
 
 import inspect
@@ -42,7 +40,7 @@ import urllib.parse
 import xml.etree.ElementTree as ET
 
 import dotenv
-from science_skills.skills.scienceskillscommon import http_client
+from polite_http import http_client
 
 EUTILS_BASE = "https://eutils.ncbi.nlm.nih.gov"
 PMC_BIOC_BASE = (

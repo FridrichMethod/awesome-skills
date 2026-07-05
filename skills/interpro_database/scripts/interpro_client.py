@@ -17,10 +17,8 @@
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#   "scienceskillscommon",
+#   "polite-http",
 # ]
-# [tool.uv.sources]
-# scienceskillscommon = { path = "../../scienceskillscommon" }
 # ///
 
 from __future__ import annotations
@@ -33,7 +31,7 @@ import time
 from typing import Any
 import urllib.parse
 
-from science_skills.skills.scienceskillscommon import http_client
+from polite_http import http_client
 
 BASE_URL = "https://www.ebi.ac.uk/interpro/api/"
 DEFAULT_PAGE_SIZE = 200

@@ -47,7 +47,7 @@ This is not optional. Treatment plans benefit greatly from visual elements. Befo
 
 **How to generate schematics:**
 ```bash
-python scripts/generate_schematic.py "your diagram description" -o figures/output.png
+python <path-to-scientific-schematics-skill>/scripts/generate_schematic.py "your diagram description" -o figures/output.png
 ```
 
 The AI will automatically:

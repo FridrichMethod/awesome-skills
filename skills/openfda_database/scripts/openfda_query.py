@@ -22,11 +22,9 @@ other, animalandveterinary, cosmetic, and transparency.
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#   "scienceskillscommon",
+#   "polite-http",
 #   "python-dotenv",
 # ]
-# [tool.uv.sources]
-# scienceskillscommon = { path = "../../scienceskillscommon" }
 # ///
 
 from __future__ import annotations
@@ -38,7 +36,7 @@ import sys
 from typing import Any
 
 import dotenv
-from science_skills.skills.scienceskillscommon import http_client
+from polite_http import http_client
 
 BASE_URL = "https://api.fda.gov"
 CLIENT = http_client.HttpClient(BASE_URL, qps=4.0)

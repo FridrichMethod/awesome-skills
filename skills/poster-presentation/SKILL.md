@@ -1,8 +1,11 @@
 ---
 name: poster-presentation
-description: Create scientific conference posters as .pptx files using python-pptx. Handles A0/A1 layouts, section placement, figure insertion, and academic color schemes. Exports editable .pptx and PDF.
-tools: Read, Write, Bash
+description: Create scientific conference posters as native, editable .pptx files using python-pptx. Handles A0/A1 layouts, section placement, figure insertion, and academic color schemes. Exports editable .pptx and PDF. Use when the user wants a directly editable PowerPoint poster; for HTML/CSS-based posters exported to PDF/PPTX use pptx-posters, and for standard LaTeX posters use latex-posters.
+allowed-tools: Read Write Bash
 version: "1.0.0"
+license: MIT license
+metadata:
+    skill-author: K-Dense Inc.
 ---
 
 # Scientific Conference Poster — PowerPoint (.pptx)
@@ -846,12 +849,12 @@ For high-quality figures to embed in the poster, use the `scientific-schematics`
 
 ```bash
 # Generate workflow diagram for Methods section
-python scripts/generate_schematic.py \
+python <path-to-scientific-schematics-skill>/scripts/generate_schematic.py \
   "Three-stream CNN architecture: MRI encoder, PET encoder, CSF encoder feeding into cross-modal attention fusion with final classification layer" \
   -o figures/architecture.png
 
 # Generate results figure
-python scripts/generate_schematic.py \
+python <path-to-scientific-schematics-skill>/scripts/generate_schematic.py \
   "ROC curves for three-class neuroimaging classification showing AD vs CN AUC 0.97, MCI vs CN AUC 0.89" \
   -o figures/roc_curves.png
 ```

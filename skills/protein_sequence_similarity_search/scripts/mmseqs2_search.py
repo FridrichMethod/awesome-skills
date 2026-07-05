@@ -23,10 +23,8 @@ output file specified via the required --output flag.
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#   "scienceskillscommon",
+#   "polite-http",
 # ]
-# [tool.uv.sources]
-# scienceskillscommon = { path = "../../scienceskillscommon" }
 # ///
 
 import argparse
@@ -37,10 +35,9 @@ import sys
 import tarfile
 import tempfile
 import time
-import urllib.error
 import urllib.parse
 
-from science_skills.skills.scienceskillscommon import http_client
+from polite_http import http_client
 
 MAX_ALIGNMENT_HITS = 300
 POLLING_TIMEOUT = 15 * 60  # 15 minutes.
@@ -184,8 +181,7 @@ def _run_mmseqs2(query_input, json_file, include_mgnify, tty):
         f"{COLABFOLD_HOST}/ticket/msa", method="POST", data=data, timeout=60
     )
   except (
-      urllib.error.URLError,
-      urllib.error.HTTPError,
+      http_client.HttpError,
       TimeoutError,
       RuntimeError,
   ) as e:
@@ -265,8 +261,7 @@ def _run_mmseqs2(query_input, json_file, include_mgnify, tty):
 
     os.remove(tar_path)
   except (
-      urllib.error.URLError,
-      urllib.error.HTTPError,
+      http_client.HttpError,
       TimeoutError,
       RuntimeError,
       OSError,

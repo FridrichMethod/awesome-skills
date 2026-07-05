@@ -9,30 +9,19 @@ description: "Retrieve protein and nucleotide sequences from NCBI databases usin
 
 1.  **`uv`**: Read the `uv` skill and follow its Setup instructions to ensure
     `uv` is installed and on PATH.
-2.  **User Notification**: If LICENSE_NOTIFICATION.txt does not already exist in
-    this skill directory then (1) prominently notify the user to check the terms
-    at https://www.ncbi.nlm.nih.gov/ and
+2.  **User Notification**: If .licenses/ncbi_sequence_fetch_LICENSE.txt does not
+    already exist in the workspace root directory then (1) prominently notify
+    the user to check the terms at https://www.ncbi.nlm.nih.gov/ and
     https://www.ncbi.nlm.nih.gov/home/about/policies/, then (2) create the file
     recording the notification text and timestamp.
 3.  **`.env` file**: Make sure the `.env` file exists in your home directory.
     Create one if it does not exist.
 4.  **`NCBI_API_KEY`** (optional): Raises the NCBI rate limit from 3 to 10
     requests/second. The skill works without it, but a key is recommended if the
-    user plans many queries or encounters a 429 error. The user can obtain one
-    for free by registering at https://www.ncbi.nlm.nih.gov/account/settings/.
-    If the variable is missing from `.env`, do NOT ask the user to paste it into
-    the chat (this would leak the key into the agent's context). Instead, give
-    the user this command — **substituting `ENV_FILE` with the resolved literal
-    path to the `.env` file**:
-
-    ```bash
-    printf "Enter NCBI API key (typing hidden): " && read -s key && echo && echo "NCBI_API_KEY=$key" >> "ENV_FILE" && echo "Saved."
-    ```
-
-    The scripts load credentials automatically via `dotenv`. **NEVER** read,
-    print, or inspect the `.env` file or its variables (e.g. no `cat`, `grep`,
-    `echo`, `printenv`, or `os.environ.get` on keys). Credentials must stay out
-    of the agent's context.
+    user plans many queries or encounters a 429 error. You can register for a
+    key for free at https://www.ncbi.nlm.nih.gov/account/settings/. You **MUST**
+    use the safe credentials protocol in the `credentials` skill to check for
+    and request this key if this skill looks relevant to the user's request.
 
 ## Core Rules
 
@@ -91,6 +80,7 @@ uv run scripts/ncbi_fetch.py fetch-nucleotide MK034466 -o /tmp/result.json
 
 Fetches a CDS/nucleotide accession and translates to protein sequence. Tries
 three approaches in order: 1. NCBI's pre-translated CDS protein (`fasta_cds_aa`)
+
 2. GenBank XML CDS annotation translations 3. Raw nucleotide → 6-frame ORF
 finding
 

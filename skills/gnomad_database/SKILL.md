@@ -9,10 +9,10 @@ description: "Query the Genome Aggregation Database (gnomAD). Use when determini
 
 1.  **`uv`**: Read the `uv` skill and follow its Setup instructions to ensure
     `uv` is installed and on PATH.
-2.  **User Notification**: If LICENSE_NOTIFICATION.txt does not already exist in
-    this skill directory then (1) prominently notify the user to check the terms
-    at https://gnomad.broadinstitute.org/policies and
-    https://gnomad.broadinstitute.org/data#api, then (2) create the file
+2.  **User Notification**: If .licenses/gnomad_database_LICENSE.txt does not
+    already exist in the workspace root directory then (1) prominently notify
+    the user to check the terms at https://gnomad.broadinstitute.org/policies
+    and https://gnomad.broadinstitute.org/data#api, then (2) create the file
     recording the notification text and timestamp.
 
 ## Core Rules

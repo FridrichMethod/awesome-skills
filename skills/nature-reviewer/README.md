@@ -21,6 +21,7 @@ https://www-nature-com/nature/for-authors/editorial-criteria-and-processes
 
 - 将手稿草稿、摘要、选定章节、图表或作者说明作为审稿输入包读取。
 - 按来源约束的 `Nature` 风格维度评估工作：`originality`、`scientific importance`、`interdisciplinary readership`、`technical soundness` 和 `readability for nonspecialists`。
+- 当稿件有明确技术领域时，按需调用领域证据链 gate，覆盖化学、工程、材料、大气、气候生态、水文和遥感等常见稿件类型。
 - 生成 `3` 份 reviewer report；差异只体现在重点，不编造身份或专业背景。
 - 说明哪些读者会对结果感兴趣，以及原因。
 - 识别作者论证成立前必须解决的技术缺陷。
@@ -54,6 +55,7 @@ https://www-nature-com/nature/for-authors/editorial-criteria-and-processes
 - 评估只能基于本地 reviewer 来源和用户提供的手稿事实。
 - 三位审稿人使用同一事实基础，只改变事实权重。
 - 不得编造审稿人身份、细分专业角色、机构或隐藏知识。
+- 领域 gate 只能用于强化技术证据链判断，不能把三份报告改写成虚构的“化学审稿人”“统计审稿人”等人设。
 - 必须明确回答 `who will be interested in the new results and why`。
 - 必须明确识别阻碍作者论证成立的 `technical failings`。
 - 区分技术有效性和 broad-interest 适配度；来源认为两者相关但并不等同。
@@ -78,6 +80,7 @@ nature-reviewer/
     ├── source-basis.md
     ├── reviewer-workflow.md
     ├── review-axes.md
+    ├── domain-specific-review-gates.md
     ├── report-structure.md
     ├── role-boundaries.md
     └── qa-checklist.md

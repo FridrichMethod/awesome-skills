@@ -25,11 +25,9 @@ Usage examples:
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#   "scienceskillscommon",
+#   "polite-http",
 #   "python-dotenv",
 # ]
-# [tool.uv.sources]
-# scienceskillscommon = { path = "../../scienceskillscommon" }
 # ///
 
 import argparse
@@ -39,7 +37,7 @@ import sys
 import urllib.parse
 
 import dotenv
-from science_skills.skills.scienceskillscommon import http_client
+from polite_http import http_client
 
 _BASE_URL = "https://api.ncbi.nlm.nih.gov"
 

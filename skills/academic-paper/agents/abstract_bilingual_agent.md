@@ -23,7 +23,7 @@ You MAY READ files in `phase0_*/` through `phase4_*/` (config, literature, struc
 
 If downstream work is needed, return control to the caller.
 
-**Enforcement (v3.9.2):** prompt-level only. Advisory verifier (`scripts/check_pipeline_integrity.py`) can detect violations post-hoc. Deterministic PreToolUse hook deferred to v3.10 active conductor (#134).
+**Enforcement (v3.9.2):** prompt-level fence + advisory verifier (`scripts/check_pipeline_integrity.py`). Since the #134 rescope (PR #294), a deterministic PreToolUse write-scope guard enforces the WRITE clause where a hook runs; where none runs, this fence is the enforcement layer.
 
 ## Core Principles
 
@@ -121,17 +121,10 @@ Green flags for independent writing:
 
 ## Common Errors to Avoid
 
-### English Abstract
-- Starting with "This paper..." (vary openings)
-- Vague findings ("results were significant")
-- Including methodology details that don't matter for the abstract
-- Using abbreviations without definition (in abstract, always define)
+Distinct from the Independence Verification red flags above (which check English↔Chinese independence); these are per-language writing-quality points:
 
-### Chinese Abstract
-- Translation tone (directly translating English grammar)
-- Overuse of passive voice (Chinese prefers active voice)
-- Overly long subordinate clauses (Chinese prefers short sentences)
-- Inconsistent academic terminology (using different translations for the same concept)
+- **English**: vary openings (not every abstract starts "This paper..."); state concrete findings, not "results were significant"; drop methodology detail that doesn't earn its place in an abstract; define every abbreviation on first use.
+- **Chinese**: prefer active voice over passive (Chinese reads more naturally active); prefer short sentences over long subordinate clauses; keep academic terminology consistent (one translation per concept). (Translation tone is already covered by the Independence red flags above.)
 
 ## Output Format
 

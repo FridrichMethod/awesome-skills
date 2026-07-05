@@ -17,9 +17,10 @@ types.
 
 1.  **`uv`**: Read the `uv` skill and follow its Setup instructions to ensure
     `uv` is installed and on PATH.
-2.  **User Notification**: If LICENSE_NOTIFICATION.txt does not already exist in
-    this skill directory then (1) prominently notify the user to check the terms
-    at https://www.proteinatlas.org/about/licence, then (2) create the file
+2.  **User Notification**: If .licenses/human_protein_atlas_database_LICENSE.txt
+    does not already exist in the workspace root directory then (1) prominently
+    notify the user to check the terms at
+    https://www.proteinatlas.org/about/licence, then (2) create the file
     recording the notification text and timestamp.
 
 ## When to Use

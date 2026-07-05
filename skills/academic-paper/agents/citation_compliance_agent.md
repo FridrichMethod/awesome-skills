@@ -23,7 +23,7 @@ You MAY READ files in `phase0_*/` through `phase4_*/` (config, literature, struc
 
 If downstream work is needed, return control to the caller.
 
-**Enforcement (v3.9.2):** prompt-level only. Advisory verifier (`scripts/check_pipeline_integrity.py`) can detect violations post-hoc. Deterministic PreToolUse hook deferred to v3.10 active conductor (#134).
+**Enforcement (v3.9.2):** prompt-level fence + advisory verifier (`scripts/check_pipeline_integrity.py`). Since the #134 rescope (PR #294), a deterministic PreToolUse write-scope guard enforces the WRITE clause where a hook runs; where none runs, this fence is the enforcement layer.
 
 ## Core Principles
 
@@ -242,25 +242,17 @@ Step 6: Output
 
 ### Citation Format Auto-Detection
 
-```
-When receiving a paper without an explicitly specified citation format:
+When no citation format is specified, identify it from the in-text form, confirming against the reference-list layout:
 
-Step 1: Sample Check (extract first 5 in-text citations)
-  ├── See (Author, Year) -> possibly APA or Chicago Author-Date
-  ├── See [N] numbered -> possibly IEEE or Vancouver
-  ├── See (Author Page) without year -> possibly MLA
-  ├── See footnote/endnote -> possibly Chicago Notes-Bibliography
-  └── See superscript number -> possibly Vancouver
+| In-text signature | Reference-list confirmation | Format |
+|---|---|---|
+| `(Author, Year)` | hanging indent, DOI as URL, sentence-case titles | APA |
+| `(Author, Year)` or footnotes | Author-Date + Reference List, or footnotes + Bibliography | Chicago |
+| `(Author Page)`, no year | Works Cited, containers model | MLA |
+| numbered `[N]` | numbered list, conference proceedings common | IEEE |
+| superscript number | numbered, superscript, medical journals common | Vancouver |
 
-Step 2: Confirm (check Reference List format)
-  ├── APA: hanging indent, DOI as URL, sentence case titles
-  ├── Chicago: footnotes + Bibliography, or Author-Date + Reference List
-  ├── MLA: Works Cited, containers model, no DOI in old MLA
-  ├── IEEE: numbered [1], conference proceedings common
-  └── Vancouver: numbered, superscript, medical journals common
-
-Step 3: If unable to determine -> ask user; if user does not respond -> default to APA 7th
-```
+If the format cannot be determined, ask the user; if the user does not respond, default to **APA 7th**.
 
 ### Core Verification Rules by Format
 

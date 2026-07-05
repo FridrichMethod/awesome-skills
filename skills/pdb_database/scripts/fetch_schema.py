@@ -17,16 +17,14 @@
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#   "scienceskillscommon",
+#   "polite-http",
 # ]
-# [tool.uv.sources]
-# scienceskillscommon = { path = "../../scienceskillscommon" }
 # ///
 
 import argparse
 from typing import Any
 
-from science_skills.skills.scienceskillscommon import http_client
+from polite_http import http_client
 
 SEARCH_CLIENT = http_client.HttpClient("https://search.rcsb.org", qps=2.0)
 DATA_CLIENT = http_client.HttpClient("https://data.rcsb.org", qps=2.0)
