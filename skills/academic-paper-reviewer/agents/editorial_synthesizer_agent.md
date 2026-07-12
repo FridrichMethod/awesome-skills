@@ -237,6 +237,21 @@ Based on the decision matrix in `references/editorial_decision_standards.md`:
 - Even when Rejecting, provide constructive improvement directions
 - Suggest more suitable journals or research directions
 
+### Step 4b: Cross-Model Blind Decision Check (Optional, #518)
+
+The editorial decision is irreversible once the decision letter ships. When `ARS_CROSS_MODEL` is set AND the consent gate in `shared/cross_model_verification.md` has been passed (reviewer cards + paper metadata go to an external provider — the env var alone is not consent), run a blind disagreement check once your decision exists and before the roadmap is built. **Where it runs:** in the standard Synthesis Protocol, after Step 4 and before Step 5; under a v3.6.2 sprint contract, as a **post-Step-3 comparison** — the mechanical three steps (build matrix → evaluate conditions → precedence) execute exactly as specified and emit `editorial_decision` first, and this check happens strictly after, never extending or re-running the contract arithmetic.
+
+1. Record your own decision in structured form first: `{decision: accept | minor_revision | major_revision | reject, drivers: [up to 3 one-sentence reasons]}` — in sprint mode the decision is the emitted `editorial_decision` verbatim; the drivers name the fired condition(s) or, in standard mode, the Step 4 rationale.
+2. Send the panel's usable reviewer cards — all `panel_size` N of them (5 in the default full-mode panel, 2 under `methodology_focus`; never a hardcoded count) — plus paper metadata to the cross-model with the structured-decision prompt from `shared/cross_model_verification.md` § Blind Disagreement Checkpoints. **Never include your decision, the scoring matrix outcome, or your rationale** — the cross-model decides blind (anchoring prevention).
+3. The cross-model returns `{decision: accept | minor_revision | major_revision | reject, drivers: [up to 3], confidence}`.
+4. Differing enum values = material divergence (adjacent categories, e.g. minor vs major revision, are still material; note adjacency). On divergence, add a **Cross-Model Divergence** subsection to the Decision Rationale: state both structured decisions and address each cross-model driver specifically against the reviewer cards already on file. Your decision stands unless the **user** changes it — divergence is a review trigger, never a vote, and the two decisions are never averaged.
+5. Agreement → one line in the decision letter: `[CROSS-MODEL-CHECKPOINT: agreement — editorial-decision]`, with both structured decisions recorded.
+6. Transport failure → `[CROSS-MODEL-ERROR]`, proceed single-model, note it in the letter. This check is judgment, not lookup — an ungrounded/compatible provider is first-class here, and its divergence is an adversarial hypothesis, never a confirmed defect.
+
+**Sprint-contract boundary (v3.6.2):** the cross-model's drivers are NOT new review comments and NEVER enter the scoring matrix, the failure-condition evaluation, or the roadmap as findings — the rebuttal may cite only existing reviewer-card content, and a fired condition's `action` is never softened on the cross-model's account (the forbidden-operations list holds). This check adds a comparison surface, not a sixth reviewer.
+
+When `ARS_CROSS_MODEL` is not set: no behavioral change.
+
 ### Step 5: Revision Roadmap Construction
 
 Organize all items requiring revision into an executable checklist by priority. **Roadmap items are keyed to `sub_claim_id`, not to weakness bundles**: a compound weakness whose sub-claims reached different consensus levels (e.g. SC-1 at CONSENSUS-4, SC-2 a single-reviewer finding) produces **separate, correctly-prioritized items**, never one blurred item that buries the minority sub-claim. Each item carries its `sub_claim_id` so it traces back to the Step 1b inventory and forward into `academic-paper` revision mode (the id is additive provenance — it does not change the roadmap's input format).

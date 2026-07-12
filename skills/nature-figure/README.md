@@ -1,12 +1,30 @@
 # `nature-figure` 技能
 
-`nature-figure` 用于生成可投稿级科研图，面向 Nature 级期刊和高影响力学术场景，同时支持 Python 与 R 两条绘图路径。
+`nature-figure` 用于生成可投稿级科研图，面向 Nature 级期刊和高影响力学术场景，同时支持 Python 与 R 两条绘图路径。若用户明确需要 AI 生成论文示意图、机制图或 graphical abstract，也支持通过 OpenRouter Images API 调用 `openai/gpt-image-2` 生成概念示意图草稿。
 
-该技能从“图件契约”开始，而不是直接套模板。开始绘图前，必须明确核心结论、证据层级、图件原型、后端选择、期刊与导出约束、统计说明和 source-data 可追溯性。只有在科学逻辑明确后，才使用绘图模板。
+该技能从“图件契约”开始，而不是直接套模板。开始绘图前，必须明确核心结论、证据层级、图件原型、后端选择、期刊与导出约束、统计说明和 source-data 可追溯性。第一次使用绘图路径时，用户选择 Python 或 R 后会写入默认偏好；后续默认沿用该后端，除非用户明确切换。只有在科学逻辑明确后，才使用绘图模板。
 
 Python 路径主要使用 `matplotlib`、`seaborn`、`subplot_mosaic` 和 `statsmodels`，适合精细低层布局控制。R 路径使用 `ggplot2`、`patchwork`、`ComplexHeatmap`、`ggrepel`、`svglite`、`cairo_pdf` 和 `ragg`。如果使用私有模板集合，不得在面向用户的输出中暴露私有路径、文件名或来源信息。
 
 该技能参考了 [figures4papers](https://github.com/ChenLiu-1996/figures4papers) 中来自 *Nature Machine Intelligence* 和顶级机器学习/生物信息学论文的生产脚本。原始 demo 脚本和预览图也打包在 `assets/figures4papers/` 中，供模式级改写使用。
+
+---
+
+## OpenRouter AI 示意图生成
+
+当用户明确要求“用 OpenRouter / GPT Image 2 生成论文示意图、机制示意图、graphical abstract”时，走独立 AI-schematic route，不需要先询问 Python 或 R。
+
+```bash
+export OPENROUTER_API_KEY="sk-or-..."
+python skills/nature-figure/scripts/generate_openrouter_schematic.py \
+  --title "Paper title" \
+  --abstract-file abstract.txt \
+  --panel-map "left: problem; center: proposed mechanism; right: validated outcome" \
+  --outdir outputs/schematic \
+  --basename graphical_abstract
+```
+
+这个功能生成的是概念视觉草稿，不应作为定量数据面板。正式投稿前，建议检查科学元素是否被幻觉扩写，并把关键文字、箭头和标注重画成可编辑矢量对象。
 
 ---
 
@@ -54,6 +72,9 @@ nature-figure/
 ├── SKILL.md                     # 短路由：后端 gate，加载 fragments
 ├── manifest.yaml                # always_load core + backend axis + 按需 references
 ├── README.md                    # 本文件
+├── scripts/
+│   ├── generate_openrouter_schematic.py
+│   └── nature_figure_backend.py
 ├── static/
 │   ├── core/                    # 始终加载
 │   │   ├── contract.md          # 图件契约、后端 gate、互斥规则、运行时缺失处理
@@ -75,6 +96,7 @@ nature-figure/
     ├── api.md                   # PALETTE 常量、helper 函数签名
     ├── design-theory.md         # 字体、色彩理论、布局、导出策略
     ├── common-patterns.md       # 可复用代码模式
+    ├── openrouter-image-generation.md
     ├── tutorials.md             # 端到端教程
     ├── chart-types.md           # radar、3D sphere、scatter、fill_between、log-scale
     └── demos.md                 # figures4papers demo map 与路由指南
@@ -84,7 +106,7 @@ nature-figure/
 
 ## 后端与图件契约规则
 
-除非用户已经指定后端，否则先询问用户选择 **Python 或 R**。如果用户需要推荐，参考 `references/backend-selection.md`。
+绘图任务优先使用用户已经指定的后端；如果没有指定，则读取 `scripts/nature_figure_backend.py` 保存的默认偏好。第一次使用且尚未保存偏好时，再询问用户选择 **Python 或 R**，并把答案保存为后续默认后端。如果用户需要推荐，参考 `references/backend-selection.md`。
 
 后端一旦选定，绘图、预览、导出和视觉 QA 都必须只使用该后端。如果所选运行时或包缺失，应停止并报告 blocker；不要用另一种语言临时替代。该规则双向适用：不能用 Python 替代 R，也不能用 R 替代 Python。
 

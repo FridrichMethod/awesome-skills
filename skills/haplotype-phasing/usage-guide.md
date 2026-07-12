@@ -1,68 +1,66 @@
-# Haplotype Phasing - Usage Guide
+# Read-Backed Haplotype Phasing - Usage Guide
 
 ## Overview
-
-Estimate haplotype phase from population linkage disequilibrium - turning unphased genotypes (0/1) into phased haplotypes (0|1) using SHAPEIT5, SHAPEIT4, Eagle2, or Beagle. The load-bearing idea is that statistical phase is an inference, not a measurement: it works well for common variants in LD with their neighbors and degrades steeply for rare variants, so the deliverable is a switch-error rate stratified by minor allele count, not a single genome-wide number, and rare-variant cis/trans calls (compound heterozygotes) need biobank-scale phasing or orthogonal trio/read-backed evidence. This skill owns the statistical paradigm and carves the boundary to read-backed phasing, which is a physically different signal owned by long-read-sequencing.
+This skill performs read-backed (physical) haplotype phasing of a single sample's Oxford Nanopore or PacBio long reads and haplotags the BAM for allele-resolved downstream analysis. Because a long read physically spans multiple heterozygous sites, haplotypes are reconstructed directly from the reads with no reference panel - so phasing works on rare and private variants, but phase blocks are capped by read length and heterozygosity and break wherever no read spans two adjacent hets. The central lesson is that phasing the VCF (GT pipe + PS) is not enough: every read-level downstream tool (allele-specific methylation, phased SVs, IGV coloring, read splitting) needs the per-read HP tag that only the separate haplotag step writes. This skill covers WhatsHap, LongPhase, and HiPhase, trio phasing as the gold standard, the phasing-quality metrics, and the diploid-assumption traps. Statistical/panel phasing for imputation is a separate skill (phasing-imputation/haplotype-phasing).
 
 ## Prerequisites
-
-- A phasing engine: SHAPEIT5 (`conda install -c bioconda shapeit5`), Eagle2, or Beagle (a Java jar). bcftools for normalization and inspection.
-- A QC'd, biallelic VCF/BCF and a genetic (recombination) map matching the data's genome build.
-- A reference panel if reference-based phasing a small cohort (route to reference-panels for selection).
-- Conceptual prerequisites and big notes:
-  - Only heterozygous sites carry phase ambiguity; all error is measured there.
-  - SHAPEIT5 is a suite (phase_common, phase_rare, ligate, switch), not one command; this changed from SHAPEIT4.
-  - The genetic map must match the genome build; a mismatched map degrades phasing silently.
-  - chrX male non-PAR is haploid and must be coded so; split multiallelics before phasing.
-  - Reference-based phasing wins for small cohorts; within-cohort phasing wins past tens of thousands of samples.
+```bash
+conda install -c bioconda whatshap longphase samtools htslib
+# HiPhase (PacBio HiFi) and HapCUT2 (multi-tech) optionally
+# Inputs: a het VCF (Clair3/DeepVariant) + the aligned long-read BAM + reference
+```
 
 ## Quick Start
-
 Tell your AI agent what you want to do:
-- "Phase my array VCF with Eagle2 against an ancestry-matched reference panel"
-- "Phase my biobank WGS data including rare variants with SHAPEIT5"
-- "Phase my genotypes with Beagle as input to imputation"
-- "Benchmark my phasing switch-error rate against a trio, stratified by allele frequency"
-- "Should I phase against a reference panel or within my cohort?"
+- "Phase my Clair3 variants with WhatsHap and haplotag the BAM"
+- "Phase my whole ONT genome fast and co-phase the SVs with LongPhase"
+- "Trio-phase my family"
+- "Report my phasing quality (block N50 and switch error)"
 
 ## Example Prompts
 
-### Pre-phasing for imputation
-> "I have a 5,000-sample European array VCF on GRCh38. Phase it as input to imputation against a matched panel, per chromosome, and tell me whether reference-based or within-cohort phasing is appropriate at this sample size."
+### Phase and haplotag
+> "I have a Clair3 het VCF and my ONT BAM. Phase the variants with WhatsHap using realignment for indels, then haplotag the BAM and confirm the HP tags are present so I can run allele-specific methylation."
 
-### Rare-variant phasing
-> "I have 50,000 WGS samples and need to call compound heterozygotes. Run the SHAPEIT5 common-scaffold-then-rare pipeline and explain why rare-variant phasing needs this design and how to report accuracy by minor allele count."
+### Whole-genome speed with SV co-phasing
+> "Phase my 30x ONT genome quickly with LongPhase, co-phasing the Sniffles SVs so I get long phase blocks, then haplotag the BAM."
 
-### Benchmarking
-> "I have parent-parent-child trios in my cohort. Use them to compute my phaser's switch-error rate stratified by minor allele count and explain what switch versus Hamming error tells me."
+### Trio
+> "I sequenced a mother-father-child trio. Trio-phase the child with WhatsHap using the pedigree, since that is the gold standard."
 
-### Boundary
-> "I have long-read sequencing on a single sample and want to phase a private variant. Should I run SHAPEIT, and how does read-backed phasing fit in?"
+### Quality assessment
+> "Assess my phasing: report block N50, phased fraction, and the switch error rate against the GIAB trio-phased truth, and explain the flip decomposition."
+
+### Allele-specific methylation handoff
+> "Haplotag my modBAM and give me per-haplotype methylation at imprinted loci."
 
 ## What the Agent Will Do
-
-1. Confirm the genome build and align the genetic map to it; normalize the VCF to biallelic.
-2. Choose reference-based vs within-cohort phasing by cohort size and panel availability, and the engine (SHAPEIT5 for rare-variant biobank work, Eagle2/Beagle for common-variant pre-phasing).
-3. For rare-variant phasing, run phase_common -> ligate -> phase_rare with overlapping chunks.
-4. Handle chrX by coding male non-PAR haploid and splitting the PARs.
-5. Benchmark with the `switch` tool against trios where available, reporting SER stratified by minor allele count.
-6. Hand the phased haplotypes to genotype-imputation, or flag when a phase-dependent claim needs trio/read-backed confirmation.
+1. Take the het VCF and the aligned BAM and choose a phaser (WhatsHap default; LongPhase for speed/SV co-phasing; HiPhase for HiFi; `--ped` for trios).
+2. Phase the variants (`--reference --indels` on long reads), writing GT pipe + PS into the VCF.
+3. Haplotag the BAM (HP/PS read tags) and verify the tags are present.
+4. Report block N50 together with switch error (not N50 alone).
+5. Hand the haplotagged BAM to downstream consumers (modkit ASM, Severus phased SVs, IGV).
+6. Flag haploid/CNV/segdup regions where phasing is unreliable.
 
 ## Tips
-
-- Do not trust a single genome-wide switch-error rate for a rare-variant call; phasing quality is a steep function of minor allele count.
-- A switch error is invisible to genotype QC because it changes which haplotype an allele sits on, not the genotype; report a rate against an independent truth set.
-- Make chunked phasing regions overlap so the ligate step can resolve phase across the seam; abutting chunks guarantee a switch.
-- Combine, do not rank, the phase sources: seed SHAPEIT with read-backed phase from long reads when phasing a private variant, since statistical phasing cannot place a variant no one else carries.
-- Match the genetic map and reference panel to the data build; a GRCh37 map on GRCh38 data corrupts phase with no error.
+- `phase` writes the VCF; `haplotag` writes the BAM - run both, and verify HP tags with `samtools view ... | grep HP:i:`.
+- Always pass `--reference` on long reads (realignment mode) and `--indels` to phase indels.
+- The trio flag is `--ped` (a PED file), not `--trio`; trio phasing is the gold standard when parents are sequenced.
+- Report block N50 AND switch error together; N50 alone is gameable by over-joining blocks.
+- Short blocks on a homozygosity-rich sample are biology, not tool failure - co-phase SVs (LongPhase) or use ultra-long reads to bridge sparse-het gaps.
+- LongPhase uses bare `--ont`/`--pb` and subcommands `phase`/`haplotag`/`modcall`; `--max-coverage 15` in WhatsHap is a runtime cap, not a minimum depth.
+- Phasing of chrX/Y/MT, CNV regions, and segdups is unreliable (the diploid assumption is false there).
 
 ## Related Skills
 
-- reference-panels - Select the ancestry-matched panel that reference-based phasing copies from
-- genotype-imputation - Imputation consumes the phased haplotypes (pre-phasing)
-- imputation-qc - Switch-error benchmarking alongside imputation quality QC
-- long-read-sequencing/haplotype-phasing - Read-backed / molecular single-sample phasing
-- variant-calling/variant-normalization - Split multiallelics and left-align before phasing
-- causal-genomics/fine-mapping - Phased haplotypes feed haplotype-level fine-mapping
-- clinical-databases/hla-typing - HLA typing is a high-stakes consumer of long-range phase
-- workflows/gwas-pipeline - End-to-end QC -> phase -> impute -> associate
+- clair3-variants - Produces the het VCF to phase
+- long-read-alignment - Produces the BAM
+- nanopore-methylation - Allele-specific methylation via `--partition-tag HP`
+- structural-variants - Severus consumes a haplotagged BAM
+- phasing-imputation/haplotype-phasing - Statistical/panel phasing for imputation
+- genome-assembly/hifi-assembly - Phased de novo haplotype contigs
+
+## Resources
+- [WhatsHap docs](https://whatshap.readthedocs.io/)
+- [LongPhase](https://github.com/twolinin/longphase)
+- [HiPhase](https://github.com/PacificBiosciences/HiPhase)

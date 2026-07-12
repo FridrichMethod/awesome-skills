@@ -24,6 +24,18 @@ def _parse_scalar(value: str) -> Any:
         if not inner:
             return []
         return [part.strip().strip('"') for part in inner.split(",")]
+    # Convert numeric and boolean strings so the fallback parser
+    # matches what PyYAML would produce
+    for cast in (int, float):
+        try:
+            return cast(value)
+        except (ValueError, TypeError):
+            pass
+    low = value.lower()
+    if low in ("true", "yes", "on"):
+        return True
+    if low in ("false", "no", "off"):
+        return False
     return value
 
 

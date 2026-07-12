@@ -239,7 +239,7 @@ Each successful run posts a per-source change summary table in the job summary.
 
 ```
 awesome-skills/
-├── skills/                          ← 2,024 skill dirs (managed by sync; do not edit directly)
+├── skills/                          ← 2,031 skill dirs (managed by sync; do not edit directly)
 ├── install.sh                       ← one-line installer (curl|bash compatible)
 ├── scripts/
 │   └── sync_skills.py               ← aggregation logic

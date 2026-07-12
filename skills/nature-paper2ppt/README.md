@@ -14,7 +14,7 @@
 - 撰写中文标题、精简 bullet、图注、takeaway 和 speaker notes。
 - 生成可编辑的 `.pptx` 作为主交付物。
 - 提取图表时记录 asset manifest。
-- 对页数、嵌入媒体、speaker notes 和 PPTX 包结构做轻量 QA。
+- 对页数、嵌入媒体、speaker notes、图片裁剪、版式对齐、AI 模板化表达和 PPTX 包结构做轻量 QA。
 
 ## 来源与设计层级
 
@@ -32,6 +32,8 @@ nature-paper2ppt/
 ├── SKILL.md                     # 短路由：识别 paper_type，加载 fragments
 ├── manifest.yaml                # always_load core + paper_type axis + 按需 references
 ├── README.md
+├── scripts/
+│   └── audit_pptx_quality.py     # PPTX XML 质量审计：越界、裁剪、对齐、套话
 ├── static/
 │   ├── core/                    # 始终加载
 │   │   ├── principles.md        # 目的、核心原则、lean mode、输入、语言
@@ -103,3 +105,4 @@ output/
 - 默认语言为简体中文，同时保留重要技术术语、缩写、基因名、模型名、公式和统计术语的英文。
 - 该技能适用于多个研究领域，不限于生物医学论文。
 - 如果没有可靠的 headless renderer，技能会进行结构 QA，并记录跳过渲染预览 QA 的原因。
+- 生成 PPTX 后应运行 `scripts/audit_pptx_quality.py`；高严重度问题需要修复后再交付。

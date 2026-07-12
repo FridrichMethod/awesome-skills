@@ -190,6 +190,11 @@ Recommended platforms: PROSPERO for systematic reviews, OSF Registries for all o
 - Recommended: [Yes / No]
 - Platform: [OSF / PROSPERO / AsPredicted / N/A]
 - Status: [Planned / Completed / Not applicable]
+
+### Design-Freeze Checkpoint Audit (cross-model, only when `ARS_CROSS_MODEL` is set + consent granted; populated AFTER the comparison — never sent to the cross-model)
+- Primary decision: [sound / revise_before_freeze / fundamental_concern] — drivers: [up to 3]
+- Cross-model decision: [sound / revise_before_freeze / fundamental_concern / unavailable] — drivers: [up to 3; none when unavailable] — confidence: [low/medium/high; N/A when unavailable]
+- Outcome: [agreement / divergence — see targeted rebuttal / unavailable — transport error, single-model only]
 ```
 
 ## Quality Criteria
@@ -201,6 +206,19 @@ Recommended platforms: PROSPERO for systematic reviews, OSF Registries for all o
 - If human subjects are involved, IRB planning is mandatory (ref: `references/irb_decision_tree.md`)
 - Reporting standard should be identified at design stage (ref: `references/equator_reporting_guidelines.md`)
 - Preregistration should be considered for confirmatory research (ref: `references/preregistration_guide.md`)
+
+## Cross-Model Blind Checkpoint at Design Freeze (Optional, #518)
+
+The Methodology Blueprint is one of the pipeline's two irreversible checkpoints: once frozen, every downstream stage builds on it. When `ARS_CROSS_MODEL` is set AND the consent gate in `shared/cross_model_verification.md` has been passed (blueprint content goes to an external provider — the env var alone is not consent), run a blind disagreement check before presenting the blueprint as final:
+
+1. Finish your own blueprint and **commit your own decision in the same structured form first, SEPARATELY from the blueprint**: record `{decision: sound | revise_before_freeze | fundamental_concern, drivers: [up to 3 one-sentence reasons]}` outside the document that will be sent (it lands in the blueprint's audit section only at step 5, after the comparison — writing it into the blueprint first would leak it to the cross-model and break blindness). Criteria: `sound` = every methodological choice traces to the RQ and no unmitigated validity threat remains; `revise_before_freeze` = the design intent holds but at least one named component (paradigm/method/data/analysis/validity) needs rework before downstream stages build on it; `fundamental_concern` = the design cannot answer the RQ as posed (wrong paradigm, unanswerable question, fatal validity threat).
+2. Send a **sanitized payload** to the cross-model with the structured-decision prompt from `shared/cross_model_verification.md` § Blind Disagreement Checkpoints: the RQ Brief + the draft blueprint **with the Design-Freeze Checkpoint Audit section (and any other self-judgment, scores, or reasoning) stripped out** — the cross-model decides blind (anchoring prevention).
+3. The cross-model returns `{decision: sound | revise_before_freeze | fundamental_concern, drivers: [up to 3], confidence}`.
+4. Differing enum values = material divergence. Address each cross-model driver specifically against the blueprint's actual content (no generic reassurance), then present BOTH structured decisions + your targeted rebuttal to the user. Your recommendation stands unless the **user** changes it — divergence is a review trigger, never a vote.
+5. Agreement → log `[CROSS-MODEL-CHECKPOINT: agreement — design-freeze]`. Now (and only now) populate the Design-Freeze Checkpoint Audit section of the blueprint with both structured decisions and the outcome; on transport failure, record the primary decision with cross-model decision `unavailable` (drivers: none, confidence: N/A) and outcome `unavailable — transport error, single-model only`.
+6. Transport failure → `[CROSS-MODEL-ERROR]`, proceed single-model, note it in the blueprint. This check is judgment, not lookup — an ungrounded/compatible provider is first-class here, and its divergence is an adversarial hypothesis, never a confirmed defect.
+
+When `ARS_CROSS_MODEL` is not set: no behavioral change.
 
 ## PATTERN PROTECTION (v3.6.7)
 
