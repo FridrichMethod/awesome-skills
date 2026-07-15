@@ -8,7 +8,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![sync-skills](https://github.com/FridrichMethod/awesome-skills/actions/workflows/sync-skills.yml/badge.svg)](https://github.com/FridrichMethod/awesome-skills/actions/workflows/sync-skills.yml)
 [![Skills](https://img.shields.io/badge/skills-2000%2B-brightgreen)](#sources)
-[![Sources](https://img.shields.io/badge/upstream%20sources-16-blue)](#sources)
+[![Sources](https://img.shields.io/badge/upstream%20sources-17-blue)](#sources)
 [![Last Commit](https://img.shields.io/github/last-commit/FridrichMethod/awesome-skills)](https://github.com/FridrichMethod/awesome-skills/commits/main)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
@@ -26,7 +26,7 @@ Agent skills are how you give Claude Code or Codex CLI deep, reusable expertise 
 
 **awesome-skills** does three things:
 
-1. **Aggregates** the best Claude Code / Codex skills from 16 upstream curated collections — bio/scientific, academic writing, official Anthropic, Google DeepMind, Superpowers, Karpathy, and major community libraries.
+1. **Aggregates** the best Claude Code / Codex skills from 17 upstream curated collections — bio/scientific, academic writing, official Anthropic, Google DeepMind, Superpowers, Karpathy, and major community libraries.
 2. **Filters** out things that break installs (Git LFS pointers, files >40 MB, bundled vector DBs, stale `.gitattributes`).
 3. **Auto-syncs** every Sunday so your skill library stays current without manual work.
 
@@ -133,7 +133,7 @@ If you already have the repo cloned, `./install.sh` detects the adjacent `skills
 
 ## Sources
 
-Skills are aggregated from these upstream repositories — credit and gratitude to the original authors. Sources are grouped by scope; within `scripts/sync_skills.py` they are listed in install order (later = wins on name collision). Currently **16 sources**.
+Skills are aggregated from these upstream repositories — credit and gratitude to the original authors. Sources are grouped by scope; within `scripts/sync_skills.py` they are listed in install order (later = wins on name collision). Currently **17 sources**.
 
 ### Bio / scientific / medical
 
@@ -155,6 +155,7 @@ Skills are aggregated from these upstream repositories — credit and gratitude 
 | [lishix520/academic-paper-skills](https://github.com/lishix520/academic-paper-skills) | 624 | 2 | Paper strategist + composer |
 | [jamditis/claude-skills-journalism](https://github.com/jamditis/claude-skills-journalism) | 209 | 53 | Journalism, FOIA, fact-checking, academic writing |
 | [Yuan1z0825/nature-skills](https://github.com/Yuan1z0825/nature-skills) | 13k | 9 | **Nature journal** writing, polishing, figures, citations, peer-review response |
+| [AIScientists-Dev/academic-humanizer](https://github.com/AIScientists-Dev/academic-humanizer) | 485 | 1 | De-AI academic prose & grant proposals (NSF/NIH) — preserve scholarly voice, tie claims to evidence, never touch numbers/citations |
 
 ### General-purpose & foundational
 
@@ -196,7 +197,7 @@ Skills are aggregated from these upstream repositories — credit and gratitude 
 | Category | Skills |
 |---|---|
 | **Pipelines** | `academic-paper` · `academic-paper-reviewer` · `academic-pipeline` · `deep-research-swarm` · `composer` · `strategist` |
-| **Drafting** | `scientific-writing` · `scientific-manuscript-writing` · `academic-writing` · `article-writing` · `peer-review-methodology` |
+| **Drafting** | `scientific-writing` · `scientific-manuscript-writing` · `academic-writing` · `academic-humanizer` · `article-writing` · `peer-review-methodology` |
 | **Citation / lit search** | `pubmed-database` · `biorxiv-database` · `medrxiv-search` · `literature-review` · `citation-management` · `paperzilla` |
 | **Figures** | `latex-posters` · `latex-research-posters` · `scientific-schematics` · `scientific-visualization` · `markdown-mermaid-writing` · `pptx-posters` |
 | **Venue figure guides** | `nature-figure-guide` · `cell-figure-guide` · `science-figure-guide` · `lancet-figure-guide` · `nejm-figure-guide` · `pnas-figure-guide` · `elife-figure-guide` · `cancer-research-figure-guide` |
@@ -239,7 +240,7 @@ Each successful run posts a per-source change summary table in the job summary.
 
 ```
 awesome-skills/
-├── skills/                          ← 2,031 skill dirs (managed by sync; do not edit directly)
+├── skills/                          ← 2,032 skill dirs (managed by sync; do not edit directly)
 ├── install.sh                       ← one-line installer (curl|bash compatible)
 ├── scripts/
 │   └── sync_skills.py               ← aggregation logic
@@ -310,6 +311,7 @@ This project would not exist without the work of:
 
 - [Imbad0202](https://github.com/Imbad0202) and [lishix520](https://github.com/lishix520) for the academic paper pipelines
 - [Yuan1z0825](https://github.com/Yuan1z0825) for [nature-skills](https://github.com/Yuan1z0825/nature-skills) — Nature journal writing, polishing, figures, citations, and peer-review response
+- [AIScientists-Dev](https://github.com/AIScientists-Dev) for [academic-humanizer](https://github.com/AIScientists-Dev/academic-humanizer) — de-AI-ing academic prose and grant proposals while preserving scholarly voice and evidence-bound claims
 - [Joe Amditis](https://github.com/jamditis) for the journalism skills
 
 **General-purpose / foundational**
