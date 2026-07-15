@@ -16,6 +16,34 @@ echo "Target: ${CLAUDE_DIR}"
 echo "PubMed email: ${PUBMED_EMAIL}"
 echo
 
+required_paths=(
+    "README.md"
+    "SKILL.md"
+    "manifest.yaml"
+    "static"
+    "references"
+    "scripts"
+    "config"
+    "mcp-server"
+)
+
+missing_paths=()
+for relpath in "${required_paths[@]}"; do
+    if [ ! -e "${SCRIPT_DIR}/${relpath}" ]; then
+        missing_paths+=("${relpath}")
+    fi
+done
+
+if [ "${#missing_paths[@]}" -gt 0 ]; then
+    echo "ERROR: incomplete nature-academic-search skill directory." >&2
+    echo "Missing required path(s):" >&2
+    for relpath in "${missing_paths[@]}"; do
+        echo "  - ${SCRIPT_DIR}/${relpath}" >&2
+    done
+    echo "Install the full skills/nature-academic-search folder and retry." >&2
+    exit 1
+fi
+
 # 1. Install Python dependencies
 echo "[1/5] Installing Python dependencies..."
 pip install --quiet -r "${SCRIPT_DIR}/mcp-server/requirements.txt" 2>/dev/null || {
@@ -36,6 +64,8 @@ echo "[3/5] Copying Skill..."
 mkdir -p "${SKILL_TARGET}"
 cp "${SCRIPT_DIR}/README.md" "${SKILL_TARGET}/"
 cp "${SCRIPT_DIR}/SKILL.md" "${SKILL_TARGET}/"
+cp "${SCRIPT_DIR}/manifest.yaml" "${SKILL_TARGET}/"
+cp -r "${SCRIPT_DIR}/static" "${SKILL_TARGET}/"
 cp -r "${SCRIPT_DIR}/references" "${SKILL_TARGET}/"
 cp -r "${SCRIPT_DIR}/scripts" "${SKILL_TARGET}/"
 cp -r "${SCRIPT_DIR}/config" "${SKILL_TARGET}/"

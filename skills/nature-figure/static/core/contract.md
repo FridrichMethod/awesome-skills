@@ -2,11 +2,15 @@
 
 A publication-quality scientific figure is a visual argument, not an isolated pretty plot. Every figure starts from a claim, an evidence hierarchy, and a review-risk check before code or aesthetics. Before generating or editing code, establish the contract below.
 
-## Backend selection is a blocking gate
+## Backend selection uses a saved preference
 
-If the user has not explicitly chosen Python or R in the current request or provided a clearly language-specific input file/workflow, ask one concise question: **Python or R?** Then stop and wait for the user's answer. Do not generate mock data, write scripts, create figures, or choose Python/R by default. This overrides general autonomy/default-execution behavior for figure tasks.
+For plotting tasks, first honor an explicit Python/R choice in the current request or a clearly language-specific input file/workflow. Save that backend as the user's default with `scripts/nature_figure_backend.py set python` or `scripts/nature_figure_backend.py set r`.
 
-Only recommend a backend when the user explicitly asks you to choose or recommend one. In that case, use `references/backend-selection.md`, state the reason, and then proceed with the recommended backend.
+If the current request does not specify a backend, check the saved preference with `scripts/nature_figure_backend.py get`. If it returns `python` or `r`, use that backend without asking again.
+
+If no saved preference exists, ask one concise question: **Python or R? I will remember this as your default.** Then stop and wait for the user's answer. Do not generate mock data, write scripts, create figures, or choose Python/R by default before this first preference is established. After the user answers, save it and proceed.
+
+Only recommend a backend when the user explicitly asks you to choose or recommend one. In that case, use `references/backend-selection.md`, state the reason, save the selected backend, and then proceed with the recommended backend.
 
 ## The selected backend is exclusive
 
@@ -21,7 +25,7 @@ After the backend is selected, check the selected runtime early (`Rscript`/R for
 1. **Core conclusion**: write the one-sentence claim the figure must defend.
 2. **Evidence chain**: map each planned panel to the claim, and drop panels that do not carry a unique piece of evidence.
 3. **Archetype**: classify the figure as `quantitative grid`, `schematic-led composite`, `image plate + quant`, or `asymmetric mixed-modality figure`.
-4. **Backend**: use the selected Python or R track exclusively for all figure drawing, previewing, exporting, and visual QA. Do not cross-render with the other language.
+4. **Backend**: use the explicit or saved Python/R track exclusively for all figure drawing, previewing, exporting, and visual QA. Do not cross-render with the other language.
 5. **Journal/export contract**: set final dimensions, editable text, source data, statistics, image-integrity notes, and export formats before styling.
 
 The highest-priority rule is: **the chart serves the scientific logic**. Aesthetic polish, template matching, and complex layout are subordinate to making the core conclusion clear, defensible, and reviewable.

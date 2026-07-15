@@ -22,10 +22,8 @@ and counting matching studies.
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#   "scienceskillscommon",
+#   "polite-http",
 # ]
-# [tool.uv.sources]
-# scienceskillscommon = { path = "../../scienceskillscommon" }
 # ///
 
 import argparse
@@ -33,7 +31,7 @@ import json
 import sys
 import urllib.parse
 
-from science_skills.skills.scienceskillscommon import http_client
+from polite_http import http_client
 
 BASE_URL = "https://clinicaltrials.gov/api/v2"
 _CLIENT = http_client.HttpClient(BASE_URL + "/", qps=1.0)

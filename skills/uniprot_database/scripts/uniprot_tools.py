@@ -17,10 +17,8 @@
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#   "scienceskillscommon",
+#   "polite-http",
 # ]
-# [tool.uv.sources]
-# scienceskillscommon = { path = "../../scienceskillscommon" }
 # ///
 
 from __future__ import annotations
@@ -34,7 +32,7 @@ import time
 from typing import Any, Iterator
 import urllib.parse
 
-from science_skills.skills.scienceskillscommon import http_client
+from polite_http import http_client
 
 
 class UniProtError(Exception):

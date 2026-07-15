@@ -17,10 +17,8 @@
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#   "scienceskillscommon",
+#   "polite-http",
 # ]
-# [tool.uv.sources]
-# scienceskillscommon = { path = "../../scienceskillscommon" }
 # ///
 
 import argparse
@@ -30,7 +28,7 @@ import sys
 import time
 import uuid
 
-from science_skills.skills.scienceskillscommon import http_client
+from polite_http import http_client
 
 ALLOWED_DATABASES = [
     "afdb50",

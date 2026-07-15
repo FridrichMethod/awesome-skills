@@ -21,18 +21,15 @@ and saving them to a specified output file path.
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#   "scienceskillscommon",
+#   "polite-http",
 # ]
-# [tool.uv.sources]
-# scienceskillscommon = { path = "../../scienceskillscommon" }
 # ///
 
 import argparse
 import os
 import sys
-import urllib.error
 
-from science_skills.skills.scienceskillscommon import http_client
+from polite_http import http_client
 
 _CLIENT = http_client.HttpClient("https://arxiv.org/", qps=1.0 / 3.0)
 
@@ -96,8 +93,8 @@ def download_paper(args: argparse.Namespace):
       f.write(content)
     print(f"Success! Saved to {args.output}")
 
-  except urllib.error.HTTPError as e:
-    if e.code == 404:
+  except http_client.HttpError as e:
+    if e.status_code == 404:
       if args.format == "html":
         print(
             "Error 404: HTML format is not available for this paper (ID:"

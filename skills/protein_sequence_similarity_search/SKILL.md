@@ -7,28 +7,18 @@ description: "Searches for homologous protein sequences using MMseqs2 (fast, def
 
 1.  **`uv`**: Read the `uv` skill and follow its Setup instructions to ensure
     `uv` is installed and on PATH.
-2.  **User Notification**: If LICENSE_NOTIFICATION.txt does not already exist in
-    this skill directory then (1) prominently notify the user to check the terms
-    at https://www.ebi.ac.uk/jdispatcher/sss/ncbiblast and
+2.  **User Notification**: If
+    .licenses/protein_sequence_similarity_search_LICENSE.txt does not already
+    exist in the workspace root directory then (1) prominently notify the user
+    to check the terms at https://www.ebi.ac.uk/jdispatcher/sss/ncbiblast and
     https://colabfold.com, then (2) create the file recording the notification
     text and timestamp.
 3.  **`.env` file**: Make sure the `.env` file exists in your home directory.
     Create one if it does not exist.
 4.  **`USER_EMAIL`** (optional but recommended): Recommended by the EBI for
-    BLAST job tracking, but the skill works without it. If the variable is
-    missing from `.env`, do NOT ask the user to paste it into the chat (this
-    would leak the value into the agent's context). Instead, give the user this
-    command — **substituting `ENV_FILE` with the resolved literal path to the
-    `.env` file**:
-
-    ```bash
-    printf "Enter contact email: " && read email && echo "USER_EMAIL=$email" >> "ENV_FILE" && echo "Saved."
-    ```
-
-    The scripts load credentials automatically via `dotenv`. **NEVER** read,
-    print, or inspect the `.env` file or its variables (e.g. no `cat`, `grep`,
-    `echo`, `printenv`, or `os.environ.get` on keys). Credentials must stay out
-    of the agent's context.
+    BLAST job tracking, but the skill works without it. You **MUST** use the
+    safe credentials protocol in the `credentials` skill to check for and
+    request this credential if this skill looks relevant to the user's request.
 
 ## Goal
 
@@ -116,7 +106,9 @@ requests "BLAST"** or **a specific BLAST database** (e.g. `uniprotkb_swissprot`,
 2.  **Generate File Names:** (e.g., `proteinA_ebi_blast.json` and
     `proteinA_ebi_blast.md`).
 3.  This API requires the user email address to be set in the USER_EMAIL
-    environment variable for inclusion in request header.
+    environment variable for inclusion in request header. You **MUST** use the
+    safe credentials protocol in the `credentials` skill to check for and
+    request this credential if this skill looks relevant to the user's request.
 4.  Execute the BLAST script:
 
     *   **Default (uniprotkb):**

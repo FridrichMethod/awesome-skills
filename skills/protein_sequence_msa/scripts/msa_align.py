@@ -15,11 +15,9 @@
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#   "scienceskillscommon",
+#   "polite-http",
 #   "python-dotenv",
 # ]
-# [tool.uv.sources]
-# scienceskillscommon = { path = "../../scienceskillscommon" }
 # ///
 
 """Runs EBI Clustal Omega for MSA computation.
@@ -34,7 +32,7 @@ import time
 import urllib.parse
 
 import dotenv
-from science_skills.skills.scienceskillscommon import http_client
+from polite_http import http_client
 
 _POLLING_TIMEOUT_SECS = 15 * 60  # 15 minutes.
 

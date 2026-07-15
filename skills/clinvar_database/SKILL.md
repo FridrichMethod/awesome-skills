@@ -9,30 +9,18 @@ description: "Use when needing clinical significance, pathogenicity classificati
 
 1.  **`uv`**: Read the `uv` skill and follow its Setup instructions to ensure
     `uv` is installed and on PATH.
-2.  **User Notification**: If LICENSE_NOTIFICATION.txt does not already exist in
-    this skill directory then (1) prominently notify the user to check the terms
-    at https://www.ncbi.nlm.nih.gov/clinvar/, then (2) create the file recording
-    the notification text and timestamp.
+2.  **User Notification**: If .licenses/clinvar_database_LICENSE.txt does not
+    already exist in the workspace root directory then (1) prominently notify
+    the user to check the terms at https://www.ncbi.nlm.nih.gov/clinvar/, then
+    (2) create the file recording the notification text and timestamp.
 3.  **`.env` file**: Make sure the `.env` file exists in your home directory.
     Create one if it does not exist.
 4.  **`NCBI_API_KEY`** (optional): Raises the NCBI rate limit from 3 to 10
     requests/second. The skill works without it, but a key is recommended if the
-    user plans many queries or encounters a 429 error. The user can obtain one
-    for free by registering at https://www.ncbi.nlm.nih.gov/account/settings/.
-    If the variable is missing from `.env`, do NOT ask the user to paste it into
-    the chat (this would leak the key into the agent's context). Instead, give
-    the user this command — **substituting `ENV_FILE` with the resolved literal
-    path to the `.env` file**:
-
-    ```bash
-    printf "Enter NCBI API key (typing hidden): " && read -s key && echo && echo "NCBI_API_KEY=$key" >> "ENV_FILE" && echo "Saved."
-    ```
-
-    The scripts load credentials automatically via `dotenv`. **NEVER** read,
-    print, or inspect the `.env` file or its variables (e.g. no `cat`, `grep`,
-    `echo`, `printenv`, or `os.environ.get` on keys). Credentials must stay out
-    of the agent's context. See the
-    [API Key section](#obtaining-and-using-an-api-key) for more details.
+    user plans many queries or encounters a 429 error. You can register for a
+    key for free at https://www.ncbi.nlm.nih.gov/account/settings/. You **MUST**
+    use the safe credentials protocol in the `credentials` skill to check for
+    and request this key if this skill looks relevant to the user's request.
 
 ## Overview
 
@@ -89,9 +77,9 @@ uv run scripts/clinvar_api.py search --query "BRCA1[gene]" --output results.json
     script's parsed output does not contain the specific fields you need, you
     may modify the script or query the NCBI E-utilities API directly — but be
     aware that the raw XML schemas are complex and vary between record types.
--   If the rate limit is hit, the script will throw a clear error. Follow the
-    prerequisite instructions above to help the user add `NCBI_API_KEY` to the
-    `.env` file.
+-   If the rate limit is hit, the script will throw a clear error. You **MUST**
+    use the safe credentials protocol in the `credentials` skill to check for
+    and request the `NCBI_API_KEY` to help the user add it to their `.env` file.
 -   **Notification**: If this skill is used, ensure this is mentioned in the
     output.
 
@@ -341,22 +329,10 @@ overlap your target region, it is relevant regardless of missing labels.
 
 ### Obtaining and Using an API Key
 
-To increase the rate limit to 10 requests per second, you need to obtain an NCBI
-API key and add it to the `.env` file. You can obtain a key by following the
-instructions at [NCBI ClinVar API docs][ncbi-api]
-
-[ncbi-api]: https://www.ncbi.nlm.nih.gov/clinvar/docs/api_http/
-
-Once you have a key, follow the prerequisite instructions to add it to the
-`.env` file.
-
-```bash
-uv run scripts/clinvar_api.py search --query "BRCA1[gene]" --output results.json
-```
-
-If a `RateLimitError` is encountered, follow the prerequisite instructions to
-help the user add `NCBI_API_KEY` to the `.env` file, providing the
-[NCBI ClinVar API docs][ncbi-api] URL for instructions on how to obtain one.
+You can register for a key for free at
+https://www.ncbi.nlm.nih.gov/account/settings/. You **MUST** use the safe
+credentials protocol in the `credentials` skill to check for and request this
+key if this skill looks relevant to the user's request.
 
 ## Best Practices
 
@@ -376,8 +352,9 @@ help the user add `NCBI_API_KEY` to the `.env` file, providing the
     provided `clinvar_api.py` client which handles the unpredictable XML schemas
     robustly.
 -   **Getting HTTP 429 Too Many Requests** — The client throws an exception
-    telling you to pause. Follow the prerequisite instructions to help the user
-    add `NCBI_API_KEY` to the `.env` file, then retry.
+    telling you to pause. You **MUST** use the safe credentials protocol in the
+    `credentials` skill to check for and request the `NCBI_API_KEY` to help the
+    user add it to their `.env` file, then retry.
 -   **Sending raw DNA sequences to the API** — The API expects HGVS
     nomenclature, RS IDs, or proper Entrez coordinate syntax (`11[chr] AND
     1234[chrpos]`), not raw ATCG strings.

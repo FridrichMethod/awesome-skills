@@ -18,9 +18,10 @@ to find conservation peaks across a regulatory element.
 
 1.  **`uv`**: Read the `uv` skill and follow its Setup instructions to ensure
     `uv` is installed and on PATH.
-2.  **User Notification**: If LICENSE_NOTIFICATION.txt does not already exist in
-    this skill directory then (1) prominently notify the user to check the terms
-    at https://genome.ucsc.edu/conditions.html and
+2.  **User Notification**: If .licenses/ucsc_conservation_and_tfbs_LICENSE.txt
+    does not already exist in the workspace root directory then (1) prominently
+    notify the user to check the terms at
+    https://genome.ucsc.edu/conditions.html and
     https://genome.ucsc.edu/goldenPath/help/api.html, then (2) create the file
     recording the notification text and timestamp.
 

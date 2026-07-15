@@ -21,11 +21,9 @@ pagination handling, rate limit backoffs, and error checking.
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#   "scienceskillscommon",
+#   "polite-http",
 #   "python-dotenv",
 # ]
-# [tool.uv.sources]
-# scienceskillscommon = { path = "../../scienceskillscommon" }
 # ///
 
 from __future__ import annotations
@@ -37,11 +35,10 @@ import os
 import re
 import sys
 from typing import Any, Sequence
-import urllib.error
 import urllib.parse
 
 import dotenv
-from science_skills.skills.scienceskillscommon import http_client
+from polite_http import http_client
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
@@ -49,10 +46,14 @@ BASE_URL = "https://api.openalex.org"
 PDF_BASE_URL = "https://content.openalex.org"
 
 _API_CLIENT = http_client.HttpClient(
-    BASE_URL, qps=10.0, referer_skill="literature-search-openalex"
+    BASE_URL,
+    qps=10.0,
+    referer="https://github.com/google-deepmind/science-skills/tree/main/literature-search-openalex",
 )
 _PDF_CLIENT = http_client.HttpClient(
-    PDF_BASE_URL, qps=1.0, referer_skill="literature-search-openalex"
+    PDF_BASE_URL,
+    qps=1.0,
+    referer="https://github.com/google-deepmind/science-skills/tree/main/literature-search-openalex",
 )
 
 
@@ -417,7 +418,7 @@ def handle_download_pdf(args: argparse.Namespace) -> None:
       logging.warning("PDF not found on OpenAlex content server (404).")
     else:
       logging.warning("Failed to download PDF from primary server: %s", e)
-  except (urllib.error.URLError, OSError) as e:
+  except OSError as e:
     logging.warning("Network error downloading PDF: %s", e)
 
   # Try fallback: download from PDF URLs in the work's metadata.

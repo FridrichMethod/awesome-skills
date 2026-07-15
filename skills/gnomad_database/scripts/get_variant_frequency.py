@@ -17,10 +17,8 @@
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#   "scienceskillscommon",
+#   "polite-http",
 # ]
-# [tool.uv.sources]
-# scienceskillscommon = { path = "../../scienceskillscommon" }
 # ///
 
 import argparse
@@ -28,7 +26,7 @@ import json
 import os
 import sys
 
-from science_skills.skills.scienceskillscommon import http_client
+from polite_http import http_client
 
 # Respect 10 queries per minute requirement.
 CLIENT = http_client.HttpClient("https://gnomad.broadinstitute.org", qps=0.1666)

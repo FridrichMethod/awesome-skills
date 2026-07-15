@@ -19,6 +19,15 @@ Use this checklist before finalizing a response package or when auditing an exis
 - Line numbers are not invented; use section names if line numbers are unavailable.
 - Reviewer comments and response IDs match throughout tracker, letter, and checklist.
 
+## Revision formatting
+
+- If manuscript text is edited, the changed text is marked in red on a backed-up/copy version of the original manuscript, with a clean copy kept separate when needed.
+- In LaTeX marked manuscripts, changed text uses `\revised{...}` or an equivalent visible red-text macro.
+- If revised manuscript text is pasted into the response letter after the answer, that pasted text is italic.
+- In LaTeX response letters, pasted revised manuscript excerpts use `\RevisedExcerpt{...}` or another visible italic excerpt style.
+- In LaTeX or print-oriented response letters, each new reviewer response starts on a new page.
+- Cover letters summarize the revision for the editor and do not replace the point-by-point response.
+
 ## Factuality
 
 - No invented data.

@@ -24,11 +24,9 @@ Rate-limited to 3 requests/second (10/s with NCBI_API_KEY).
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#   "scienceskillscommon",
+#   "polite-http",
 #   "python-dotenv",
 # ]
-# [tool.uv.sources]
-# scienceskillscommon = { path = "../../scienceskillscommon" }
 # ///
 
 from __future__ import annotations
@@ -44,7 +42,7 @@ import urllib.request
 import xml.etree.ElementTree as ET
 
 import dotenv
-from science_skills.skills.scienceskillscommon import http_client
+from polite_http import http_client
 
 _CODON_TABLE = {
     'ATA': 'I',

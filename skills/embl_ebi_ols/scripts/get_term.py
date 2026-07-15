@@ -33,17 +33,15 @@ Relation types:
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#   "scienceskillscommon",
+#   "polite-http",
 # ]
-# [tool.uv.sources]
-# scienceskillscommon = { path = "../../scienceskillscommon" }
 # ///
 
 import argparse
 import sys
 from typing import Any
-import urllib.error
 import ols_utils
+from polite_http import http_client
 
 VALID_RELATIONS = {
     "parents",
@@ -136,10 +134,8 @@ def get_roots(args: argparse.Namespace):
         },
         args.output,
     )
-  except urllib.error.HTTPError as e:
-    ols_utils.error_exit(f"HTTP Error {e.code}: {e.reason}", args.output)
-  except urllib.error.URLError as e:
-    ols_utils.error_exit(f"Network error: {str(e)}", args.output)
+  except http_client.HttpError as e:
+    ols_utils.error_exit(f"HTTP Error {e.status_code}: {e}", args.output)
 
 
 def get_term(args: argparse.Namespace):
@@ -227,7 +223,7 @@ def get_term(args: argparse.Namespace):
                 for t in embedded
             ])
             rel_url = rel_data.get("_links", {}).get("next", {}).get("href")
-        except urllib.error.HTTPError:
+        except http_client.HttpError:
           term[rel] = []
 
     result = {"status": "success", "term": term}
@@ -239,14 +235,14 @@ def get_term(args: argparse.Namespace):
     else:
       ols_utils.write_output(result, args.output)
 
-  except urllib.error.HTTPError as e:
-    if e.code == 404:
+  except http_client.HttpError as e:
+    if e.status_code == 404:
       identifier = args.obo_id or args.iri
       ols_utils.error_exit(
           f"Term not found: {identifier}. Check the ID.", args.output
       )
     else:
-      ols_utils.error_exit(f"HTTP Error {e.code}: {e.reason}", args.output)
+      ols_utils.error_exit(f"HTTP Error {e.status_code}: {e}", args.output)
 
 
 def parse_args() -> argparse.Namespace:

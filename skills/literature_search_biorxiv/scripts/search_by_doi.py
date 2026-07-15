@@ -17,16 +17,14 @@
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#   "scienceskillscommon",
+#   "polite-http",
 # ]
-# [tool.uv.sources]
-# scienceskillscommon = { path = "../../scienceskillscommon" }
 # ///
 
 import argparse
 import json
 import sys
-from science_skills.skills.scienceskillscommon import http_client
+from polite_http import http_client
 
 _CLIENT = http_client.HttpClient(base_url="https://api.biorxiv.org/", qps=1.0)
 

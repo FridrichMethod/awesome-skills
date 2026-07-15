@@ -6,10 +6,10 @@ description: >
 
 always_load:
   # Shared layer — common to nature-polishing and nature-writing
-  - ../../_shared/core/reader-workflow.md
-  - ../../_shared/core/paper-type-taxonomy.md
-  - ../../_shared/core/ethics.md
-  - ../../_shared/core/terminology-ledger.md
+  - ../_shared/core/reader-workflow.md
+  - ../_shared/core/paper-type-taxonomy.md
+  - ../_shared/core/ethics.md
+  - ../_shared/core/terminology-ledger.md
   # Skill-local core
   - static/core/stance.md
   - static/core/failure-modes.md
@@ -71,6 +71,8 @@ references:
   on_demand:
     - condition: needs Nature/Nature Communications article-level patterns for abstracts, intros, Results openings, Discussion, conclusions, titles
       path: references/published-article-patterns.md
+    - condition: empirical 2025 Nat Commun diction calibration — connector frequencies, the significantly red line, hedge/booster/tense word choices
+      path: references/nat-comms-2025-diction.md
     - condition: needs section-specific move orders or phrase patterns
       path: references/section-moves.md
     - condition: needs hedging, transition, evidence, limitation, future-work phrases

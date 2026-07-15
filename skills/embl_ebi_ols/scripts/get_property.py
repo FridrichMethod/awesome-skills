@@ -21,16 +21,14 @@ This script fetches ontology property details, including hierarchy
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#   "scienceskillscommon",
+#   "polite-http",
 # ]
-# [tool.uv.sources]
-# scienceskillscommon = { path = "../../scienceskillscommon" }
 # ///
 
 import argparse
 import sys
-import urllib.error
 import ols_utils
+from polite_http import http_client
 
 
 def get_roots(args: argparse.Namespace):
@@ -70,10 +68,8 @@ def get_roots(args: argparse.Namespace):
         },
         args.output,
     )
-  except urllib.error.HTTPError as e:
-    ols_utils.error_exit(f"HTTP Error {e.code}: {e.reason}", args.output)
-  except urllib.error.URLError as e:
-    ols_utils.error_exit(f"Network error: {str(e)}", args.output)
+  except http_client.HttpError as e:
+    ols_utils.error_exit(f"HTTP Error {e.status_code}: {e}", args.output)
 
 
 def get_property(args: argparse.Namespace):
@@ -145,19 +141,19 @@ def get_property(args: argparse.Namespace):
               }
               for p in embedded
           ]
-        except urllib.error.HTTPError:
+        except http_client.HttpError:
           prop[rel] = []
 
     ols_utils.write_output({"status": "success", "property": prop}, args.output)
 
-  except urllib.error.HTTPError as e:
-    if e.code == 404:
+  except http_client.HttpError as e:
+    if e.status_code == 404:
       identifier = args.obo_id or args.iri
       ols_utils.error_exit(
           f"Property not found: {identifier}. Check the ID.", args.output
       )
     else:
-      ols_utils.error_exit(f"HTTP Error {e.code}: {e.reason}", args.output)
+      ols_utils.error_exit(f"HTTP Error {e.status_code}: {e}", args.output)
 
 
 def parse_args() -> argparse.Namespace:

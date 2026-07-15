@@ -16,9 +16,10 @@ druggable genes.
 
 1.  **`uv`**: Read the `uv` skill and follow its Setup instructions to ensure
     `uv` is installed and on PATH.
-2.  **User Notification**: If LICENSE_NOTIFICATION.txt does not already exist in
-    this skill directory then (1) prominently notify the user to check the terms
-    at https://platform-docs.opentargets.org/licence, then (2) create the file
+2.  **User Notification**: If .licenses/opentargets_database_LICENSE.txt does
+    not already exist in the workspace root directory then (1) prominently
+    notify the user to check the terms at
+    https://platform-docs.opentargets.org/licence, then (2) create the file
     recording the notification text and timestamp.
 
 ## Core Rules
@@ -54,8 +55,8 @@ uv run scripts/query_opentargets.py --output /tmp/opentargets_results.json [OPTI
 
 **Available Commands:**
 
--   **`get-gwas-studies`** *`efo_id`*: Fetches all GWAS studies associated with
-    a specific disease ontology EFO ID (e.g. `EFO_0000685`).
+-   **`get-gwas-studies`** *`disease_id`*: Fetches all GWAS studies associated
+    with a specific disease ID (e.g. `MONDO_0008383` for Rheumatoid Arthritis).
 -   **`get-study-credible-sets`** *`study_id`*: Fetches all credible sets for a
     given study ID (e.g. `FINNGEN_R12_RX_CROHN_2NDLINE`). Returns confidence,
     finemapping method, variant, and p-value info.
@@ -68,12 +69,15 @@ uv run scripts/query_opentargets.py --output /tmp/opentargets_results.json [OPTI
 -   **`get-target-druggability`** *`ensembl_id`*: Provides tractability data
     (small molecule, antibody, etc.) and clinical trial safety info for a
     gene/target.
--   **`get-associated-targets`** *`efo_id`*: Find all target genes associated
-    with a specific disease EFO ID.
+-   **`get-associated-targets`** *`disease_id`*: Find all target genes
+    associated with a specific disease ID (EFO or MONDO).
+-   **`get-disease-drugs`** *`disease_id [--min-stage STAGE]`*: Find all drugs
+    and clinical candidates associated with a disease. Use `--min-stage` to
+    filter (e.g., `PHASE_3` for Phase III or Approved).
 -   **`get-associated-diseases`** *`ensembl_id`*: Find all diseases associated
     with a specific target Ensembl ID.
 -   **`search-disease`** *`query_string`*: Search for a disease by name to find
-    its EFO ID and other metadata.
+    its ID and other metadata.
 -   **`get-credible-sets-near-target`** *`ensembl_id [--window N]`*: Fetches
     credible sets for a target and filters them to those within a genomic window
     around the target. Useful for finding variants "nearby" a gene.
@@ -171,7 +175,9 @@ corresponding string in the `confidence` field of the API response.
 ## Tips and Common Mistakes
 
 -   **ID Formats**:
-    -   Disease IDs must be in EFO format (e.g. `EFO_0000685`).
+    -   Disease IDs are typically MONDO IDs (e.g. `MONDO_0008383` for Rheumatoid
+        Arthritis) or EFO IDs (e.g. `EFO_0009460`). Use the `search-disease`
+        command to find the correct ID.
     -   Target IDs must be Ensembl IDs (e.g. `ENSG00000169083`), not HGNC
         symbols. If you only have a gene symbol, you may need to map it first
         using a custom GraphQL `search` query.
@@ -185,10 +191,10 @@ corresponding string in the `confidence` field of the API response.
     with a higher limit if you specifically need more data, but be cautious with
     large limit values. Always use the `--output` flag to save the result to a
     file and avoid terminal output truncation.
--   **Pagination and incomplete results**: The `--page-size` option (default:
-    200) controls how many items are fetched from the API. **Always check the
-    `count` field in the response and compare it to the number of `rows`
-    actually returned.** If `count` > number of rows, you have incomplete data —
-    either increase `--page-size` to fetch more, or inform the user that only a
-    partial result set was returned. This is especially important for `get-l2g`
-    without `--study-id`, which can return hundreds of credible sets.
+-   **Pagination and incomplete results**: The `--page-size` option
+    (default: 200) controls how many items are fetched from the API. **Always
+    check the `count` field in the response and compare it to the number of
+    `rows` actually returned.** If `count` > number of rows, you have incomplete
+    data — either increase `--page-size` to fetch more, or inform the user that
+    only a partial result set was returned. This is especially important for
+    `get-l2g` without `--study-id`, which can return hundreds of credible sets.

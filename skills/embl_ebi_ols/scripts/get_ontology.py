@@ -21,15 +21,13 @@ ontology from the OLS4 API.
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#   "scienceskillscommon",
+#   "polite-http",
 # ]
-# [tool.uv.sources]
-# scienceskillscommon = { path = "../../scienceskillscommon" }
 # ///
 
 import argparse
-import urllib.error
 import ols_utils
+from polite_http import http_client
 
 
 def get_ontology(args: argparse.Namespace):
@@ -96,15 +94,15 @@ def get_ontology(args: argparse.Namespace):
           args.output,
       )
 
-  except urllib.error.HTTPError as e:
-    if e.code == 404:
+  except http_client.HttpError as e:
+    if e.status_code == 404:
       ols_utils.error_exit(
           f"Ontology not found: '{args.id}'. "
           "Use --id without arguments to list available ontologies.",
           args.output,
       )
     else:
-      ols_utils.error_exit(f"HTTP Error {e.code}: {e.reason}", args.output)
+      ols_utils.error_exit(f"HTTP Error {e.status_code}: {e}", args.output)
 
 
 def parse_args() -> argparse.Namespace:

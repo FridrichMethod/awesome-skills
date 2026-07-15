@@ -22,10 +22,8 @@ pharmacology, images, and performing similarity/substructure searches.
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#   "scienceskillscommon",
+#   "polite-http",
 # ]
-# [tool.uv.sources]
-# scienceskillscommon = { path = "../../scienceskillscommon" }
 # ///
 
 import argparse
@@ -33,7 +31,7 @@ import json
 import sys
 import urllib.parse
 
-from science_skills.skills.scienceskillscommon import http_client
+from polite_http import http_client
 
 PUBCHEM_BASE_URL = "https://pubchem.ncbi.nlm.nih.gov/rest"
 _CLIENT = http_client.HttpClient(PUBCHEM_BASE_URL, qps=5)

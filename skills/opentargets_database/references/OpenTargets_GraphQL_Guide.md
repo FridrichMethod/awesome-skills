@@ -18,18 +18,21 @@ tokens.
 
 For common tasks, use the specialized subcommands provided by the script:
 
--   `get-gwas-studies <efo_id>`: Fetch GWAS studies for a disease.
+-   `get-gwas-studies <disease_id>`: Fetch GWAS studies for a disease.
 -   `get-study-credible-sets <study_id>`: Fetch 95% credible sets for a study.
 -   `get-qtl-credible-sets <variant_id>`: Fetch QTL credible sets for a variant.
 -   `get-l2g <variant_id> [--study-id <study_id>]`: Get Locus-to-Gene (L2G)
     predictions.
 -   `get-target-druggability <ensembl_id>`: Get tractability and safety data for
     a target.
--   `get-associated-targets <efo_id>`: Find target genes associated with a
+-   `get-associated-targets <disease_id>`: Find target genes associated with a
     disease.
+-   `get-disease-drugs <disease_id> [--min-stage <stage>]`: Find drugs and
+    clinical candidates associated with a disease, optionally filtering by
+    minimum clinical stage (e.g., `PHASE_3`, `APPROVAL`).
 -   `get-associated-diseases <ensembl_id>`: Find diseases associated with a
     target.
--   `search-disease <query_string>`: Search for a disease to find its EFO ID.
+-   `search-disease <query_string>`: Search for a disease to find its ID.
 
 **Global Options:**
 
@@ -73,10 +76,12 @@ following core entities defined in the schema:
 
 ### 2. Disease (or Phenotype)
 
--   **Identifier:** Experimental Factor Ontology (EFO) ID (e.g., `EFO_0000685`).
--   **Root Queries:** `disease(efoId: String!)`, `diseases(efoIds: [String!]!)`
+-   **Identifier:** Disease ID, typically MONDO ID (e.g., `MONDO_0008383` for
+    Rheumatoid Arthritis) or EFO ID (e.g., `EFO_0009460`).
+-   **Root Queries:** `disease(efoId: String!)` (accepts MONDO/EFO IDs),
+    `diseases(efoIds: [String!]!)`
 -   **Key Fields:**
-    -   `id`: EFO ID.
+    -   `id`: Disease ID.
     -   `name`, `description`: Disease name and summary.
     -   `synonyms`: Alternative names.
     -   `associatedTargets(...)`: Targets associated with this disease, sortable
@@ -93,7 +98,8 @@ following core entities defined in the schema:
 -   **Key Fields:**
     -   `id`: ChEMBL ID.
     -   `name`, `drugType`: Generic name and molecule type.
-    -   `isApproved`, `maximumClinicalTrialPhase`: Clinical status.
+    -   `maximumClinicalStage`: Highest clinical stage reached (values are
+        enums, e.g., "APPROVAL", "PHASE_3", "PHASE_2", "PHASE_1", "PHASE_0").
     -   `mechanismsOfAction`: How the drug interacts with its target.
     -   `indications`: Diseases the drug is indicated for.
     -   `adverseEvents(...)`: Significant adverse events from FAERS.

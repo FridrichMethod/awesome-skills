@@ -9,9 +9,9 @@ description: "Browse, filter, and download life sciences, biology, and medical p
 
 1.  **`uv`**: Read the `uv` skill and follow its Setup instructions to ensure
     `uv` is installed and on PATH.
-2.  **User Notification**: If LICENSE_NOTIFICATION.txt does not already exist in
-    this skill directory then (1) prominently notify the user to check the terms
-    at https://api.biorxiv.org/ and
+2.  **User Notification**: If .licenses/literature_search_biorxiv_LICENSE.txt
+    does not already exist in the workspace root directory then (1) prominently
+    notify the user to check the terms at https://api.biorxiv.org/ and
     https://www.biorxiv.org/content/about-biorxiv and to always check the
     license of the papers retrieved by the skill for any restrictions, then (2)
     create the file recording the notification text and timestamp.

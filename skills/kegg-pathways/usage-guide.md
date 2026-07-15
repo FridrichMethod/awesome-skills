@@ -1,7 +1,7 @@
 # KEGG Pathway and Topology Enrichment - Usage Guide
 
 ## Overview
-KEGG enrichment tests genes against KEGG's curated pathway and module gene sets across all three generations of pathway analysis: over-representation (enrichKEGG, enrichMKEGG), ranked GSEA (gseKEGG), and signed-topology perturbation (SPIA/graphite). KEGG is the database that owns the third generation because it ships signed directed signaling topology (KGML), letting SPIA propagate fold-changes through the wiring rather than treating a pathway as an unordered gene set. The load-bearing caveat: a KEGG result is a timestamped query against a live, partially-paywalled REST API, so it is irreproducible unless the release is pinned.
+KEGG enrichment tests genes against KEGG's curated pathway and module gene sets across all three generations of pathway analysis: over-representation (enrichKEGG, enrichMKEGG), ranked GSEA (gseKEGG), and signed-topology perturbation (SPIA/graphite). KEGG is the database that owns the third generation because it ships signed directed signaling topology (KGML), letting SPIA propagate fold-changes through the wiring rather than treating a pathway as an unordered gene set. The caveat that breaks reproducibility: a KEGG result is a timestamped query against a live, partially-paywalled REST API, so it is irreproducible unless the release is pinned.
 
 ## Prerequisites
 ```r
@@ -109,6 +109,5 @@ SPIA output adds NDE, pNDE (over-representation), tA and pPERT (perturbation thr
 - reactome-pathways - Reactome curated-pathway enrichment (reproducible local DB)
 - wikipathways - WikiPathways community-pathway enrichment
 - enrichment-visualization - Dot/bar/cnet/emap plots of enrichment results
-- enrichment-foundations - The ORA/FCS/topology generation taxonomy and null theory
 - differential-expression/de-results - Source of the gene list and the fold-changes
 - workflows/expression-to-pathways - End-to-end DE-to-enrichment pipeline

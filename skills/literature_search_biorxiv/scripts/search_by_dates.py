@@ -17,27 +17,22 @@
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#   "scienceskillscommon",
+#   "polite-http",
 # ]
-# [tool.uv.sources]
-# scienceskillscommon = { path = "../../scienceskillscommon" }
 # ///
 
 import argparse
 import json
 import sys
-from science_skills.skills.scienceskillscommon import http_client
+from polite_http import http_client
 
 client = http_client.HttpClient(base_url="https://api.biorxiv.org/", qps=1.0)
 
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-MIN_REQUEST_INTERVAL = 1.0  # seconds between API requests
-LOCK_FILE = "/tmp/biorxiv_api.lock"
-MAX_RETRIES = 4
-USER_AGENT = ""
 
+BIORXIV_PAGE_SIZE = 30
 BIORXIV_CATEGORIES = [
     "animal_behavior_and_cognition",
     "biochemistry",
@@ -216,14 +211,14 @@ def search_biorxiv(args):
 
       all_results.append(paper)
 
-    # The bioRxiv API returns results in pages of up to 100 items.
-    # We advance `cursor` by the page size and stop once we get a short
+    # The bioRxiv API returns results in pages of up to `BIORXIV_PAGE_SIZE`
+    # items. We advance `cursor` by the page size and stop once we get a short
     # page.  NOTE: We intentionally do NOT use `total_count` for
-    # termination because the API sometimes reports 100 (the page size)
-    # rather than the true total, which causes premature stopping.
+    # termination because the API sometimes reports `BIORXIV_PAGE_SIZE` (the
+    # page size) rather than the true total, which causes premature stopping.
     cursor += len(collection)
 
-    if len(collection) < 100:
+    if len(collection) < BIORXIV_PAGE_SIZE:
       # A short page is the only reliable signal that we've fetched everything.
       break
 

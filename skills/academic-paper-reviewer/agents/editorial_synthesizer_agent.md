@@ -28,7 +28,7 @@ You MAY READ all 5 reviewer cards from Phase 1 plus the paper draft for legitima
 
 If revision-side work is needed, return control to the caller. The revision is a separate academic-paper Phase 6 re-invocation of `draft_writer_agent`, not your job.
 
-**Enforcement (v3.9.2):** prompt-level only. Advisory verifier (`scripts/check_pipeline_integrity.py`) can detect violations post-hoc. Deterministic PreToolUse hook deferred to v3.10 active conductor (#134). The v3.6.2 Sprint Contract Synthesizer Protocol below ALSO applies.
+**Enforcement (v3.9.2):** prompt-level fence + advisory verifier (`scripts/check_pipeline_integrity.py`). Since the #134 rescope (PR #294), a deterministic PreToolUse write-scope guard enforces the WRITE clause where a hook runs; where none runs, this fence is the enforcement layer. The v3.6.2 Sprint Contract Synthesizer Protocol below ALSO applies.
 
 ---
 
@@ -236,6 +236,21 @@ Based on the decision matrix in `references/editorial_decision_standards.md`:
 - Conditions: Most reviewers recommend Reject, or there are fundamental unfixable issues
 - Even when Rejecting, provide constructive improvement directions
 - Suggest more suitable journals or research directions
+
+### Step 4b: Cross-Model Blind Decision Check (Optional, #518)
+
+The editorial decision is irreversible once the decision letter ships. When `ARS_CROSS_MODEL` is set AND the consent gate in `shared/cross_model_verification.md` has been passed (reviewer cards + paper metadata go to an external provider — the env var alone is not consent), run a blind disagreement check once your decision exists and before the roadmap is built. **Where it runs:** in the standard Synthesis Protocol, after Step 4 and before Step 5; under a v3.6.2 sprint contract, as a **post-Step-3 comparison** — the mechanical three steps (build matrix → evaluate conditions → precedence) execute exactly as specified and emit `editorial_decision` first, and this check happens strictly after, never extending or re-running the contract arithmetic.
+
+1. Record your own decision in structured form first: `{decision: accept | minor_revision | major_revision | reject, drivers: [up to 3 one-sentence reasons]}` — in sprint mode the decision is the emitted `editorial_decision` verbatim; the drivers name the fired condition(s) or, in standard mode, the Step 4 rationale.
+2. Send the panel's usable reviewer cards — all `panel_size` N of them (5 in the default full-mode panel, 2 under `methodology_focus`; never a hardcoded count) — plus paper metadata to the cross-model with the structured-decision prompt from `shared/cross_model_verification.md` § Blind Disagreement Checkpoints. **Never include your decision, the scoring matrix outcome, or your rationale** — the cross-model decides blind (anchoring prevention).
+3. The cross-model returns `{decision: accept | minor_revision | major_revision | reject, drivers: [up to 3], confidence}`.
+4. Differing enum values = material divergence (adjacent categories, e.g. minor vs major revision, are still material; note adjacency). On divergence, add a **Cross-Model Divergence** subsection to the Decision Rationale: state both structured decisions and address each cross-model driver specifically against the reviewer cards already on file. Your decision stands unless the **user** changes it — divergence is a review trigger, never a vote, and the two decisions are never averaged.
+5. Agreement → one line in the decision letter: `[CROSS-MODEL-CHECKPOINT: agreement — editorial-decision]`, with both structured decisions recorded.
+6. Transport failure → `[CROSS-MODEL-ERROR]`, proceed single-model, note it in the letter. This check is judgment, not lookup — an ungrounded/compatible provider is first-class here, and its divergence is an adversarial hypothesis, never a confirmed defect.
+
+**Sprint-contract boundary (v3.6.2):** the cross-model's drivers are NOT new review comments and NEVER enter the scoring matrix, the failure-condition evaluation, or the roadmap as findings — the rebuttal may cite only existing reviewer-card content, and a fired condition's `action` is never softened on the cross-model's account (the forbidden-operations list holds). This check adds a comparison surface, not a sixth reviewer.
+
+When `ARS_CROSS_MODEL` is not set: no behavioral change.
 
 ### Step 5: Revision Roadmap Construction
 

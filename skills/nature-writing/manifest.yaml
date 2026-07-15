@@ -6,10 +6,10 @@ description: >
 
 always_load:
   # Shared layer — common to nature-polishing and nature-writing
-  - ../../_shared/core/reader-workflow.md
-  - ../../_shared/core/paper-type-taxonomy.md
-  - ../../_shared/core/ethics.md
-  - ../../_shared/core/terminology-ledger.md
+  - ../_shared/core/reader-workflow.md
+  - ../_shared/core/paper-type-taxonomy.md
+  - ../_shared/core/ethics.md
+  - ../_shared/core/terminology-ledger.md
   # Skill-local core
   - static/core/stance.md
   - static/core/workflow.md
@@ -75,6 +75,8 @@ references:
   on_demand:
     - condition: needs section-level structure, argument order, or published-article patterns
       path: references/article-architecture.md
+    - condition: genre-aware 2025 Nat Commun empirical structure, quantified connector/diction preferences, or research/review/perspective/comment/benchmark differences
+      path: references/nat-comms-2025-corpus.md
     - condition: drafting/revising abstract; especially challenge-contribution forms
       path: references/abstract.md
     - condition: drafting/revising a Nature-family broad-audience summary paragraph or introduction opening

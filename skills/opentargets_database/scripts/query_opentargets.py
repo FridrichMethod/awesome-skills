@@ -22,10 +22,8 @@ predictions, target druggability, and disease/target associations.
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#   "scienceskillscommon",
+#   "polite-http",
 # ]
-# [tool.uv.sources]
-# scienceskillscommon = { path = "../../scienceskillscommon" }
 # ///
 
 import argparse
@@ -34,10 +32,13 @@ import re
 import sys
 from typing import Any
 
-from science_skills.skills.scienceskillscommon import http_client
+from polite_http import http_client
 
 BASE_URL = "https://api.platform.opentargets.org/api/v4/graphql"
 _CLIENT = http_client.HttpClient(BASE_URL, qps=1.0)
+
+CLINICAL_STAGES = ["PHASE_0", "PHASE_1", "PHASE_2", "PHASE_3", "APPROVAL"]
+STAGE_ORDER = {stage: i for i, stage in enumerate(CLINICAL_STAGES)}
 
 
 def normalize_variant_id(variant_id: str) -> str:
@@ -161,7 +162,10 @@ def main():
   p_gwas = subparsers.add_parser(
       "get-gwas-studies", help="Get GWAS studies for a specific disease EFO ID"
   )
-  p_gwas.add_argument("efo_id", help="Disease EFO ID (e.g., EFO_0000685)")
+  p_gwas.add_argument(
+      "disease_id",
+      help="Disease ID (EFO or MONDO, e.g., MONDO_0005011)",
+  )
 
   # get-qtl-credible-sets
   p_qtl = subparsers.add_parser(
@@ -202,7 +206,10 @@ def main():
       "get-associated-targets",
       help="Get targets associated with a disease EFO ID",
   )
-  p_assoc_tgt.add_argument("efo_id", help="Disease EFO ID (e.g., EFO_0000349)")
+  p_assoc_tgt.add_argument(
+      "disease_id",
+      help="Disease ID (EFO or MONDO, e.g., MONDO_0005005)",
+  )
 
   # get-associated-diseases
   p_assoc_dis = subparsers.add_parser(
@@ -247,6 +254,21 @@ def main():
       help="Window size in bp around the target (default: 500000)",
   )
 
+  # get-disease-drugs
+  p_dis_drugs = subparsers.add_parser(
+      "get-disease-drugs",
+      help="Get drugs and clinical candidates for a disease",
+  )
+  p_dis_drugs.add_argument(
+      "disease_id",
+      help="Disease ID (EFO or MONDO, e.g., MONDO_0006823)",
+  )
+  p_dis_drugs.add_argument(
+      "--min-stage",
+      choices=CLINICAL_STAGES,
+      help="Filter to drugs at or above this clinical stage for the disease",
+  )
+
   # custom-query
   p_custom = subparsers.add_parser(
       "custom-query", help="Execute a custom GraphQL query"
@@ -278,7 +300,7 @@ def main():
           }
         }
         """
-    variables = {"efoId": args.efo_id}
+    variables = {"efoId": args.disease_id}
 
   elif args.command == "get-qtl-credible-sets":
     query = """
@@ -368,7 +390,7 @@ def main():
           }
         }
         """
-    variables = {"efoId": args.efo_id}
+    variables = {"efoId": args.disease_id}
 
   elif args.command == "get-associated-diseases":
     query = """
@@ -510,6 +532,62 @@ def main():
     with open(args.output, "w", encoding="utf-8") as f:
       f.write(json.dumps(truncated_data, indent=2))
 
+    sys.exit(0)
+
+  elif args.command == "get-disease-drugs":
+    query = """
+        query getDiseaseDrugs($efoId: String!) {
+          disease(efoId: $efoId) {
+            id
+            name
+            drugAndClinicalCandidates {
+              count
+              rows {
+                maxClinicalStage
+                drug {
+                  id
+                  name
+                  drugType
+                  maximumClinicalStage
+                }
+              }
+            }
+          }
+        }
+        """
+    variables = {"efoId": args.disease_id}
+
+    data = _CLIENT.fetch_json(
+        BASE_URL,
+        method="POST",
+        json_body={"query": query, "variables": variables},
+    )
+    if "errors" in data:
+      print(
+          f"GraphQL Errors: {json.dumps(data['errors'], indent=2)}",
+          file=sys.stderr,
+      )
+      sys.exit(1)
+
+    disease_data = data.get("data", {}).get("disease")
+    if disease_data and args.min_stage:
+      candidates = disease_data.get("drugAndClinicalCandidates", {})
+      rows = candidates.get("rows", [])
+      filtered_rows = []
+      min_stage_val = STAGE_ORDER.get(args.min_stage)
+      for row in rows:
+        stage = row.get("maxClinicalStage")
+        stage_val = STAGE_ORDER.get(stage)
+        if stage_val is not None and stage_val >= min_stage_val:
+          filtered_rows.append(row)
+      candidates["total_count"] = candidates.get("count")
+      candidates["rows"] = filtered_rows
+      candidates["filtered_count"] = len(filtered_rows)
+      candidates["count"] = len(filtered_rows)
+
+    truncated_data = truncate_data(data.get("data", {}), args.limit)
+    with open(args.output, "w", encoding="utf-8") as f:
+      f.write(json.dumps(truncated_data, indent=2))
     sys.exit(0)
 
   elif args.command == "custom-query":

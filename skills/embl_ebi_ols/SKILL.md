@@ -9,10 +9,10 @@ description: "Query and search the EMBL-EBI Ontology Lookup Service (OLS) for bi
 
 1.  **`uv`**: Read the `uv` skill and follow its Setup instructions to ensure
     `uv` is installed and on PATH.
-2.  **User Notification**: If LICENSE_NOTIFICATION.txt does not already exist in
-    this skill directory then (1) prominently notify the user to check the terms
-    at https://www.ebi.ac.uk/ols4/api-docs, then (2) create the file recording
-    the notification text and timestamp.
+2.  **User Notification**: If .licenses/embl_ebi_ols_LICENSE.txt does not
+    already exist in the workspace root directory then (1) prominently notify
+    the user to check the terms at https://www.ebi.ac.uk/ols4/api-docs, then (2)
+    create the file recording the notification text and timestamp.
 
 ## Core Rules
 

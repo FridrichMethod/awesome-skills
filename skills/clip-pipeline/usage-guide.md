@@ -10,12 +10,18 @@ Complete CLIP-seq workflow from raw FASTQ to ENCODE-compliant binding sites, sin
 # Preprocessing + alignment + QC
 conda install -c bioconda umi_tools cutadapt fastp star samtools bowtie2 preseq picard multiqc rseqc bedtools
 
-# Peak calling and downstream
-conda install -c bioconda clipper pureclip homer idr meme
+# Peak calling and downstream (CLIPper is NOT on bioconda -- the bioconda `clipper` is an
+# unrelated R package. Install YeoLab CLIPper from source:
+#   git clone https://github.com/YeoLab/clipper && cd clipper && conda env create -f environment3.yml && pip install .)
+conda install -c bioconda pureclip homer idr meme
 
 # R / Bioconductor for annotation and differential
 BiocManager::install(c('ChIPseeker','DEWSeq','TxDb.Hsapiens.UCSC.hg38.knownGene'))
 ```
+
+**Input data:**
+- Paired IP and size-matched input (SMInput) FASTQ, plus a STAR index and the genome FASTA
+- A chromosome-sizes file and a BED of expressed 3'UTRs, for the GC-matched motif background. Motif discovery is SKIPPED without them: HOMER run without an explicit `-fasta` background first-order-scrambles the input and reports a spuriously U/AU-rich logo on any UV-CLIP library.
 
 ## Quick Start
 
@@ -103,3 +109,4 @@ Tell your AI agent what you want to do:
 - clip-seq/ago-clip-mirna-targets - For miRNA targets
 - clip-seq/clip-deep-learning - For variant-effect prediction
 - read-qc/quality-reports - Upstream FastQC / MultiQC
+- reporting/automated-qc-reports - MultiQC aggregation (a triage snapshot, not a gate)

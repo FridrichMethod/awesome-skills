@@ -1,8 +1,6 @@
 ---
 name: nature-paper2ppt
-description: Build a complete but efficient Nature-style Chinese PPTX presentation from a scientific paper, preprint, PDF, article text, abstract, figure legends, or reading notes. Use this skill whenever the user asks to make slides/PPT/PPTX for journal club, group meeting, paper sharing, thesis seminar, lab meeting, department report, or academic presentation from a research paper, not only medical papers. It identifies the paper type and argument, selects only the figures needed for the story, writes Chinese slide content and speaker notes, creates the actual .pptx deck, and runs an explicit self-review/corrective revision loop focused on figure quality, text overflow prevention, and non-template visual design before delivery.
-version: 2.0.0
-author: Community contribution, refactored into static/dynamic layers
+description: Build a complete Nature-style Chinese PPTX presentation from a scientific paper, preprint, PDF, article text, figure legends, or reading notes. Use for journal club, group meeting, thesis seminar, paper sharing, conference or defense decks, and Chinese requests such as 论文做PPT、论文汇报、组会PPT、文献汇报、学术汇报、做幻灯片、读书报告PPT. It classifies paper type, builds an evidence-led story, selects key figures, writes Chinese slide content and speaker notes, creates the actual .pptx, and runs corrective QA for complete figure crops, stable alignment, text overflow, and de-templated Chinese academic expression. Also trigger when improving weak paper-to-PPT output with cropped figures, loose alignment, obvious AI-style wording, or heavy manual rework.
 ---
 
 # Paper-to-PPTX — Router
@@ -51,7 +49,7 @@ Apply the loaded fragments in this priority order:
 4. Workflow (`core/workflow.md`) — run the 9 steps end to end.
 5. Output and quality rules (`core/output-and-quality.md`) — deliverables, quality gates, fallbacks.
 
-Build the Terminology Ledger (`../../_shared/core/terminology-ledger.md`) while reading the source, so model names, gene/protein names, datasets, metrics, and abbreviations stay identical across every slide and speaker note.
+Build the Terminology Ledger (`../_shared/core/terminology-ledger.md`) while reading the source, so model names, gene/protein names, datasets, metrics, and abbreviations stay identical across every slide and speaker note.
 
 The end product is a real `.pptx` deck, not an outline or script. Do not fabricate results, numbers, or figure details.
 
@@ -61,7 +59,9 @@ The files under `references/` are deep references, not defaults. Open them on de
 
 - composing/auditing slide layout, visual rhythm, typography, anti-template design, archetypes, on-slide text budget → `references/design-and-layout.md`.
 - selecting, extracting, cropping, and quality-checking figure/table assets → `references/figure-assets.md`.
-- running the self-review/corrective revision loop, severity grading, programmatic python-pptx checks, rendered-preview policy, and final verification → `references/self-review.md`.
+- running the self-review/corrective revision loop, severity grading, programmatic PPTX checks, rendered-preview policy, and final verification → `references/self-review.md`.
+
+When a real PPTX has been generated, run `scripts/audit_pptx_quality.py` unless the file is unavailable. Treat high-severity findings as blockers, revise the deck, then re-run the audit and record the final result in `output/qa_report.md`.
 
 ## Why this split
 

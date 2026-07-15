@@ -9,10 +9,10 @@ description: "Visualize, analyze, and render protein and molecular structures us
 
 1.  **`uv`**: Read the `uv` skill and follow its Setup instructions to ensure
     `uv` is installed and on PATH.
-2.  **User Notification**: If LICENSE_NOTIFICATION.txt does not already exist in
-    this skill directory then (1) prominently notify the user to check the
-    license at https://www.pymol.org/, then (2) create the file recording the
-    notification text and timestamp.
+2.  **User Notification**: If .licenses/pymol_LICENSE.txt does not already exist
+    in the workspace root directory then (1) prominently notify the user to
+    check the license at https://www.pymol.org/, then (2) create the file
+    recording the notification text and timestamp.
 
 ## Overview
 

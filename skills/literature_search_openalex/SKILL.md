@@ -9,29 +9,20 @@ description: "Query the OpenAlex scholarly database for research papers, authors
 
 1.  **`uv`**: Read the `uv` skill and follow its Setup instructions to ensure
     `uv` is installed and on PATH.
-2.  **User Notification**: If LICENSE_NOTIFICATION.txt does not already exist in
-    this skill directory then (1) prominently notify the user to check the terms
-    at https://developers.openalex.org/ and to always check the license of the
-    papers retrieved by the skill for any restrictions, then (2) create the file
-    recording the notification text and timestamp.
+2.  **User Notification**: If .licenses/literature_search_openalex_LICENSE.txt
+    does not already exist in the workspace root directory then (1) prominently
+    notify the user to check the terms at https://developers.openalex.org/ and
+    to always check the license of the papers retrieved by the skill for any
+    restrictions, then (2) create the file recording the notification text and
+    timestamp.
 3.  **`.env` file**: Make sure the `.env` file exists in your home directory.
     Create one if it does not exist.
 4.  **`OPENALEX_API_KEY`** (optional but recommended): Enables the OpenAlex
     Premium API with higher rate limits. The skill works without it (using the
-    free "polite pool"). If the variable is missing from `.env`, do NOT ask the
-    user to paste it into the chat (this would leak the key into the agent's
-    context). Instead, give the user this command — **substituting `ENV_FILE`
-    with the resolved literal path to the `.env` file**:
-
-    ```bash
-    printf "Enter OpenAlex API key (typing hidden): " && read -s key && echo && echo "OPENALEX_API_KEY=$key" >> "ENV_FILE" && echo "Saved."
-    ```
-
-    The scripts load credentials automatically via `dotenv`. **NEVER** read,
-    print, or inspect the `.env` file or its variables (e.g. no `cat`, `grep`,
-    `echo`, `printenv`, or `os.environ.get` on keys). Credentials must stay out
-    of the agent's context. See the [Rate Limits section](#rate-limits) for more
-    details.
+    free "polite pool"). You can obtain a key at OpenAlex.org → account
+    settings. You **MUST** use the safe credentials protocol in the
+    `credentials` skill to check for and request this key if this skill looks
+    relevant to the user's request.
 
 ## Core Rules
 
@@ -45,9 +36,9 @@ description: "Query the OpenAlex scholarly database for research papers, authors
 4.  **No fabrication.** Never invent OpenAlex IDs or DOIs. Use `resolve`/`get`
     to look them up. Report empty results accurately.
 5.  **API key.** If a command returns 401/429 or you need high-volume queries,
-    follow the prerequisite instructions above to help the user add
-    `OPENALEX_API_KEY` to the `.env` file. Keys are at OpenAlex.org → account
-    settings.
+    you **MUST** use the safe credentials protocol in the `credentials` skill to
+    check for and request the `OPENALEX_API_KEY` to help the user add it to
+    their `.env` file.
 6.  **Keep output small.** Always use `--select` and `--per-page 5–10` for
     overview queries. Pipe `filter` output to a file (`> results.json`), then
     slim with `jq` before reading into context.
@@ -151,12 +142,20 @@ uv run scripts/openalex_cli.py filter works \
 
 ## Error Handling
 
-Code | Meaning             | Action
----- | ------------------- | ------------------------------------------------
-401  | Unauthorized        | Help user add API key to `.env` (see prereqs)
-403  | Plan upgrade needed | Inform user; see https://openalex.org/pricing
-404  | Not found           | Verify ID; try `resolve` first
-429  | Rate limited        | Wait and retry; suggest adding API key to `.env`
+| Code | Meaning             | Action                        |
+| ---- | ------------------- | ----------------------------- |
+| 401  | Unauthorized        | You MUST use safe credentials |
+:      :                     : protocol in credentials skill :
+:      :                     : to help user add API key to   :
+:      :                     : `.env`                        :
+| 403  | Plan upgrade needed | Inform user; see              |
+:      :                     : https\://openalex.org/pricing :
+| 404  | Not found           | Verify ID; try `resolve`      |
+:      :                     : first                         :
+| 429  | Rate limited        | Wait and retry; you MUST use  |
+:      :                     : safe credentials protocol in  :
+:      :                     : credentials skill to help     :
+:      :                     : user add API key to `.env`    :
 
 Known premium-only filters: `from_updated_date`, `to_updated_date`.
 

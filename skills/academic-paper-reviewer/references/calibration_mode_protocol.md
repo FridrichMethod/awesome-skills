@@ -194,6 +194,16 @@ This is an interpretive caveat only. ARS does **not** detect, prevent, or correc
 
 **A single-model spot-check (weak, optional).** With no second model, you can reword the rubric and re-judge, then check whether the verdict changed. Be clear about what this does: it only tells you whether a *change of wording* shifts the judgment — surface wording sensitivity. It does **not** reveal whether the model is quietly optimizing toward the grader (that can be unverbalized), and a verdict that survives rewording is **not** evidence the judgment is correct — only that it is stable to that paraphrase. It is one model checking itself, so its power against grader-awareness is limited. No score, no threshold, no gate.
 
+### Directional prior: assume leniency relative to human expert review (FARS external anchor)
+
+Beyond the same-family optimism above, there is a citable **directional** prior on the sign of the error: when the simulated 5-reviewer panel's output is read as a pass/fail signal, assume it runs **lenient relative to human expert review** until your own calibration measurement shows otherwise. FARS (Tang et al. 2026, arXiv:2606.31651) provides a deployment-scale external anchor: on the FARS deployment corpus, an ICLR-style automated reviewer (Stanford Agentic Reviewer) averaged 5.00 over the 165 papers it reviewed, while the paper-level mean from 282 human expert reviews covering 140 of those papers was 3.23 on the same 0-10 scale — a ~1.8-point gap (a descriptive difference between overlapping-but-unequal paper sets, not a paired estimate), and the automated score never functioned as an acceptance probability, only as a relative ranking.
+
+How to use this prior:
+
+- The **direction** is a working prior, not a law: FARS measured one setup (ICLR-style ML reviewing, one reviewer system), so carrying its sign to other domains, rubrics, or this panel is a heuristic extrapolation — which is exactly why it lands as a default-until-measured assumption rather than a fact. Under this prior, a panel "accept" is weaker evidence than a panel "reject", and a panel score is better read as a relative ranking within a batch than as an acceptance probability.
+- The **magnitude** (~1.8 points) is **NOT portable** across domains, rubrics, or model setups. Never apply it as a correction factor, threshold shift, or score adjustment — if you need a number for your setup, measure it with this mode (Phases 2/4, using the optional human reviewer scores in the gold set).
+- This is an interpretive caveat only: no behavior, schema, gate, or threshold changes. The simulated panel remains advisory infrastructure behind human checkpoints — the caveat is about how to read its output, not about its authority.
+
 ---
 
 ## Integration with existing modes
@@ -220,6 +230,7 @@ This is an interpretive caveat only. ARS does **not** detect, prevent, or correc
 ## References
 
 - Lu, C. et al. (2026). Towards end-to-end automation of AI research. *Nature* 651, 914-919. doi:10.1038/s41586-026-10265-5 — Table 1 (reviewer validation), Methods A.1.1 (ensembling).
+- Tang, Q., Hu, X., Liu, X., Chen, Y. & Shao, Y. (2026). FARS: A fully automated research system deployed at scale. arXiv:2606.31651 — deployment-scale automated-vs-human reviewer comparison (automated mean over 165 papers; 282 human expert reviews over 140 papers); source of the leniency-direction anchor above.
 - Efron, B. & Tibshirani, R. J. (1993). *An Introduction to the Bootstrap*. Chapman & Hall/CRC — bootstrap CI methodology.
 - ARS `shared/cross_model_verification.md` — cross-model reviewer integration.
 - ARS `academic-paper-reviewer/references/quality_rubrics.md` — scoring rubric definitions.

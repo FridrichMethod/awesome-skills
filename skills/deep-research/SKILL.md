@@ -1,9 +1,9 @@
 ---
 name: deep-research
-description: "Universal deep research agent team. 13-agent pipeline for rigorous academic research on any topic. 7 modes: full research, quick brief, paper review, lit-review, fact-check, Socratic guided research dialogue, and systematic review with optional meta-analysis. Covers research question formulation, Socratic mentoring, methodology design, systematic literature search, source verification, cross-source synthesis, risk of bias assessment, meta-analysis, APA 7.0 report compilation, editorial review, devil's advocate challenges, ethics review, and post-research literature monitoring. Triggers on: research, deep research, literature review, systematic review, meta-analysis, PRISMA, evidence synthesis, fact-check, guide my research, help me think through, 研究, 深度研究, 文獻回顧, 文獻探討, 系統性回顧, 後設分析, 事實查核, 引導我的研究, 幫我釐清, 幫我想想, 我不確定要研究什麼, 研究方向, 研究主題."
+description: "Universal deep research agent team. 13-agent pipeline for rigorous academic research on any topic. 8 modes: full research, quick brief, paper review, lit-review, fact-check, three-way literature scan, Socratic guided research dialogue, and systematic review with optional meta-analysis. Covers research question formulation, Socratic mentoring, methodology design, systematic literature search, source verification, cross-source synthesis, risk of bias assessment, meta-analysis, APA 7.0 report compilation, editorial review, devil's advocate challenges, ethics review, and post-research literature monitoring. Triggers on: research, deep research, literature review, systematic review, meta-analysis, PRISMA, evidence synthesis, fact-check, WHY HOW WHAT papers, 3W literature scan, guide my research, help me think through, 研究, 深度研究, 文獻回顧, 文獻探討, 系統性回顧, 後設分析, 事實查核, 三段式文獻掃描, 引導我的研究, 幫我釐清, 幫我想想, 我不確定要研究什麼, 研究方向, 研究主題, 심층 연구, 문헌 조사, 체계적 문헌고찰, 메타분석, 사실 확인, 연구 방향을 잡아줘, 연구 주제 정하는 것을 도와줘."
 metadata:
-  version: "2.9.4"
-  last_updated: "2026-05-18"
+  version: "2.11.0"
+  last_updated: "2026-07-11"
   status: active
   data_access_level: raw
   task_type: open-ended
@@ -50,9 +50,11 @@ Guide my research on the impact of declining birth rates on private universities
 
 ### Trigger Keywords
 
-**English**: research, deep research, literature review, systematic review, meta-analysis, PRISMA, evidence synthesis, fact-check, methodology, APA report, academic analysis, policy analysis, guide my research, help me think through, monitor this topic, set up alerts
+**English**: research, deep research, literature review, systematic review, meta-analysis, PRISMA, evidence synthesis, fact-check, methodology, APA report, academic analysis, policy analysis, WHY HOW WHAT papers, 3W literature scan, guide my research, help me think through, monitor this topic, set up alerts
 
-**繁體中文**: 研究, 深度研究, 文獻回顧, 文獻探討, 系統性回顧, 後設分析, 證據綜整, 事實查核, 研究方法, 學術分析, 政策分析, 引導我的研究, 幫我釐清, 監測這個主題, 設定追蹤
+**繁體中文**: 研究, 深度研究, 文獻回顧, 文獻探討, 系統性回顧, 後設分析, 證據綜整, 事實查核, 三段式文獻掃描, WHY HOW WHAT 論文比較, 研究方法, 學術分析, 政策分析, 引導我的研究, 幫我釐清, 監測這個主題, 設定追蹤
+
+**한국어**: 심층 연구, 문헌 조사, 문헌 고찰, 체계적 문헌고찰, 메타분석, 근거 종합, 사실 확인, 팩트체크, 연구 방법 설계, 학술 분석, 연구 방향을 잡아줘, 연구 주제 정하는 것을 도와줘, 무엇을 연구할지 모르겠어, 이 주제 계속 모니터링해줘
 
 ### Socratic Mode Activation
 
@@ -87,6 +89,7 @@ Activate `socratic` mode when the user's **intent** matches any of the following
 | Need a quick brief (30 min) / 需要快速摘要 | `quick` | fidelity |
 | Have a paper to evaluate before citing / 有論文需要評估 | `review` | balanced |
 | Need literature review for a topic / 需要文獻回顧 | `lit-review` | fidelity |
+| Need a fast paper-comparison scan / 需要快速比較多篇論文 | `three-way-scan` | fidelity |
 | Need to verify specific claims / 需要查核特定事實 | `fact-check` | fidelity |
 | Need systematic review / meta-analysis / 系統性回顧或後設分析 | `systematic-review` | fidelity |
 
@@ -130,7 +133,9 @@ User Input
     |   |           +-- No --> Need a full report?
     |   |                      +-- Yes --> full mode
     |   |                      +-- No --> Only need literature?
-    |   |                                 +-- Yes --> lit-review mode
+    |   |                                 +-- Yes --> Need rapid paper comparison?
+    |   |                                            +-- Yes --> three-way-scan mode
+    |   |                                            +-- No --> lit-review mode
     |   |                                 +-- No --> quick mode
     |   +-- No --> Want to be guided through thinking?
     |              +-- Yes --> socratic mode
@@ -268,7 +273,7 @@ In Mode B, **single-phase agents (Bucket A per `docs/design/2026-05-18-ars-v3.9.
 
 Routing into Mode B requires explicit user signal — `/ars-<mode>` slash command or `[direct-mode]` prefix. Ambiguous cross-phase input defaults to clarification per `.claude/CLAUDE.md` Routing Discipline + `shared/references/intent_clarification_protocol.md`.
 
-**Enforcement (v3.9.2):** prompt-level via Phase Boundary blocks on Bucket A agents + advisory verifier (`scripts/check_pipeline_integrity.py`). Deterministic PreToolUse hook + multi-phase envelope deferred to v3.10 active conductor (#134).
+**Enforcement (v3.9.2):** Phase Boundary blocks on Bucket A agents + advisory verifier (`scripts/check_pipeline_integrity.py`) + a deterministic PreToolUse write-scope guard in hook-enabled runtimes (#134 rescope, PR #294). Multi-phase envelope remains forward-scope (#134 Slices 3-5).
 
 ---
 
@@ -304,9 +309,47 @@ PRISMA 2020-compliant systematic review with optional meta-analysis. Follows 5-p
 | `quick` | RQ + Biblio + Verification + Report | Research brief | 500-1,500 |
 | `review` | Editor + Devil's Advocate + Ethics | Reviewer report on provided text | N/A |
 | `lit-review` | Biblio + Verification + Synthesis | Annotated bibliography + synthesis | 1,500-4,000 |
+| `three-way-scan` | Biblio + Verification (retrieval + WHY/HOW/WHAT extract) | Paper shortlist compared by WHY/HOW/WHAT + cross-paper synthesis | 800-2,000 |
 | `fact-check` | Source Verification only | Verification report | 300-800 |
 | `socratic` | Socratic Mentor + RQ + Devil's Advocate | Research Plan Summary (INSIGHT collection) | N/A (iterative) |
 | `systematic-review` | RQ + Architect + Biblio + Verification + RoB + Meta-Analysis + Synthesis + Report + Editor + Ethics + DA | Full PRISMA 2020 report + forest plot data + GRADE table | 5,000-15,000 |
+
+---
+
+## Three-Way Scan Mode (WHY / HOW / WHAT)
+
+Use `three-way-scan` when the user needs a disciplined shortlist of papers compared in a stable frame, but does **not** yet need a full literature review report.
+
+- **WHY**: what problem or bottleneck the paper addresses and why it matters
+- **HOW**: what strategy, method, or technical route the paper uses
+- **WHAT**: what the paper found, built, or still leaves unresolved
+
+This mode is intentionally lighter than `lit-review`. It prioritizes:
+
+1. candidate retrieval
+2. deduplication
+3. compact per-paper extraction
+4. cross-paper synthesis of shared WHY, divergent HOW, and remaining gaps
+
+Recommended per-paper output:
+
+```markdown
+## <paper title>
+Source: <provider> | Year: <year> | Link: <url>
+
+- WHY: ...
+- HOW: ...
+- WHAT: ...
+```
+
+Then add:
+
+- common `WHY`
+- divergent `HOW`
+- strongest `WHAT`
+- unresolved global gap
+
+If the user later wants a broader evidence matrix, thematic synthesis, or PRISMA-like coverage, escalate from `three-way-scan` to `lit-review` or `systematic-review`.
 
 ---
 
@@ -491,12 +534,23 @@ deep-research (systematic-review) + academic-paper -> PRISMA systematic review p
 
 ---
 
+## Model Tiering (#517, optional)
+
+When `ARS_MODEL_TIERING` is set, the dispatching session routes this skill's agents per `shared/model_tiering.md` (canonical: the full 39-agent judgment/execution table + rules). Compact rule:
+
+- **Unset (default):** every agent inherits the session model — byte-equivalent pre-#517 behavior.
+- **`economy`** (frontier-tier session): execution-type agents dispatch ONE tier below the session model — floor Opus-class, never lower; judgment-type agents stay on the session model. No-op at or below the floor (announce once).
+- **`quality-boost`** (below-frontier session): judgment-type agents at the checkpoint surfaces (Stage 2.5/4.5 gates; the opt-in Stage 4→5 claim–ref audit; final review) jump UP to the frontier tier (however many tiers away — not a single increment); nothing is ever downgraded. No-op at the frontier (announce once).
+- Unknown values → warn once, behave as unset. Tiers are relative positions, never hard-pinned model ids. When a direction is active, route repeated same-stage calls to the SAME worker so its prompt cache accumulates; unset means dispatch shapes stay byte-equivalent too.
+
+---
+
 ## Version Info
 
 | Item | Content |
 |------|---------|
-| Skill Version | 2.9.4 |
-| Last Updated | 2026-05-18 |
+| Skill Version | 2.11.0 |
+| Last Updated | 2026-07-11 |
 | Maintainer | Cheng-I Wu |
 | Dependent Skills | academic-paper v1.0+ (downstream) |
 

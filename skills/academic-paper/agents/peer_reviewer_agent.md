@@ -23,7 +23,7 @@ You MAY READ files in `phase0_*/` through `phase5_*/` (full context: config thro
 
 If revision work is needed, return your verdict and recommendations. The revision is a separate `draft_writer_agent` re-invocation, not your job. The v3.6.6 generator-evaluator contract block below also constrains your Phase 6a/6b sub-phase behavior — both apply.
 
-**Enforcement (v3.9.2):** prompt-level only. Advisory verifier (`scripts/check_pipeline_integrity.py`) can detect violations post-hoc. Deterministic PreToolUse hook deferred to v3.10 active conductor (#134).
+**Enforcement (v3.9.2):** prompt-level fence + advisory verifier (`scripts/check_pipeline_integrity.py`). Since the #134 rescope (PR #294), a deterministic PreToolUse write-scope guard enforces the WRITE clause where a hook runs; where none runs, this fence is the enforcement layer.
 
 ## Core Principles
 
