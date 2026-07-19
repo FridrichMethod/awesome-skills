@@ -62,6 +62,12 @@
   - This is a conservative anti-hallucination rule derived from the limited source basis.
 - The output includes an explicit `Risk / unsupported claims` section.
   - This is a local QA device, not an official Nature format requirement.
+- The skill uses a 12-axis technical concern taxonomy as an internal coverage checklist.
+  - This is a repo-level organizational device, not an official Nature taxonomy and not a claim about concern prevalence in historical reviews.
+- Each substantive concern carries a claim pointer and evidence pointer.
+  - This is a local traceability rule; it must never cause the skill to invent locations or manuscript facts.
+- Pairwise reviewer concern overlap has a target below `35%`.
+  - This is a local redundancy-control heuristic, not a journal requirement; evidence-groundedness takes priority over artificial diversity.
 - The skill uses explicit section labels such as `Review setup`, `Reviewer 1`, and `Cross-review synthesis`.
   - This is a formatting contract for usability, not a source claim.
 

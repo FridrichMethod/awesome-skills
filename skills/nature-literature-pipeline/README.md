@@ -1,100 +1,46 @@
-# nature-literature-pipeline
+# `nature-literature-pipeline` 技能
 
-文献管线引擎 + 每日推送应用层。一套完整的自动化文献发现和跟进系统。
+[English](README_EN.md)
 
-## 这是什么
+`nature-literature-pipeline` 用于搭建持续运行的文献发现管线：多源检索、六维评分、精读摘要、推送和归档，适合每天或每周跟踪一个研究方向。
 
-不是简单的"帮我搜几篇论文"——它是一个结构化管线：多源检索 → 六维评分筛选 → 精读 → 格式化推送 → 归档。支持 cron 每日自动运行。
+## 适合用它做什么
 
-## 与 nature-academic-search 的关系
+- 为固定主题建立自动化文献监测。
+- 从 arXiv、OpenAlex、Crossref、Semantic Scholar 等来源收集候选论文。
+- 对候选文献按方向匹配、方法价值、期刊质量、网络关联、工程价值和归档价值打分。
+- 把 Top 文献整理成可推送的中文/英文精读摘要。
+- 维护 DOI、arXiv ID、主题标签和已读状态，减少重复阅读。
 
-`nature-academic-search` 是**按需搜索**（"现在帮我找几篇 XX 的论文"），本 skill 是**自动化订阅**（"每天帮我盯着这个领域，有新论文推送给我"）。互补关系，建议两个都装。
+## 与 `nature-academic-search` 的关系
 
-## 管线架构
+`nature-academic-search` 适合一次性检索和引用核查；`nature-literature-pipeline` 适合持续订阅和周期性推送。前者回答“现在帮我找”，后者回答“持续帮我盯”。
 
-```
-多源检索（30 篇候选）
-  arXiv / OpenAlex / Crossref / Semantic Scholar（自动降级）
-       ↓
-六维粗筛（30 → 5 篇）
-  方向匹配 × 35 + 方法论 × 20 + 期刊质量 × 15
-  + 网络关联 × 10 + 工程价值 × 10 + 归档价值 × 10
-       ↓
-精读（top 5）
-  标注来源：Full-text / Abstract only / Metadata only
-       ↓
-推送
-  🏅 排名 | 标题 | 期刊 | ⭐ 评分 | 💡 一句话 | 🔬 方法 | 📊 关键数据 | 🧭 点评
-       ↓
-归档
-  DOI/arXiv 去重 → 分类 → 笔记 → 更新索引
-```
+## 典型请求
 
-## 安装
+- “每天早上帮我跟踪海洋混凝土氯离子扩散和机器学习方向的新论文。”
+- “为这个关键词组建一条每周推送的文献管线。”
+- “把过去 7 天候选论文按六维评分筛到 Top 5，并归档。”
 
-```bash
-# Codex
-请从这个仓库安装 nature-literature-pipeline：
-https://github.com/Yuan1z0825/nature-skills.git
-请把 skills/nature-literature-pipeline/ 完整安装，包括 references/ 和 templates/
+## 你需要提供
 
-# Hermes / Claude Code
-git clone https://github.com/Yuan1z0825/nature-skills.git
-cp -r nature-skills/skills/nature-literature-pipeline ~/.hermes/skills/research/
-# 重启 session 或 /reload-skills
-```
+- 研究主题、关键词、排除词、重点期刊或重点作者。
+- 推送频率、每次候选数量和最终精读数量。
+- 输出位置，例如 Markdown 目录、飞书/Telegram 接口或本地归档文件夹。
 
-## 首次配置
+## 产出
 
-装好后告诉 agent：
+- 候选文献表和去重后的 Top 列表。
+- 每篇重点论文的精读卡片：问题、方法、关键数据、局限和与你课题的关系。
+- 可复用的管线配置、归档索引和失败/降级说明。
 
-```
-我的研究领域是钙钛矿太阳能电池，关键词：perovskite solar cell, PSC stability,
-hole transport layer, interface passivation,
-文献推送到飞书群"每日文献"，归档到 ~/research/literature/
-```
+## 边界
 
-Agent 会配置关键词、推送目标、归档路径。之后设置 cron：
+- 自动推送依赖本机 cron、消息接口或用户配置的调度器。
+- 无法访问全文时，会明确标注 `Abstract only` 或 `Metadata only`。
+- 不会把评分当作论文质量的最终判断；高分候选仍需要人工阅读确认。
 
-```
-帮我设一个每天早上 8:30 的文献推送，30 篇候选，推送 top 5
-```
+## 相关技能
 
-## 文件结构
-
-```
-nature-literature-pipeline/
-├── SKILL.md                                ← 技能入口
-├── README.md                               ← 本文件
-├── references/
-│   ├── scoring-system.md                   ← 六维评分体系
-│   ├── gap-analysis.md                     ← 文献 gap 分析方法
-│   ├── note-template.md                    ← 标准化文献笔记模板
-│   ├── push-format.md                      ← 推送消息格式规范
-│   ├── cron-setup.md                       ← cron 创建/验证/故障恢复
-│   └── review-compilation-workflow.md      ← 综述文献汇编工作流
-└── templates/
-    └── literature-push-template.md         ← 可分享的通用配置模板
-```
-
-## 内置保护
-
-- **评分校验**：每个维度不超过上限，总分自动重算
-- **三重去重**：DOI / arXiv ID / OpenAlex ID
-- **自动降级**：Semantic Scholar 不可用 → 自动切 OpenAlex + Crossref + arXiv
-- **只写文献库**：每日管线只写 `raw/` 目录，不自动改 wiki/知识库
-
-## 常见问题
-
-**Q: 和 nature-citation 怎么配合？**
-管线发现新论文 → 用 nature-citation 导出 CNS 格式引用插入手稿。
-
-**Q: 需要什么模型？**
-推荐 DeepSeek V3 以上。每日 cron 可用 flash 模型降低成本。
-
-**Q: 我的领域不是材料/化学？**
-全部可配置。关键词换成你的领域即可——医学、生物、CS、社科都一样用。
-
-## 作者
-
-十五 (JL Lab) — 基于真实科研工作流构建，已稳定运行数月。
+- `nature-academic-search`：一次性多源检索、引用指标和严格他引审计。
+- `nature-reader`：把候选论文做成全文中英对照阅读材料。

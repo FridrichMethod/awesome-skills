@@ -9,7 +9,7 @@ description: >
 
 always_load:
   # Shared layer — common to the nature-* skills
-  - ../_shared/core/terminology-ledger.md
+  - ../nature-shared/core/terminology-ledger.md
   # Skill-local core
   - static/core/principles.md
   - static/core/toolchain.md

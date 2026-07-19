@@ -10,7 +10,7 @@ description: >
 # cross-reference the shared modules with ../ relative links. The workflow axis
 # therefore points at them in place rather than moving them into
 # static/fragments/, which would break those internal links. nature-academic-
-# search does not use the prose-oriented _shared layer.
+# search does not use the prose-oriented nature-shared layer.
 
 always_load:
   - static/core/tools.md

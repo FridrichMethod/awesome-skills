@@ -63,15 +63,17 @@ Package readiness:
 Use a compact table:
 
 ```markdown
-| ID | Reviewer concern | Type | Severity | Proposed action | Readiness | Missing author input |
-|---|---|---|---|---|---|---|
-| R1.1 | Missing validation cohort | Evidence / validation | Major | ACCEPT_ANALYSIS | needs_author_input | Need result summary and manuscript location |
+| ID | Reviewer concern | Type | Severity | Proposed action | Work status | Required input | Expected output | Blocks finalization? |
+|---|---|---|---|---|---|---|---|---|
+| R1.1 | Missing validation cohort | Evidence / validation | Major | ACCEPT_ANALYSIS | TODO_ANALYSIS | Validation result and location | Results text plus validation table | Yes |
 ```
 
 Keep reviewer concern text short in the tracker. Preserve the full wording in the letter when available.
 Use `E.1`, `E.2`, etc. for editor instructions and list them before reviewer comments.
 When the input is a pasted editorial email, use the tracker to preserve all extracted required
 revision items rather than only the reviewer comments.
+Do not use `Work status` as a synonym for `Proposed action`: the former reports progress and verification, while the latter states the response strategy.
+If the table becomes too wide for the requested medium, keep the same fields in a per-item block rather than dropping status, expected output, or blocking state.
 
 ## Point-by-point letter anatomy
 

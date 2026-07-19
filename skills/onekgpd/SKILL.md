@@ -2,9 +2,9 @@
 name: onekgpd
 description: "Query the 1000 Genomes Project dataset (3,202 whole-genome-sequenced individuals, GRCh38) at the level of individual participants. Use when a question is about individuals or variants in the 1000 Genomes Project cohort: which individuals carry variants matching specific criteria in a gene or region, which individuals are homozygous-reference at a position, which variants exist in the dataset or carried by specified individuals in a gene or region, the relatedness between two specified individuals. Variants are returned with 1000 Genomes allele frequencies (AF), gnomAD v4.1 exome and genome AF, AlphaMissense score, and HGVSp annotations."
 license: MIT
-compatibility: Requires Python >=3.12. Variant and sample queries require outbound network access to the public 1000 Genomes query endpoint over TLS; the sample/population metadata commands run fully offline over a data file bundled in the skill. No credentials, API keys, or environment variables are used.
+compatibility: Requires Python >=3.11. Variant and sample queries require outbound network access to the public 1000 Genomes query endpoint over TLS; the sample/population metadata commands run fully offline over a data file bundled in the skill. No credentials, API keys, or environment variables are used.
 allowed-tools: Write Bash
-metadata: {"version": "1.0", "skill-author": "Dnaerys"}
+metadata: {"version": "1.2", "skill-author": "Dnaerys"}
 ---
 
 # OneKGPd: Individual-Level Queries over the 1000 Genomes Project
@@ -174,6 +174,9 @@ filtering is not necessarily echoed back on the returned variant.
 > `--gnomad-exomes-af-gt 0` selects variants that *are* in gnomAD exomes; a
 > returned `gnomad_exomes_af` of `0.0` means the variant is absent from gnomAD
 > exomes. The same convention for gnomAD genomes AF.
+> Conversely, `--gnomad-exomes-af-lt` / `--gnomad-genomes-af-lt` bounds **include**
+unannotated variants: "AF < X in gnomAD" includes variants with gnomAD AF = 0,
+i.e. unannotated; pair it with `--gnomad-*-af-gt 0` to require presence in gnomAD.
 
 > [!NOTE]
 > `am_score` of `0.0` means not scored or not annotated by AlphaMissense - it does not mean `benign`.
@@ -221,7 +224,7 @@ The full per-flag tables live in
 
 -   `count-variants` — count variants in a region, cohort-wide.
 -   `select-variants` — select variants in a region, cohort-wide. Use `--limit N`
-    (hard cap, default 1000) **or** `--page-size N` (retrieve the full set in
+    (hard cap, default 200) **or** `--page-size N` (retrieve the full set in
     pages); the two are mutually exclusive. The summary flags `truncated` when
     the cap is reached.
 -   `count-variants-in-samples` — as `count-variants`, restricted to
@@ -229,9 +232,11 @@ The full per-flag tables live in
 -   `select-variants-in-samples` — as `select-variants`, restricted to
     `--samples NAME1,NAME2,...` (required).
 
-Each returned variant carries these 19 keys: `chr`, `start`, `end`, `ref`,
-`alt`, `af`, `ac`, `an`, `homc`, `hetc`, `misc`, `homfc`, `hetfc`, `misfc`,
-`gnomad_exomes_af`, `gnomad_genomes_af`, `am_score`, `amino_acids`, `biallelic`.
+Each returned variant carries these 22 keys: `chr`, `start`, `end`, `ref`,
+`alt`, `af`, `ac`, `an`, `hom_samples`, `het_samples`, `mis_samples`,
+`hom_samples_fx`, `het_samples_fx`, `mis_samples_fx`, `hom_samples_mxy`,
+`het_samples_mxy`, `mis_samples_mxy`, `gnomad_exomes_af`, `gnomad_genomes_af`,
+`am_score`, `amino_acids`, `biallelic`.
 ClinVar significance and VEP consequence are filter criteria only and are not
 returned. Full schema:
 [references/onekgpd_commands.md](references/onekgpd_commands.md).

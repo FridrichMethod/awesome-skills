@@ -2,45 +2,49 @@
 
 [中文说明](README.md)
 
-## What It Does
+`nature-proposal-writer` is a proposal-first research-writing workflow for turning topics, ideas, drafts, or sections into academic text with argument structure, evidence boundaries, and quality gates.
 
-- A proposal-first research-writing state machine that establishes evidence, argument, and section contracts before drafting or reviewing proposal text.
+## What To Use It For
 
-## When to Use It
+- Build a research canon, problem chain, and section contracts from a rough research direction.
+- Revise existing paragraphs so argument order, contribution boundaries, and evidence support are clearer.
+- Expand existing drafts into proposals, manuscript sections, review frameworks, or project narratives.
+- Run content, language, citation, and formatting QA after drafting.
 
-- You need to draft a proposal, opening report, research plan, or structured research-writing document.
-- You want a QA pass that checks evidence, argument, feasibility, and section logic.
-- You need to move from rough notes to a coherent proposal skeleton.
+## Three Modes
 
-## Copy-Paste Prompts
+| Mode | Input | Best For |
+|------|-------|----------|
+| `compose` | Topic, direction, rough idea | Build argument and sections from scratch |
+| `revise` | Existing paragraph or section | Gap analysis, reordering, and polishing |
+| `hybrid` | Draft plus expansion target | Preserve existing text while filling structure |
 
-- `Build a proposal outline from these notes and identify missing evidence.`
-- `Review this research plan for argument gaps, feasibility, and section logic.`
-- `Draft the opening-report background and research objectives from these materials.`
+## Typical Requests
 
-## Required Inputs
+- "I have a grant title; first break down the scientific questions and research content, do not write prose yet."
+- "This introduction is scattered; rebuild it with the proposal-first workflow."
+- "Expand this draft into a proposal framework and mark evidence gaps."
 
-- Research topic, background notes, preliminary evidence, target format, constraints, and review criteria.
-- Optional existing draft for QA or rewrite.
+## What You Need To Provide
 
-## Expected Outputs
+- Research topic, target reader, submission/application type, and available materials.
+- Confirmed facts, data, figures, references, or wording that must not change.
+- Desired length, language, and file format.
 
-- Proposal outline, section contract, and evidence map.
-- Drafted or revised proposal sections.
-- QA findings and next-step checklist.
+## Outputs
 
-## Dependencies / API Keys / Local Environment
+- Argument architecture, section contracts, and writing order.
+- Ready-to-paste draft text or revised text.
+- QA results: content gaps, language risks, citation/numbering issues, and facts that need author confirmation.
 
-- May integrate with Hermes or Claude Code workflows depending on the local setup.
-- No special dependency for plain text drafting.
+## Boundaries
 
-## FAQ
-
-- **Is this only for grant proposals?** No. It also fits opening reports, research plans, and proposal-like academic documents.
-- **Does it write before checking evidence?** The intended workflow is evidence and argument first, drafting second.
+- The skill does not invent experimental results, references, collaboration basis, or feasibility evidence.
+- Missing facts are marked as `AUTHOR_INPUT_NEEDED` rather than hidden under fluent prose.
+- For sentence-level English polishing only, use `nature-polishing`.
 
 ## Related Skills
 
-- [`nature-writing`](../nature-writing/README_EN.md)
-- [`nature-polishing`](../nature-polishing/README_EN.md)
-- [`nature-reviewer`](../nature-reviewer/README_EN.md)
+- `nature-writing`: Nature-style manuscript-section drafting.
+- `nature-polishing`: English manuscript polishing, restructuring, and translation.
+- `nsfc-proposal`: dedicated National Natural Science Foundation of China proposal writing.

@@ -1,0 +1,49 @@
+name: researchwrite
+version: 1.0.0
+description: >
+  Declarative manifest for the proposal-first scientific writing pipeline. The
+  public skill uses a compact state-machine description and loads foundation
+  templates, rubrics, and validation references only for the selected compose,
+  revise, hybrid, or QA workflow.
+
+# Design note: the installed skill name is researchwrite although the directory
+# is nature-proposal-writer. Keep this manifest aligned with the SKILL.md
+# frontmatter so `npx skills add --list` exposes the same user-facing name.
+
+always_load:
+  - SKILL.md
+
+templates:
+  on_demand:
+    - condition: initializing a new proposal project or rebuilding the foundation file set
+      path: templates/00_scope.md
+    - condition: creating or auditing the research canon of hard facts and constraints
+      path: templates/01_research_canon.md
+    - condition: mapping claims to evidence before prose drafting
+      path: templates/02_evidence_table.md
+    - condition: building the argument map before section drafting
+      path: templates/03_argument_map.md
+    - condition: defining section purposes, inputs, allowed claims, and forbidden claims
+      path: templates/04_section_contracts.md
+    - condition: setting terminology, voice, banned phrases, or anti-slop style rules
+      path: templates/05_style_guide.md
+    - condition: producing a QA report after the four-gate review pipeline
+      path: templates/qa_report.md
+    - condition: writing a targeted revision brief after a failed gate or expert review
+      path: templates/revision_brief.md
+
+references:
+  on_demand:
+    - condition: scoring a draft or proposal with the 8-dimension rubric
+      path: references/evaluation-rubric.md
+    - condition: deciding whether to continue, stop, split scope, or request more evidence
+      path: references/stopping-rules.md
+    - condition: creating or repairing the five foundation files before drafting
+      path: references/foundation-files.md
+    - condition: validating claims, citations, numbering, method reproducibility, or project completeness
+      path: references/validation-checklist.md
+
+scripts:
+  on_demand:
+    - condition: exporting a proposal package to DOCX from the generated Markdown files
+      path: scripts/build_proposal_docx.py

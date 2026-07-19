@@ -2,46 +2,43 @@
 
 [中文说明](README.md)
 
-## What It Does
+`nature-citation` splits manuscript passages or scientific claims into citable units and finds supporting references from Nature Portfolio, the Science family, and Cell Press.
 
-- Adds strict Nature/CNS-style supporting citations to manuscript passages by splitting claims into citable segments and searching within curated high-impact source families.
+## What To Use It For
 
-## When to Use It
+- Add citations to key claims in an introduction, discussion, or reviewer response.
+- Split long passages into stable claim units such as `S001` and `S002`.
+- Restrict evidence to Nature, Science, Cell, and their subjournals, or keep only flagship journals.
+- Explain each candidate paper's support position, evidence strength, and insertion point.
+- Export selected references for Zotero, EndNote, or other reference managers.
 
-- You need supporting references for a manuscript paragraph, abstract, introduction, or discussion.
-- You want references constrained to Nature Portfolio, Science-family, or Cell Press sources.
-- You need citation exports such as ENW, RIS, or Zotero RDF.
+## Typical Requests
 
-## Copy-Paste Prompts
+- "Split this introduction paragraph and add Nature-series citations."
+- "Use only CNS and subjournal papers from the last five years to support these claims."
+- "I have confirmed these DOIs; export them in a Zotero-importable format."
 
-- `Add Nature/CNS-style supporting citations to this introduction paragraph.`
-- `Split this long claim into citable segments and find supporting high-impact references.`
-- `Export the selected references as RIS for Zotero.`
+## What You Need To Provide
 
-## Required Inputs
+- Passage to cite, claim list, or DOI list.
+- Journal scope, year range, whether reviews are allowed, and whether only flagship journals should be kept.
+- Target citation style and export format such as `RIS`, `ENW`, or Zotero `RDF`.
 
-- Manuscript passage or claim list.
-- Optional journal/source constraints and publication-year range.
-- Optional export format preference.
+## Outputs
 
-## Expected Outputs
+- Claim-segmentation table and candidate-reference table.
+- Suggested insertion position, DOI, journal, year, and support note for each claim.
+- Optional JSON, TSV, Markdown, or HTML review materials.
+- Reference-management export file.
 
-- Segmented claim-to-reference mapping.
-- Recommended citations with source rationale.
-- Reference-manager-ready export files when requested.
+## Boundaries
 
-## Dependencies / API Keys / Local Environment
-
-- Internet or literature-search access may be required for fresh verification.
-- Reference exports depend on the available local scripts and source metadata.
-
-## FAQ
-
-- **Does it cite any paper it finds?** No. It should follow the skill's strict source and relevance filters.
-- **Can I use it for non-Nature journals?** Yes, but the default source discipline is Nature/CNS-leaning support, so say when a broader scope is desired.
+- Candidate papers are support options, not a guarantee that the final citation is appropriate.
+- Blogs, press releases, and search snippets are not used as sole evidence.
+- When a paper supports a nearby but not identical claim, the evidence mismatch is stated explicitly.
 
 ## Related Skills
 
-- [`nature-academic-search`](../nature-academic-search/README_EN.md)
-- [`nature-ref-verifier`](../nature-ref-verifier/README_EN.md)
-- [`nature-writing`](../nature-writing/README_EN.md)
+- `nature-academic-search`: broader literature search and citation-metric audits.
+- `nature-ref-verifier`: verify selected reference metadata.
+- `nature-writing`: integrate citation choices back into manuscript argument.

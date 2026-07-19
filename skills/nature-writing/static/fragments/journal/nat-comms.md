@@ -2,7 +2,7 @@
 
 ## Read the shared facts first
 
-Open `../../../../_shared/journal-formats/nat-comms.md` for the authoritative formatting facts: word limits, abstract rules, figure specs, reference style, mandatory statements, and common desk-rejection patterns.
+Open `../../../../nature-shared/journal-formats/nat-comms.md` for the authoritative formatting facts: word limits, abstract rules, figure specs, reference style, mandatory statements, and common desk-rejection patterns.
 
 The notes below are the **drafting action layer** on top of those facts.
 

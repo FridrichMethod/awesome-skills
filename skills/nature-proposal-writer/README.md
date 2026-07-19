@@ -1,112 +1,50 @@
-# researchwrite
+# `nature-proposal-writer` 技能
 
-Proposal-first 科研写作状态机。不是"帮我写论文"——它强制执行写作前的论证架构，写完跑四层 QA pipeline。
+[English](README_EN.md)
 
-## 这是什么
+`nature-proposal-writer` 是 proposal-first 的科研写作工作流，用于把题目、想法、草稿或章节扩展为有论证结构、证据边界和质量闸门的科研文本。
 
-三个模式 + 四层质量闸门：
+## 适合用它做什么
 
-```
-你的输入                  模式           做什么
-─────────────            ─────          ──────────────────
-题目、方向、模糊想法  →  compose       9步：从 research canon 到 .docx 导出
-已有段落/章节          →  revise        9步：差距分析 → 对比润色前后
-已有草稿 + 要扩写      →  hybrid        compose + revise 组合
-```
+- 从模糊研究方向搭建 research canon、问题链和章节契约。
+- 修改已有段落，使论证顺序、贡献边界和证据支撑更清楚。
+- 将已有草稿扩写为 proposal、论文章节、综述框架或项目说明。
+- 在写作后执行内容、语言、引用和格式层面的 QA。
 
-写完后自动跑 QA：
+## 三种模式
 
-```
-Gate 2: professor 专家审查（内容层）
-  ├── 论文 → 方法论专家 + 领域专家
-  ├── proposal → 可行性专家 + 创新性专家
-  └── 综述 → 覆盖面专家 + 批判深度专家
-      ↓
-Gate 1: avoid-ai-writing（语言层，仅英文）
-      ↓
-Gate 3: 自动校验（citation？可复现？编号连续？）
-      ↓
-Gate 4: 评分阈值（≥7.0 通过，<7.0 定向回退 ≤3 轮）
-```
+| 模式 | 输入 | 适合场景 |
+|------|------|----------|
+| `compose` | 题目、方向、粗略想法 | 从零建立论证和章节 |
+| `revise` | 已有段落或章节 | 做差距分析、重排和润色 |
+| `hybrid` | 草稿加扩写目标 | 保留已有文本，同时补足结构 |
 
-## 核心原则
+## 典型请求
 
-| # | 原则 | 说明 |
-|---|------|------|
-| 1 | 证据先于文字 | 起草前必须建立 research_canon 和 evidence_table |
-| 2 | 论证先于章节 | 写正文前必须完成 argument_map |
-| 3 | 契约先于段落 | 每节需要 purpose / allowed claims / forbidden claims |
-| 4 | 动态专家 | 按失败模式召唤对应审查专家 |
-| 5 | 内容先于语言 | 诊断科学逻辑后再做语言打磨 |
-| 6 | 该停就停 | 平台期、证据缺失是停止理由 |
+- “我有一个基金题目，帮我先拆科学问题和研究内容，不要直接写正文。”
+- “这段 introduction 太散，按 proposal-first 的方式重构。”
+- “把这份草稿扩成 proposal 框架，并标出证据缺口。”
 
-## 安装
+## 你需要提供
 
-```bash
-# Hermes / Claude Code
-git clone https://github.com/Jiahao8595/research-pipeline.git
-cp -r research-pipeline/researchwrite ~/.hermes/skills/
-```
+- 研究主题、目标读者、拟投稿/申报类型和已有材料。
+- 已确认的事实、数据、图表、参考文献或不能改动的表述。
+- 希望输出的长度、语言和文件格式。
 
-安装后 `/reload-skills`。
+## 产出
 
-**前置依赖：**
+- 论证架构、章节契约和写作顺序。
+- 可粘贴的正文草稿或修订版。
+- QA 结果：内容缺口、语言风险、引用/编号问题和需要作者确认的事实。
 
-```bash
-hermes skills install brainstorm     # 入口追问
-hermes skills install professor      # 动态专家审查
-hermes skills install avoid-ai-writing  # 英文去 AI 味
-hermes skills install docx           # Word 文档导出
-```
+## 边界
 
-## 使用示例
+- 不会替作者虚构实验结果、参考文献、合作基础或可行性证据。
+- 对缺失事实会标记 `AUTHOR_INPUT_NEEDED`，而不是用流畅文字掩盖。
+- 如果只是句子级英文润色，优先使用 `nature-polishing`。
 
-```
-# 从零写 proposal
-"用 researchwrite 帮我写一个关于钙钛矿稳定性优化的研究计划"
+## 相关技能
 
-# 审查已有文本
-"用 researchwrite 审查这段 discussion，paper 挡位"
-
-# 快速扫读
-"快速扫一下这个摘要"（只标记问题，不全跑 QA）
-```
-
-## 四挡位
-
-| 挡位 | 场景 | 阈值 | 说明 |
-|------|------|:---:|------|
-| `paper` | 投稿论文 | 7.0 | 全跑 |
-| `proposal` | 研究方案/开题 | 7.0 | 全跑 |
-| `internal` | 内部汇报 | 5.0 | 跳过专家审查 |
-| `quick` | 快速扫读 | — | 只标记 P0 问题 |
-
-## 文件结构
-
-```
-researchwrite/
-├── SKILL.md                       ← 技能入口
-├── README.md                      ← 本文件
-├── references/
-│   ├── evaluation-rubric.md       ← 8 维 × 4 锚点评分体系
-│   ├── stopping-rules.md          ← 迭代终止条件
-│   ├── foundation-files.md        ← 建立 foundation 五文件
-│   └── validation-checklist.md    ← 自动校验清单
-├── scripts/
-│   └── build_proposal_docx.py     ← .md → .docx 构建脚本
-└── templates/                     ← 空模板（新建项目用）
-    ├── 00_scope.md
-    ├── 01_research_canon.md
-    ├── 02_evidence_table.md
-    ├── 03_argument_map.md
-    ├── 04_section_contracts.md
-    ├── 05_style_guide.md
-    ├── qa_report.md
-    └── revision_brief.md
-```
-
-> **完整 reference 文件**（compose/revise/hybrid 模式详解、专家分派、导出归档、综述框架等 12 份）未包含在公开版本中。如需获取，请通过 [GitHub issue](https://github.com/Jiahao8595/research-pipeline/issues) 或邮件联系作者。
-
-## 作者
-
-十五 (JL Lab) — 基于博士研究实战构建的写作框架。
+- `nature-writing`：Nature 风格手稿章节起草。
+- `nature-polishing`：英文稿件润色、重构和翻译。
+- `nsfc-proposal`：国家自然科学基金申请书的专项写作。

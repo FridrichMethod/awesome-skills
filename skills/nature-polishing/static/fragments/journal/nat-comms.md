@@ -2,7 +2,7 @@
 
 ## Read the shared facts first
 
-Open `../../../../_shared/journal-formats/nat-comms.md` for the authoritative formatting facts: word limits, abstract rules, figure specs, reference style, mandatory statements, and common desk-rejection patterns.
+Open `../../../../nature-shared/journal-formats/nat-comms.md` for the authoritative formatting facts: word limits, abstract rules, figure specs, reference style, mandatory statements, and common desk-rejection patterns.
 
 The notes below are the **polishing action layer** on top of those facts.
 
@@ -31,7 +31,7 @@ These are diagnostic, not destructive — surface the problem in `Revision notes
 
 ## Things the shared facts already cover
 
-Do not restate facts that live in `_shared/journal-formats/nat-comms.md`. Reference them when the user asks. Examples Claude should respond by reading shared facts:
+Do not restate facts that live in `nature-shared/journal-formats/nat-comms.md`. Reference them when the user asks. Examples Claude should respond by reading shared facts:
 
 - "What's the reference style?" → cite the format example from shared
 - "How many figures can I have?" → cite the 10-item cap from shared

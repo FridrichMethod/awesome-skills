@@ -49,7 +49,7 @@ Apply the loaded fragments in this priority order:
 4. Workflow (`core/workflow.md`) — run the 9 steps end to end.
 5. Output and quality rules (`core/output-and-quality.md`) — deliverables, quality gates, fallbacks.
 
-Build the Terminology Ledger (`../_shared/core/terminology-ledger.md`) while reading the source, so model names, gene/protein names, datasets, metrics, and abbreviations stay identical across every slide and speaker note.
+Build the Terminology Ledger (`../nature-shared/core/terminology-ledger.md`) while reading the source, so model names, gene/protein names, datasets, metrics, and abbreviations stay identical across every slide and speaker note.
 
 The end product is a real `.pptx` deck, not an outline or script. Do not fabricate results, numbers, or figure details.
 
@@ -68,4 +68,4 @@ When a real PPTX has been generated, run `scripts/audit_pptx_quality.py` unless 
 - The static layer is versioned and reviewable. Adding a new paper-type arc is one new fragment plus one manifest line.
 - The dynamic layer keeps each invocation cheap: only the arc for this paper enters context up front; heavy design and QA material loads only when that step runs.
 - The router itself is short on purpose. Update fragments, not this file, when adding scope.
-- This structure mirrors `nature-writing`, `nature-polishing`, and `nature-reader` so shared content lives in `_shared/`.
+- This structure mirrors `nature-writing`, `nature-polishing`, and `nature-reader` so shared content lives in `nature-shared/`.

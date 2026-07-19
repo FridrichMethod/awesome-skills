@@ -2,46 +2,45 @@
 
 [中文说明](README.md)
 
-## What It Does
+`nature-literature-pipeline` builds a recurring literature-discovery pipeline: multi-source retrieval, six-dimension scoring, deep-reading summaries, delivery, and archiving.
 
-- Runs an automated literature-discovery pipeline with multi-source retrieval, scoring, deep-reading delivery, and local archiving.
+## What To Use It For
 
-## When to Use It
+- Set up automated literature monitoring for a fixed research topic.
+- Collect candidate papers from arXiv, OpenAlex, Crossref, Semantic Scholar, and related sources.
+- Score candidates by topic match, methodological value, journal quality, network relation, engineering value, and archive value.
+- Turn top papers into Chinese or English deep-reading digests for delivery.
+- Maintain DOI, arXiv ID, topic tags, and read status to reduce duplicate reading.
 
-- You want daily or scheduled literature discovery for a topic.
-- You need ranked papers, summaries, and archive-ready notes.
-- You want a pipeline rather than a one-off literature search.
+## Relationship With `nature-academic-search`
 
-## Copy-Paste Prompts
+`nature-academic-search` is for one-off search and citation checks; `nature-literature-pipeline` is for continuous subscription and periodic delivery. The former answers "find papers now"; the latter answers "keep watching this area."
 
-- `Set up a daily literature push for this research topic.`
-- `Run the literature pipeline for these keywords and rank papers by novelty and relevance.`
-- `Archive today's top papers with summaries and source links.`
+## Typical Requests
 
-## Required Inputs
+- "Track new papers on marine concrete chloride diffusion and machine learning every morning."
+- "Create a weekly literature pipeline for this keyword set."
+- "Score papers from the last seven days, keep the Top 5, and archive them."
 
-- Topic, keywords, sources, schedule, scoring preferences, and delivery target.
-- Optional chat, Feishu, Obsidian, or local archive path configuration.
+## What You Need To Provide
 
-## Expected Outputs
+- Research topic, keywords, exclusion terms, priority journals, or priority authors.
+- Delivery frequency, number of candidates per run, and number of deep-read papers.
+- Output target, such as Markdown directory, Feishu/Telegram interface, or local archive folder.
 
-- Ranked literature digest.
-- Deep-reading notes and local archive records.
-- Scheduled-task configuration guidance when supported.
+## Outputs
 
-## Dependencies / API Keys / Local Environment
+- Candidate-paper table and deduplicated Top list.
+- Deep-reading card for each key paper: problem, method, key data, limitations, and relation to your project.
+- Reusable pipeline configuration, archive index, and failure/degradation notes.
 
-- Search providers or MCP tools may require credentials.
-- Hermes cron is local; the machine or profile must be running for scheduled tasks.
-- Messaging integrations require local bot credentials.
+## Boundaries
 
-## FAQ
-
-- **Is this the same as nature-academic-search?** No. `nature-academic-search` is a search and verification skill; this is a recurring pipeline around discovery, scoring, and delivery.
-- **Can it run in the cloud automatically?** Only if the selected agent/runtime is deployed there; local Hermes cron is not a cloud service by itself.
+- Automatic delivery depends on local cron, messaging interfaces, or the user's configured scheduler.
+- When full text is unavailable, the output is marked as `Abstract only` or `Metadata only`.
+- Scores are not final judgments of paper quality; high-scoring candidates still need human reading.
 
 ## Related Skills
 
-- [`nature-academic-search`](../nature-academic-search/README_EN.md)
-- [`nature-reader`](../nature-reader/README_EN.md)
-- [`nature-experiment-log`](../nature-experiment-log/README_EN.md)
+- `nature-academic-search`: one-off multi-source search, citation metrics, and strict external-citation audit.
+- `nature-reader`: turn candidate papers into full Chinese-English reading materials.

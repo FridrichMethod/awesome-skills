@@ -42,3 +42,4 @@ save_pub_r <- function(plot, filename, width_mm = 183, height_mm = 120, dpi = 60
 - `references/r-template-index.md` — adapt a user-provided or private R template collection without exposing source paths.
 - `references/design-theory.md` — typography, color theory, layout rationale, export policy (backend-agnostic).
 - `references/nature-2026-observations.md` — real Nature page archetypes to match before choosing layout.
+- `scripts/validate_figure.py` — dependency-free static R source preflight before running R and inspecting the rendered outputs.

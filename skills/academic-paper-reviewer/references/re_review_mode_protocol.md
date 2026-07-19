@@ -9,6 +9,7 @@ Input:
 1. Original Revision Roadmap (Stage 3 output)
 2. Revised manuscript
 3. Response to Reviewers (optional)
+4. Editorial Decision Letter (optional, #539 — its Review Panel Provenance block feeds the Judge Record's Round-1 provenance; absent → "unknown (provenance block absent)")
 
 Phase 0: Reads the Revision Roadmap, builds a checklist
 Phase 1: EIC checks each item (other reviewers not activated)
@@ -39,6 +40,16 @@ Priority 2 (Suggested):
 Priority 3 (Nice to Fix):
   -> Check but does not affect Decision
 ```
+
+### Judge Independence (#539)
+
+The re-review judges revisions on the same model family that drove them — an analogous correlated-judge configuration to the one Ren et al. (2026, arXiv:2607.13104 §8.1.2) warn about (their warning addresses the identical evaluation operator driving updates AND reporting final results; here the correlation is family-level), with the same failure direction: the revision loop can converge on "what this judge likes" instead of quality.
+
+**When cross-model verification is active** (configured + consented, same boundary as every cross-model feature): after the re-review's Priority 1 assessments are committed, the dispatching layer (the main session / orchestrator running the mode — per #523 it, not a fenced agent, executes API calls) runs an independent per-item pass using the provider TRANSPORT from § API Call Patterns (endpoint + auth) with a JUDGMENT-specific request — NOT the citation-verification handlers (those hard-code citation prompts, require web grounding, and normalize a different verdict set): no web-search requirement (revision-addressedness is persona judgment, the DA-critique class — compatible providers first-class), a prompt asking only for one verdict from the closed set, and the response parsed against exactly {FULLY_ADDRESSED, PARTIALLY_ADDRESSED, NOT_ADDRESSED, MADE_WORSE} — any non-conforming response maps to `unavailable`, never coerced. No #527 envelope (that grammar is for fenced-owner handoffs; none occurs here). Inputs per item: the roadmap item + the author's claim + the revised passage, personal names/affiliations stripped (the § data-minimization rule), delimited as data, not instructions. The dispatching layer compares mechanically and writes the result into the R&R Traceability Matrix's `Cross-model` column: `agree`, `diverges: <verdict>`, or `unavailable`. A `diverges` cell is a review trigger for the decision-maker's Phase 2 synthesis — never a vote; the primary verdict is never overwritten. `unavailable` (API failure) is a ROW-level status: that row carries the single-family caveat; the run-level disclosure below applies only when the pass was not configured or EVERY item came back unavailable. A mixed run records `partial — N/M items judged` in the Judge Record.
+
+**When not active** (or the pass came back `unavailable`): the re-review proceeds single-family and the Re-Review Output carries the disclosure line verbatim (it is part of the output template below): "This verification round ran on the same model family that drove the revisions; over-optimization to this judge's latent biases is possible (Ren et al. 2026, arXiv:2607.13104 §8.1.2)." Never omit it in single-family runs.
+
+**Judge identity recording (both cases):** the Re-Review Output's Judge Record block (below) records the judge configuration — the verification judge's family/id (the running session knows its own), the Round-1 panel provenance copied seat-level from the Editorial Decision Letter's Review Panel Provenance block (#540; carried into Stage 3' with the letter — no per-seat model id is invented), the prompt/rubric surfaces used, the evidence the judge saw, and the judging budget noted separately from generation. Schema 6 carries these as the optional `judge_record` field.
 
 ### Commitment Ledger Verification (Kong A1 / v3.11)
 
@@ -88,6 +99,17 @@ If Re-Review Decision = Major Revision:
 ```markdown
 # Verification Review Report
 
+## Judge Record (#539)
+
+- **Verification judge**: [model family/id running this re-review — the session's own]
+- **Round-1 panel provenance**: [copied seat-level from the Editorial Decision Letter's Review Panel Provenance block (#540); "unknown (provenance block absent)" when absent — record the reason when known, e.g. "guided-mode Round 1 (no letter emitted)" or "pre-#540 letter"]
+- **Independent cross-model pass**: [ran — [family/id], see the Cross-model matrix column / partial — N/M items judged, [family/id] / not_configured / failed — [reason]; not_configured and failed apply the run-level single-family disclosure, partial applies it per unavailable row]
+- **Prompt/rubric surfaces**: [the re-review protocol + verification-logic sections used, by file reference; rubric/contract version]
+- **Evidence seen by the judge**: [revised manuscript + Response to Reviewers + Revision Roadmap / list deviations]
+- **Judging budget**: [approx. calls/tokens spent on verification, separate from generation]
+
+[Single-family runs: include the disclosure line verbatim here — "This verification round ran on the same model family that drove the revisions; over-optimization to this judge's latent biases is possible (Ren et al. 2026, arXiv:2607.13104 §8.1.2)."]
+
 ## Decision
 [Accept / Minor Revision / Major Revision]
 
@@ -95,10 +117,12 @@ If Re-Review Decision = Major Revision:
 
 ### Priority 1 — Required Revisions
 
-| # | Original Review Comment | Author's Claim | Response Status | Revision Location | Verified? | Quality Assessment |
-|---|------------------------|---------------|-----------------|-------------------|-----------|-------------------|
-| R1 | [Original text] | [What the author claims to have done in Response to Reviewers] | FULLY_ADDRESSED | Section X.X | ✅ Yes | Adequately addressed; newly added content effectively resolves the issue |
-| R2 | [Original text] | [Author's stated change] | PARTIALLY_ADDRESSED | Section Y.Y | ⚠️ Partial | Partially addressed, but still missing [specific gap] |
+| # | Original Review Comment | Author's Claim | Response Status | Revision Location | Verified? | Cross-model (#539) | Quality Assessment |
+|---|------------------------|---------------|-----------------|-------------------|-----------|--------------------|--------------------|
+| R1 | [Original text] | [What the author claims to have done in Response to Reviewers] | FULLY_ADDRESSED | Section X.X | ✅ Yes | agree | Adequately addressed; newly added content effectively resolves the issue |
+| R2 | [Original text] | [Author's stated change] | PARTIALLY_ADDRESSED | Section Y.Y | ⚠️ Partial | diverges: NOT_ADDRESSED | Partially addressed, but still missing [specific gap] |
+
+Cross-model cell vocabulary (Priority 1 rows only — the pass does not evaluate Priority 2/3, whose tables omit the column): `agree` / `diverges: <verdict>` / `unavailable` (dispatch failed — single-family disclosure applies) / `not_configured` (cross-model not active — every Priority 1 row carries it, single-family disclosure applies).
 
 ### Priority 2 — Suggested Revisions
 

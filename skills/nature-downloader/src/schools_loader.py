@@ -1,4 +1,7 @@
-"""预设学校库加载与匹配模块。"""
+"""Optional user-maintained institution preset loader.
+
+The distributed schools.yaml is intentionally empty.
+"""
 
 from __future__ import annotations
 
@@ -24,18 +27,6 @@ def _parse_scalar(value: str) -> Any:
         if not inner:
             return []
         return [part.strip().strip('"') for part in inner.split(",")]
-    # Convert numeric and boolean strings so the fallback parser
-    # matches what PyYAML would produce
-    for cast in (int, float):
-        try:
-            return cast(value)
-        except (ValueError, TypeError):
-            pass
-    low = value.lower()
-    if low in ("true", "yes", "on"):
-        return True
-    if low in ("false", "no", "off"):
-        return False
     return value
 
 
@@ -134,13 +125,4 @@ def list_school_names() -> list[str]:
 
 if __name__ == "__main__":
     schools = load_schools()
-    print(f"预设学校库共 {len(schools)} 所")
-    for s in schools[:5]:
-        print(f"  - {s['name']} ({', '.join(s.get('aliases', []))})")
-    if len(schools) > 5:
-        print(f"  ... 还有 {len(schools) - 5} 所")
-
-    print("\n=== 匹配测试 ===")
-    for q in ["交大", "SJTU", "清华", "复旦", "不存在的学校"]:
-        m = match_school(q)
-        print(f"  '{q}' -> {m['name'] if m else '未匹配'}")
+    print(f"用户维护的机构预设数量：{len(schools)}")

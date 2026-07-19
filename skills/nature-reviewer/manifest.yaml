@@ -1,0 +1,32 @@
+name: nature-reviewer
+version: 1.1.0
+description: >
+  Declarative manifest for the Nature-style reviewer assessment workflow. It
+  keeps the referee-facing SKILL.md compact while loading source basis, axes,
+  domain gates, report structure, role boundaries, and QA checks only when the
+  review stage requires them.
+
+# Design note: reviewer simulation should remain grounded and non-inventive.
+# The official/local criteria and QA checks are always relevant to final reports,
+# but domain-specific gates should only load for manuscripts in covered domains.
+
+always_load:
+  - references/editorial criteria and processes.md
+  - references/source-basis.md
+
+references:
+  on_demand:
+    - condition: executing the full fact-base extraction workflow or resolving assessment order
+      path: references/reviewer-workflow.md
+    - condition: weighting originality, scientific importance, interdisciplinary readership, technical soundness, or readability
+      path: references/review-axes.md
+    - condition: building the internal concern ledger, checking technical coverage, or anchoring concerns to manuscript claims and evidence locations
+      path: references/technical-concern-taxonomy.md
+    - condition: manuscript is clearly in chemistry, engineering, materials, atmospheric science, climate-ecology, hydrology, or remote sensing
+      path: references/domain-specific-review-gates.md
+    - condition: composing or auditing the exact three-reviewer plus synthesis output structure
+      path: references/report-structure.md
+    - condition: preventing invented reviewer identities, editor decisions, or inappropriate reviewer-role claims
+      path: references/role-boundaries.md
+    - condition: final groundedness, non-invention, coverage, and reviewer-risk QA before delivery
+      path: references/qa-checklist.md

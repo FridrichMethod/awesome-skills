@@ -40,6 +40,24 @@
   - `promising but broad-interest case remains underdeveloped`
   - `currently not established from the provided evidence`
 
+## Concern traceability
+
+- Give each substantive concern a stable local ID: `R1-M1`, `R1-M2`, `R1-m1`, and so on.
+- Use this compact shape inside `Major concerns`, `Minor concerns`, or the technical-failings block:
+
+```text
+R1-M1 — [experimental-design]
+Claim pointer: [faithful one-sentence paraphrase of the challenged claim or reporting element]
+Evidence pointer: [section / figure / table, or "location not provided"]
+Concern: [evidence-grounded critique]
+Resolution test: [evidence, analysis, clarification, or claim adjustment that would resolve it]
+```
+
+- A `claim_pointer` is not a quotation unless the exact wording was supplied.
+- An `evidence_pointer` may use a page or line number only when the number was supplied or directly verified.
+- Minor presentation concerns may point to the affected reporting element instead of a scientific claim.
+- Do not emit the complete internal 12-axis coverage matrix.
+
 ## Cross-review synthesis structure
 
 - Include:
@@ -48,6 +66,8 @@
   - `Where emphasis differs across reviewers`
   - `Broad-interest / significance readout`
   - `Most important issues to resolve before a strong Nature-style case is established`
+- List a concern under `Consensus technical risks` only when at least two reviewer reports raise the same underlying issue.
+- Keep meaningful single-reviewer concerns visible under `Where emphasis differs across reviewers`.
 
 ## Risk / unsupported claims section
 

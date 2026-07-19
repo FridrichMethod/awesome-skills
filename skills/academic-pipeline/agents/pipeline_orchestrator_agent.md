@@ -120,9 +120,9 @@ You can adjust any stage's mode at any time. Ready to begin?
 
 | Type | When Used | Content |
 |------|-----------|---------|
-| FULL | First checkpoint; after integrity boundaries; before finalization | Full deliverables list + decision dashboard + all options |
+| FULL | First checkpoint; after integrity boundaries; Stage 5 completion (final-deliverable acceptance) | Full deliverables list + decision dashboard + all options |
 | SLIM | After 2+ consecutive "continue" responses on non-critical stages | One-line status + explicit continue/pause prompt |
-| MANDATORY | Integrity FAIL; Review decision; Stage 5 | Cannot be skipped; requires explicit user input |
+| MANDATORY | Integrity FAIL; Review decision; Stage 5 entry gate (before finalization) | Cannot be skipped; requires explicit user input |
 
 #### Checkpoint Type Rules
 
@@ -130,7 +130,7 @@ You can adjust any stage's mode at any time. Ready to begin?
 2. After 2+ consecutive "continue" without reviewing deliverables: switch to SLIM and prompt user awareness ("You've continued 3 times in a row. Want to review progress?")
 3. Integrity boundaries (Stage 2.5, 4.5): always MANDATORY
 4. Review decisions (Stage 3, 3'): always MANDATORY
-5. Before finalization (Stage 5): always MANDATORY
+5. Before finalization (Stage 5 entry gate): always MANDATORY — this is the checkpoint between Stage 4.5 PASS and the Stage 5 dispatch, where the user explicitly confirms proceeding and makes the finalization-format decision (citation style); the in-stage LaTeX question and content confirmation stay inside Stage 5 execution. The Stage 5 completion checkpoint (Final Paper delivered, before Stage 6) is FULL — never SLIM. See `../references/pipeline_state_machine.md` § Stage 5 boundary semantics
 6. All other stages: start FULL, downgrade to SLIM if user says "just continue"
 
 #### User Engagement Tracking
@@ -142,8 +142,8 @@ consecutive_continue_count: integer (reset to 0 when user chooses any action oth
 ```
 
 - `consecutive_continue_count < 2` -> FULL checkpoint (unless rules above override)
-- `consecutive_continue_count >= 2` -> SLIM checkpoint (unless rules above override to MANDATORY)
-- `consecutive_continue_count >= 4` -> SLIM + awareness prompt ("You've continued [N] times in a row...")
+- `consecutive_continue_count >= 2` -> SLIM checkpoint (unless rules above override to MANDATORY, or the checkpoint is one the rules pin to FULL — the Stage 5 completion checkpoint is FULL — never SLIM, regardless of the continue count)
+- `consecutive_continue_count >= 4` -> SLIM + awareness prompt ("You've continued [N] times in a row..."); the FULL-pinned checkpoints above still render FULL
 
 #### Steps
 
@@ -203,7 +203,7 @@ SLIM checkpoints never reset. MANDATORY checkpoints co-occur with reset when app
 4. The `[PASSPORT-RESET: ...]` tag is the sole machine-stable handoff anchor. The `### Resume Instruction` subsection is for user ergonomics.
 5. Hash mismatch on `resume_from_passport=<hash>` is a hard error; orchestrator refuses to proceed.
 6. A `boundary` is consumed only by appending a `kind: resume` entry with matching `consumes_hash`. Double-resume (second resume of an already-consumed boundary) is a hard error.
-7. MANDATORY checkpoints (Stage 2.5 / 4.5, review decisions, Stage 5) remain MANDATORY even when reset co-occurs. Integrity gates are never diluted. If the boundary carries `pending_decision`, resume must re-prompt the user; `next` is advisory. Actual routing comes from the matched option's `next_stage`/`next_mode`, not from the boundary `next` field.
+7. MANDATORY checkpoints (Stage 2.5 / 4.5, review decisions, the Stage 5 entry gate) remain MANDATORY even when reset co-occurs. Integrity gates are never diluted. If the boundary carries `pending_decision`, resume must re-prompt the user; `next` is advisory. Actual routing comes from the matched option's `next_stage`/`next_mode`, not from the boundary `next` field.
 8. `collaboration_depth_agent` observer fires on FULL checkpoints as before; its output is included in the checkpoint notification regardless of reset state. Observer state does NOT cross reset boundaries.
 9. Resume consumption MUST hold an exclusive advisory lock on the passport file for the entire read-check-append sequence (acquire the lock on the "Acquire passport lock" obligation, hold across the read-ledger, no-prior-resume check, and resume-entry append steps, release only after the append is durable). Releasing the lock between the no-prior-resume check and the resume-entry append reopens the double-resume race this rule exists to prevent. Non-POSIX implementations that cannot provide OS-level exclusion MUST refuse to resume rather than degrade silently (fail with an explicit error surfaced to the user). See §"Concurrency model" in the protocol doc.
 
@@ -293,8 +293,11 @@ Verification result: [PASS / PASS WITH NOTES / FAIL]
 - Data verification: [X/X] passed
 - Originality check: [PASS/ISSUES]
 - Claim verification: [X/X] verified [PASS/ISSUES]
+- Advisory rows (#547/#548/#541, non-gating): [none / N rows, listed below]
 
 [If FAIL: list correction items with severity]
+
+[If advisory rows exist: list each row with its ADV-E4-<n> / ADV-E5-<n> / ADV-CACHE-<n> ID and content, then ask the user per row — proceed open (default) or accept-with-justification / confirm-absolute / (cache rows) note the invalidate option — and record each response in this checkpoint dialogue. Advisory rows never block continuation.]
 
 Flagged: [issues requiring attention]
 
@@ -320,7 +323,7 @@ Users respond to checkpoint prompts with one of these commands. The orchestrator
 | `abort` / `terminate` | Terminate pipeline entirely | `pipeline_state` = `aborted`; save all materials with current versions |
 
 **Skippable vs Non-Skippable Stages**:
-- Skippable: Stage 1 (deep-research, if user provides own bibliography), Stage 3' (re-review, if only minor revisions), Stage 4' (re-revise, if accepted)
+- Skippable: Stage 1 (deep-research, if user provides own bibliography), Stage 3' (re-review, if only minor revisions), Stage 4' (re-revise, if accepted), Stage 6 (process summary — declined at the Stage 5 completion checkpoint; marked `skipped`, pipeline still terminates `completed`)
 - Non-Skippable: Stage 2 (writing), Stage 2.5 (pre-review integrity), Stage 3 (initial review), Stage 4.5 (final integrity), Stage 5 (finalize)
 
 ### Mode Switching Rules
@@ -357,18 +360,20 @@ When a sub-skill stage fails or produces unacceptable output:
 
 ### Collaboration Depth Observer (advisory, never blocks)
 
-**When.** At every FULL checkpoint, every SLIM checkpoint, and after Stage 6 (pipeline completion). This is an **observer** agent — it reads the just-completed dialogue range (per-stage) or the whole pipeline log (at completion), scores the user-AI collaboration pattern against `shared/collaboration_depth_rubric.md`, and emits a short advisory report. It is **not** in the blocking path; the orchestrator's progression decision ignores its output.
+**When.** At every FULL checkpoint, every SLIM checkpoint, and during Stage 6 record compilation (the whole-pipeline pass, before the Process Record is delivered). This is an **observer** agent — it reads the just-completed dialogue range (per-stage) or the whole pipeline log (at completion), scores the user-AI collaboration pattern against `shared/collaboration_depth_rubric.md`, and emits a short advisory report. It is **not** in the blocking path; the orchestrator's progression decision ignores its output.
 
 **How the orchestrator invokes it.**
 1. At checkpoint step 3 (above), after updating `state_tracker` with the new checkpoint, derive the stage's `dialogue_log_ref` (turn range covering only the just-completed stage; see `state_tracker_agent.md`).
 2. **Short-stage guard**: if the stage's user-turn count is less than 5, skip the dispatch and inject a static `Collaboration Depth: insufficient_evidence (stage had N user turns; rubric needs ≥5)` block. This avoids a full-model call just to receive the agent's own `insufficient_evidence` answer.
 3. Otherwise, dispatch `collaboration_depth_agent` with the range pointer. It reads live conversation turns — **do not** pass a summary.
 4. Receive its Markdown block and inject it as a named section into the checkpoint template (FULL: full block; SLIM: one-line compact; MANDATORY: omit — MANDATORY checkpoints are integrity gates and must not be diluted).
-5. At Stage 6 completion, dispatch the observer a second time in **whole-pipeline mode** (range = all stages). Its output becomes a new chapter, "Collaboration Depth Trajectory", in the Process Record, **separate from** the existing 6-dimension Collaboration Quality Evaluation (which is AI self-reflection; the observer is about the user's collaboration pattern).
+5. During Stage 6 compilation — after the dialogue review (Process Summary Workflow step 2) and BEFORE the Process Record is generated and delivered (steps 3-5), so its output can be a chapter of the record the user acknowledges — dispatch the observer a second time in **whole-pipeline mode** (range = all stages). Its output becomes a new chapter, "Collaboration Depth Trajectory", in the Process Record, **separate from** the existing 6-dimension Collaboration Quality Evaluation (which is AI self-reflection; the observer is about the user's collaboration pattern).
 
 **Cross-model cost and behaviour.** When `ARS_CROSS_MODEL` is set, do not re-dispatch automatically. The secondary-model invocation reads raw dialogue turns that may contain the user's private reasoning and unpublished material, so apply the consent gate first: ask for explicit user consent (if not already granted in this session) and identify the external provider, model, and content class (raw dialogue turns) that would be sent. The environment variable alone is not consent to upload that material. If consent is not granted, log `[CROSS-MODEL-SKIPPED]`, run only the primary-model observer, and append no `cross_model_divergence` block. If consent is granted, re-dispatch `collaboration_depth_agent` on the secondary model; if any dimension score diverges by > 2 points between primary and secondary, append a `cross_model_divergence` block to the checkpoint section. **Never silently average cross-model scores.** The gate gates only the upload — the observer's advisory-only, non-blocking role is unchanged. See `shared/cross_model_verification.md` for the consent boundary.
 
-The cost is multiplicative: a 10-stage pipeline with cross-model enabled produces up to ~20 observer invocations (10 primary + 10 secondary) on top of primary pipeline work. Users willing to trade coverage for cost may set `ARS_CROSS_MODEL_SAMPLE_INTERVAL=N` (default `1` = every checkpoint; `3` = every third, plus always at pipeline completion). The short-stage guard above also applies per-model, so empty stages incur no cross-model cost.
+**Cross-model handoff consumption (#527, Mode A dispatcher).** When a dispatched checkpoint owner's output contains a handoff-shaped fence (`[CROSS-MODEL-HANDOFF ...]` — ANY version, detection is generous), that block is a transport request, never an ordinary deliverable — do not file it as content, summarize it, or drop it. Only the exact column-0 `[CROSS-MODEL-HANDOFF v1]` fence is valid; an indented or other-version fence is `malformed_handoff`, never transported and never a deliverable. Consume it per `shared/cross_model_verification.md` § Cross-model handoff envelope (#527), whose normative grammar is `scripts/cross_model_handoff.py`: validate the envelope (anything malformed → `[CROSS-MODEL-ERROR: malformed_handoff]`, outcome `unavailable`, proceed single-model — never repair or guess); execute the provider transport per § API Call Patterns (endpoint, auth, model id, error handling) with the payload only as input material and the checkpoint's structured-decision prompt (or the DA-critique prompt for `full_return`) — never the citation-verification prompt or its grounding-status normalization (the `owner_decision` header is never forwarded — blindness); validate the structured result (malformed JSON or unknown enum → `[CROSS-MODEL-ERROR: malformed_result]`, outcome `unavailable` — never fabricate a judgment). Outcome routing: **agreement** (equal enums) → perform the mechanical fill and do NOT re-invoke the owner; **divergence** (differing enums) → re-invoke the ORIGINAL owner with the minimum return context (`correlation_id`, the owner's committed `owner_decision`, the cross-model's full structured result, the original payload or a pointer to the same artifact on file) — the rebuttal is the owner's, never the dispatcher's; **`expected_result: full_return`** (DA critique) → every successful response returns to the owner. With `ARS_CROSS_MODEL` unset, owners emit no envelope and behavior is unchanged; a stray envelope is logged `[CROSS-MODEL-SKIPPED]` and not transported.
+
+The cost is multiplicative: a 10-stage pipeline with cross-model enabled produces up to ~20 observer invocations (10 primary + 10 secondary) on top of primary pipeline work. Users willing to trade coverage for cost may set `ARS_CROSS_MODEL_SAMPLE_INTERVAL=N` (default `1` = every checkpoint; `3` = every third, plus always at the Stage 6 whole-pipeline pass). The short-stage guard above also applies per-model, so empty stages incur no cross-model cost.
 
 **Non-blocking guarantees** (orchestrator-level discipline):
 - The observer's output never appears in the "Flagged" line (that line is reserved for integrity and metric issues).
@@ -500,14 +505,15 @@ Reference helper: `scripts/slr_lineage.py` `emit(stages, incoming_slr_lineage)`.
 
 | Transition | Transferred Materials | Schema Reference | Transfer Method |
 |-----------|----------------------|-----------------|----------------|
-| Stage 1 -> 2 | RQ Brief, Annotated Bibliography, Synthesis Report | Schema 1 (RQ Brief), Schema 2 (Bibliography), Schema 3 (Synthesis) | deep-research handoff protocol |
-| Stage 2 -> 2.5 | Complete Paper Draft | Schema 4 (Paper Draft) | Pass to integrity_verification_agent |
+| Stage 1 -> 2 | RQ Brief, Methodology Blueprint, Annotated Bibliography, Synthesis Report | Schema 1 (RQ Brief), Schema 2 (Bibliography), Schema 3 (Synthesis) | deep-research handoff protocol |
+| Stage 2 -> 2.5 | Complete Paper Draft + #547 scope context for Phase E4 (RQ Brief `scope` — the required E4 input; `sub_question_bindings` + outline section→sub-question map when present) + the Schema 2 Annotated Bibliography (#548 — `search_strategy` is the E5 comparison basis; `sources[].relevance` + `relevance_score` ground the nearest-prior-work check), when one exists | Schema 4 (Paper Draft) + Schema 1 scope fields + Schema 2 (search_strategy + source relevance metadata) | Pass to integrity_verification_agent |
 | Stage 2.5 -> 3 | Verified Paper Draft + Integrity Report | Schema 4 + Schema 5 (Integrity Report) | Pass to reviewer (with verification report attached). Carry forward `experiment_provenance[]` + `experiment_alignment_results[]` + `experiment_intake_declaration` (#260) |
 | Stage 3 -> **coaching** -> 4 | Editorial Decision, Revision Roadmap, 5 Review Reports | Schema 6 (Review Report), Schema 7 (Revision Roadmap) | **First Socratic dialogue** -> academic-paper revision mode input |
-| Stage 4 -> 3' | Revised Draft, Response to Reviewers | Schema 4 (revised) + Schema 8 (Response to Reviewers) | Pass to reviewer (marked as verification round) |
+| Stage 4 -> 3' | Revised Draft, Response to Reviewers + Editorial Decision Letter (its Review Panel Provenance block feeds the #539 Judge Record) | Schema 4 (revised) + Schema 8 (Response to Reviewers) + Schema 6 (letter) | Pass to reviewer (marked as verification round) |
 | Stage 3' -> **coaching** -> 4' | New Revision Roadmap (if Major) | Schema 7 (Revision Roadmap) | **First Socratic dialogue** -> academic-paper revision mode input |
-| Stage 4/4' -> 4.5 | Revised/Re-Revised Draft | Schema 4 (revised) | Pass to integrity_verification_agent (final verification) |
+| Stage 4/4' -> 4.5 | Revised/Re-Revised Draft + the same #547 scope context and #548 Schema 2 bibliography (search_strategy + source relevance metadata) as Stage 2 -> 2.5 | Schema 4 (revised) | Pass to integrity_verification_agent (final verification) |
 | Stage 4.5 -> 5 | Final Verified Draft + Final Integrity Report | Schema 4 + Schema 5 (Integrity Report) | Produce MD -> DOCX via Pandoc when available (otherwise instructions) -> ask about LaTeX -> confirm -> PDF. Carry forward `experiment_alignment_results[]` + `experiment_intake_declaration` (#260) to formatter surface + Stage 6 histogram |
+| Stage 5 -> 6 | Final deliverables list + pipeline state history (state_tracker JSON, agent logs) | — (Process Record; no numbered schema) | Dispatched only after the user confirms the Stage 5 completion checkpoint (FULL). User may decline Stage 6 there: mark it `skipped`, set pipeline state `completed`. Protocol: `../references/process_summary_protocol.md`; terminal semantics: `../references/pipeline_state_machine.md` § Stage 6 terminal semantics |
 
 **All artifacts must carry a Material Passport (Schema 9)** with `origin_skill`, `origin_mode`, `origin_date`, `verification_status`, and `version_label`. From v3.7.4+, the passport also carries the run-level `slr_lineage` boolean computed per the emission step above.
 
@@ -568,6 +574,7 @@ Notify state_tracker_agent to update state whenever a stage begins or completes:
 - Checkpoint passed: `update_pipeline_state("running")`
 - Material produced: `update_material(material_name, true)`
 - Integrity check result: `update_integrity(stage_id, verdict, details)`
+- Pipeline terminal transition: on the Stage 6 terminal acknowledgement (`finish` / `end` / `done` / `confirm`, or an unambiguous natural-language equivalent) — `update_stage("6", "completed", outputs)` + `update_pipeline_state("completed")`; if the user declined Stage 6 at the Stage 5 completion checkpoint — `update_stage("6", "skipped", {reason: "user declined Stage 6"})` + `update_pipeline_state("completed")`
 
 Request state_tracker_agent to produce the Progress Dashboard when needed.
 
@@ -575,7 +582,7 @@ Request state_tracker_agent to produce the Progress Dashboard when needed.
 
 ## Post-Review Socratic Revision Coaching
 
-**Trigger condition**: After Stage 3 or Stage 3' completion, Decision = Minor/Major Revision
+**Trigger condition**: After Stage 3 completion with Decision = Minor/Major Revision (both route to Stage 4), OR after Stage 3' completion with Decision = Major Revision (routes to Stage 4'). A Stage 3' Minor decision does NOT trigger coaching — it routes directly to Stage 4.5 per the state machine (`Accept|Minor -> 4.5`), so there is no coaching step on that path.
 **Executor**: academic-paper-reviewer's eic_agent (Phase 2.5)
 **Purpose**: Help users understand review comments and plan revision strategy, rather than passively receiving a change list
 
@@ -612,7 +619,7 @@ Request state_tracker_agent to produce the Progress Dashboard when needed.
 - First acknowledge what was done well in the revision
 - User says "just fix it" "no guidance needed" -> respect the choice, skip coaching
 - Stage 3->4 max 8 rounds, Stage 3'->4' max 5 rounds
-- Decision = Accept does not trigger coaching
+- Decision = Accept does not trigger coaching (any stage); a Stage 3' Minor decision also does not trigger coaching (routes directly to Stage 4.5)
 
 ---
 

@@ -56,7 +56,7 @@ Entering Stage 2.5 (INTEGRITY) -- Mode 1 (Pre-Review)
 Loading integrity_verification_agent...
 Executing: Phase A (Reference Verification) + Phase B (Citation Context, 31% spot-check)
          + Phase C (Data Verification) + Phase D (Originality, 33% spot-check)
-         + Phase E (Claim Verification, 30% spot-check)
+         + Phase E (Claim Verification, #549 risk-stratified: 100% HIGH-IMPACT + 10% random sentinel, min(10, total))
 ```
 
 ### integrity_verification_agent Output
@@ -126,11 +126,11 @@ Executing: Phase A (Reference Verification) + Phase B (Citation Context, 31% spo
 
 ---
 
-#### Phase E: Claim Verification (30% spot-check, 6/18 claims)
+#### Phase E: Claim Verification (#549 risk-stratified, 18/18 claims)
 
-Claims C1-C6 above were selected for the 30% spot-check. Results are reported in Phase C.
+All 18 registry claims are quantitative, so every one classifies `HIGH-IMPACT` under the #549 rule (numerical claims are high-impact by definition) and is selected — 100% of the tier, uncapped. The non-high-impact remainder is empty, so there is no `RANDOM` sentinel, no `TOP-UP`, and no `NOT-SELECTED` row this run: a claim-dense paper approaches full coverage at Stage 2.5, which is the design intent. Results are reported in Phase C.
 
-**Phase E Summary**: 6 claims checked, 3 VERIFIED, 1 MAJOR_DISTORTION, 2 MINOR_DISTORTION
+**Phase E Summary**: 18 claims checked (18 `HIGH-IMPACT`), 15 VERIFIED, 1 MAJOR_DISTORTION, 2 MINOR_DISTORTION
 
 ---
 

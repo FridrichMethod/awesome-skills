@@ -49,7 +49,7 @@ Apply the loaded fragments in this priority order:
 3. Reading workflow (`core/workflow.md`) — the six-step source-map-first process.
 4. Output contract (`core/output-contract.md`) — required files and the pre-response verification checklist.
 
-Build the Terminology Ledger as you translate (`../_shared/core/terminology-ledger.md`); it becomes the `paper.md` recurring-term table and the `source_map.json` glossary.
+Build the Terminology Ledger as you translate (`../nature-shared/core/terminology-ledger.md`); it becomes the `paper.md` recurring-term table and the `source_map.json` glossary.
 
 If constraints prevent full processing, still create a draft reader and label missing pages, figures, or low-confidence crops in `translation_notes.md`. Do not switch to summary mode.
 
@@ -66,4 +66,4 @@ The files under `references/` are deep references, not defaults. Open them on de
 - The static layer is versioned and reviewable. Adding a new source format is one new fragment plus one manifest line.
 - The dynamic layer keeps each invocation cheap: only the fragment relevant to this input enters context.
 - The router itself is short on purpose. Update fragments, not this file, when adding scope.
-- This structure mirrors `nature-writing` and `nature-polishing` so shared content lives in `_shared/`.
+- This structure mirrors `nature-writing` and `nature-polishing` so shared content lives in `nature-shared/`.

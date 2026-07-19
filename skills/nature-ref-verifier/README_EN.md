@@ -2,44 +2,43 @@
 
 [中文说明](README.md)
 
-## What It Does
+`nature-ref-verifier` performs multi-source cross-verification of references, comparing authors, title, year, volume, issue, pages, DOI, and publication status, then outputs a structured fixable report.
 
-- Verifies reference lists across multiple sources and flags bibliographic inconsistencies such as author, title, year, volume, issue, page, and DOI mismatches.
+## What To Use It For
 
-## When to Use It
+- Check an entire manuscript reference list before submission.
+- Verify a few citations raised in reviewer comments.
+- Clean incorrect metadata in a Zotero / BibTeX library.
+- Flag volume-year conflicts, author-order problems, page mismatches, title differences, and wrong DOI targets.
+- Verify Chinese references through CNKI or Chinese-language sources for author names, journal names, and pages.
 
-- You need to check whether a reference list contains fabricated, inconsistent, or malformed entries.
-- You want a field-by-field verification table before submission.
-- You need to distinguish minor formatting issues from serious metadata conflicts.
+## Typical Requests
 
-## Copy-Paste Prompts
+- "Check these 50 references one by one and mark the ones that must be fixed."
+- "These DOIs may be wrong; find the real titles and page ranges."
+- "Turn the incorrect fields in this BibTeX file into patch suggestions."
 
-- `Verify this reference list and flag author, title, year, volume, issue, page, and DOI problems.`
-- `Check whether these references are real and return corrected metadata candidates.`
-- `Audit these references before journal submission.`
+## What You Need To Provide
 
-## Required Inputs
+- Reference list, single citation, BibTeX, RIS, Zotero item key, or manuscript bibliography page.
+- Allowed sources such as Crossref, PubMed, IEEE, CNKI, publisher pages, or Zotero.
+- Whether a directly importable correction file is needed.
 
-- Reference list, BibTeX, RIS, DOI list, manuscript bibliography, or pasted citations.
-- Optional target journal citation style.
+## Outputs
 
-## Expected Outputs
+- Field-level verification table: original value, trusted-source value, difference, and evidence link.
+- Severity labels: must fix, check suggested, reference only, or unverifiable.
+- Optional BibTeX patch, Zotero update suggestion, or Markdown review report.
+- Human-check checklist for uncertain records.
 
-- Verification table with per-field comparisons.
-- Severity labels for fabricated, conflicting, missing, or formatting-only issues.
-- Corrected metadata candidates and source links when available.
+## Boundaries
 
-## Dependencies / API Keys / Local Environment
-
-- Internet or bibliographic-source access may be required for fresh verification.
-- Some databases may require credentials.
-
-## FAQ
-
-- **Does it rewrite the bibliography automatically?** It should first report verified corrections; rewriting can be requested after review.
-- **Can it prove a citation is fabricated?** It can flag strong evidence of non-existence or conflict, but should report source coverage and uncertainty.
+- A single search result is not treated as final truth; key fields are verified against DOI records, publishers, or authoritative databases.
+- DOI year, volume year, and online-publication year conflicts are explained rather than force-merged.
+- Inaccessible databases or Chinese sources are marked as unverified.
 
 ## Related Skills
 
-- [`nature-academic-search`](../nature-academic-search/README_EN.md)
-- [`nature-citation`](../nature-citation/README_EN.md)
+- `nature-academic-search`: retrieve paper metadata and citation indicators.
+- `nature-citation`: choose candidate citations for manuscript claims.
+- `nature-response`: respond to reviewer comments about reference errors.

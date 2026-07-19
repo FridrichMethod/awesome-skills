@@ -1,5 +1,5 @@
 name: nature-figure
-version: 2.0.0
+version: 2.1.0
 description: >
   Declarative manifest for the static/dynamic split. SKILL.md uses this to
   decide which fragments to load for a given figure request. The main axis is
@@ -9,7 +9,7 @@ description: >
   material stays in on-demand references.
 
 always_load:
-  # Skill-local core (figure does not use the prose-oriented _shared layer)
+  # Skill-local core (figure does not use the prose-oriented nature-shared layer)
   - static/core/contract.md
   - static/core/stance.md
 
@@ -61,6 +61,8 @@ references:
       path: references/r-workflow.md
     - condition: adapt a user-provided or private R template collection without exposing source paths
       path: references/r-template-index.md
+    - condition: reuse or adapt a bundled example, plotting script, preview image, or user-provided template against new data
+      path: references/asset-adaptation.md
     - condition: before final delivery, revision package, microscopy/blot figure, or journal-specific audit
       path: references/qa-contract.md
     - condition: typography, color theory, layout rationale, export policy
@@ -77,7 +79,9 @@ references:
       path: references/figure-legend-conventions.md
     - condition: "end-to-end walkthroughs: bars, trends, heatmaps"
       path: references/tutorials.md
-    - condition: "radar, 3D sphere, fill_between, scatter patterns"
+    - condition: "validated Python CSV templates: volcano, ROC, marker dot plot, marginal density, or paired plot"
+      path: references/template-catalog.md
+    - condition: "radar, 3D sphere, fill_between, scatter, ablation-line, probability/manifold concept patterns"
       path: references/chart-types.md
     - condition: bundled figures4papers Python scripts and output previews for concrete pattern adaptation
       path: references/demos.md

@@ -1,6 +1,6 @@
 # Stage 6: Process Summary Protocol (Added in v2.4)
 
-**Trigger**: After Stage 5 (FINALIZE) completion
+**Trigger**: After the user confirms the Stage 5 completion checkpoint (FULL). Stage 6 is non-mandatory — the user may decline it at that checkpoint; it is then marked `skipped` and the pipeline still terminates `completed` (see `pipeline_state_machine.md` § Stage 6 terminal semantics)
 **Purpose**: Document the complete human-AI collaboration history for the paper creation process, for user sharing, reporting, or reflection
 
 ## Workflow
@@ -21,6 +21,11 @@
    - Quality requirement evolution (e.g., formatting, tone adjustments)
    - Pipeline statistics (stage count, review rounds, integrity verification count, etc.)
 
+2b. Dispatch collaboration_depth_agent in whole-pipeline mode (range = all
+   stages, v3.5); its advisory report becomes the "Collaboration Depth
+   Trajectory" chapter of the Process Record — this dispatch happens BEFORE
+   record generation so the chapter is inside the record the user acknowledges
+
 3. Generate Markdown version (paper_creation_process.md / paper_creation_process_en.md)
 
 4. Convert to LaTeX and compile PDF:
@@ -28,6 +33,15 @@
    - Package complete LaTeX document (with cover page, table of contents, headers/footers)
    - tectonic compile PDF
    - Chinese version requires xeCJK + Source Han Serif TC VF
+
+5. Terminal acknowledgement (pipeline terminal checkpoint):
+   - After delivering the process record, prompt the user to close the pipeline.
+   - Acknowledgement vocabulary: "finish" / "end" / "done" / "confirm", or an
+     unambiguous natural-language equivalent that accepts the deliverables.
+   - Change requests (the other language version, content corrections) keep
+     Stage 6 in_progress — they are not acknowledgements.
+   - On acknowledgement: state_tracker marks Stage 6 completed and sets the pipeline global state to completed. There is no next stage.
+     (See pipeline_state_machine.md § Stage 6 terminal semantics.)
 ```
 
 ## Required Content in Process Record

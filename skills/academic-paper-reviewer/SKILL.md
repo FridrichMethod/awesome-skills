@@ -1,6 +1,6 @@
 ---
 name: academic-paper-reviewer
-description: "Multi-perspective academic paper review with dynamic reviewer personas. Simulates 5 independent reviewers (EIC + 3 peer reviewers + Devil's Advocate) with field-specific expertise. Supports full review, re-review (verification), quick assessment, methodology focus, Socratic guided, and calibration modes. Triggers on: review paper, peer review, manuscript review, referee report, review my paper, critique paper, simulate review, editorial review, calibrate reviewer, reviewer calibration, measure reviewer accuracy, 논문 심사, 동료 심사, 모의 심사, 심사자 관점에서 평가, 심사자 보정."
+description: "Multi-perspective academic paper review with dynamic reviewer personas. Simulates 5 independent reviewers (EIC + 3 peer reviewers + Devil's Advocate) with field-specific expertise. Supports full review, re-review (verification), quick assessment, methodology focus, Socratic guided, and calibration modes. Triggers on: review paper, peer review, manuscript review, referee report, review my paper, critique paper, simulate review, editorial review, calibrate reviewer, reviewer calibration, measure reviewer accuracy, 審查論文, 論文審查, 模擬審查, 同儕審查, 幫我審這篇, 以審查人角度評估, 審查者校準, 논문 심사, 동료 심사, 모의 심사, 심사자 관점에서 평가, 심사자 보정."
 metadata:
   version: "1.10.0"
   last_updated: "2026-07-11"
@@ -47,6 +47,8 @@ Review this paper: [paste paper or provide file]
 **English**: review paper, peer review, manuscript review, referee report, review my paper, critique paper, simulate review, editorial review, calibrate reviewer, reviewer calibration, measure reviewer accuracy
 
 **한국어**: 논문 심사, 동료 심사, 모의 심사, 원고 심사, 심사 보고서, 심사자 관점에서 평가, 심사자 보정, 심사 정확도 측정
+
+**繁體中文**: 審查論文, 論文審查, 模擬審查, 同儕審查, 幫我審這篇, 以審查人角度評估, 審查者校準
 
 ### Non-Trigger Scenarios
 
@@ -237,7 +239,7 @@ Routing into Mode B requires explicit user signal — `/ars-<mode>` slash comman
 
 Dedicated mode for Pipeline Stage 3' — verifies whether revisions address first-round review comments. Uses R&R Traceability Matrix (Schema 11) with Author's Claim + Verified? columns.
 
-**Input**: Original Revision Roadmap + Revised manuscript + Response to Reviewers (optional)
+**Input**: Original Revision Roadmap + Revised manuscript + Response to Reviewers (optional) + Editorial Decision Letter (optional, #539 — its Review Panel Provenance block feeds the Judge Record)
 **Output**: Verification Review Report with traceability matrix + new issues + Decision
 
 > See `references/re_review_mode_protocol.md` for full verification logic, output format template, and Socratic guidance details.
@@ -278,6 +280,10 @@ The Devil's Advocate uses a dedicated format, not the standard reviewer template
 ## Editorial Decision Format
 
 The Editorial Decision Letter structure is detailed in `templates/editorial_decision_template.md`.
+
+## Cross-Model Reviewer Track (#540)
+
+In `full` mode only (the five-seat panel — `methodology-focus` has a two-seat contract, and `re-review`/`quick` have no Reviewer 2 seat, so the track and its provenance mandate do not apply there), when cross-model verification is active for the session — `ARS_CROSS_MODEL` configured AND the user has given the explicit cross-model consent (the env var is configuration, not consent; the manuscript is uploaded to the external provider) — Reviewer 2 runs on the cross-model family (a substrate swap inside the fixed five-seat panel — NOT the retired 6th-reviewer design; authority: `shared/cross_model_verification.md` § Cross-Model Reviewer Track, incl. the #523 dispatching-layer transport and the two-call sprint-contract split). Otherwise all five personas share one model family — on the normal primary-family routing, including any active `ARS_MODEL_TIERING` policy — and the Editorial Decision Letter's Review Panel Provenance block discloses the correlated-error caveat (Ren et al. 2026, arXiv:2607.13104 §5.2). Dispatch failure falls back to that same primary-family routing with the fallback disclosed — never silent.
 
 ---
 
@@ -409,6 +415,7 @@ Follows the paper's language. Academic terms remain in English. User can overrid
 
 - **Reviewer hard gate.** All reviewer modes that ship with contracts (`reviewer_full`, `reviewer_methodology_focus`) now run two-call Phase 1 (paper-content-blind) + Phase 2 (paper-visible) orchestration. See `references/sprint_contract_protocol.md`.
 - **Schema 13 sprint contract.** Template-driven acceptance criteria with `panel_size`, `acceptance_dimensions`, `failure_conditions` (with `severity` precedence + `cross_reviewer_quantifier` panel-relative thresholds), `measurement_procedure`, optional `override_ladder`, bounded `agent_amendments`. Validator: `scripts/check_sprint_contract.py`. Schema: `shared/sprint_contract.schema.json`.
+- **Panel self-consistency checker (#510).** After synthesis, the orchestrator runs `scripts/check_panel_synthesis.py` to recompute each reviewer's decision and the panel decision from the emitted scores (protocol §8.1). A synthesis mismatch voids the synthesis (one retry); an inconsistent reviewer report is unusable (`[PANEL-SHRUNK]`).
 - **Synthesizer three-step mechanical protocol.** Build cross-reviewer matrix → evaluate each failure_condition with panel-relative quantifier + expression vocabulary → resolve precedence by severity. Forbidden operations explicit in `agents/editorial_synthesizer_agent.md`.
 - **methodology_focus reduced panel.** `reviewer_methodology_focus` mode runs a 2-reviewer panel (EIC + methodology only) instead of the default 5.
 - **Templates:** `shared/contracts/reviewer/full.json` (panel 5) and `shared/contracts/reviewer/methodology_focus.json` (panel 2). Reserved modes (`reviewer_re_review`, `reviewer_calibration`, `reviewer_guided`) keep pre-v3.6.2 behaviour until follow-up patch templates land.

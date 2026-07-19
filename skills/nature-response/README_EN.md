@@ -2,47 +2,46 @@
 
 [中文说明](README.md)
 
-## What It Does
+`nature-response` drafts, audits, and revises revision correspondence, including point-by-point reviewer responses, revision cover letters, red-marked manuscript excerpts, and editable LaTeX templates.
 
-- Drafts, audits, and revises point-by-point reviewer response letters, revision cover letters, red-marked manuscript plans, and LaTeX response templates.
+## What To Use It For
 
-## When to Use It
+- Parse editor decision letters, revision emails, and reviewer reports.
+- Split comments into stable IDs such as `E.1`, `R1.1`, and `R2.3`.
+- Build response strategy, manuscript-change actions, and evidence needs for each comment.
+- Track response action, task progress, and package readiness separately, with inspectable evidence for completed work.
+- Draft formal, restrained, submission-ready English point-by-point responses and cover letters.
+- Audit rebuttal drafts for missed replies, defensive tone, unsupported claims, and missing line numbers.
 
-- You receive a major or minor revision decision.
-- You need to parse editor and reviewer comments into actionable response items.
-- You need a cover letter, reviewer-by-reviewer replies, redline guidance, or LaTeX template.
+## Typical Requests
 
-## Copy-Paste Prompts
+- "Here is the editor email and reviewer comments; generate a point-by-point response framework."
+- "Turn my Chinese revision notes into English reviewer responses."
+- "Check whether this rebuttal misses anything, sounds too strong, or lacks evidence."
 
-- `Use this revision email to draft point-by-point replies and a cover letter.`
-- `Revise this response letter so each reviewer comment is answered clearly and politely.`
-- `Create a LaTeX response template where each reviewer starts on a new page and quoted manuscript text is italicized.`
+## What You Need To Provide
 
-## Required Inputs
+- Editor decision letter, reviewer comments, revision requirements, or existing rebuttal draft.
+- Completed or planned experiments, analyses, figures, line numbers, and manuscript-change locations.
+- Target journal, manuscript ID, title, and required submission files.
 
-- Decision letter, reviewer comments, manuscript changes, response draft, and target journal constraints.
-- Optional original manuscript, revised manuscript, or change log.
+## Outputs
 
-## Expected Outputs
+- Response strategy summary.
+- Point-by-point response letter, revision cover letter, or LaTeX response package.
+- Manuscript-change checklist, missing-information checklist, and risk notes.
+- Per-item tracker with work status, required input, expected output, and finalization-blocking state.
+- Optional red-marked manuscript excerpts; manuscript text must come from the author.
 
-- Point-by-point response letter.
-- Revision cover letter.
-- Redline/change-location plan for the manuscript.
-- LaTeX templates and formatting guidance when requested.
+## Boundaries
 
-## Dependencies / API Keys / Local Environment
-
-- LaTeX is optional and only needed for compiling templates.
-- Manuscript redlining may require document tooling depending on file format.
-
-## FAQ
-
-- **Should quoted revised manuscript text be formatted specially?** Yes. The current convention is to answer the comment, then paste revised manuscript text in italics.
-- **Should reviewer sections start on new pages?** Yes, when producing formal reviewer-response letters.
-- **Can it start from an email?** Yes. The workflow should parse the email and begin the response plan automatically.
+- The skill does not invent experiments, analyses, line numbers, figures, statistical results, or editor requirements.
+- Information that needs author confirmation is marked in Chinese rather than written as fact.
+- For pre-submission simulated review, use `nature-reviewer`.
 
 ## Related Skills
 
-- [`nature-reviewer`](../nature-reviewer/README_EN.md)
-- [`nature-polishing`](../nature-polishing/README_EN.md)
-- [`nature-writing`](../nature-writing/README_EN.md)
+- `nature-reviewer`: simulate reviewer comments before submission.
+- `nature-polishing`: polish reviewer-response and cover-letter English.
+- `nature-statistics`: handle statistical reviewer comments.
+- `nature-ref-verifier`: verify reference-error comments.

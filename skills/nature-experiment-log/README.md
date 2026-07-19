@@ -1,62 +1,41 @@
-# experiment-log
+# `nature-experiment-log` 技能
 
-标准化实验日志记录工具。接收图片、语音、文字等原始材料，自动生成带 YAML frontmatter 的结构化日志。
+[English](README_EN.md)
 
-## 这是什么
+`nature-experiment-log` 用于把实验图片、语音、文字和零散观察整理成可追溯的结构化实验日志，并写入 Obsidian 或普通 Markdown 工作流。
 
-不是"帮我记实验"——它是一套标准化的日志管线：接收原始材料 → 提取结构化信息 → 生成唯一 ID → 写出标准格式日志 → 归档原始文件。
+## 适合用它做什么
 
-适用于任何需要规范实验记录的研究领域。
+- 将当天实验记录整理成带 YAML frontmatter 的标准日志。
+- 从照片、显微图、称量记录、仪器截图或语音转写中提取实验要素。
+- 为样品、条件、观察、异常、下一步动作和原始附件建立稳定链接。
+- 把飞书、聊天记录或 CLI 输入中的原始材料归档为同一套实验记录格式。
 
-## 安装
+## 典型请求
 
-```bash
-git clone https://github.com/Jiahao8595/research-pipeline.git
-cp -r research-pipeline/experiment-log ~/.hermes/skills/
-```
+- “记录一个实验：316L 在 500°C 氯盐腐蚀 300 h，Ar 气氛，失重 0.0032 g。”
+- “把这几张实验照片整理成今天的 Obsidian 实验日志。”
+- “根据这段语音转写补一条标准实验记录，并列出缺失信息。”
 
-安装后 `/reload-skills`。
+## 你需要提供
 
-**前置依赖：**
+- 实验日期、样品、条件、处理步骤、观察结果或原始附件。
+- 目标 vault / 输出目录；如果没有指定，技能会先生成可保存的 Markdown。
+- 需要固定的命名规则、项目编号或样品编号。
 
-```bash
-hermes skills install feishu-cli-integration   # 飞书消息接收（路径 B）
-hermes skills install obsidian                 # vault 文件管理
-```
+## 产出
 
-## 使用方式
+- 一条带 YAML frontmatter 的实验日志。
+- 对原始图片、音频、表格或聊天记录的附件索引。
+- 缺失字段清单和后续实验动作建议。
 
-**路径 A — CLI 直接提交：**
-```
-"记录一个实验：今天在 500°C 做了 316L 的氯盐腐蚀，300h，Ar 气氛，失重 0.0032g"
-```
-附上图片，agent 会 vision_analyze 提取信息并生成标准日志。
+## 边界
 
-**路径 B — 飞书提交：**
-把实验照片和语音发到配置好的飞书群，agent 自动扫描并处理。
+- 不会替作者编造温度、时间、配比、设备型号或实验结果。
+- 对无法从材料中确认的信息，会保留 `AUTHOR_INPUT_NEEDED` 或中文确认项。
+- 飞书、Obsidian 等外部写入能力取决于本机是否已配置相应 CLI 或目录权限。
 
-## 文件结构
+## 相关技能
 
-```
-experiment-log/
-├── SKILL.md                    ← 技能入口
-├── README.md                   ← 本文件
-└── references/
-    └── example-log.md          ← 完整日志示例
-```
-
-## 核心设计
-
-- **统一 ID 体系** — 体系代码 + 设备代码 + 日期 + 序号，跨实验可追踪
-- **样品批次追踪** — 同一批样品 ID 一致，dataview 可查
-- **YAML frontmatter** — 结构化数据 + 自由文本，既人可读又机器可查
-- **飞书 CLI 集成** — 手机拍照发群 → 自动入 vault
-- **异常追踪** — 自动检测异常并追加到异常记录
-
-## 自定义
-
-设备代码、体系代码、实验类型目录全部可按你的实验室配置。详见 SKILL.md 中的「自定义指南」。
-
-## 作者
-
-十五 (JL Lab)
+- `nature-data`：把实验数据整理成投稿用 Data Availability 与 FAIR 清单。
+- `nature-figure`：把实验数据或图像进一步做成投稿级图件。

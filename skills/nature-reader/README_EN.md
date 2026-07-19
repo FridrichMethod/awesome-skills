@@ -2,46 +2,43 @@
 
 [中文说明](README.md)
 
-## What It Does
+`nature-reader` converts paper PDFs, DOIs, arXiv links, publisher HTML, or pasted text into traceable full-paper Markdown readers with Chinese-English text, figure/table placement, and a source map.
 
-- Creates source-grounded full-paper Markdown readers with Chinese-English side-by-side translation, figure/table awareness, and source anchors.
+## What To Use It For
 
-## When to Use It
+- Create full-paper Chinese-English Markdown readers.
+- Insert figures, tables, and translated legends near the first substantive discussion.
+- Build page and source anchors for every paragraph, figure, and table.
+- Extract reviewable reading materials from PDFs, HTML, or preprint text.
+- Produce reading notes that can support later writing, presentations, or citation checks.
 
-- You want to read or translate a complete paper rather than only summarize it.
-- You need figures and tables placed near relevant text.
-- You want source-grounded notes that preserve structure and citations.
+## Typical Requests
 
-## Copy-Paste Prompts
+- "Turn this PDF into a full Chinese-English Markdown reader."
+- "Translate and explain this paper, placing figures near the relevant text."
+- "Use this DOI to get the paper content and generate a reader with a source map."
 
-- `Turn this PDF into a figure-aware Chinese-English Markdown reader.`
-- `Create a full-paper Markdown reading note with figures placed near the relevant sections.`
-- `Translate this paper with original text, Chinese translation, and source anchors.`
+## What You Need To Provide
 
-## Required Inputs
+- PDF, DOI, arXiv link, publisher HTML, title, or pasted text.
+- Output directory and whether image cropping is needed.
+- Whether to keep English original text, Chinese translation, figures, tables, and translation notes.
 
-- PDF, DOI, arXiv link, publisher HTML, pasted article text, or extracted figures/tables.
-- Optional output path and language preferences.
+## Outputs
 
-## Expected Outputs
+- `paper.md`: full reading material.
+- `source_map.json`: mapping for pages, text blocks, and figures/tables.
+- `translation_notes.md`: terminology, uncertain content, and translation notes.
+- `assets/`: figures, cropped images, and required attachments.
 
-- Full Markdown reader.
-- Chinese-English side-by-side sections.
-- Figure/table placement notes and source anchors.
-- Uncertainty notes when extraction is incomplete.
+## Boundaries
 
-## Dependencies / API Keys / Local Environment
-
-- PDF extraction or rendering tools may be required for scanned or layout-heavy papers.
-- Internet access may be needed for DOI or publisher retrieval.
-
-## FAQ
-
-- **Does it summarize or translate?** It focuses on full-paper reading and translation, with summaries included only when helpful.
-- **Can it handle scanned PDFs?** Only if OCR or visual extraction is available; otherwise it should report the limitation.
+- The default output is Markdown-centered; it does not generate an interactive Q&A panel by default.
+- Scanned PDFs, two-column ordering, image-only formulas, or copyright-restricted full text may need additional human checking.
+- If full text cannot be legally obtained, the skill states the limitation and works from available abstract/metadata.
 
 ## Related Skills
 
-- [`nature-paper2ppt`](../nature-paper2ppt/README_EN.md)
-- [`nature-academic-search`](../nature-academic-search/README_EN.md)
-- [`nature-polishing`](../nature-polishing/README_EN.md)
+- `nature-downloader`: legally obtain PDF or HTML full text first.
+- `nature-paper2ppt`: turn reading materials into Chinese presentation slides.
+- `nature-citation`: extract claims that need citation support.

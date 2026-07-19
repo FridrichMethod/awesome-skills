@@ -15,10 +15,12 @@ response. If the user wants rebuttal writing, route to `nature-response`.
 
 - Ground the review only in the local source basis plus manuscript facts supplied by the user.
 - Evaluate the manuscript against source-grounded axes: `originality`, `scientific importance`, `interdisciplinary readership`, `technical soundness`, and `readability for nonspecialists`.
+- Use the 12-axis technical concern taxonomy only as an internal coverage checklist; it supplements but never replaces the five source-grounded axes.
 - Return exactly `3 reviewer reports + 1 cross-review synthesis` unless the user explicitly asks for another structure.
 - The three reviewers may differ only in `emphasis`; do not invent reviewer identities, specialties, institutions, or biographies.
 - Identify who would be interested in the results and why.
 - Identify technical failings that must be addressed before the authors' case is established.
+- Give every substantive concern a stable ID, a faithful `claim_pointer`, and a verifiable `evidence_pointer`; mark missing locations instead of inventing them.
 - Distinguish clearly between what is supported, what is weak, and what is not assessable from the provided material.
 - When the manuscript has a clear technical domain, use claim-dependent domain gates as supporting checks, but keep the output inside the same 3-reviewer `nature-reviewer` structure.
 - Do not claim the editor's final decision or certainty about fit to `Nature`.
@@ -42,10 +44,11 @@ If the provided material is partial, perform a bounded review and mark the asses
 2. Extract a shared manuscript fact base: main claim, visible evidence, claimed significance, likely readership, and visible limitations.
 3. Check readiness and label missing evidence or missing sections instead of inventing them.
 4. Assess the manuscript using the source-grounded axes.
-5. If the manuscript clearly falls into a technical domain covered by `references/domain-specific-review-gates.md`, load only the relevant domain section and use it to sharpen the technical-soundness critique.
-6. Generate `Reviewer 1`, `Reviewer 2`, and `Reviewer 3` using shared facts but different emphasis.
-7. Generate a `Cross-review synthesis` that captures consensus and weighting differences.
-8. Run QA for groundedness, coverage, role boundaries, and non-invention.
+5. Build an internal concern ledger using `references/technical-concern-taxonomy.md`; record applicability, claim/evidence pointers, severity, and the resolution test for each supported concern.
+6. If the manuscript clearly falls into a technical domain covered by `references/domain-specific-review-gates.md`, load only the relevant domain section and use it to sharpen the technical-soundness critique.
+7. Generate `Reviewer 1`, `Reviewer 2`, and `Reviewer 3` using shared facts but different emphasis. Reuse ledger issue keys internally so repeated concerns can be measured and cross-referenced.
+8. Generate a `Cross-review synthesis` that captures consensus and weighting differences. Label an issue as consensus only when at least two reviewer reports raise the same underlying concern.
+9. Run QA for evidence anchoring, overlap, groundedness, coverage, role boundaries, and non-invention.
 
 ## Output format
 
@@ -67,6 +70,13 @@ Reviewer 1
 - Technical failings that need to be addressed before the case is established:
 - Assessment against Nature-style criteria:
 - Recommendation posture:
+
+For each substantive concern:
+- Concern ID: R1-M1
+- Axis:
+- Claim pointer:
+- Evidence pointer:
+- Concern and resolution test:
 
 Reviewer 2
 [Same structure]
@@ -101,6 +111,7 @@ Risk / unsupported claims
 | [references/source-basis.md](references/source-basis.md) | You need source provenance, local rule summaries, or source-vs-implementation boundaries |
 | [references/reviewer-workflow.md](references/reviewer-workflow.md) | You need the invocation order, fact-base extraction flow, or synthesis rules |
 | [references/review-axes.md](references/review-axes.md) | You need the evaluation axes or reviewer weighting logic |
+| [references/technical-concern-taxonomy.md](references/technical-concern-taxonomy.md) | You need the internal 12-axis coverage check, concern ledger, or claim/evidence-pointer rules |
 | [references/domain-specific-review-gates.md](references/domain-specific-review-gates.md) | The manuscript has clear chemistry, engineering, materials, atmospheric, climate-ecology, hydrology, or remote-sensing evidence chains |
 | [references/report-structure.md](references/report-structure.md) | You need the default output contract or section anatomy |
 | [references/role-boundaries.md](references/role-boundaries.md) | You need constraints on reviewer differences and editor-versus-reviewer boundaries |

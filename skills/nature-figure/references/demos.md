@@ -23,9 +23,9 @@ define the scientific claim, pick Python or R, and only then adapt a demo patter
 | Project | Open when | Local examples |
 |---------|-----------|----------------|
 | `figure_ImmunoStruct` | Method comparison bars, ablation bars, large readable annotations | `../assets/figures4papers/figure_ImmunoStruct/plot_bars.py`, `raw_data.py`, `figures/*.png` |
-| `figure_CellSpliceNet` | Compact comparison and ablation bars | `../assets/figures4papers/figure_CellSpliceNet/plot_comparison.py`, `plot_ablation.py` |
+| `figure_CellSpliceNet` | Compact comparison bars, cross-species benchmark bars, and ablation bars | `../assets/figures4papers/figure_CellSpliceNet/plot_comparison.py`, `plot_comparison_cross_species.py`, `plot_ablation.py` |
 | `figure_brainteaser` | Composition breakdown bars, category/subcategory comparisons, rewriting/self-correction panels | `../assets/figures4papers/figure_brainteaser/plot_*.py` |
-| `figure_VIGIL` | Radar/polar comparison and post-training trend lines | `../assets/figures4papers/figure_VIGIL/plot_comparison_radar.py`, `plot_posttraining.py` |
+| `figure_VIGIL` | Radar/polar comparison, post-training trends, hyperparameter/data ablation curves, and probability/manifold concept panels | `../assets/figures4papers/figure_VIGIL/plot_comparison_radar.py`, `plot_posttraining.py`, `plot_ablation.py`, `plot_concept.py` |
 | `figure_ophthal_review` | Time trends and composition heatmaps for review/survey style figures | `../assets/figures4papers/figure_ophthal_review/plot_trend.py`, `plot_composition.py` |
 | `figure_RNAGenScape` | Heatmaps, optimization/speed comparisons, manifold illustrations, sweep plots | `../assets/figures4papers/figure_RNAGenScape/plot_*.py` |
 | `figure_Dispersion` | Conceptual 3D-style sphere diagrams and observation/idea panels | `../assets/figures4papers/figure_Dispersion/plot_illustration.py`, `plot_idea.py` |
@@ -40,12 +40,17 @@ define the scientific claim, pick Python or R, and only then adapt a demo patter
   `api.md`.
 - Radar/polar: start with `figure_VIGIL`; cross-check `chart-types.md` before
   implementing normalization, radial labels, and legend placement.
-- Trend/line: start with `figure_VIGIL` or `figure_ophthal_review`; use shared
-  legends and direct event labels where they reduce eye travel.
+- Trend/line and ablation curves: start with `figure_VIGIL` or
+  `figure_ophthal_review`; use shared legends, dashed reference baselines, dual
+  axes only when two metrics are genuinely coupled, and direct event labels where
+  they reduce eye travel.
 - Heatmap/matrix: start with `figure_RNAGenScape` or `figure_ophthal_review`; keep
   colorbars and labels readable at final journal dimensions.
 - Conceptual 3D/spheres: start with `figure_Dispersion` or `figure_Cflows`; use this
   only when it supports the manuscript claim, not as decorative filler.
+- Probability/manifold concept panels: start with `figure_VIGIL/plot_concept.py`;
+  treat the output as a conceptual model schematic and replace all labels/data
+  metaphors with manuscript-specific, evidence-supported claims.
 
 ## Relationship to the older skill
 

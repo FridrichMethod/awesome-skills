@@ -13,3 +13,12 @@ Default output:
 For Chinese-author notes, provide polished English first, then brief Chinese notes explaining major structural choices.
 
 If essential evidence or boundary is missing, do not invent. Write a placeholder such as `[Evidence needed: comparator group accuracy on test set X]` and list it under `Assumptions or missing inputs:`.
+
+For `task=submission-package`, replace the default manuscript format with:
+
+1. `Submission readiness:`
+2. `Deliverable matrix:`
+3. `Draft materials:`
+4. `AUTHOR_INPUT_NEEDED:`
+5. `Cross-file consistency checks:`
+6. `Next actions:`

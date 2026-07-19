@@ -41,7 +41,7 @@ Translate every extractable substantive block with these rules:
 - do not silently skip Methods, limitations, data availability, code availability, competing interests, or extended captions
 - if the paper is too long for one pass, write `paper.md` incrementally by page/section and mark pending blocks rather than switching to summary mode
 
-If a sentence contains multiple claims, keep the translation readable but do not split away the original evidence chain. Build the Terminology Ledger (`../../../_shared/core/terminology-ledger.md`) as you translate so recurring terms stay consistent across the whole document.
+If a sentence contains multiple claims, keep the translation readable but do not split away the original evidence chain. Build the Terminology Ledger (`../../../nature-shared/core/terminology-ledger.md`) as you translate so recurring terms stay consistent across the whole document.
 
 ## 4. Extract and place figures and tables near the relevant discussion
 

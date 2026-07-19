@@ -32,6 +32,13 @@ _boot_spec = importlib.util.spec_from_file_location(
 gh_wiki_bootstrap = importlib.util.module_from_spec(_boot_spec)
 _boot_spec.loader.exec_module(gh_wiki_bootstrap)
 
+# The scaffolder evaluates a PEP 508 environment marker on a preserved requirements.txt's
+# PyYAML line only when `packaging` is importable; without it, it falls back to treating the
+# line as installable. Tests that assert an EXCLUDING marker warns therefore need packaging
+# present, so they guard on this. A matching or absent marker holds either way (the fallback
+# also selects the env), so those need no guard.
+HAS_PACKAGING = importlib.util.find_spec("packaging") is not None
+
 GOOD = """---
 type: Process
 title: good
@@ -259,6 +266,203 @@ def test_force_preserve_warns_with_constraint_file_and_no_pyyaml(tmp_path):
     assert rc == 0, out
     assert "does not list PyYAML" in out
     assert "PyYAML>=5.1" in out
+
+
+@pytest.mark.skipif(not HAS_PACKAGING, reason="marker evaluation needs the packaging library")
+def test_force_preserve_warns_when_pyyaml_marker_excludes_env(tmp_path):
+    # #185: a PyYAML line gated by a PEP 508 marker to another environment installs nothing
+    # here, so the preserved file still lacks an importable PyYAML. The name sniffer alone
+    # reads it as declared and stays silent; the marker must be evaluated so the note fires
+    # when the declaration will not install for the interpreter that runs validate.py.
+    target = tmp_path / "kb"
+    scaffold(target)
+    (target / "requirements.txt").write_text(
+        'PyYAML; sys_platform == "no-such-platform"\n', encoding="utf-8")
+    rc, out = scaffold(target, "--force")
+    assert rc == 0, out
+    assert "does not list PyYAML" in out
+    assert "PyYAML>=5.1" in out
+
+
+def test_force_preserve_no_warning_when_pyyaml_marker_matches(tmp_path):
+    # the other side: a PyYAML line whose marker selects this interpreter installs normally,
+    # so the note must stay silent. Guards against over-nagging on a valid environment gate.
+    # Holds with or without packaging: the marker matches, and the no-packaging fallback also
+    # treats the line as installable.
+    target = tmp_path / "kb"
+    scaffold(target)
+    (target / "requirements.txt").write_text(
+        'PyYAML; python_version >= "3.0"\n', encoding="utf-8")
+    rc, out = scaffold(target, "--force")
+    assert rc == 0, out
+    assert "skipping validation" in out.lower()
+    assert "does not list PyYAML" not in out
+
+
+@pytest.mark.skipif(not HAS_PACKAGING, reason="marker evaluation needs the packaging library")
+def test_force_preserve_warns_when_pyyaml_hash_line_marker_excludes_env(tmp_path):
+    # #185 (review): pip-compile --generate-hashes writes a requirement as a backslash-
+    # continued block: the marker on the first physical line, indented `--hash` options on
+    # following lines. Read physically, the first line keeps a trailing '\' that breaks marker
+    # parsing, so an environment-excluded PyYAML read as installable and the note went silent.
+    # Joining continuations first reconstructs the logical line, drops the hash options, and
+    # the excluding marker fires the note.
+    target = tmp_path / "kb"
+    scaffold(target)
+    (target / "requirements.txt").write_text(
+        'pyyaml==6.0.1 ; sys_platform == "no-such-platform" \\\n'
+        '    --hash=sha256:aaaa \\\n'
+        '    --hash=sha256:bbbb\n', encoding="utf-8")
+    rc, out = scaffold(target, "--force")
+    assert rc == 0, out
+    assert "does not list PyYAML" in out
+
+
+def test_force_preserve_no_warning_when_pyyaml_hash_line_no_marker(tmp_path):
+    # guard on the join: a hash-locked PyYAML with no marker reconstructs to an installable
+    # line, so the note stays silent. Holds with or without packaging.
+    target = tmp_path / "kb"
+    scaffold(target)
+    (target / "requirements.txt").write_text(
+        'pyyaml==6.0.1 \\\n    --hash=sha256:aaaa \\\n    --hash=sha256:bbbb\n', encoding="utf-8")
+    rc, out = scaffold(target, "--force")
+    assert rc == 0, out
+    assert "does not list PyYAML" not in out
+
+
+def test_force_preserve_no_warning_when_comment_ends_in_backslash(tmp_path):
+    # #185 (review): pip does not continue a full-line comment even when it ends in '\'. If the
+    # join treated the comment as continuing, it would swallow the following PyYAML line into
+    # the comment, hiding the declaration and firing a false 'missing PyYAML' note. The comment
+    # must be emitted on its own so the real PyYAML line is read. Holds with or without packaging.
+    target = tmp_path / "kb"
+    scaffold(target)
+    (target / "requirements.txt").write_text(
+        "# a trailing note that ends in a backslash \\\n"
+        "PyYAML==6.0.1\n", encoding="utf-8")
+    rc, out = scaffold(target, "--force")
+    assert rc == 0, out
+    assert "does not list PyYAML" not in out
+
+
+def test_force_preserve_no_warning_when_comment_backslash_precedes_include(tmp_path):
+    # #185 (review): same join bug, higher-impact variant. A comment ending in '\' just before
+    # an `-r` include directive would swallow the directive, so the include (which may supply
+    # PyYAML from a file we do not read) goes unseen and the note wrongly fires. The comment
+    # must not continue, so the `-r` line is read and suppresses the note.
+    target = tmp_path / "kb"
+    scaffold(target)
+    (target / "requirements.txt").write_text(
+        "# via requirements.in \\\n"
+        "-r base.txt\n", encoding="utf-8")
+    rc, out = scaffold(target, "--force")
+    assert rc == 0, out
+    assert "does not list PyYAML" not in out
+
+
+@pytest.mark.parametrize("line,expected", [
+    ("PyYAML>=5.1", True),                       # no marker: installs here
+    ('PyYAML; python_version >= "3.0"', True),   # marker selects this interpreter
+    ("PyYAML  # just a note", True),             # inline comment, no marker
+    ("PyYAML; ", True),                          # empty marker after ';'
+])
+def test_requirement_marker_selects_env_true_cases(line, expected):
+    # a missing, empty, or matching marker selects the current environment. These hold with
+    # or without packaging, since the packaging-absent fallback also returns True, so no
+    # skip guard is needed here (only the excluding case below depends on packaging).
+    assert scaffold_mod._requirement_marker_selects_env(line) == expected
+
+
+@pytest.mark.skipif(not HAS_PACKAGING, reason="marker evaluation needs the packaging library")
+def test_requirement_marker_excludes_env():
+    # an excluding marker returns False only when packaging can evaluate it; the fallback
+    # (packaging absent) returns True, so this case is guarded on packaging being present.
+    assert scaffold_mod._requirement_marker_selects_env(
+        'PyYAML; sys_platform == "no-such-platform"') is False
+
+
+@pytest.mark.skipif(not HAS_PACKAGING, reason="marker evaluation needs the packaging library")
+def test_requirement_marker_hash_inside_quoted_marker_excludes():
+    # a '#' inside a quoted marker string is not a pip comment; stripping at the first '#'
+    # would corrupt the marker. Parsing the full requirement keeps it intact, so the
+    # excluding marker still evaluates (no implementation is named "cpython#not").
+    assert scaffold_mod._requirement_marker_selects_env(
+        'PyYAML; implementation_name == "cpython#not"') is False
+
+
+@pytest.mark.skipif(not HAS_PACKAGING, reason="marker evaluation needs the packaging library")
+def test_requirement_marker_semicolon_inside_url_excludes():
+    # a ';' inside a direct-reference URL is part of the URL, not the marker separator.
+    # Splitting on the first ';' would misread the URL as the marker; parsing the full
+    # requirement extracts the real trailing marker after ' ; ' and evaluates it.
+    assert scaffold_mod._requirement_marker_selects_env(
+        'PyYAML @ https://example.com/pkg;param ; sys_platform == "no-such-platform"') is False
+
+
+@pytest.mark.skipif(not HAS_PACKAGING, reason="marker evaluation needs the packaging library")
+def test_requirement_marker_hashed_requirement_excluded():
+    # a hash-pinned line (pip-compile --generate-hashes) carries pip's per-requirement
+    # `--hash` option, which packaging.requirements.Requirement rejects. The pip option must
+    # be stripped before parsing, or the excluding marker is never seen and the missing-PyYAML
+    # warning is wrongly suppressed. With the option dropped the marker evaluates and excludes.
+    assert scaffold_mod._requirement_marker_selects_env(
+        'PyYAML==6.0.1; sys_platform == "no-such-platform" '
+        '--hash=sha256:aaaa --hash=sha256:bbbb') is False
+
+
+def test_requirement_marker_hashed_requirement_matches():
+    # a hash-pinned PyYAML with no marker still counts as installable: dropping the `--hash`
+    # options leaves a bare, applicable requirement. Holds with or without packaging (the
+    # packaging-absent fallback also returns True), so no skip guard is needed.
+    assert scaffold_mod._requirement_marker_selects_env(
+        'PyYAML==6.0.1 --hash=sha256:aaaa') is True
+
+
+@pytest.mark.skipif(not HAS_PACKAGING, reason="marker evaluation needs the packaging library")
+def test_requirement_marker_whitespace_hash_inside_quoted_marker_excludes():
+    # #185 (review): a '#' preceded by whitespace *inside* a quoted marker value is part of the
+    # marker, not a pip inline comment. Stripping the comment before parsing (the earlier
+    # regex-first approach) corrupts the marker and the line reads as installable, wrongly
+    # suppressing the note. Parsing the whole line first keeps the '#' intact, so the excluding
+    # marker still evaluates (no implementation is named "cpython #not").
+    assert scaffold_mod._requirement_marker_selects_env(
+        'PyYAML; implementation_name == "cpython #not"') is False
+
+
+@pytest.mark.skipif(not HAS_PACKAGING, reason="marker evaluation needs the packaging library")
+def test_requirement_marker_trailing_comment_after_marker_excludes():
+    # guard on the parse-first change: a real pip inline comment after the marker must still be
+    # stripped so the marker evaluates. The whole-line parse fails on the trailing comment, then
+    # the comment is removed on retry and the excluding marker evaluates to False.
+    assert scaffold_mod._requirement_marker_selects_env(
+        'PyYAML; sys_platform == "no-such-platform"  # windows only') is False
+
+
+@pytest.mark.skipif(not HAS_PACKAGING, reason="marker evaluation needs the packaging library")
+def test_requirement_marker_unevaluable_lockfile_marker_does_not_crash():
+    # #185 (review): packaging 26 added lock-file-context marker variables. A line such as
+    # `PyYAML; dependency_groups == "docs"` parses, but Marker.evaluate() raises KeyError in the
+    # default metadata context because that variable is not defined there. Any evaluation failure
+    # must be treated as unjudgeable and fall back to installable, not crash. Asserts the outcome
+    # (True, no exception), which also holds on older packaging that rejects the marker at parse
+    # time (InvalidRequirement, then True via the parse fallback).
+    assert scaffold_mod._requirement_marker_selects_env(
+        'PyYAML; dependency_groups == "docs"') is True
+
+
+@pytest.mark.skipif(not HAS_PACKAGING, reason="marker evaluation needs the packaging library")
+def test_force_preserve_no_crash_on_unevaluable_marker(tmp_path):
+    # #185 (review): a preserved requirements.txt whose PyYAML line carries a marker that parses
+    # but cannot be evaluated in the default context (dependency_groups, a lock-file-only
+    # variable) must not crash the --force run. The marker is unjudgeable, so PyYAML counts as
+    # possibly installable and the note stays silent; the run exits 0.
+    target = tmp_path / "kb"
+    scaffold(target)
+    (target / "requirements.txt").write_text(
+        'PyYAML; dependency_groups == "docs"\n', encoding="utf-8")
+    rc, out = scaffold(target, "--force")
+    assert rc == 0, out
+    assert "does not list PyYAML" not in out
 
 
 @pytest.mark.parametrize("line,expected", [
@@ -1220,14 +1424,31 @@ def test_source_trailing_comment_after_quoted_block_item_ok(tmp_path):
 
 def test_source_duplicate_key_later_unquoted_hash_fails(tmp_path):
     # YAML keeps the LAST of duplicate keys, so a valid first source followed by a later
-    # source that drops "#445" must still fail — scan every top-level source occurrence.
+    # duplicate that drops "#445" must still fail. A duplicate `source:` key is malformed
+    # regardless of whether the later value is lossy — the effective source must come from
+    # exactly one literal key — so this is rejected as a duplicate, closing the gap where two
+    # clean duplicate source keys used to pass silently.
     scaffold(tmp_path / "kb", "--no-validate")
     b = tmp_path / "kb" / "bundle"
     write_concept(b, _concept_with_source(
         'source: ["README.md"]\nsource:\n  - issue #445'))
     rc, out = validate(b)
     assert rc == 1, out
-    assert "source" in out and "#" in out
+    assert "source" in out and "duplicate" in out
+
+
+def test_source_two_clean_duplicate_keys_rejected(tmp_path):
+    # regression: two literal `source:` keys that are BOTH clean used to pass silently —
+    # safe_load kept the last and discarded the first with no warning, so a lost provenance
+    # list went unreported. The "exactly one source key" invariant now rejects any duplicate,
+    # lossy or not.
+    scaffold(tmp_path / "kb", "--no-validate")
+    b = tmp_path / "kb" / "bundle"
+    write_concept(b, _concept_with_source(
+        'source: ["README.md"]\nsource: ["LICENSE"]'))
+    rc, out = validate(b)
+    assert rc == 1, out
+    assert "source" in out and "duplicate" in out
 
 
 def test_source_unquoted_with_apostrophe_then_hash_fails(tmp_path):
@@ -1338,6 +1559,250 @@ def test_source_anchored_quoted_value_passes(tmp_path):
     write_concept(b, _concept_with_source('source: [&p "issue #445"]'))
     rc, out = validate(b)
     assert rc == 0, out
+
+
+# --- #169: a YAML alias in source defeats the quoting check, so reject it -----
+
+def _concept_with_frontmatter(fm_body):
+    # a concept whose whole frontmatter body is given verbatim (for shapes the fixed
+    # `source:` slot in _concept_with_source cannot express, e.g. an extra anchor key).
+    return f"---\n{fm_body}\n---\n# good\n"
+
+
+def test_source_alias_drops_comment_now_rejected(tmp_path):
+    # #169 false-negative: an aliased block item (`*p`) shares its anchor's node, whose
+    # end mark sits at the anchor definition — so the dropped `#445` after the alias was
+    # never inspected and the lossy bundle passed. An alias in source is now a hard error.
+    scaffold(tmp_path / "kb", "--no-validate")
+    b = tmp_path / "kb" / "bundle"
+    write_concept(b, _concept_with_source("source:\n  - &p README.md\n  - *p #445"))
+    rc, out = validate(b)
+    assert rc == 1, out
+    assert "source" in out and "alias" in out
+
+
+def test_source_flow_alias_rejected(tmp_path):
+    # #169 false-positive shape: `source: [*p]` reads the same node as the anchor def on
+    # another key, so the quoting check flagged that line's comment instead of the real
+    # problem. The alias use itself is what's wrong — reject it, with an honest message.
+    scaffold(tmp_path / "kb", "--no-validate")
+    b = tmp_path / "kb" / "bundle"
+    write_concept(b, _concept_with_frontmatter(
+        "type: Process\ntitle: good\ndescription: a good concept\n"
+        "ptr: &p README.md\nsource: [*p]\n"
+        'verified: 2026-06-23\ntimestamp: 2026-06-23\ntags: ["x"]'))
+    rc, out = validate(b)
+    assert rc == 1, out
+    assert "source" in out and "alias" in out
+
+
+def test_source_anchor_defined_and_aliased_in_source_rejected(tmp_path):
+    # an anchor defined and aliased entirely within source is still an alias use.
+    scaffold(tmp_path / "kb", "--no-validate")
+    b = tmp_path / "kb" / "bundle"
+    write_concept(b, _concept_with_source('source:\n  - &p "README.md"\n  - *p'))
+    rc, out = validate(b)
+    assert rc == 1, out
+    assert "alias" in out
+
+
+def test_source_whole_value_alias_rejected(tmp_path):
+    # the entire source value can be an alias: `source: *p`. That resolves to a list and
+    # would otherwise pass the list/quoting checks, so it must be caught here.
+    scaffold(tmp_path / "kb", "--no-validate")
+    b = tmp_path / "kb" / "bundle"
+    write_concept(b, _concept_with_frontmatter(
+        "type: Process\ntitle: good\ndescription: a good concept\n"
+        'refs: &p ["README.md"]\nsource: *p\n'
+        'verified: 2026-06-23\ntimestamp: 2026-06-23\ntags: ["x"]'))
+    rc, out = validate(b)
+    assert rc == 1, out
+    assert "alias" in out
+
+
+def test_source_anchor_definition_still_passes(tmp_path):
+    # regression guard for the existing contract: an anchor DEFINITION on a literal
+    # source element (never aliased) is harmless and must keep passing. Only alias USES
+    # are rejected. (Mirrors test_source_anchored_quoted_value_passes.)
+    scaffold(tmp_path / "kb", "--no-validate")
+    b = tmp_path / "kb" / "bundle"
+    write_concept(b, _concept_with_source('source: [&p "README.md"]'))
+    rc, out = validate(b)
+    assert rc == 0, out
+
+
+def test_alias_outside_source_with_clean_source_passes(tmp_path):
+    # an anchor/alias used OUTSIDE source must not fail a bundle whose top-level source
+    # is clean and literal — the check is scoped to the source value only.
+    scaffold(tmp_path / "kb", "--no-validate")
+    b = tmp_path / "kb" / "bundle"
+    write_concept(b, _concept_with_frontmatter(
+        "type: Process\ntitle: good\ndescription: a good concept\n"
+        "note: &n reused\nother: *n\n"
+        'source: ["README.md"]\n'
+        'verified: 2026-06-23\ntimestamp: 2026-06-23\ntags: ["x"]'))
+    rc, out = validate(b)
+    assert rc == 0, out
+
+
+def test_source_anchor_shared_with_other_key_rejected(tmp_path):
+    # the other direction: an anchor DEFINED in source but aliased elsewhere entangles
+    # source with the rest of the frontmatter. source must be self-contained literals, so
+    # this is rejected too (the shared node's marks are ambiguous, per #169). Deliberate.
+    scaffold(tmp_path / "kb", "--no-validate")
+    b = tmp_path / "kb" / "bundle"
+    write_concept(b, _concept_with_frontmatter(
+        "type: Process\ntitle: good\ndescription: a good concept\n"
+        'source: [&p "README.md"]\nother: *p\n'
+        'verified: 2026-06-23\ntimestamp: 2026-06-23\ntags: ["x"]'))
+    rc, out = validate(b)
+    assert rc == 1, out
+    assert "source" in out and ("anchor" in out or "alias" in out)
+
+
+def test_source_via_merge_key_drops_comment_now_rejected(tmp_path):
+    # #169 sibling: `source` supplied through a YAML merge key (`<<`) is materialized by
+    # safe_load but leaves no literal `source:` key node, so the quoting scan (which keys
+    # on that node) never runs and a dropped `#445` slips through. The merged source must
+    # be rejected: OKF source must be a literal top-level list, not merged in.
+    scaffold(tmp_path / "kb", "--no-validate")
+    b = tmp_path / "kb" / "bundle"
+    write_concept(b, _concept_with_frontmatter(
+        "type: Process\ntitle: good\ndescription: a good concept\n"
+        "refs: &r\n  - issue #445\n<<: {source: *r}\n"
+        'verified: 2026-06-23\ntimestamp: 2026-06-23\ntags: ["x"]'))
+    rc, out = validate(b)
+    assert rc == 1, out
+    assert "source" in out and "merge" in out
+
+
+def test_source_via_merge_key_clean_still_rejected(tmp_path):
+    # even a merge-supplied source with no dropped comment is rejected — the indirection
+    # itself is invalid, so the check does not depend on the merged value being lossy.
+    scaffold(tmp_path / "kb", "--no-validate")
+    b = tmp_path / "kb" / "bundle"
+    write_concept(b, _concept_with_frontmatter(
+        "type: Process\ntitle: good\ndescription: a good concept\n"
+        'refs: &r ["README.md"]\n<<: {source: *r}\n'
+        'verified: 2026-06-23\ntimestamp: 2026-06-23\ntags: ["x"]'))
+    rc, out = validate(b)
+    assert rc == 1, out
+    assert "source" in out and "merge" in out
+
+
+def test_source_via_merge_key_with_literal_source_rejected(tmp_path):
+    # codex-connector P2: a merge whose mapping carries its own `source` (`<<: {source: ...}`)
+    # sitting beside a literal `source:` key used to pass. YAML lets the literal override the
+    # merged value, so the top-level scan counted only the literal (len 1) and the merged
+    # provenance was silently dropped: the same lost-provenance shape the duplicate-key check
+    # rejects. A merge that supplies source is now rejected whether or not a literal source
+    # sits beside it (the earlier merge tests only covered merge-supplied source with no literal).
+    scaffold(tmp_path / "kb", "--no-validate")
+    b = tmp_path / "kb" / "bundle"
+    write_concept(b, _concept_with_frontmatter(
+        "type: Process\ntitle: good\ndescription: a good concept\n"
+        '<<: {source: ["LICENSE"]}\nsource: ["README.md"]\n'
+        'verified: 2026-06-23\ntimestamp: 2026-06-23\ntags: ["x"]'))
+    rc, out = validate(b)
+    assert rc == 1, out
+    assert "source" in out and "merge" in out
+
+
+def test_source_via_nested_merge_key_with_literal_source_rejected(tmp_path):
+    # codex 5.5 round 1: the merge-supplied-source check must look at the merged mapping's
+    # EFFECTIVE keys, not just its immediate ones. A merge that imports a mapping whose own
+    # `source` arrives through a further nested merge (`defaults: &d {<<: {source: [...]}}`
+    # then `<<: *d`) still materializes source in safe_load, and a literal `source:` overrides
+    # it, dropping the merged provenance. Recursing through nested merges closes that bypass.
+    scaffold(tmp_path / "kb", "--no-validate")
+    b = tmp_path / "kb" / "bundle"
+    write_concept(b, _concept_with_frontmatter(
+        "type: Process\ntitle: good\ndescription: a good concept\n"
+        'defaults: &d {<<: {source: ["LICENSE"]}}\n<<: *d\nsource: ["README.md"]\n'
+        'verified: 2026-06-23\ntimestamp: 2026-06-23\ntags: ["x"]'))
+    rc, out = validate(b)
+    assert rc == 1, out
+    assert "source" in out and "merge" in out
+
+
+def test_source_alias_as_key_rejected(tmp_path):
+    # #169 sibling (review): an alias in KEY position (`*k` resolving to "source") makes
+    # compose reuse the anchor's node, so the key reads as a literal "source" while the real
+    # key is an alias. safe_load still materializes source, so this must be rejected like any
+    # other non-literal source key — even when the aliased key's value is itself clean.
+    scaffold(tmp_path / "kb", "--no-validate")
+    b = tmp_path / "kb" / "bundle"
+    write_concept(b, _concept_with_frontmatter(
+        "type: Process\ntitle: good\ndescription: a good concept\n"
+        'source_key: &k source\n*k: ["README.md"]\n'
+        'verified: 2026-06-23\ntimestamp: 2026-06-23\ntags: ["x"]'))
+    rc, out = validate(b)
+    assert rc == 1, out
+    assert "source" in out and ("merge" in out or "alias" in out)
+
+
+def test_merge_key_outside_source_with_clean_source_passes(tmp_path):
+    # scope guard: a merge key that supplies OTHER fields, with a literal clean source,
+    # must still pass — the check rejects merged/aliased source only, not every merge key.
+    scaffold(tmp_path / "kb", "--no-validate")
+    b = tmp_path / "kb" / "bundle"
+    write_concept(b, _concept_with_frontmatter(
+        "type: Process\ntitle: good\ndescription: a good concept\n"
+        "defaults: &d\n  note: x\n<<: *d\nsource: [\"README.md\"]\n"
+        'verified: 2026-06-23\ntimestamp: 2026-06-23\ntags: ["x"]'))
+    rc, out = validate(b)
+    assert rc == 0, out
+
+
+def test_source_explicit_merge_tag_key_with_clean_source_passes(tmp_path):
+    # #169 sibling (review round 2): a key SPELLED "source" but carrying the explicit !!merge
+    # tag is a merge directive, not a source key — PyYAML identifies merge by the key's tag,
+    # not its scalar spelling. safe_load merges it and the effective mapping has only the
+    # separate literal `source:`, so the file is valid. Classifying by spelling alone counts
+    # the merge-tagged key as a second "source" key and falsely rejects it.
+    scaffold(tmp_path / "kb", "--no-validate")
+    b = tmp_path / "kb" / "bundle"
+    write_concept(b, _concept_with_frontmatter(
+        "type: Process\ntitle: good\ndescription: a good concept\n"
+        'defaults: &d {note: x}\n!!merge source: *d\nsource: ["README.md"]\n'
+        'verified: 2026-06-23\ntimestamp: 2026-06-23\ntags: ["x"]'))
+    rc, out = validate(b)
+    assert rc == 0, out
+
+
+def test_source_explicit_merge_tag_supplies_lossy_source_rejected(tmp_path):
+    # #169 sibling (review round 2): the other direction — a merge key written with the
+    # explicit !!merge tag but spelled "source" merges a nested source in, so safe_load's
+    # effective source is lossy ("issue", #445 dropped) while no literal source key exists.
+    # Classifying by spelling counts the merge-tagged key as the one literal source and lets
+    # the lossy pointer bypass the scan; the tag must exclude it, so this is rejected.
+    scaffold(tmp_path / "kb", "--no-validate")
+    b = tmp_path / "kb" / "bundle"
+    write_concept(b, _concept_with_frontmatter(
+        "type: Process\ntitle: good\ndescription: a good concept\n"
+        '!!merge source:\n  source:\n    - issue #445\n'
+        'verified: 2026-06-23\ntimestamp: 2026-06-23\ntags: ["x"]'))
+    rc, out = validate(b)
+    assert rc == 1, out
+    assert "source" in out
+
+
+def test_source_literal_then_aliased_duplicate_key_rejected(tmp_path):
+    # #169 sibling (review round 2): a clean literal `source:` FIRST, then a second key that
+    # is an alias resolving to "source" (`*k`). YAML keeps the last of duplicate keys, so
+    # safe_load's effective source is the aliased duplicate ("issue", with #445 dropped), yet
+    # the earlier clean literal made the old "at least one clean source key" check pass. The
+    # effective source must come from exactly one literal source key, so the duplicate is
+    # rejected.
+    scaffold(tmp_path / "kb", "--no-validate")
+    b = tmp_path / "kb" / "bundle"
+    write_concept(b, _concept_with_frontmatter(
+        "type: Process\ntitle: good\ndescription: a good concept\n"
+        'source: ["README.md"]\nsource_key: &k source\n*k:\n  - issue #445\n'
+        'verified: 2026-06-23\ntimestamp: 2026-06-23\ntags: ["x"]'))
+    rc, out = validate(b)
+    assert rc == 1, out
+    assert "source" in out and "duplicate" in out
 
 
 # --- uppercase .md extension handling (#150 sub-item 2) ----------------------

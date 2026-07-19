@@ -9,6 +9,7 @@ The response letter is an editor-facing verification document. The cover letter 
 - Preserve each reviewer comment faithfully before responding.
 - Every reviewer concern must be answered, cross-referenced, or explicitly marked as unresolved.
 - Map every response to manuscript evidence, a revision location, a justified disagreement, or `AUTHOR_INPUT_NEEDED`.
+- Keep response action, per-item work status, and package readiness separate: what should be done is not evidence that it has been done.
 - Do not invent experiments, analyses, citations, line numbers, figure panels, supplementary materials, editor instructions, reviewer identities, or manuscript changes.
 - Prefer concise, evidence-linked replies over long defensive explanations.
 - When disagreeing, acknowledge the concern first, then give a scientific or scope-based reason.
@@ -23,6 +24,7 @@ The response letter is an editor-facing verification document. The cover letter 
 - Do not ignore any reviewer comment.
 - Do not rephrase reviewer comments in a way that changes their meaning.
 - Do not claim a revision was made unless the user supplied it.
+- Do not mark work as verified merely because a draft reply exists or the author says "done" without an inspectable revised artifact.
 - Do not invent line numbers, figure panels, citations, statistical results, or supplementary items.
 - Do not use hostile or accusatory language.
 - Do not cite time, money, or convenience as the primary reason for not doing a requested experiment.

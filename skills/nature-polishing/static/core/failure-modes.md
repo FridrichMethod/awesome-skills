@@ -18,4 +18,4 @@ Prioritize fixes in this order:
 
 Do not sentence-polish a draft whose section job is wrong. Surface the structural problem first, then polish.
 
-Terminology consistency is a cross-cutting check that runs at every level: build the Terminology Ledger on first contact (see `../../../_shared/core/terminology-ledger.md`) and enforce its canonical forms throughout the polish.
+Terminology consistency is a cross-cutting check that runs at every level: build the Terminology Ledger on first contact (see `../../../nature-shared/core/terminology-ledger.md`) and enforce its canonical forms throughout the polish.

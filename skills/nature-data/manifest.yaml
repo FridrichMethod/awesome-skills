@@ -10,7 +10,7 @@ description: >
 # language — is handled at runtime by inline rules and the on-demand references,
 # not by loading different large content bodies. There is therefore no content
 # axis; the split is core (always loaded) plus on-demand references. nature-data
-# does not use the prose-oriented _shared layer (it governs data-availability
+# does not use the prose-oriented nature-shared layer (it governs data-availability
 # policy, with its own source basis).
 
 always_load:

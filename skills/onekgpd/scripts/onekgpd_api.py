@@ -1,6 +1,6 @@
 # /// script
-# requires-python = ">=3.12"
-# dependencies = ["dnaerys"]
+# requires-python = ">=3.11"
+# dependencies = ["dnaerys>=0.2.1,<0.3.0"]
 # ///
 """OneKGPd — individual-level queries over the 1000 Genomes Project.
 
@@ -50,7 +50,6 @@ from dnaerys import (
 
 DEFAULT_ENDPOINT = "db.dnaerys.org:443"   # public 1000 Genomes instance (fixed)
 DEFAULT_VARIANT_LIMIT = 200               # hard cap when neither --limit nor --page-size given
-DEFAULT_BUFFER_SIZE = 5000                # paginate_variants buffer (matches client default)
 MAX_RETRIES = 3                           # bounded retry attempts on retryable errors
 RETRY_BASE_DELAY = 1.0                    # seconds; exponential backoff: 1, 2, ...
 PREVIEW_ROWS = 10                         # rows shown in a stdout summary preview
@@ -226,7 +225,7 @@ def _build_annotation_filter(args) -> AnnotationFilter | None:
 
 def _chr_to_str(chrom) -> str:
     """Render a ``Chromosome`` enum as ``chr17`` / ``chrX`` / ``chrMT``."""
-    return "chr" + chrom.name[len("CHR_"):]
+    return "chr" + chrom.name[len("CHR"):]
 
 
 def _region_one_label(r: Region) -> str:
@@ -258,12 +257,15 @@ def _variant_to_dict(v) -> dict:
         "af": v.af,
         "ac": v.ac,
         "an": v.an,
-        "homc": v.homc,
-        "hetc": v.hetc,
-        "misc": v.misc,
-        "homfc": v.homfc,
-        "hetfc": v.hetfc,
-        "misfc": v.misfc,
+        "hom_samples": v.hom_samples,
+        "het_samples": v.het_samples,
+        "mis_samples": v.mis_samples,
+        "hom_samples_fx": v.hom_samples_fx,
+        "het_samples_fx": v.het_samples_fx,
+        "mis_samples_fx": v.mis_samples_fx,
+        "hom_samples_mxy": v.hom_samples_mxy,
+        "het_samples_mxy": v.het_samples_mxy,
+        "mis_samples_mxy": v.mis_samples_mxy,
         "gnomad_exomes_af": v.gnomad_exomes_af,
         "gnomad_genomes_af": v.gnomad_genomes_af,
         "am_score": v.am_score,
@@ -367,7 +369,6 @@ def _run_select_variants(args, samples: list[str] | None) -> None:
             if page_size is not None:
                 pq = client.paginate_variants(
                     page_size=page_size,
-                    buffer_size=DEFAULT_BUFFER_SIZE,
                     region=region,
                     regions=regions,
                     samples=samples,

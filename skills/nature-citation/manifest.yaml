@@ -12,7 +12,7 @@ description: >
 # split is core (always loaded) plus on-demand references. Heavy, only-sometimes-
 # needed material (the script flag reference and long-article batching strategy)
 # lives in references so a normal short run stays cheap. nature-citation does not
-# use the prose-oriented _shared layer.
+# use the prose-oriented nature-shared layer.
 
 always_load:
   - static/core/principles.md

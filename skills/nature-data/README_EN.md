@@ -2,46 +2,43 @@
 
 [中文说明](README.md)
 
-## What It Does
+`nature-data` prepares, audits, or revises Nature / Springer Nature-style Data Availability statements, repository plans, dataset citations, and FAIR metadata checklists.
 
-- Prepares Nature-ready Data Availability statements, repository plans, dataset citations, and FAIR metadata checklists.
+## What To Use It For
 
-## When to Use It
+- Draft a manuscript-ready Data Availability statement.
+- Check whether statements such as "data are available from the corresponding author" or "raw data are in supplementary materials" are sufficient.
+- Map every dataset supporting a conclusion to a repository, accession, DOI, license, or access condition.
+- Distinguish public data, controlled-access data, third-party data, supplementary-data cases, and not-applicable cases.
+- Turn Chinese author notes into submission-ready English and list facts that still need confirmation.
 
-- A manuscript needs a Data Availability statement.
-- You need to choose a repository or accession strategy.
-- The data include sensitive, restricted, proprietary, or third-party materials.
+## Typical Requests
 
-## Copy-Paste Prompts
+- "Write this manuscript's Data Availability statement in Nature style."
+- "Some data cannot be public; draft a controlled-access statement."
+- "Check whether my data statement is missing accessions, repositories, or licenses."
 
-- `Draft a Nature-ready Data Availability statement for this manuscript.`
-- `Choose a repository plan for these datasets and explain what metadata are required.`
-- `Audit this data-sharing plan against FAIR expectations.`
+## What You Need To Provide
 
-## Required Inputs
+- The data source supporting each figure, table, or conclusion.
+- Upload status, repository link, accession, DOI, embargo, or access restriction.
+- Availability boundaries for code, materials, protocols, and third-party data.
 
-- Dataset descriptions, file types, repository names, accession numbers, restrictions, and manuscript context.
-- Information about source data, supplementary data, code, and third-party datasets.
+## Outputs
 
-## Expected Outputs
+- Ready-to-paste English Data Availability statement.
+- Dataset-to-figure/conclusion mapping table.
+- Missing-information checklist and FAIR / DataCite metadata check.
+- Conservative wording for restricted, third-party, or supplementary-data cases.
 
-- Data Availability statement drafts.
-- Repository and accession checklists.
-- Dataset citation and FAIR metadata guidance.
-- Risk notes for restricted or sensitive data.
+## Boundaries
 
-## Dependencies / API Keys / Local Environment
-
-- No special runtime dependency for text-only drafting.
-- Repository-specific validation may require internet access.
-
-## FAQ
-
-- **Can it invent accession numbers?** No. It should use provided accession numbers or leave clear placeholders.
-- **Can restricted data still be described?** Yes. It should state access conditions, governance, and request paths clearly.
+- The skill does not invent accessions, DOIs, licenses, repository records, or access restrictions.
+- Missing information is handled with a usable draft plus a short confirmation checklist.
+- Data restricted by ethics, privacy, commercial terms, or third-party agreements need real restriction details from the author.
 
 ## Related Skills
 
-- [`nature-writing`](../nature-writing/README_EN.md)
-- [`nature-response`](../nature-response/README_EN.md)
-- [`nature-reader`](../nature-reader/README_EN.md)
+- `nature-experiment-log`: organize experiment logs and raw attachments into traceable data sources.
+- `nature-statistics`: check statistical reporting and source-data wording.
+- `nature-response`: respond to reviewer concerns about data availability.

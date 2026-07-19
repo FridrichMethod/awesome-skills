@@ -1,60 +1,44 @@
----
-name: nature-ref-verifier
-description: >-
-  学术参考文献多源交叉验证技能。逐条对比作者、标题、年份、卷期、页码，
-  标记卷年/DOI年冲突、作者顺序异常、页码偏差等问题，输出结构化验证报告。
----
+# `nature-ref-verifier` 技能
 
-# nature-ref-verifier
+[English](README_EN.md)
 
-## 用途
+`nature-ref-verifier` 用于对参考文献逐条执行多源交叉验证，比较作者、题名、年份、卷期、页码、DOI 和出版状态，并输出可修正的结构化报告。
 
-逐条验证参考文献的元数据准确性。适合论文提交前自查、审稿意见回复时的引用核查、Zotero 库定期养护。
+## 适合用它做什么
 
-## 工作流概要
+- 投稿前检查整篇论文参考文献是否准确。
+- 针对审稿意见核查某几条引用是否写错。
+- 清理 Zotero / BibTeX 库中的错误元数据。
+- 标记卷年与 DOI 年冲突、作者顺序异常、页码偏差、题名不一致和 DOI 指向错误。
+- 对中文参考文献结合 CNKI 或中文来源核验作者名、刊名和页码。
 
-1. **解析输入** — 接受整篇论文的参考文献列表、单条引用、BibTeX 文件或 Zotero item key
-2. **多源并行查询** — 根据可用工具，同时查 Crossref / IEEE Xplore / 网络搜索 / CNKI / Zotero
-3. **字段级对比** — 逐字段比对，按严重程度分为 🔴 必须修正 / 🟡 建议核对 / 🟢 仅供参考
-4. **置信度评估** — 输出 ✅ Verified / ⚠️ Check suggested / ❌ Needs fix / ❓ Unverifiable
-5. **输出报告** — Markdown 摘要 / BibTeX patch / Zotero 更新指令
+## 典型请求
 
-## 设计背景
+- “帮我逐条检查这 50 条参考文献，标出必须修正的。”
+- “这几条 DOI 好像不对，帮我查真实题名和页码。”
+- “把 BibTeX 里的错误字段整理成 patch 建议。”
 
-本技能源于实际开题报告参考文献核查中遇到的问题：
+## 你需要提供
 
-| 问题类型 | 示例 | 发现方式 |
-|---------|------|---------|
-| 作者完全编造 | Smogavec P → Leckebusch J | CrossRef 查 DOI |
-| 作者顺序颠倒 | Vainikainen→Mikhnev | IEEE 官网 |
-| 卷年 vs DOI 年 | Dadrass 卷2025/上线2024 | 多源对比 |
-| 页码完全错误 | Noon: 1444-1449→1309-1319 | IEEE Xplore |
-| 中文作者名搞混 | 赵延刚→赵廷刚 | 知网 |
-| DOI 指向不同论文 | Abidi: 错误 DOI | CrossRef |
+- 参考文献列表、单条引用、BibTeX、RIS、Zotero item key 或论文参考文献页。
+- 允许使用的数据源，例如 Crossref、PubMed、IEEE、CNKI、出版社页面或 Zotero。
+- 是否需要生成可直接导入的修正文件。
 
-单一搜索引擎（谷歌学术 / Bing / Crossref）都不足以覆盖所有问题，必须多源交叉验证。
+## 产出
 
-## 环境和依赖
+- 字段级核查表：原始值、可信来源值、差异和证据链接。
+- 严重程度分级：必须修正、建议核对、仅供参考、无法验证。
+- 可选 BibTeX patch、Zotero 更新建议或 Markdown 审查报告。
+- 对不确定条目的人工核查清单。
 
-可选工具，有则启用：
+## 边界
 
-- `zotero-cli` / `zotero-mcp` — 读取 Zotero 库、修正条目
-- `kimi-datasource (scholar)` — 学术搜索
-- `kimi-webbridge` — 带校园网登录态的知网查询
-- `WebSearch` / `FetchURL` — 通用网络搜索兜底
+- 不会把单一搜索结果当作最终事实；关键字段优先回到 DOI、出版社或权威数据库。
+- DOI、卷期和在线发表年份不一致时，会解释冲突而不是强行合并。
+- 无法访问的数据库或中文来源会被标注为未验证。
 
-## 使用方式
+## 相关技能
 
-直接告诉 agent：
-
-```
-帮我校验这篇论文的参考文献
-```
-
-```
-验证这条引用：Farquharson G, Langman A. ... 1999
-```
-
-```
-检查我的 bib 文件，输出修正后的版本
-```
+- `nature-academic-search`：检索论文元数据和引用指标。
+- `nature-citation`：为手稿 claim 选择候选引用。
+- `nature-response`：回应审稿人关于参考文献错误的意见。

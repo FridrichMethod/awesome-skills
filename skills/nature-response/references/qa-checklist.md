@@ -10,6 +10,17 @@ Use this checklist before finalizing a response package or when auditing an exis
 - Repeated concerns are cross-referenced rather than ignored.
 - No major concern is answered only with thanks.
 - Editor-specific instructions are addressed before reviewer comments when supplied.
+- Every editor/reviewer item has an action, work status, required input, expected output, and finalization-blocking state.
+
+## Status calibration
+
+- `VERIFIED_DONE` is supported by an inspectable revised manuscript passage, result, figure/table, repository record, approval, or equivalent supplied artifact.
+- An author statement without the corresponding artifact is `REPORTED_DONE_UNVERIFIED`.
+- A drafted response paragraph alone never proves that a manuscript change, analysis, or experiment was completed.
+- `NOT_FEASIBLE` includes a scientific, ethical, scope, or data-based rationale and an appropriate alternative such as claim moderation or a limitation.
+- `PROPOSED_DISAGREEMENT` includes evidence and awaits author confirmation; it is not silently treated as an approved final response.
+- Required inputs and expected outputs are concrete enough for the author to act on and verify.
+- `Blocks finalization?` agrees with severity, missing evidence, and package readiness.
 
 ## Traceability
 
@@ -62,12 +73,14 @@ Before returning final text, ask:
 - Are all placeholders visible enough that the author cannot accidentally submit fabricated compliance?
 - Is the package readiness honestly labelled as `ready_to_submit`, `draft_with_placeholders`, `needs_author_input`, or `blocked`?
 - If any item is `draft_with_placeholders`, `needs_author_input`, or `blocked`, the package must not be labelled `ready_to_submit`.
+- Does every `VERIFIED_DONE` item cite its verification evidence?
+- Does `ready_to_submit` have no blocking item, no unresolved placeholder, and no claimed change left at `REPORTED_DONE_UNVERIFIED` or `TODO_*`?
 
 ## Readiness gate
 
 Use these labels consistently:
 
-- `ready_to_submit`: all comments are answered with supplied actions and traceable locations.
+- `ready_to_submit`: all comments are answered, no item blocks finalization, every claimed completed change is verified against supplied evidence, and no placeholder remains.
 - `draft_with_placeholders`: draft text exists, but visible placeholders or missing locations remain.
 - `needs_author_input`: the author must provide facts before final response wording is credible.
 - `blocked`: a compliance, integrity, central-evidence, or appeal-like issue prevents normal final response drafting.

@@ -71,6 +71,10 @@ Mutual exclusions enforced: `--biallelic-only`/`--multiallelic-only`,
 AlphaMissense score bounds. Setting a `*-gt` ≥ its matching `*-lt` defines an
 empty range and returns nothing.
 
+The `--gnomad-exomes-af-lt` / `--gnomad-genomes-af-lt` bounds **include** unannotated
+variants: "AF < X in gnomAD" includes variants with gnomAD AF = 0, i.e. unannotated;
+pair it with `--gnomad-*-af-gt 0` to require presence in gnomAD.
+
 ---
 
 ## Commands
@@ -183,19 +187,22 @@ and VEP consequence are **not** echoed back on a returned variant):
 | `end` | int | 1-based inclusive end. |
 | `ref` | str | Reference allele. |
 | `alt` | str | Alternate allele. |
-| `af` | float | 1000 Genomes dataset allele frequency. |
-| `ac` | float | Dataset allele count (0.5 for male non-PAR het calls on sex chromosomes). |
+| `af` | float | Dataset allele frequency. |
+| `ac` | float | Dataset allele count (0.5 for male non-PAR het calls on on X and Y chromosomes). |
 | `an` | int | Dataset allele number. |
-| `homc` | int | Homozygous allele count. |
-| `hetc` | int | Heterozygous allele count. |
-| `misc` | int | Missing (no-call) allele count. |
-| `homfc` | int | Female homozygous count (sex chromosomes). |
-| `hetfc` | int | Female heterozygous count (sex chromosomes). |
-| `misfc` | int | Female missing count (sex chromosomes). |
+| `hom_samples` | int | Number of all samples with a homozygous genotype. |
+| `het_samples` | int | Number of all samples with a heterozygous genotype. |
+| `mis_samples` | int | Number of all samples with a missing (no-call) genotype. |
+| `hom_samples_fx` | int | Number of female samples with a homozygous genotype, X chromosome only (0 outside X). |
+| `het_samples_fx` | int | Number of female samples with a heterozygous genotype, X chromosome only (0 outside X). |
+| `mis_samples_fx` | int | Number of female samples with a missing (no-call) genotype, X chromosome only (0 outside X). |
+| `hom_samples_mxy` | int | Number of male samples with a homozygous genotype, X & Y chromosomes only (0 outside X and Y). |
+| `het_samples_mxy` | int | Number of male samples with a heterozygous genotype, X & Y chromosomes only (0 outside X and Y). |
+| `mis_samples_mxy` | int | Number of male samples with a missing (no-call) genotype, X & Y chromosomes only (0 outside X and Y). |
 | `gnomad_exomes_af` | float | gnomAD v4.1 exomes AF. `0.0` = absent from gnomAD exomes. |
 | `gnomad_genomes_af` | float | gnomAD v4.1 genomes AF. `0.0` = absent from gnomAD genomes. |
 | `am_score` | float | AlphaMissense score. `0.0` = not annotated. |
-| `amino_acids` | str | Amino-acid substitution (HGVSp / VEP `Amino_acids`). |
+| `amino_acids` | str | HGVSp Amino-acid substitution. |
 | `biallelic` | bool | Whether the site was biallelic in the input VCFs. |
 
 ---

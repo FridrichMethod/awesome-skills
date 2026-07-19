@@ -124,10 +124,21 @@ This document defines all legal states, transition conditions, transition action
          |FINALIZE|                                 |
          +---+----+                                 |
              |                                      |
-             v                                      |
-         +-------+                                  |
-         |  END  |                                  |
-         +-------+                                  |
+        [checkpoint]---[decline Stage 6]---+        |
+             |                             |        |
+             v                             |        |
+         +--------+                        |        |
+         |Stage 6 |                        |        |
+         |PROCESS |                        |        |
+         |SUMMARY |                        |        |
+         +---+----+                        |        |
+             |                             |        |
+   [terminal acknowledgement]              |        |
+             |                             |        |
+             v                             |        |
+        +---------+                        |        |
+        |COMPLETED| <----------------------+        |
+        +---------+                                 |
 ```
 
 ---
@@ -145,7 +156,7 @@ This document defines all legal states, transition conditions, transition action
 | INIT | Stage 4 | User has review comments | Confirm paper + review comments, launch revision |
 | INIT | Stage 5 | User has final draft for format conversion | Confirm format requirements, launch format-convert |
 | Stage 1 | **checkpoint** | Stage 1 completed | Wait for user confirmation |
-| checkpoint | Stage 2 | User confirms | handoff RQ Brief + Bibliography + Synthesis |
+| checkpoint | Stage 2 | User confirms | handoff RQ Brief + Methodology Blueprint + Bibliography + Synthesis |
 | Stage 2 | **checkpoint** | Stage 2 completed, Paper Draft produced | Wait for user confirmation |
 | checkpoint | Stage 2.5 | User confirms | Pass Paper Draft to integrity agent |
 | Stage 2.5 | **checkpoint** | PASS | Wait for user confirmation |
@@ -155,7 +166,7 @@ This document defines all legal states, transition conditions, transition action
 | checkpoint | Stage 4 | Decision = Minor/Major, user confirms | Pass Revision Roadmap |
 | checkpoint | Stage 4.5 | Decision = Accept, user confirms | Skip revision, go directly to final verification |
 | Stage 4 | **checkpoint** | Stage 4 completed | Wait for user confirmation |
-| checkpoint | Stage 3' | User confirms | Pass Revised Draft + Response to Reviewers |
+| checkpoint | Stage 3' | User confirms | Pass Revised Draft + Response to Reviewers + Editorial Decision Letter (#539 Judge Record input) |
 | Stage 3' | **checkpoint** | Decision produced | Wait for user confirmation |
 | checkpoint | Stage 4.5 | Decision = Accept/Minor, user confirms | Pass final draft to final verification |
 | checkpoint | Stage 4' | Decision = Major, user confirms | Pass new Revision Roadmap |
@@ -163,7 +174,12 @@ This document defines all legal states, transition conditions, transition action
 | checkpoint | Stage 4.5 | User confirms | Pass revised draft to final verification |
 | Stage 4.5 | **checkpoint** | PASS (zero issues) | Wait for user confirmation |
 | Stage 4.5 | Stage 4.5 (retry) | FAIL | Fix issues, re-verify (max 3 rounds) |
-| checkpoint | Stage 5 | User confirms | Pass final accepted draft |
+| checkpoint | Stage 5 | User confirms (MANDATORY — the Stage 5 entry gate; see § Stage 5 boundary semantics) | Pass final accepted draft; record the finalization-format decision (citation style) |
+| Stage 5 | **checkpoint** | Stage 5 completed, Final Paper delivered | Wait for user confirmation (FULL — never SLIM; see § Stage 5 boundary semantics) |
+| checkpoint | Stage 6 | User confirms | Dispatch Process Summary per `process_summary_protocol.md` |
+| checkpoint | completed | User declines Stage 6 | Mark Stage 6 `skipped` (non-mandatory stage); set pipeline global state `completed` |
+| Stage 6 | **terminal checkpoint** | Process Record delivered | Wait for terminal acknowledgement (see § Stage 6 terminal semantics) |
+| terminal checkpoint | completed | User acknowledges (`finish` / `end` / `done` / `confirm`, or an unambiguous natural-language equivalent) | Mark Stage 6 `completed`; set pipeline global state `completed` |
 
 ### Special Flow Transitions
 
@@ -190,6 +206,37 @@ This document defines all legal states, transition conditions, transition action
 
 ---
 
+## Stage 5 and Stage 6 Boundary Semantics (#528)
+
+The two boundaries below were under-specified before v3.17 (different runtimes could resolve them differently). This section is the authority; `SKILL.md` and `pipeline_orchestrator_agent.md` mirror it.
+
+### Stage 5 boundary semantics
+
+"Before finalization (Stage 5): always MANDATORY" refers to exactly ONE checkpoint: the **Stage 5 entry gate** — the checkpoint between Stage 4.5 PASS and the Stage 5 dispatch. It is MANDATORY because it carries the finalization decisions:
+
+- explicit confirmation to proceed to finalization (no auto-advance);
+- the finalization-format decision: citation style (APA 7.0 / Chicago / IEEE, ...) — the "Stage 5 finalization format" pending decision the passport-reset machinery records at this boundary.
+
+Transition state: `awaiting_confirmation` → on user confirmation → Stage 5 `in_progress`.
+
+Other confirmations near Stage 5 are NOT this MANDATORY boundary:
+
+1. The in-stage interactions of the Stage 5 output process — the "Need LaTeX?" question (Step 3) and the content confirmation before the final PDF (Step 4) — are part of Stage 5 execution, not pipeline checkpoints; they are asked during the stage, never at the gate.
+2. The **Stage 5 completion checkpoint** (Final Paper delivered, before Stage 6) follows the global stage-completion rule: it is a FULL checkpoint — never SLIM, because final-deliverable acceptance must not be downgraded — but it is not on the MANDATORY list.
+
+### Stage 6 terminal semantics
+
+Stage 6 is a non-mandatory stage (it is absent from the orchestrator's non-skippable list). At the Stage 5 completion checkpoint the user may decline it: Stage 6 is marked `skipped` and the pipeline still terminates `completed` (the Final Paper was already produced at Stage 5).
+
+When Stage 6 runs, its completion is the pipeline's **terminal checkpoint**:
+
+1. After delivering the Process Record (MD + PDF per the user's language choice), the orchestrator prompts for a terminal acknowledgement.
+2. Terminal acknowledgement vocabulary: `finish` / `end` / `done` / `confirm`, or an unambiguous natural-language equivalent that accepts the deliverables. Change requests (the other language version, content corrections) keep Stage 6 `in_progress` — they are not acknowledgements.
+3. On acknowledgement: state_tracker marks Stage 6 `completed` and sets the pipeline global state to `completed`. This is the terminal transition — there is no next stage.
+4. After `completed`, no stage transition is legal (see Prohibited Transitions). New requests start a new pipeline run or a targeted single-skill invocation (mid-entry).
+
+---
+
 ## Material Dependency Matrix
 
 | Material | Produced At | Consumed At | Required/Recommended |
@@ -206,10 +253,12 @@ This document defines all legal states, transition conditions, transition action
 | Revision Roadmap | Stage 3 | Stage 4 (input) | Required |
 | Revised Draft | Stage 4 | Stage 3' (Phase 0) | Required |
 | Response to Reviewers | Stage 4 | Stage 3' (input) | Recommended |
+| Editorial Decision Letter (Schema 6) | Stage 3 | Stage 3' (input) | Recommended (#539 — its Review Panel Provenance block feeds the Judge Record; absent → "unknown (provenance block absent)") |
 | **Re-Review Report** | **Stage 3'** | **Stage 4' (input)** | **Required (if Major)** |
 | **Re-Revised Draft** | **Stage 4'** | **Stage 4.5 (input)** | **Required (if executed)** |
 | **Integrity Report (Final)** | **Stage 4.5** | **Stage 5 (prerequisite)** | **Required** |
-| Final Paper | Stage 5 | END (delivery) | Required |
+| Final Paper | Stage 5 | User (delivery) | Required |
+| Process Record | Stage 6 | User (delivery) | Optional (Stage 6 is skippable) |
 
 ---
 

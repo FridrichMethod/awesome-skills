@@ -10,7 +10,7 @@ Force every section to serve this sentence. If the sentence cannot be written, t
 
 ## 1b. Build the Terminology Ledger
 
-On first contact with the material, extract the recurring terms, abbreviations, notation, and proper names into a Terminology Ledger before drafting any prose. Lock the canonical forms and reuse them across every section. See `../../../_shared/core/terminology-ledger.md`.
+On first contact with the material, extract the recurring terms, abbreviations, notation, and proper names into a Terminology Ledger before drafting any prose. Lock the canonical forms and reuse them across every section. See `../../../nature-shared/core/terminology-ledger.md`.
 
 ## 2. Choose section architecture
 
@@ -29,7 +29,7 @@ Drafting a full section on a wrong assumed premise wastes the whole draft and is
 - **One-sentence argument** (from step 1) — the single most important thing to get right. Echo it back in plain language.
 - **Plan**: detected paper type, section(s), journal / word limit, and the paragraph map from step 3 as a short bullet list.
 - **Key terminology**: the canonical forms locked in the Terminology Ledger (step 1b) for the main methods, models, datasets, and metrics. Surface them here so the user can fix a wrong canonical term before it propagates through every section.
-- **Primary reader**: who the draft is optimized for, and which of the five reader questions it leads with (relevance / novelty / trust / reuse / meaning — see `../../../_shared/core/reader-workflow.md`). Getting the lead question wrong is a common silent cause of "this is not what I meant".
+- **Primary reader**: who the draft is optimized for, and which of the five reader questions it leads with (relevance / novelty / trust / reuse / meaning — see `../../../nature-shared/core/reader-workflow.md`). Getting the lead question wrong is a common silent cause of "this is not what I meant".
 - **Key assumptions**: anything else you inferred rather than were told — especially what the core contribution is and which result to lead with. Mark each clearly as an assumption.
 - **At most 2–3 targeted questions**, only on genuinely ambiguous, high-leverage points (how to frame the core contribution, target audience / journal, which result leads). Do not ask about things the user already made clear, and do not pad the list to reach three.
 

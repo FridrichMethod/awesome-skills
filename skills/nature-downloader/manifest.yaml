@@ -1,10 +1,9 @@
 name: nature-downloader
-version: 1.0.0
+version: 2.0.0
 description: >
-  Configure a user's legitimate library resource entry, reuse their logged-in
-  Chrome institutional session, and download open-access or institution-
-  authorized academic full text/PDFs with clear status reporting for missing
-  PDF or missing library permission.
+  Download academic full text through publisher APIs, lawful open-access
+  fallbacks, CNKI, or a user's institution-authorized browser session, with
+  secure credential storage and an auditable per-paper manifest.
 
 always_load:
   - SKILL.md
@@ -15,8 +14,12 @@ references:
       path: README.md
     - condition: configuring known school presets, resource URL inference, or health checks
       path: scripts/configure_school.py
+    - condition: configuring or validating Elsevier, Springer Nature, or IEEE API credentials
+      path: scripts/configure_credentials.py
     - condition: batch DOI/title/topic downloads through Web of Science or open-access sources
       path: scripts/batch_download.mjs
+    - condition: publisher API routing, OA fallback, and provider-specific full-text status
+      path: scripts/lib/publisher-providers.mjs
     - condition: browser-authenticated PDF fetching and PDF signature checks
       path: scripts/browser_pdf_downloader.mjs
     - condition: canonical download statuses and manifest status semantics

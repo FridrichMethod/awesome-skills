@@ -2,44 +2,40 @@
 
 [中文说明](README.md)
 
-## What It Does
+`nature-experiment-log` turns experiment images, voice notes, text, and scattered observations into traceable structured experiment logs for Obsidian or plain Markdown workflows.
 
-- Standardizes experiment images, voice notes, and text into structured Obsidian-compatible experiment logs with YAML frontmatter and archived source materials.
+## What To Use It For
 
-## When to Use It
+- Turn a day's experiment record into a standard log with YAML frontmatter.
+- Extract experiment elements from photos, microscopy images, weighing notes, instrument screenshots, or voice transcripts.
+- Link samples, conditions, observations, anomalies, next actions, and raw attachments.
+- Archive raw materials from Feishu, chat records, or CLI input into the same experiment-log format.
 
-- You need to turn raw experiment notes into a durable lab log.
-- You want consistent metadata, file naming, and source-material archiving.
-- You are collecting field, lab, or group-chat experiment evidence.
+## Typical Requests
 
-## Copy-Paste Prompts
+- "Record an experiment: 316L chloride-salt corrosion at 500°C for 300 h in Ar, mass loss 0.0032 g."
+- "Turn these experiment photos into today's Obsidian lab log."
+- "Use this voice transcript to create a standard experiment record and list missing information."
 
-- `Turn these photos and notes into a structured experiment log entry.`
-- `Archive these raw materials and create an Obsidian experiment note with YAML frontmatter.`
-- `Summarize today's experiment from these voice notes and images.`
+## What You Need To Provide
 
-## Required Inputs
+- Experiment date, sample, conditions, steps, observations, or raw attachments.
+- Target vault / output directory; if not specified, the skill generates Markdown that can be saved.
+- Required naming rules, project IDs, or sample IDs.
 
-- Images, voice transcripts, text notes, dates, project names, experiment IDs, and operator/context information.
-- Optional Obsidian vault or archive path.
+## Outputs
 
-## Expected Outputs
+- Experiment log with YAML frontmatter.
+- Attachment index for source images, audio, tables, or chat records.
+- Missing-field checklist and suggested next experiment actions.
 
-- Markdown experiment log with YAML frontmatter.
-- Archived source-material references.
-- Clean summaries, observations, and follow-up action items.
+## Boundaries
 
-## Dependencies / API Keys / Local Environment
-
-- Obsidian is optional but useful for vault workflows.
-- Messaging or Feishu integration may require local credentials and bot setup.
-
-## FAQ
-
-- **Does it replace a formal lab notebook?** No. It helps structure and archive notes; institutional record requirements still apply.
-- **Can it handle images without text?** Yes, but it should mark visual interpretation uncertainty.
+- The skill does not invent temperature, duration, recipe, device model, or results.
+- Unconfirmed information is preserved as `AUTHOR_INPUT_NEEDED` or Chinese confirmation items.
+- Feishu, Obsidian, or other external write paths depend on local CLI configuration or directory permissions.
 
 ## Related Skills
 
-- [`nature-literature-pipeline`](../nature-literature-pipeline/README_EN.md)
-- [`nature-data`](../nature-data/README_EN.md)
+- `nature-data`: turn experiment data into Data Availability and FAIR checklists.
+- `nature-figure`: turn experiment data or images into submission-grade figures.
