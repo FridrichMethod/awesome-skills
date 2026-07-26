@@ -31,9 +31,9 @@ If code throws ImportError, AttributeError, or TypeError, introspect the install
 |---------------------|------|----------------|
 | Single amplicon, single sample (e.g. pilot edit validation) | `CRISPResso` | `--amplicon_seq`, `--guide_seq` |
 | Same amplicon, many samples (e.g. timecourse, dose response) | `CRISPRessoBatch` | `--batch_settings` table |
-| Many amplicons, pooled in one library (e.g. arrayed validation pool) | `CRISPRessoPooled` | `--amplicon_file` |
-| Off-target survey from whole-genome BAM | `CRISPRessoWGS` | `--bam`, `--reference`, `--regions_file` |
-| Comparing two CRISPResso runs (e.g. condition A vs B) | `CRISPRessoCompare` | `--crispresso_output_folder_1`, `_2` |
+| Many amplicons, pooled in one library (e.g. arrayed validation pool) | `CRISPRessoPooled` | `--amplicons_file` |
+| Off-target survey from whole-genome BAM | `CRISPRessoWGS` | `--bam_file`, `--reference_file`, `--region_file` |
+| Comparing two CRISPResso runs (e.g. condition A vs B) | `CRISPRessoCompare` | two positional output folders |
 | HDR / knock-in validation | `CRISPResso` with `--expected_hdr_amplicon_seq` | Same as base CRISPResso |
 | Cytosine base editor (C->T) | `CRISPResso --base_editor_output` | `--conversion_nuc_from C --conversion_nuc_to T` |
 | Adenine base editor (A->G) | `CRISPResso --base_editor_output` | `--conversion_nuc_from A --conversion_nuc_to G` |
@@ -46,7 +46,7 @@ If code throws ImportError, AttributeError, or TypeError, introspect the install
 
 ## The Quantification Window
 
-**Why this matters for postdoc-level use:** CRISPResso classifies reads as "edited" or "unmodified" based on whether *modifications fall inside the quantification window* (not the whole amplicon). The window is centered on the predicted cut site (Cas9: 3 bp upstream of PAM; Cas12a: 18 bp downstream of PAM) with a default size of 1 (the cut site itself).
+**Why this matters for postdoc-level use:** CRISPResso classifies reads as "edited" or "unmodified" based on whether *modifications fall inside the quantification window* (not the whole amplicon). The window is centered on the predicted cut site (Cas9: 3 bp upstream of PAM; Cas12a: 18 bp downstream of PAM) with a default size of 1. `--quantification_window_size N` extends N bp on EACH side, so the window is 2N bp wide.
 
 ```bash
 # Default Cas9 setup
@@ -54,7 +54,7 @@ If code throws ImportError, AttributeError, or TypeError, introspect the install
 --quantification_window_center -3               # 3 bp upstream of PAM
 
 # Base editor: widen window to cover editing positions 4-8
---quantification_window_size 10                 # extend to capture position 4-8
+--quantification_window_size 10                 # 10 bp each side (20 bp total)
 --quantification_window_center -10              # center on the editing window
 ```
 
@@ -63,7 +63,7 @@ If code throws ImportError, AttributeError, or TypeError, introspect the install
 - Too wide: includes random sequencing errors; inflates editing rate
 - Wrong center: edits at correct position are scored as outside the window
 
-For base editing screens, the convention is `--quantification_window_size 10` to cover positions 4-13 from PAM-distal end. For prime editing with multi-base templated edits, widen to encompass the entire edit region.
+For base editing screens a widened window is conventional; CRISPResso2's own base-editor guidance uses `--quantification_window_center -17` with a window sized to span the editing positions. For prime editing with multi-base templated edits, widen to encompass the entire edit region.
 
 ## Single-Amplicon Cas9 Editing
 
@@ -88,20 +88,21 @@ CRISPResso \
 #   sample_results/<name>/CRISPResso_mapping_statistics.txt
 #   sample_results/<name>/CRISPResso_quantification_of_editing_frequency.txt
 #   sample_results/<name>/Alleles_frequency_table.zip
-#   sample_results/<name>/Indel_size_distribution.png
-#   sample_results/<name>/Insertion_deletion_substitution.png
+#   sample_results/<name>/3a.<ref>.Indel_size_distribution.pdf
+#   sample_results/<name>/4b.<ref>.Insertion_deletion_substitution_locations.pdf
+#   (PDF by default; add --save_also_png for PNG)
 ```
 
 **Key outputs:**
 
 | File | Content |
 |------|---------|
-| `CRISPResso_mapping_statistics.txt` | Reads aligned, reads in quantification window, % alignment, % discarded |
+| `CRISPResso_mapping_statistics.txt` | Tab-separated, one data row: READS IN INPUTS, READS AFTER PREPROCESSING, READS ALIGNED, N_COMPUTED_ALN, ... (no percentage columns) |
 | `CRISPResso_quantification_of_editing_frequency.txt` | % unmodified, % NHEJ, % HDR (if expected), per-edit-class breakdown |
 | `Alleles_frequency_table.zip` | Per-allele sequences and frequencies (allele-level resolution) |
 | `Nucleotide_percentage_table.txt` | Per-position A/C/G/T/- frequencies (substitutions + deletions) |
 | `Quantification_window_nucleotide_percentage_table.txt` | Same, restricted to quantification window (base-editor analysis) |
-| `Reference_modified_chr11_115...png` | Sequencing pile-up over amplicon |
+
 
 ## Base Editor Quantification
 
@@ -166,7 +167,8 @@ CRISPResso \
     --name pe_sample
 
 # Output adds:
-#   Prime_editing_outcomes.txt - intended-edit vs scaffold-incorporation vs indel vs unmodified
+#   Prime-editing outcomes are extra amplicon rows (Reference / Prime-edited / Scaffold-incorporated)
+#   inside CRISPResso_quantification_of_editing_frequency.txt
 ```
 
 **Reading prime-editor output:**
@@ -222,7 +224,7 @@ CRISPRessoBatch \
 CRISPRessoPooled \
     --fastq_r1 pooled_R1.fastq.gz \
     --fastq_r2 pooled_R2.fastq.gz \
-    --amplicon_file amplicons.txt \
+    --amplicons_file amplicons.txt \
     --output_folder pooled_run \
     --n_processes 8
 
@@ -243,7 +245,7 @@ CRISPRessoPooled \
 CRISPRessoWGS \
     --bam aligned.bam \
     --reference genome.fa \
-    --regions_file off_targets.bed \
+    --region_file off_targets.bed \
     --output_folder wgs_run \
     --n_processes 8
 ```
@@ -323,15 +325,15 @@ def parse_crispresso(output_dir):
 
 | Threshold | Value | Source / Rationale |
 |-----------|-------|--------------------|
-| Cas9 editing efficiency (functional KO) | >70% indels | Clement 2019 *Nat Biotechnol*; below this, KO is incomplete |
-| Indel rate (clean base editor) | <5% | Clement 2019; >5% = unwanted cut activity |
+| Cas9 editing efficiency (functional KO) | >70% indels | Field convention; below this, KO is incomplete |
+| Indel rate (clean base editor) | <5% | Field convention; >5% = unwanted cut activity |
 | Target conversion (CBE) | >30% | Variable by target; below this, screen power is poor |
 | Target conversion (ABE) | >30% | ABE typically lower per-base than CBE |
 | Bystander rate (BE) | <10% acceptable; <5% ideal | Application-dependent; for variant function studies, must be controlled |
-| Intended-edit % (prime editor) | >5% per-edit | Anzalone 2019 baseline; can be 50%+ at favorable sites |
+| Intended-edit % (prime editor) | >5% per-edit | Field convention; can be 50%+ at favorable sites |
 | Scaffold incorporation (PE) | <2% | High-quality pegRNA design |
 | Alignment rate | >85% | Below this, amplicon design or contamination issue |
-| Minimum read quality | Phred 30 | Joung 2017 sequencing standard |
+| Minimum read quality | Phred 30 | Q30 Illumina base-call-accuracy standard |
 | Quantification window size (Cas9) | 1 | Clement 2019 default; precise cut-site analysis |
 | Quantification window size (BE) | 10 | Cover editing window positions 4-13 |
 
@@ -354,7 +356,6 @@ def parse_crispresso(output_dir):
 - Pinello L et al. 2016. *Nat Biotechnol* 34:695. Original CRISPResso.
 - Anzalone AV et al. 2019. *Nature* 576:149. Prime editing (PE-1/PE-2/PE-3).
 - Komor AC et al. 2016. *Nature* 533:420. Base editing (BE3).
-- Sanson KR et al. 2020. *Nat Commun* 11:5165. GRACE base-editor screen library.
 - Findlay GM et al. 2018. *Nature* 562:217. Saturation genome editing.
 
 ## Related Skills

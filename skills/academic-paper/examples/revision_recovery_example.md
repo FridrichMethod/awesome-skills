@@ -379,8 +379,8 @@ Revision Date: 2026-03-06
 Entering Stage 3' (RE-REVIEW) -- Loop 1/2
 
 Loading academic-paper-reviewer SKILL.md (re-review mode)...
-Passing Revised Draft + Response to Reviewers + original Revision Roadmap + Editorial Decision Letter (#539)...
-5 reviewers re-reviewing revision quality...
+Passing Revised Draft + Response to Reviewers + original Revision Roadmap + Editorial Decision Letter (#539) + apply report(s) (#390) + Round-1 Reviewer Configuration Cards (yardstick continuity)...
+EIC verifying each roadmap item (Round-1 reviewer configuration reused — field_analyst not re-run)...
 ```
 
 ### Revision Response Verification
@@ -419,7 +419,10 @@ Per the quality rubrics: 65-79 = Minor Revision, >= 80 = Accept. Score of 78.0 i
 ### Editorial Synthesizer Assessment
 
 ```
-All 5 reviewers concur: revision quality is strong.
+EIC verification (Round-1 configuration reused): revision quality is strong.
+Every Round-1 concern — including R1's and the DA's — is checked against the
+revised manuscript per the Traceability Rule; the panel is not re-convened
+at re-review.
 
 Key improvements:
 1. The DA-CRITICAL strawman reframing is the most significant improvement.

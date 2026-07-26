@@ -11,15 +11,129 @@
 3. Record the access path, failure reason, and reusable configuration so batch jobs remain auditable.
 4. Never bypass paywalls, DRM, CAPTCHAs, or two-factor verification, and never read or export browser cookies, passwords, localStorage, or session files.
 
-## What To Use It For
+## Supporting Information Confirmation
 
-- Configure a school library, CARSI, EZproxy, WebVPN, or resource-portal entry point for first use.
-- Prefer configured Elsevier, Springer Nature, or IEEE full-text APIs, then automatically try lawful OA sources when an API attempt fails.
-- Reuse the user's logged-in Chrome institutional session to download legally accessible PDFs.
-- Try to obtain full text from DOI, title, publisher page, PubMed page, or CNKI Chinese title.
-- When explicitly requested, use `--si` with an exact WoS title to download supplementary files into a clean per-article folder.
-- Save HTML/text or explain access status when no PDF is available.
-- Report why access failed: no permission, user login required, CAPTCHA, human verification, or missing holdings.
+Every download command must choose one SI mode explicitly:
+
+```bash
+--no-si  # download the main text only
+--si     # download the main text and available Supporting Information
+```
+
+If neither option is provided, the CLI returns `si_confirmation_required` and does not create output directories or download files. Passing both options fails argument validation. In batch jobs, the choice applies to the whole batch.
+
+## Configuration
+
+### Library and CNKI
+
+Save the resource portal that the user actually uses:
+
+```bash
+python3 scripts/configure_school.py infer "https://example.edu/library/resources"
+python3 scripts/configure_school.py url "https://example.edu/library/resources"
+python3 scripts/configure_school.py show
+python3 scripts/configure_school.py health --force
+```
+
+Regular school configuration is stored in `~/.config/lit-dl/school.json`.
+
+### Publisher APIs
+
+Configure publisher APIs only when non-OA English papers match those publishers:
+
+- Elsevier: [Developer Portal](https://dev.elsevier.com/)
+- Springer Nature: [API Access](https://dev.springernature.com/docs/quick-start/api-access/)
+- IEEE: [Developer Registration](https://developer.ieee.org/member/register)
+
+Store API keys through hidden input:
+
+```bash
+python3 scripts/configure_credentials.py set elsevier
+python3 scripts/configure_credentials.py set springer_nature
+python3 scripts/configure_credentials.py set ieee --fulltext-endpoint 'https://issued-endpoint.example/articles/{doi}'
+python3 scripts/configure_credentials.py show
+python3 scripts/configure_credentials.py validate elsevier
+python3 scripts/configure_credentials.py delete elsevier
+```
+
+When the user has already provided a publisher API key in the conversation, the agent should save it through standard input without echoing it in commands, replies, or manifests:
+
+```bash
+python3 scripts/configure_credentials.py set elsevier --stdin
+```
+
+Otherwise prefer local hidden input. Institutional passwords, OTP codes, cookies, and session tokens are not handled by this rule. Secrets are stored in `~/.config/lit-dl/credentials.json` with owner-only permissions and are displayed only by their last four characters.
+
+Unpaywall needs a compliant contact email:
+
+```bash
+python3 scripts/configure_credentials.py contact-email researcher@example.org
+```
+
+The email is stored as non-secret settings in `~/.config/lit-dl/settings.json`.
+
+## Download Examples
+
+Download main PDFs by DOI:
+
+```bash
+node scripts/batch_download.mjs \
+  --dois "10.1007/s00122-021-03957-1,10.1111/pbi.14066" \
+  --no-si \
+  --out "./literature-downloads"
+```
+
+Chinese titles use the CNKI route only:
+
+```bash
+node scripts/batch_download.mjs \
+  --title "乡村振兴背景下数字治理研究" \
+  --no-si \
+  --out "./literature-downloads"
+```
+
+For an exact English OA title:
+
+```bash
+node scripts/batch_download.mjs \
+  --title "Attention Is All You Need" \
+  --open-access \
+  --no-si \
+  --out "./literature-downloads"
+```
+
+Search by topic and download SI:
+
+```bash
+node scripts/batch_download.mjs \
+  --topic "rice blast resistance gene" \
+  --count 10 \
+  --si \
+  --out "./literature-downloads"
+```
+
+For a known lawful full-text URL:
+
+```bash
+node scripts/batch_download.mjs \
+  --pdf-url "https://arxiv.org/pdf/1706.03762" \
+  --title "Attention Is All You Need" \
+  --no-si \
+  --out "./literature-downloads"
+```
+
+Use `--language zh|en` or `--route cnki|open_access|elsevier|springer_nature|ieee|web_access` to override ambiguous metadata. A `--source-url` pointing to CNKI forces the Chinese CNKI route.
+
+## API Failure and Web Access Fallback
+
+When Elsevier, Springer Nature, or IEEE APIs return no entitlement or no full text, the downloader tries PMC, Unpaywall, publisher OA, and lawful repositories first. Only when API and OA routes fail does it return `api_fallback_confirmation_required`; after confirmation, rerun with the publisher-specific choice:
+
+```bash
+--api-fallback-web-for elsevier
+--no-api-fallback-web-for springer_nature
+```
+
+For the whole batch, use `--api-fallback-web` or `--no-api-fallback-web`. Web Access reuses the user's logged-in Chrome institutional session; login, QR approval, OTP, and complex verification remain user actions.
 
 ## Typical Requests
 

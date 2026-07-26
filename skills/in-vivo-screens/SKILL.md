@@ -29,11 +29,11 @@ If code throws ImportError, AttributeError, or TypeError, introspect the install
 | Constraint | In vitro | In vivo |
 |------------|----------|---------|
 | Cells per condition | 10M-100M (unlimited) | Limited by injection volume (1-5M cells typical) |
-| Implant -> early tumor cell count | N/A | 10-100x drop typical (~94% library complexity may survive in CD45+ TILs) |
-| Late tumor cell count | N/A | Further 5-10x reduction; final ~3.93 sgRNAs/gene |
+| Implant -> early tumor cell count | N/A | 10-100x drop typical |
+| Late tumor cell count | N/A | Further 5-10x reduction; ~4 sgRNAs/gene retained in late tumors (Scheidmann 2022) |
 | Bottleneck per animal | None | Tens of millions of cells fail to engraft |
 | Library coverage achievable | 500-1000x | Often 50-100x effective at endpoint |
-| sgRNAs survivable | Full library | 80-94% in early tumors; 60-80% in late tumors |
+| sgRNAs survivable | Full library | 66-97% in early (14 d) tumors, strongly cell-line dependent (Lee 2023); by 38-43 d most reads come from the top 1% of guides |
 
 **Math:** A 70,000-sgRNA library at 500x coverage requires 35M cells in pool. Most syngeneic models can implant 1-5M cells. Result: real coverage is 70x at best; effective coverage at endpoint is even lower after bottleneck.
 
@@ -43,10 +43,10 @@ If code throws ImportError, AttributeError, or TypeError, introspect the install
 
 **Manguso et al 2017 *Nature* 547:413** established the canonical in vivo CRISPR screen methodology with a focused library:
 
-- 2,368 genes (kinases + cell surface proteins + immune factors)
-- 4 sgRNAs per gene (~9,500 sgRNAs total)
+- 2,398 genes covering kinases, phosphatases, cell-surface proteins, antigen presentation, immune regulation and chromatin remodeling; the 2,368 expressed in the melanoma line were the ones scored
+- 4 sgRNAs per gene, delivered as four sub-pools of one sgRNA per gene plus 100 non-targeting controls each (9,992 sgRNAs total)
 - Targeted at immune-evasion biology in syngeneic mouse melanoma
-- Identified PTPN2, NLRC5, CD47 as immune-evasion genes
+- Recovered the known immune-evasion genes Cd274 (PD-L1) and Cd47, and identified Ptpn2 loss as sensitizing tumors to immunotherapy through increased IFN-gamma signaling and antigen presentation
 
 **Standard focused-library principles:**
 
@@ -56,23 +56,22 @@ If code throws ImportError, AttributeError, or TypeError, introspect the install
 
 **Public focused libraries:**
 - Manguso 2017 immune library (Addgene)
-- Joung 2017 pooled screen reference
 - DepMap focused panels for specific pathways
 - Custom: order from Twist via CRISPick or CRISPOR
 
-## CRISPR-StAR (Temporal Activation; Uijttewaal 2025)
+## CRISPR-StAR (Stochastic Activation by Recombination; Uijttewaal 2025)
 
-**Uijttewaal et al 2025 *Nat Biotechnol* 43(11):1848** (published online Dec 2024) introduced CRISPR-StAR (Staggered Activation Reporter), which uses inducible Cas9 expression to delay gene editing until after cells have engrafted in the animal.
+**Uijttewaal et al 2025 *Nat Biotechnol* 43(11):1848** (published online Dec 2024) introduced CRISPR-StAR, which holds sgRNAs inactive until cells have engrafted and re-expanded, then activates each sgRNA in only half the progeny of a clone to generate matched active-vs-inactive internal controls.
 
 **How it works:**
-1. Library is delivered into cells with inducible (Dox-controlled) Cas9
-2. Cells are implanted in animal at MOI 0.3
-3. Cells engraft into tumor (no editing yet); library complexity preserved
-4. Days 5-7 post-implantation: induce Cas9 with doxycycline
-5. Editing begins; screen proceeds for additional weeks
-6. Tumor harvest, DNA extraction, sequencing
+1. Library is delivered as sgRNAs held in an inactive state, alongside a tamoxifen-inducible CreERT2 recombinase
+2. Cells are implanted in animal at MOI 0.3; they engraft and re-expand into single-cell-derived clones (no editing yet); library complexity preserved
+3. Tamoxifen induces CreERT2 recombination, which stochastically activates the sgRNA in ~half the cells of each clone
+4. Active and still-inactive (wild-type) cells of the same clone, tracked by UMI barcodes, form paired internal active-vs-control comparisons
+5. Screen proceeds; tumor harvest, DNA extraction, sequencing
+6. Per-clone active-vs-inactive contrast suppresses engraftment and clonal-drift noise
 
-**Quantified gain:** CRISPR-StAR enables genome-scale in vivo screens (vs focused libraries) by generating intrinsic per-clone controls; outperforms conventional in vivo screens in therapy-resistant mouse melanoma models (Uijttewaal 2025).
+**What it buys:** CRISPR-StAR enables genome-scale in vivo screens (vs focused libraries) by generating intrinsic per-clone controls; outperforms conventional in vivo screens in therapy-resistant mouse melanoma models (Uijttewaal 2025).
 
 ## Syngeneic vs Xenograft vs PDX
 
@@ -95,7 +94,7 @@ If code throws ImportError, AttributeError, or TypeError, introspect the install
 ```bash
 # Typical PCR + sequencing parameters for in vivo screens
 # Per-tumor DNA: 0.5-5 mg yield from typical syngeneic tumor
-# Per-sample sequencing depth: ≥500 reads/sgRNA at endpoint (lower than in vitro 300+)
+# Per-sample sequencing depth: >=500 reads/sgRNA at endpoint (bottleneck-limited libraries need depth, not breadth)
 # Multiple animals per condition (n=5-10) to account for clonal variation
 
 # mageck count for in vivo
@@ -144,9 +143,11 @@ def meta_analyze_animals(per_animal_results):
     '''per_animal_results: list of MAGeCK gene_summary.txt per animal.'''
     merged = pd.concat([df.assign(animal=i) for i, df in enumerate(per_animal_results)])
     grouped = merged.groupby('id')
-    meta = grouped.apply(lambda g: pd.Series({
+    meta = grouped.apply(lambda g: pd.Series({   # pandas 2.2+: pass include_groups=False
         'mean_neg_score': g['neg|score'].mean(),
-        'stouffer_z': norm.ppf(g['neg|p-value']).sum() / (len(g) ** 0.5),
+        # clip to keep norm.ppf finite at p=0; negate so positive z = stronger depletion,
+        # matching examples/per_animal_meta_analysis.py
+        'stouffer_z': -norm.ppf(g['neg|p-value'].clip(1e-10, 1 - 1e-10)).sum() / (len(g) ** 0.5),
         'animals_significant': (g['neg|fdr'] < 0.05).sum(),
         'n_animals': len(g)
     }))
@@ -208,7 +209,7 @@ def meta_analyze_animals(per_animal_results):
 | Animals per condition | 10+ for hit-calling; 5 minimum | Inter-animal variability |
 | Animals per condition for arrayed validation | 10 | Tighter signal needed |
 | In vivo CEGv2 PR-AUC | >0.4 (context-dependent) | Lower than in vitro 0.7 |
-| Late tumor sgRNA-per-gene | ~3.93 typical | Empirical from literature |
+| Late tumor sgRNA-per-gene | ~3.93 mean | Scheidmann 2022 (CTC-derived breast-cancer xenograft; model-dependent) |
 | Days to harvest (tumor) | 12-21 days post-implant | Time for selection to manifest |
 
 ## Common Errors
@@ -225,9 +226,9 @@ def meta_analyze_animals(per_animal_results):
 
 - Manguso RT et al. 2017. *Nature* 547:413. In vivo CRISPR screen for immune evasion; canonical focused-library design.
 - Chen S et al. 2015. *Cell* 160:1246. Original in vivo Cas9 screening methodology.
-- Aoki Y et al. 2023. *Cancer Gene Therapy* (doi 10.1038/s41417-023-00664-5). Clonal dynamics limit selection detection in in-vivo CRISPR screens. (Earlier "Sci Adv 9:eadg2451" attribution could not be verified.)
+- Lee TW et al. 2023. *Cancer Gene Ther* 30:1610. Clonal dynamics limit detection of selection in tumour xenograft CRISPR/Cas9 screens.
+- Scheidmann MC et al. 2022. *Cancer Res* 82:681. In vivo CRISPR screen in a CTC-derived xenograft; late-tumor sgRNA-per-gene retention.
 - Uijttewaal ECH et al. 2025. *Nat Biotechnol* 43:1848 (online Dec 2024). CRISPR-StAR intrinsic-control screening for in vivo models.
-- Pacini C et al. 2024. *Nat Commun* 15:1230. DepMap screening benchmark including in vivo.
 
 ## Related Skills
 

@@ -11,7 +11,7 @@ Decision-grade analysis of single-cell pooled CRISPR screens. Covers Perturb-seq
 pip install pertpy scanpy anndata muon
 
 # SCEPTRE (R; for calibrated low-MOI DE)
-R -e "install.packages('sceptre', repos = 'https://cran.r-project.org')"
+R -e "devtools::install_github('katsevich-lab/sceptre')"   # sceptre is not on CRAN
 
 # Seurat (R; for Mixscape native + multiome)
 R -e "install.packages('Seurat')"
@@ -28,7 +28,7 @@ Required inputs:
 Tell the AI agent what to do:
 - "Analyze my CROP-seq experiment: sgRNA assignment, Mixscape escaper filter, SCEPTRE DE per perturbation, downstream pathway analysis"
 - "Choose between direct-capture Perturb-seq and CROP-seq architecture for a planned 1000-pert screen in iPSC-derived neurons"
-- "Scale up: design genome-wide Perturb-seq following Replogle 2022 protocol (2.5M cells, 19,000 genes, CRISPRi)"
+- "Scale up: design genome-wide Perturb-seq following the Replogle 2022 protocol (2.5M cells, ~9,866 expressed genes in K562, CRISPRi)"
 - "Diagnose: why does my Mixscape filter out 80% of perturbed cells as escapers?"
 - "Run SCEPTRE on my low-MOI Perturb-seq data and compare FDR calibration vs MAST"
 
@@ -38,7 +38,7 @@ Tell the AI agent what to do:
 
 > "I'm running a 1,500-perturbation screen in primary T cells. Choose between Dixit Perturb-seq (direct capture) vs CROP-seq vs Perturb-CITE-seq. Required: scRNA + sgRNA detection from same library. Recommendation depends on cost vs sgRNA assignment rate."
 
-> "Genome-wide essentiality screen in K562. Replicate Replogle 2022 design: 2.5M cells, 2,058 perturbations via CRISPRi, 10X 3' direct capture, ~1,000 cells/pert. Estimate cost and channel count."
+> "Genome-wide essentiality screen in K562. Replicate Replogle 2022 design: 2,057 essential-gene perturbations via CRISPRi, 10X 3' direct capture, a median >100 cells/pert as screened (budget 500-1,000 if per-perturbation DE power is the goal). Estimate cost and channel count."
 
 ### sgRNA Assignment + Filtering
 
@@ -54,9 +54,9 @@ Tell the AI agent what to do:
 
 ### Genome-Wide Scale
 
-> "Design genome-wide Perturb-seq for 19,000 protein-coding genes with 5 sgRNAs/gene CRISPRi. Compute cells needed at 500/pert (target Replogle 2022 scale). Distribute across 10X channels."
+> "Design genome-wide Perturb-seq for 19,000 protein-coding genes using one dual-sgRNA CRISPRi element per gene. Compute cells needed at 500/pert. Distribute across 10X channels."
 
-> "For my 2-million-cell genome-scale dataset, run per-pert SCEPTRE; output a 2058-pert x 19000-gene matrix of log-FCs. Cluster perturbations by their gene-effect profiles to identify functional modules."
+> "For my 2-million-cell genome-scale dataset, run per-pert SCEPTRE; output a 2057-pert x 19000-gene matrix of log-FCs. Cluster perturbations by their gene-effect profiles to identify functional modules."
 
 ### Diagnostics
 
@@ -81,7 +81,7 @@ Tell the AI agent what to do:
 5. Flag multiplets (cells with 2+ sgRNAs); decide to filter or analyze as combinatorial
 6. Standard normalization (scanpy: total + log1p; or scran)
 7. Apply Mixscape escaper filtering with NTC controls and K=20 nearest neighbors
-8. Verify KO retention rate (typically 30-60% of perturbed cells)
+8. Verify KO retention rate (strongly guide-dependent; Papalexi 2021 saw 39-92% across four guides against one gene)
 9. Per-perturbation DE via SCEPTRE (low-MOI variant if applicable) with covariates (n_genes, n_umi, channel)
 10. Permutation FDR with 1,000+ iterations
 11. Aggregate per-perturbation signatures; pathway enrichment
@@ -91,8 +91,8 @@ Tell the AI agent what to do:
 ## Tips
 
 - The single most common silent failure: sgRNA library prep doesn't match scRNA architecture. CROP-seq sgRNA is in 3'UTR captured by 3' chemistry. Direct-capture Perturb-seq needs amplicon-PCR pre-sequencing. Mixing them fails silently with low assignment rate.
-- For genome-wide screens, Replogle 2022 is the canonical protocol. Match: CRISPRi, 10X 3' chemistry, ~1,000 cells per pert, 5 sgRNAs per gene.
-- Mixscape escaper filtering is mandatory for clean perturbation signal. 30-60% of perturbed cells fail to edit; including them dilutes effects. Skip Mixscape only if validating that Cas9 expression is uniform via independent assay.
+- For genome-wide screens, Replogle 2022 is the canonical protocol. Match: CRISPRi, 10X 3' chemistry, one dual-sgRNA element per gene, and a median >100 cells per perturbation (budget 500-1,000 per perturbation if per-perturbation DE power is the goal).
+- Mixscape escaper filtering is mandatory for clean perturbation signal. A guide- and gene-dependent fraction of cells fail to edit (Papalexi 2021: ~25% escapers for IFNGR2, but a predicted 0% perturbation rate for 15 genes); including them dilutes effects. Skip Mixscape only if validating that Cas9 expression is uniform via independent assay.
 - SCEPTRE is the only DE method with calibrated FDR on Perturb-seq scale (Barry 2024 benchmark). MAST and Wilcoxon over-call by 5-10x. Always use SCEPTRE.
 - Cells per perturbation: 500 minimum for moderate effects; 1,000+ for genome-scale comparisons. Below 500, per-pert DE is unstable.
 - MOI 0.3 is the standard for single-sgRNA-per-cell; at MOI 0.5, 9% of cells get multiple sgRNAs (not analyzable as single perturbation).
@@ -115,7 +115,7 @@ Tell the AI agent what to do:
 
 | Resolution | Cells per perturbation |
 |------------|------------------------|
-| Genome-scale (Replogle 2022) | 500-1,000 |
+| Genome-scale | 500-1,000 |
 | Focused (specific module) | 1,000-2,000 |
 | Single-pert deep | 5,000+ |
 | Combinatorial (pair) | 2,000+ per pair |
@@ -124,7 +124,7 @@ Tell the AI agent what to do:
 
 - [ ] sgRNA assignment rate >70% of cells
 - [ ] Multiplet rate <5% after doublet filtering
-- [ ] Mixscape KO retention 30-60% of perturbed
+- [ ] Mixscape KO retention >40% per guide (flag any guide below; investigate near-0% rates)
 - [ ] SCEPTRE permutation FDR calibrated (not MAST)
 - [ ] Per-pert cell count ≥500
 - [ ] Channel batch as SCEPTRE covariate

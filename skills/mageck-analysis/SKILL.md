@@ -76,12 +76,12 @@ If code throws ImportError, AttributeError, or TypeError, introspect the install
 
 ```bash
 mageck count \
-    --list-seq library.csv \                       # sgRNA library: header sgRNA,Gene,Sequence
+    --list-seq library.csv \                       # sgRNA library: sgRNA id, sequence, gene (in that order)
     --sample-label Plasmid,Day0,Veh_r1,Veh_r2,Drug_r1,Drug_r2 \
     --fastq Plasmid.fq.gz Day0.fq.gz Veh_r1.fq.gz Veh_r2.fq.gz Drug_r1.fq.gz Drug_r2.fq.gz \
     --norm-method median \                         # see normalization decision below
     --output-prefix screen \
-    --trim-5 CACCG                                 # 5'-adapter (lentiGuide-Puro convention)
+    --trim-5 AUTO                                  # length(s) to trim from 5' end; AUTO detects it (int or comma-list also accepted)
 
 # Outputs:
 #   screen.count.txt           raw counts
@@ -93,10 +93,10 @@ mageck count \
 **Library file format (tab- or comma-separated; first row is header):**
 
 ```
-sgRNA,Gene,Sequence
-BRCA1_1,BRCA1,ATGGATTTATCTGCTCTTCG
-BRCA1_2,BRCA1,CAGCAGATACTTGATGCATC
-NTC_0001,NonTargeting_0001,GACGCATCGAATCAATAGCC
+sgRNA,Sequence,Gene
+BRCA1_1,ATGGATTTATCTGCTCTTCG,BRCA1
+BRCA1_2,CAGCAGATACTTGATGCATC,BRCA1
+NTC_0001,GACGCATCGAATCAATAGCC,NonTargeting_0001
 ```
 
 ## Normalization Decision
@@ -124,7 +124,7 @@ mageck test \
     --norm-method median \
     --output-prefix drug_vs_veh \
     --gene-lfc-method median \                     # alternative: mean (less robust)
-    --sort-criterion pos                           # rank for positive selection (note: `--sort-criterion` singular, not `--sort-criteria`)
+    --sort-criteria pos                            # rank for positive selection (choices: neg, pos; default neg)
 # Outputs: drug_vs_veh.gene_summary.txt (gene-level), drug_vs_veh.sgrna_summary.txt
 ```
 
@@ -169,9 +169,9 @@ mageck mle \
     --output-prefix timecourse_mle \
     --norm-method median \
     --sgrna-efficiency efficiency.txt \            # OPTIONAL: from JACKS or library design
-    --sgrna-eff-name-column 1 \
-    --sgrna-eff-score-column 2 \
-    --max-sgrnapergene-permutation 10
+    --sgrna-eff-name-column 0 \                    # 0-based; 0 is the default
+    --sgrna-eff-score-column 1 \                   # 0-based; 1 is the default
+    --max-sgrnapergene-permutation 40              # skip genes with more sgRNAs than this (default 40)
 # Outputs: timecourse_mle.gene_summary.txt with beta scores per condition + Wald p-values
 ```
 
@@ -199,13 +199,10 @@ mageck test \
     --norm-method control \                         # NTCs as normalization reference
     --control-sgrna ntcs.txt \                      # one NTC sgRNA per line
     --gene-lfc-method median \
-    # `--variance-estimation-samples` is NOT a standard `mageck test` flag in current MAGeCK releases;
-    # remove this line and let `mageck test` estimate the negative-binomial dispersion from the count
-    # table normally, or use `mageck mle` with explicit design-matrix samples for variance modelling.
-    --sgrna-efficiency efficiency.txt \
-    --sgrna-eff-name-column 1 \
-    --sgrna-eff-score-column 2 \
+    --variance-estimation-samples Day0_r1,Day0_r2 \  # estimate variance from these samples
     --output-prefix drug_screen_normalized
+# --sgrna-efficiency / --sgrna-eff-name-column / --sgrna-eff-score-column are `mageck mle` options,
+# not `mageck test` options; pass them to mle if guide-efficacy weighting is needed.
 ```
 
 **Reading order:** Run `mageck count` -> screen-qc skill for QC -> `mageck test` or `mageck mle` -> `MAGeCKFlute` for visualization -> downstream pathway analysis.
@@ -290,8 +287,8 @@ FluteMLE(gene_summary = "timecourse_mle.gene_summary.txt",
 ```bash
 mageck-vispr init my_screen
 # Edit config.yaml to point to counts + library
-mageck-vispr run --cores 8
-# Generates interactive HTML at output/index.html
+snakemake --cores 8                 # mageck-vispr generates a Snakemake workflow; run it with snakemake
+vispr server results/*.vispr.yaml   # serve the interactive dashboard
 ```
 
 ## Failure Modes
@@ -347,29 +344,28 @@ mageck-vispr run --cores 8
 |-----------|-------|--------------------|
 | Hit FDR (gene-level) | <0.05 | MAGeCK paper Li 2014; standard |
 | Hit LFC magnitude | >1 (2-fold) | Biologically interpretable effect size; FDR-only hits at low LFC need validation |
-| Normalization fraction-changing threshold | <40% guides change for median norm | Robson 2024 MAGeCK benchmark |
+| Normalization fraction-changing threshold | <40% guides change for median norm | Median-normalization assumption (most guides unchanged) |
 | sgRNAs needed for reliable MLE | ≥3 per gene with non-zero counts in each condition | MAGeCK 0.5+ behavior; below this, NaN |
 | Time-course conditions for MLE | ≥3 (otherwise use test) | MLE statistical power |
-| PR-AUC of ranked hits against CEGv2 | >0.7 for "passing" essentiality screen | Hart 2017; see [[screen-qc]] |
-| Permutation iterations for RRA gene-level p-value | 1000 (default), 10000 for tight FDR | `--max-sgrnapergene-permutation`; trades runtime |
+| PR-AUC of ranked hits against CEGv2 | >0.7 for "passing" essentiality screen | Community convention (CEGv2 from Hart 2017); see [[screen-qc]] |
+| RRA permutation passes per gene | 100 default; raise via `--additional-rra-parameters "--permutation N"` | Not exposed directly on `mageck test`; trades runtime |
 
 ## Common Errors
 
 | Error / symptom | Cause | Solution |
 |-----------------|-------|----------|
-| `mageck count` outputs mostly zero counts | Wrong `--trim-5` adapter | Check library plasmid; lentiGuide is CACCG, Brunello may differ |
+| `mageck count` outputs mostly zero counts | Library column order swapped, or wrong `--trim-5` length | Library must be sgRNA id, sequence, gene; try `--trim-5 AUTO` |
 | All genes significant | Median normalization break (heavy selection) | `--norm-method control` |
 | NaN beta in MLE | Gene with insufficient non-zero counts | Exclude from interpretation |
 | Two-condition MLE works but ranks differ from RRA | Different test statistic | Both correct; check direction and use the appropriate one |
 | Hits include amplified genes | No CN correction | See [[copy-number-correction]] |
-| Library not detected in screen.countsummary.txt | Library file format wrong | Check header is `sgRNA,Gene,Sequence` (no spaces) |
+| Library not detected in screen.countsummary.txt | Library file format wrong | Check column order is sgRNA id, sequence, gene (no spaces) |
 
 ## References
 
 - Li W et al. 2014. *Genome Biol* 15:554. MAGeCK; original alpha-RRA algorithm.
 - Li W et al. 2015. *Genome Biol* 16:281. MAGeCK-VISPR; QC + visualization.
 - Wang B et al. 2019. *Nat Protoc* 14:756. MAGeCKFlute pathway analysis.
-- Robson J et al. 2024. *bioRxiv*. MAGeCK normalization benchmark.
 - Joung J et al. 2017. *Nat Protoc* 12:828. Screen protocol.
 - Hart T et al. 2017. *G3* 7:2719. CEGv2/NEGv1 reference sets for benchmarking.
 

@@ -22,7 +22,7 @@ depends_on:
   - crispr-screens/in-vivo-screens
 qc_checkpoints:
   - after_counting: ">65% mapping rate; <0.5% zero-count in plasmid; Gini <0.1 on plasmid"
-  - after_qc: "Replicate Pearson on log-counts >0.85; Spearman >0.7; CEGv2 PR-AUC >0.7"
+  - after_qc: "Replicate Pearson on log-counts >=0.8 (MAGeCK-VISPR floor; >0.85 acceptable, >0.95 ideal); Spearman >0.7; CEGv2 PR-AUC >0.7"
   - after_cn_correction: "Spearman ρ between CN and gene LFC abs <0.10 post-correction (literature 'significant bias' band; <0.05 is a stricter target). Requires a matched CN profile, which the unsupervised CRISPRcleanR path never loads -- compute in crispr-screens/copy-number-correction, or use Chronos, which takes CN as input"
   - after_hit_calling: "Tier-1 hits = 3-method consensus; Tier-2 = 2 of 3; Tier-3 = single-method exploratory"
 ---
@@ -50,7 +50,7 @@ Every LFC, QC gate, and hit call is computed against a reference that is committ
 
 1. **The guide LIBRARY definition (guide->gene map + control classes) is the denominator, the calibrator, and the training reference — committed once.** The library must carry non-targeting controls (NTCs, ~1%, the null distribution) AND CEGv2 reference essentials + NEGv1 non-essentials (the positive/negative calibrators for PR-AUC and BAGEL2/Chronos priors). NTCs calibrate the null/FDR; CEGv2/NEGv1 calibrate PR-AUC — swapping or dropping a class silently breaks FDR or QC.
 2. **The baseline choice has a right answer and rescales every hit.** Dropout/enrichment LFC is against a baseline: plasmid pool for the cloning-bottleneck baseline, Day-0/T0 for the biology baseline, and vehicle (NOT Day-0) for drug screens — drug-vs-Day-0 conflates drug effect with normal proliferation.
-3. **Copy-number correction MUST precede hit calling in cancer cell lines.** Multiple simultaneous Cas9 cuts at amplified loci trigger a gene-independent DNA-damage/G2 arrest (Aguirre 2016; Munoz 2016 shows the amplicon effect is p53-INDEPENDENT -- separately, Ihry 2018 / Haapaniemi 2018 report p53-dependent toxicity of Cas9 cutting generally), so amplified regions look essential regardless of gene function; calling hits first yields false essentials at ERBB2/MYC/FGFR1. Run CRISPRcleanR/Chronos BEFORE hit calling, or use CRISPRi to bypass the DSB. This is a pipeline step, not a post-hoc interpretation. Verifying `abs(rho(LFC,CN)) < 0.1` afterwards needs a matched CN profile: CRISPRcleanR corrects unsupervised without one, so the check happens in crispr-screens/copy-number-correction (or use Chronos, which consumes CN directly).
+3. **Copy-number correction MUST precede hit calling in cancer cell lines.** Multiple simultaneous Cas9 cuts at amplified loci trigger a gene-independent DNA-damage/G2 arrest (Aguirre 2016; Munoz 2016; the effect appears in both TP53-mutant and TP53-wild-type lines, though Aguirre 2016 found TP53 status correlates with its magnitude -- separately, Ihry 2018 / Haapaniemi 2018 report p53-dependent toxicity of Cas9 cutting generally), so amplified regions look essential regardless of gene function; calling hits first yields false essentials at ERBB2/MYC/FGFR1. Run CRISPRcleanR/Chronos BEFORE hit calling, or use CRISPRi to bypass the DSB. This is a pipeline step, not a post-hoc interpretation. Verifying `abs(rho(LFC,CN)) < 0.1` afterwards needs a matched CN profile: CRISPRcleanR corrects unsupervised without one, so the check happens in crispr-screens/copy-number-correction (or use Chronos, which consumes CN directly).
 4. **CEGv2 essential-gene depletion is the screen's built-in positive control.** If known essentials do not deplete (CEGv2 PR-AUC below ~0.7), the screen failed selection and NO novel hit is trustworthy regardless of its p-value — the seam analog of a spike-in. Normalize -> QC -> (CN correct) -> hit-call, never hit-call first; add batch as an MLE covariate, never pre-corrected with ComBat on counts (distorts the NB mean-variance the caller assumes).
 
 ## Made-once commitments
@@ -106,7 +106,7 @@ Every LFC, QC gate, and hit call is computed against a reference that is committ
 ## Step 1: Library Design and Pre-Screen Validation
 
 Reference [[library-design]] for full library composition. Verify before sequencing:
-- Plasmid pool Gini <0.1 (Joung 2017 Nat Protoc 12:828)
+- Plasmid pool Gini <0.1 (Li W et al 2015 MAGeCK-VISPR, Genome Biol 16:281)
 - >=99% guides detected at >25 reads/guide
 - Skew (p90/p10) <2
 - NTCs comprise ~1% of library; CEGv2 reference essentials + NEGv1 non-essentials included
@@ -166,7 +166,7 @@ print('Replicate Pearson:', pearson.values[pearson.values < 1].mean())
 Hard gates from [[screen-qc]]:
 - Plasmid Gini <0.1; endpoint <0.3 (or <0.55 for heavy drug screens)
 - Replicate Pearson on log-counts >0.85
-- CEGv2 PR-AUC >0.7 against Hart 2017 reference essential gene set
+- CEGv2 PR-AUC >0.7 against the Hart 2017 reference essential gene set (community convention, not a threshold defined in that paper)
 - Reads per sgRNA per sample >=300 (DepMap convention)
 
 ## Step 4: Copy-Number Correction (Cancer Cell Lines Only)
@@ -345,7 +345,7 @@ MAGeCKFlute R package provides one-shot FluteRRA / FluteMLE dashboards with KEGG
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| False essentials at ERBB2/MYC/FGFR1 | Hit calling before copy-number correction (gene-independent, p53-independent DNA-damage arrest at amplicons) | Run CRISPRcleanR/Chronos BEFORE hit calling; verify abs(rho(LFC,CN)) < 0.1; or use CRISPRi to bypass the DSB |
+| False essentials at ERBB2/MYC/FGFR1 | Hit calling before copy-number correction (gene-independent DNA-damage arrest at amplicons, regardless of p53 status) | Run CRISPRcleanR/Chronos BEFORE hit calling; verify abs(rho(LFC,CN)) < 0.1; or use CRISPRi to bypass the DSB |
 | FDR broken or PR-AUC uncomputable | NTC (null) and CEGv2 essential (positive control) classes swapped or one absent | Keep both classes; NTCs calibrate the null/FDR, CEGv2/NEGv1 calibrate PR-AUC and BAGEL2/Chronos priors |
 | Every hit rescaled / drug effect confounded | Wrong baseline (Day-0 for a drug screen) | Drug screen -> vehicle control; plasmid pool for the cloning-bottleneck baseline |
 | "Everything significant at FDR<0.01" | Heavy selection breaks median normalization (>40% guides change) | Switch to `--norm-method control` on NTCs, or BAGEL2 |
@@ -357,9 +357,10 @@ MAGeCKFlute R package provides one-shot FluteRRA / FluteMLE dashboards with KEGG
 
 - Li W, Xu H, Xiao T, et al (2014) MAGeCK enables robust identification of essential genes from genome-scale CRISPR/Cas9 knockout screens. *Genome Biology* 15:554. DOI 10.1186/s13059-014-0554-4.
 - Aguirre AJ, Meyers RM, Weir BA, et al (2016) Genomic copy number dictates a gene-independent cell response to CRISPR/Cas9 targeting. *Cancer Discovery* 6:914-929. DOI 10.1158/2159-8290.CD-16-0154. (the amplicon artifact.)
+- Munoz DM, Cassiani PJ, Li L, et al (2016) CRISPR screens provide a comprehensive assessment of cancer vulnerabilities but generate false-positive hits for highly amplified genomic regions. *Cancer Discovery* 6:900-913. DOI 10.1158/2159-8290.CD-16-0178.
 - Hart T, Moffat J (2016) BAGEL: a computational framework for identifying essential genes from pooled library screens. *BMC Bioinformatics* 17:164. DOI 10.1186/s12859-016-1015-8.
 - Iorio F, Behan FM, Goncalves E, et al (2018) Unsupervised correction of gene-independent cell responses to CRISPR-Cas9 targeting (CRISPRcleanR). *BMC Genomics* 19:604. DOI 10.1186/s12864-018-4989-y.
-- Joung J, Konermann S, Gootenberg JS, et al (2017) Genome-scale CRISPR-Cas9 knockout and transcriptional activation screening. *Nature Protocols* 12:828-863. DOI 10.1038/nprot.2017.016. (library QC / Gini.)
+- Joung J, Konermann S, Gootenberg JS, et al (2017) Genome-scale CRISPR-Cas9 knockout and transcriptional activation screening. *Nature Protocols* 12:828-863. DOI 10.1038/nprot.2017.016. (library QC: skew, zero-count and coverage conventions.)
 
 ## Related Skills
 

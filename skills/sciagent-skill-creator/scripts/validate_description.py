@@ -4,7 +4,7 @@
 Used both by `scaffold.py` (programmatic check) and as a standalone CLI for
 authors who want to test a description before scaffolding.
 
-Rules enforced (mirrors CLAUDE.md Step 5 "Description writing rules"):
+Rules enforced (mirrors AGENTS.md Step 5 "Description writing rules"):
 
 1. Length: hard ceiling 1024 chars (also enforced by tests/test_skill_quality.py).
 2. First-120-char keyword carrier: the first word must NOT be a stop verb

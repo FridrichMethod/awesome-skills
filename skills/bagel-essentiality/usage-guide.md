@@ -2,16 +2,14 @@
 
 ## Overview
 
-Decision-grade essentiality calling for CRISPR-Cas9 fitness screens using BAGEL2 (Kim & Hart 2021 *Genome Medicine*). Computes Bayes Factors per gene by log-likelihood ratios over per-sgRNA fold changes, anchored against CEGv2 reference core-essentials (684 genes) and NEGv1 reference non-essentials (927 genes). Improvements over BAGEL1: linear extrapolation enables tumor-suppressor detection; multi-target off-target correction reduces false positives. BF >6 corresponds to FDR ~0.05; BF >12 to FDR ~0.005.
+Decision-grade essentiality calling for CRISPR-Cas9 fitness screens using BAGEL2 (Kim & Hart 2021 *Genome Medicine*). Computes Bayes Factors per gene by log-likelihood ratios over per-sgRNA fold changes, anchored against CEGv2 reference core-essentials (684 genes) and NEGv1 reference non-essentials (927 genes). Improvements over BAGEL1: linear extrapolation enables tumor-suppressor detection; multi-target off-target correction reduces false positives. BF >=6 corresponds to ~90% posterior probability of essentiality (Hart 2017); stricter BF cutoffs are BAGEL convention rather than a published FDR mapping.
 
 ## Prerequisites
 
 ```bash
 # BAGEL2 (Python)
 git clone https://github.com/hart-lab/bagel
-pip install -e .
-# OR
-pip install bagel-cas9
+# Run BAGEL.py directly from the clone; the repo has no setup.py and no PyPI release
 
 # Reference gene sets
 wget https://raw.githubusercontent.com/hart-lab/bagel/master/CEGv2.txt
@@ -31,7 +29,7 @@ Tell the AI agent what to do:
 - "Identify tumor-suppressor candidates from BAGEL2 negative BF values; cross-check against COSMIC tumor suppressor list"
 - "Compare BAGEL2 BF vs MAGeCK FDR on the same dataset; reconcile disagreements at BF 5-7 boundary"
 - "Diagnose BAGEL2 calling no hits despite known essentials -- is it a reference-set issue?"
-- "Calibrate BF threshold for clinical-grade essentiality: BF >12 (FDR 0.005) vs BF >30 (FDR 0.001)"
+- "Calibrate BF threshold for clinical-grade essentiality: BF >12 vs BF >30, using BAGEL.py pr on my own screen"
 
 ## Example Prompts
 
@@ -39,7 +37,7 @@ Tell the AI agent what to do:
 
 > "Run BAGEL.py fc then bf on counts.txt with controls Plasmid and treatment samples Drug_r1,Drug_r2,Drug_r3. Output bayes_factor.txt sorted by BF descending."
 
-> "Run BAGEL.py pr after to generate precision-recall curve against CEGv2; pick BF threshold for 95% precision (typically BF ~10-15)."
+> "Run BAGEL.py pr after to generate precision-recall curve against CEGv2; pick the BF threshold that reaches 95% precision on my screen's own PR curve."
 
 ### Tumor Suppressor Detection
 
@@ -64,9 +62,9 @@ Tell the AI agent what to do:
 1. Verify input file format: sgRNA, GENE, sample columns
 2. Download/verify CEGv2 and NEGv1 reference files from hart-lab
 3. Run `BAGEL.py fc` to compute fold changes from control samples
-4. Run `BAGEL.py bf` to compute Bayes Factors with 1000+ bootstrap iterations
+4. Run `BAGEL.py bf` to compute Bayes Factors (default: 10-fold cross-validation; `-b -NB 1000` to bootstrap)
 5. Run `BAGEL.py pr` to generate precision-recall curve
-6. Apply BF threshold (default BF >6 for FDR ~0.05)
+6. Apply BF threshold (default BF >6, ~90% posterior per Hart 2017)
 7. Stratify genes: essential (BF >6), neutral (-6 to 6), candidate tumor suppressors (BF <-6)
 8. For tumor suppressors, cross-check against COSMIC / published tumor suppressor lists
 9. Compare to MAGeCK output (if also run); report consensus hits
@@ -76,11 +74,11 @@ Tell the AI agent what to do:
 ## Tips
 
 - The single most common silent failure: wrong reference gene set file (truncated, gene-symbol mismatch). Always verify by counting genes in CEGv2.txt and NEGv1.txt before running.
-- BF >6 ≈ FDR 0.05 is calibrated against CEGv2 in Hart 2017. For cell types outside cancer (iPSC, primary T cells), this calibration may not hold; use cell-type-specific essentialomes (Dempster 2019).
+- BF >6 corresponds to ~90% posterior probability against CEGv2 in Hart 2017 (the ~5% FDR mapping is a rough BAGEL convention). For cell types outside cancer (iPSC, primary T cells), this calibration may not hold; use a cell-type-specific essentialome derived for the relevant lineage.
 - BAGEL2's tumor-suppressor sensitivity comes from linear extrapolation in the BF calculation. This is a real improvement over BAGEL1 and worth using for drug-modifier screens or screens expecting positive selection.
 - For copy-number-confounded cancer-line screens, pre-correct with CRISPRcleanR (see [[copy-number-correction]]) before BAGEL2; otherwise, amplified regions will appear as "essential" with high BF.
-- The bootstrap CI (STD column) is the diagnostic for guide-quality issues. Wide CI = low confidence; investigate per-sgRNA contributions.
-- For screens with only 3 sgRNAs/gene (some custom libraries), increase bootstrap iterations to 5000+ for stable estimates.
+- The resampling CI (STD column) is the diagnostic for guide-quality issues. Wide CI = low confidence; investigate per-sgRNA contributions.
+- For screens with only 3 sgRNAs/gene (some custom libraries), switch to bootstrapping with `-b -NB` to 5000+ for stable estimates.
 - When BAGEL2 and MAGeCK disagree, BAGEL2 typically calls more hits in screens with high background variance (it's robust due to reference-set anchoring) and fewer in screens with strong NTC null distribution.
 - For non-cancer cell types, cross-check that CEGv2 genes drop out at expected rate. If not, use cell-type-specific reference.
 
@@ -92,22 +90,24 @@ Tell the AI agent what to do:
 | Drug-modifier screen wanting both directions | BAGEL2 (tumor-suppressor sensitive) or drugZ |
 | Multi-cell-line panel | Chronos (DepMap) preferred over BAGEL2 |
 | iPSC / primary cell / non-cancer | Use cell-type-specific essentialome |
-| Custom library, <4 sgRNAs/gene | Increase bootstrap; consider MAGeCK alternative |
-| Clinical-grade essentiality | BF >12 (FDR 0.005) or higher |
+| Custom library, <4 sgRNAs/gene | Bootstrap with `-b -NB`; consider MAGeCK alternative |
+| Clinical-grade essentiality | BF >12 or higher |
 
 ## Thresholds
 
-| BF threshold | Precision | Recall | Use |
-|--------------|-----------|--------|-----|
-| 0 | 0.85 | 0.95 | Exploratory |
-| 6 | 0.95 | 0.85 | Standard, FDR ~0.05 |
-| 12 | 0.99 | 0.65 | High-confidence, FDR ~0.005 |
-| 30 | ~1.00 | 0.20 | Ultra-stringent |
+Precision and recall are screen-specific -- generate them with `BAGEL.py pr` rather than assuming fixed values. The BF ladder used in practice:
+
+| BF threshold | Use |
+|--------------|-----|
+| 0 | Exploratory; highest recall |
+| 6 | Standard call (~90% posterior, Hart 2017) |
+| 12 | High-confidence |
+| 30 | Ultra-stringent; near-certain essentials |
 
 ## Validation Checklist
 
 - [ ] CEGv2 and NEGv1 files downloaded and verified
-- [ ] Bootstrap iterations ≥1000 (default acceptable)
+- [ ] Resampling left at the 10-fold cross-validation default, or `-b -NB 1000` used deliberately
 - [ ] PR curve generated against CEGv2 for empirical threshold selection
 - [ ] Per-sgRNA LLR distributions checked for outliers
 - [ ] Hits cross-validated with MAGeCK or JACKS (consensus tier)

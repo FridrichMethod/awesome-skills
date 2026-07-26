@@ -84,6 +84,8 @@ for i in range(n_nontargeting):
 essential_genes = ['RPL11', 'RPS3', 'EIF3A', 'POLR2A', 'CDK1', 'SF3B1', 'U2AF1', 'PRPF8', 'SNRPD1', 'SNRPE']
 for gene in essential_genes:
     seq = generate_sgrna_sequence()
+    while 'TTTT' in seq:                     # poly-T terminates U6; same filter as targeting guides
+        seq = generate_sgrna_sequence()
     _, gc = score_sgrna(seq)
     all_guides.append({
         'gene': gene,
@@ -96,6 +98,8 @@ for gene in essential_genes:
 
 for gene in ['AAVS1', 'ROSA26']:
     seq = generate_sgrna_sequence()
+    while 'TTTT' in seq:                     # poly-T terminates U6; same filter as targeting guides
+        seq = generate_sgrna_sequence()
     _, gc = score_sgrna(seq)
     all_guides.append({
         'gene': gene,

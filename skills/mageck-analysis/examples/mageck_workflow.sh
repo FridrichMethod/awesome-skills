@@ -36,8 +36,8 @@ echo "Gene summary: ${OUTPUT_PREFIX}_test.gene_summary.txt"
 echo "sgRNA summary: ${OUTPUT_PREFIX}_test.sgrna_summary.txt"
 
 # Count significant hits
-NEG_HITS=$(awk -F'\t' 'NR>1 && $8<0.05' "${OUTPUT_PREFIX}_test.gene_summary.txt" | wc -l)
-POS_HITS=$(awk -F'\t' 'NR>1 && $14<0.05' "${OUTPUT_PREFIX}_test.gene_summary.txt" | wc -l)
+NEG_HITS=$(awk -F'\t' 'NR>1 && $5<0.05' "${OUTPUT_PREFIX}_test.gene_summary.txt" | wc -l)
+POS_HITS=$(awk -F'\t' 'NR>1 && $11<0.05' "${OUTPUT_PREFIX}_test.gene_summary.txt" | wc -l)
 
 echo "Negative selection hits (FDR<0.05): $NEG_HITS"
 echo "Positive selection hits (FDR<0.05): $POS_HITS"

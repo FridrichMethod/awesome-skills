@@ -7,13 +7,14 @@ Design pooled sgRNA libraries for CRISPR knockout, interference (CRISPRi), activ
 ## Prerequisites
 
 ```bash
-pip install crispor biopython pandas numpy
+git clone https://github.com/maximilianh/crisporWebsite   # CRISPOR is not on PyPI biopython pandas numpy
 # Optional modern predictors
-pip install azimuth-2  # Microsoft Research Rule Set 2 implementation
+# Rule Set 2: use Broad CRISPick, or crisprScore::getAzimuthScores() in R
+# (the original MicrosoftResearch/Azimuth is Python-2 only and archived)  # Microsoft Research Rule Set 2 implementation
 # CLI tools
-conda install -c bioconda crispor flashfry
+# FlashFry ships as a JAR from GitHub Releases: java -jar FlashFry-assembly-1.15.jar
 # For Cas12a / multiplex
-pip install crisprDesignData  # Bioconductor data
+R -e "devtools::install_github('crisprVerse/crisprDesignData')"
 ```
 
 Required inputs: gene list (HGNC symbols or Ensembl IDs), target genome assembly (GRCh38 / GRCm39 / project-specific), screen chemistry (Cas9 / CRISPRi / CRISPRa / Cas12a / BE / PE), and either FANTOM5 CAGE peaks (for CRISPRi/a) or coding-exon coordinates (for Cas9 KO).
@@ -40,7 +41,7 @@ Tell the AI agent what to design:
 
 ### CRISPRi / CRISPRa Libraries
 
-> "Design a Dolcetto-style CRISPRi library for 600 transcription factors. Resolve TSS from FANTOM5 highest-rank CAGE peak per gene; if FANTOM5 lacks a peak, fall back to Ensembl canonical TSS and flag those genes for review. Target the Dolcetto window (-50 to +300 from TSS). 6 guides per gene plus 1,000 NTCs."
+> "Design a Dolcetto-style CRISPRi library for 600 transcription factors. Resolve TSS from FANTOM5 highest-rank CAGE peak per gene; if FANTOM5 lacks a peak, fall back to Ensembl canonical TSS and flag those genes for review. Search the Dolcetto window (-50 to +300 from TSS), ranking toward the +25 to +75 optimum. 6 guides per gene plus 1,000 NTCs."
 
 > "Compare Calabrese vs Horlbeck CRISPRa TSS targeting windows for my activation screen in iPSC-derived neurons. We need to detect modest fold-change activation."
 
@@ -93,7 +94,7 @@ Tell the AI agent what to design:
 |---------|----------|-------------|---------------|-------------|
 | Brunello | Cas9 KO | 4 | 500x | Modern KO standard |
 | TKOv3 | Cas9 KO | 4 | 500x | BAGEL2-calibrated |
-| Avana | Cas9 KO | 6 | 500x | DepMap legacy (pre-2021) |
+| Avana | Cas9 KO | up to 6 as published; DepMap screens a 4-guide subset | 500x | DepMap CRISPR gene-effect releases |
 | Dolcetto | CRISPRi | 6 | 500x | Knockdown of essential/cuttable-toxicity genes |
 | Calabrese | CRISPRa | 6 | 500x | GoF activation |
 | Inzolia | Cas12a array | 4-array | 500x array | Paralog buffering / GI screens |
@@ -113,7 +114,7 @@ Tell the AI agent what to design:
 - crispr-screens/screen-qc - Library skew, Gini, replicate correlation, essentialome PR-AUC
 - crispr-screens/mageck-analysis - Standard analysis pipeline for the designed library
 - crispr-screens/combinatorial-screens - Cas12a multiplex / paralog-pair library design
-- crispr-screens/base-editing-analysis - GRACE-style base-editor library design and editing-window analysis
+- crispr-screens/base-editing-analysis - base-editor library design and editing-window analysis
 - crispr-screens/prime-editing-screens - PRIDICT2-optimized pegRNA libraries
 - crispr-screens/copy-number-correction - Filter amplicon-driven artifacts in cancer-cell-line screens
 - crispr-screens/in-vivo-screens - Bottleneck math for animal-model focused libraries

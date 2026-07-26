@@ -2,7 +2,7 @@
 
 ## Overview
 
-Decision-grade design and analysis of pooled prime-editor screens. Covers pegRNA design with PRIDICT (Mathis 2023 Nat Biotechnol 41:1151) and PRIDICT2 (Mathis 2025 Nat Biotechnol 43:712, online June 2024); PE chemistry selection (PE2, PE3, PEmax, PEAR, PE5max); pegRNA architecture (spacer + scaffold + PBS + RTT); chromatin context as the primary determinant; PRIME pooled-screen methodology (Erwood 2023); MOSAIC in situ saturation mutagenesis; CRISPResso2 quantification; and cross-modal validation with base-editor screens.
+Decision-grade design and analysis of pooled prime-editor screens. Covers pegRNA design with PRIDICT (Mathis 2023 Nat Biotechnol 41:1151) and PRIDICT2 (Mathis 2025 Nat Biotechnol 43:712, online June 2024); PE chemistry selection (PE2, PE3, PEmax, PE5max); pegRNA architecture (spacer + scaffold + PBS + RTT); chromatin context as a major locus-level determinant; PRIME pooled-screen methodology (Ren 2023); MOSAIC in situ saturation mutagenesis; CRISPResso2 quantification; and cross-modal validation with base-editor screens.
 
 ## Prerequisites
 
@@ -12,7 +12,7 @@ git clone https://github.com/uzh-dqbm-cmi/PRIDICT2
 # OR use web interface https://pridict.it/
 
 # CRISPResso2 for amplicon analysis
-pip install CRISPResso2
+conda install -c bioconda crispresso2   # not on PyPI
 
 # Helpers
 pip install pandas numpy biopython
@@ -49,7 +49,7 @@ Tell the AI agent what to do:
 
 ### Chromatin-Aware Design
 
-> "Cross-reference my pegRNA library with K562 ATAC-seq accessibility. Flag pegRNAs targeting closed chromatin (signal <0.5) for empirical pilot validation before library order. Mathis 2024 documented chromatin as the dominant determinant beyond PRIDICT sequence prediction."
+> "Cross-reference my pegRNA library with K562 ATAC-seq accessibility. Flag pegRNAs targeting closed chromatin (signal <0.5) for empirical pilot validation before library order. Mathis 2025 documented chromatin as a major locus-level determinant beyond PRIDICT sequence prediction, which is why ePRIDICT is meant to be combined with PRIDICT2.0."
 
 ### MOSAIC / Saturation
 
@@ -84,13 +84,13 @@ Tell the AI agent what to do:
 
 ## Tips
 
-- PRIDICT2 sequence prediction is a starting point, not a guarantee. Chromatin context is the dominant determinant beyond sequence; always pilot at representative sites.
+- PRIDICT2 sequence prediction is a starting point, not a guarantee. Chromatin context is a major locus-level determinant beyond sequence (pair PRIDICT2.0 with ePRIDICT); always pilot at representative sites.
 - For high-stakes variant-function calls, validate with both BE (where applicable) and PE. Concordant hits are high confidence; PE-only at BE-coverable variants are suspect.
 - PE is the gold standard for transversions (C->G, C->A, G->C, G->A) where BE doesn't work; for these variants, PE is the only choice.
 - Scaffold incorporation is a design issue, not a chemistry issue. Always check post-PE; if >5%, re-design pegRNAs with longer RTT.
 - PE3 adds a nicked sgRNA on the opposite strand; this increases editing efficiency but doubles the indel risk. Use PE2 unless PEmax + PRIDICT2 doesn't reach target efficiency.
-- For genome-scale saturation editing (BRCA1 / MMR / TP53), MOSAIC is the canonical methodology. 1000s of variants per cell line; smaller per-variant cell counts; suitable for drug-resistance variant scanning.
-- Pilot PRIDICT2 predictions in your specific cell line. The deep-learning model was trained on HEK293T / HCT116; other lines may have different chromatin and RT-activity profiles.
+- For genome-scale saturation editing, MOSAIC (2024 preprint, demonstrated on BCR-ABL1 and the IRF1 UTR) is a high-throughput prime-editing option: 1000s of variants per cell line; smaller per-variant cell counts; suitable for drug-resistance variant scanning. For established saturation genome editing of BRCA1, the reference approach remains SGE (Findlay 2018).
+- Pilot PRIDICT2 predictions in your specific cell line. The deep-learning model was trained on HEK293T (MMR-deficient) and K562 (MMR-proficient); other lines may have different chromatin and RT-activity profiles.
 - For BE-PE comparison, design parallel libraries targeting the same variants. Concordant hits represent strong biology.
 
 ## Decision Cheat Sheet
@@ -110,8 +110,8 @@ Tell the AI agent what to do:
 
 | Threshold | Value | Rationale |
 |-----------|-------|-----------|
-| PRIDICT2 prediction threshold | >50% efficiency | Mathis 2024 |
-| Intended edit % for screen | >5% | Anzalone 2019 |
+| PRIDICT2 prediction threshold | >50% efficiency | Project-chosen cutoff; PRIDICT2 prescribes none |
+| Intended edit % for screen | >5% | Field convention |
 | Scaffold incorporation | <2% (clean); <5% (acceptable) | Empirical |
 | Indel byproduct (PE2) | <3% | Anzalone 2019 |
 | PBS GC content | 40-55% | PRIDICT2 |

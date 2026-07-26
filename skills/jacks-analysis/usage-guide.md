@@ -2,16 +2,16 @@
 
 ## Overview
 
-Run JACKS (Allen et al 2019 Genome Research) for joint Bayesian decomposition of CRISPR-screen log-fold-changes into per-sgRNA guide-efficacy and per-condition per-gene effect. Designed for multi-screen joint analysis where guide efficacy is shared (same library, same chemistry, cross-cell-line or cross-condition), enabling 2.5x smaller screens and 12-21% lower gene-effect error vs MAGeCK on the same data. Outputs per-gene posterior effect + posterior std and per-sgRNA efficacy + std.
+Run JACKS (Allen et al 2019 Genome Research) for joint Bayesian decomposition of CRISPR-screen log-fold-changes into per-sgRNA guide-efficacy and per-condition per-gene effect. Designed for multi-screen joint analysis where guide efficacy is shared (same library, same chemistry, cross-cell-line or cross-condition), enabling ~2.5x smaller screens (fewer replicates/guides) and ~21% lower gene-effect error vs MAGeCK on the same data. Outputs per-gene posterior effect + posterior std and per-sgRNA efficacy + std.
 
 ## Prerequisites
 
 ```bash
-pip install jacks
+git clone https://github.com/felicityallen/JACKS && cd JACKS/jacks && pip install .   # the PyPI 'jacks' is an unrelated package
 # or latest from GitHub (run_JACKS.py is at the repo root)
 git clone https://github.com/felicityallen/JACKS && cd JACKS && pip install .
 # Optional: pre-computed reference efficacy priors
-# Download DepMap Brunello / Sanger Score efficacy posteriors for transfer learning
+# Download DepMap Brunello / Project Score efficacy posteriors for transfer learning
 ```
 
 Required inputs:
@@ -33,13 +33,13 @@ Tell the AI agent what to do:
 
 ### Multi-Screen Joint Analysis
 
-> "I have 4 Brunello screens across HCT116, HEK293T, A375, and MCF7 cell lines, each with 3 replicate Day 0 and Day 14 samples. Run JACKS jointly with `--apply_w_hp` on. Output per-line gene effects, shared efficacy, and gene-level fdr_log10."
+> "I have 4 Brunello screens across HCT116, HEK293T, A375, and MCF7 cell lines, each with 3 replicate Day 0 and Day 14 samples. Run JACKS jointly with `--apply_w_hp` on. Output per-line gene effects, the matching posterior-std file, and shared guide efficacy."
 
 > "My screens were done across 6 weeks in two batches. Set up a per-batch JACKS run and compare to a single joint run; quantify whether batch sharing improves or degrades signal."
 
 ### Reference Efficacy Transfer
 
-> "Extract the per-sgRNA efficacy posterior from a JACKS run on the DepMap Brunello panel (50 cell lines, ~10,000 screen days). Save as `brunello_efficacy_prior.tsv`. Then run JACKS on my single Brunello screen using this as `--ref_grna_efficacy_file`; verify the 2.5x sample-size reduction matches Allen 2019."
+> "Extract the per-sgRNA efficacy posterior from a JACKS run on the DepMap Brunello panel (50 cell lines, ~10,000 screen days). Save as `brunello_efficacy_prior.tsv`. Then run JACKS on my single Brunello screen passing it via `--reffile`; efficacy-aware testing enables the ~2.5x smaller screens reported in Allen 2019."
 
 ### Library Calibration / Re-design
 
@@ -60,11 +60,11 @@ Tell the AI agent what to do:
 1. Verify input file formats: sgRNA names consistent between counts, guide_map, replicate_map
 2. Decide whether joint analysis is appropriate: same library, same chemistry, ≥3 screens
 3. If applicable, build the reference efficacy prior from a matched public dataset
-4. Run JACKS via CLI `python -m jacks.run_JACKS` or programmatically via `infer_JACKS`
-5. Set `--apply_w_hp` based on chemistry (on for Cas9 KO; off if CRISPRi/a requires custom prior)
+4. Run JACKS via `python run_JACKS.py` from `JACKS/jacks/`, or programmatically via `jacks.jacks_io.runJACKS`
+5. Leave `--apply_w_hp` off unless deliberately using the hierarchical gene-effect prior (the tool's help advises cautionrior)
 6. Verify ELBO convergence; if iterations <5000, raise; if still noisy, set seed and increase further
-7. Generate gene-level results (X1, X2, fdr_log10) and sgRNA efficacy results (X1, X2)
-8. Apply hit thresholds: fdr_log10 <-1 (FDR<0.1); fdr_log10 <-2 (FDR<0.01)
+7. Generate the gene-effect matrix plus its std file, and the sgRNA efficacy file (`sgrna`, `X1`, `X2`)
+8. Call hits on effect/std (abs >2); supply `--ctrl_genes` if p-values are needed
 9. Flag low-efficacy guides (X1 <0.3) and genes where all guides are weak (re-design candidates)
 10. Cross-validate with MAGeCK / BAGEL2: identify high-confidence hits in agreement, single-tool hits flagged for orthogonal validation
 11. Decide if Chronos is preferred (cancer-line multi-cell-line screens with CN bias)
@@ -85,12 +85,12 @@ Tell the AI agent what to do:
 
 | Threshold | Value | Rationale |
 |-----------|-------|-----------|
-| Hit fdr_log10 | <-1 (FDR <0.1); <-2 (FDR <0.01) | Allen 2019 convention |
+| Hit call | gene effect negative, abs(effect/std) >2 | Bayesian z-equivalent |
 | Effective gene signal | X1 <0 AND abs(X1/X2) >2 | Bayesian z-equivalent ≈ 95% credible |
-| Low-efficacy guide flag | X1 <0.3 | Allen 2019; below this, guide non-functional |
+| Low-efficacy guide flag | X1 <0.3 | Operational convention; below this, guide likely non-functional |
 | Joint analysis screen count | ≥3 | Below this, equivalent to MAGeCK/BAGEL2 |
 | Iterations for publication | 5000+ | Verify ELBO plateau |
-| Reference for prior reuse | DepMap or Sanger Score panel | ~50 cell lines, ~10k screen days |
+| Reference for prior reuse | DepMap or Project Score panel | ~50 cell lines, ~10k screen days |
 
 ## Decision Comparison
 

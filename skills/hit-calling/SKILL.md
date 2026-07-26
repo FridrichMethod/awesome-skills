@@ -7,11 +7,11 @@ primary_tool: MAGeCK
 
 ## Version Compatibility
 
-Reference examples tested with: MAGeCK 0.5.9+, BAGEL2 1.0+, drugZ Aug 2019+, JACKS 0.2.0+, Chronos 2.0+ (DepMap), CERES 1.0+, pandas 2.2+, numpy 1.26+, scipy 1.12+, statsmodels 0.14+.
+Reference examples tested with: MAGeCK 0.5.9+, BAGEL2 2.0, drugZ Aug 2019+, JACKS 0.2.0+, Chronos 2.0+ (DepMap), CERES 1.0+, pandas 2.2+, numpy 1.26+, scipy 1.12+, statsmodels 0.14+.
 
 Before using code patterns, verify installed versions match. If versions differ:
-- CLI: `mageck --version`, `BAGEL.py --version`, `drugz --help`
-- Python: `pip show jacks chronos-cn`
+- CLI: `mageck --version`, `BAGEL.py version`, `python drugz.py --help`
+- Python: `pip show crispr_chronos` (JACKS installs from GitHub, not PyPI)
 
 If code throws ImportError, AttributeError, or TypeError, introspect the installed package and adapt the example to match the actual API rather than retrying.
 
@@ -19,7 +19,7 @@ If code throws ImportError, AttributeError, or TypeError, introspect the install
 
 **"Identify significant hits in my CRISPR screen"** -> Choose the analysis method that matches the experimental design, statistical assumptions, and quality grade of the screen. Reconcile across methods when high-stakes hits must be validated.
 
-The five primary hit-calling methods cover non-overlapping niches; the decision is not "which is best" but "which matches the design."
+The primary hit-calling methods cover non-overlapping niches; the decision is not "which is best" but "which matches the design."
 
 | Design / question | Primary method | Why | Secondary check |
 |--------------------|----------------|-----|------------------|
@@ -27,7 +27,7 @@ The five primary hit-calling methods cover non-overlapping niches; the decision 
 | Time course (3+ timepoints) | MAGeCK MLE | RRA cannot model multi-condition | JACKS (efficacy-aware) |
 | Multi-cell-line panel (cancer dependency) | Chronos | Models CN bias + screen quality jointly | MAGeCK MLE per line + meta-analysis |
 | Drug screen (vehicle vs drug) | drugZ | Bidirectional Z; vehicle-anchored | MAGeCK MLE with dose covariate |
-| Multi-screen joint, same library | JACKS | Joint efficacy + 2.5x sample-size reduction | MAGeCK MLE; results should converge |
+| Multi-screen joint, same library | JACKS | Shared efficacy; enables ~2.5x smaller screens | MAGeCK MLE; results should converge |
 | Essentiality classification with reference sets | BAGEL2 | Bayes factor with CEGv2/NEGv1 calibration | MAGeCK RRA |
 | Combinatorial / paired guide | MAGeCK MLE with GI scoring | Models interaction term; see [[combinatorial-screens]] | Custom GI scoring |
 | Single-cell perturbation (Perturb-seq) | SCEPTRE | NB GLM + permutation; see [[perturb-seq-analysis]] | Mixscape pre-filter |
@@ -142,12 +142,12 @@ def second_best_lfc(sgrna_lfc_df, genes_series, direction='neg'):
 |--------|---------------------|---------------------------|
 | MAGeCK RRA | BH per direction | `neg|fdr`, `pos|fdr` |
 | MAGeCK MLE | BH per condition | `<cond>|fdr` |
-| BAGEL2 | Bootstrap BF; reports BF threshold | BF > 6 ≈ FDR 0.05 (Hart 2017 calibration) |
+| BAGEL2 | Bootstrap BF; reports BF threshold | BF > 6 ≈ 90% posterior (Hart 2017); ~5% FDR by convention |
 | drugZ | BH per direction | `fdr_synth`, `fdr_supp` |
 | JACKS | Posterior probability + BH | `fdr_log10` (log10 FDR) |
 | Chronos | DepMap gene-effect probability | `effect_probability` |
 
-**Reconciliation:** BF >6 in BAGEL2 corresponds roughly to FDR 0.05 in MAGeCK; this calibration was confirmed in Hart 2017 G3 by overlap with CEGv2. drugZ FDR is per-direction; the `fdr_synth` and `fdr_supp` columns are independent BH corrections.
+**Reconciliation:** BF >6 in BAGEL2 corresponds to ~90% posterior probability (Hart 2017 G3, by overlap with CEGv2) and is commonly used as a stringent cutoff roughly comparable to MAGeCK FDR 0.05. Treat that equivalence as an approximate convention, not an exact calibration. drugZ FDR is per-direction; the `fdr_synth` and `fdr_supp` columns are independent BH corrections.
 
 ## Order of Operations
 
@@ -219,8 +219,8 @@ def custom_zscore_hit_calling(counts_df, ctrl_cols, treat_cols, genes_series, nt
 ### drugZ and MAGeCK disagree on small-effect drug-modifier screen
 
 **Trigger:** Effect size is small; MAGeCK rank-based test is less sensitive than drugZ bidirectional Z.
-**Mechanism:** drugZ specifically optimized for small effects in drug screens (Li & Hart 2019); MAGeCK RRA loses sensitivity at small effects.
-**Symptom:** drugZ has ~2x more hits at the same FDR threshold; MAGeCK misses real chemogenomic interactions.
+**Mechanism:** drugZ specifically optimized for small effects in drug screens (Colic et al. 2019); MAGeCK RRA loses sensitivity at small effects.
+**Symptom:** At matched FDR, drugZ calls small-effect chemogenomic interactions (e.g. DDR genes) that MAGeCK RRA misses, with stronger expected-pathway enrichment.
 **Fix:** Use drugZ as primary for chemogenomic; MAGeCK as confirmatory. See [[drugz-chemogenomic]].
 
 ### JACKS down-weights efficiency, MAGeCK doesn't, disagreement
@@ -243,10 +243,10 @@ def custom_zscore_hit_calling(counts_df, ctrl_cols, treat_cols, genes_series, nt
 |-----------|-------|--------------------|
 | MAGeCK RRA FDR (gene-level) | <0.05 | Li 2014; standard publication |
 | MAGeCK RRA LFC | abs(LFC) >1 | 2-fold; biological |
-| BAGEL2 Bayes Factor | >6 (≈ FDR 0.05); >12 (≈ FDR 0.005) | Kim & Hart 2021; calibrated against CEGv2 |
-| drugZ FDR | <0.05 per direction | Li & Hart 2019 |
-| JACKS fdr_log10 | <-1 (FDR <0.1); <-2 (FDR <0.01) | Allen 2019 |
-| Chronos gene-effect probability | >0.7 | DepMap convention |
+| BAGEL2 Bayes Factor | >6 standard; >12 stricter | Hart 2017; BAGEL convention |
+| drugZ FDR | <0.05 per direction | Colic et al. 2019 |
+| JACKS fdr_log10 | <-1 (FDR <0.1); <-2 (FDR <0.01) | Standard FDR convention |
+| Chronos dependency probability | >0.5 | DepMap convention (dependency-probability cutoff) |
 | Tier 1 consensus (3 methods) | 100% agreement | High confidence; minimal validation needed |
 | Tier 2 consensus (2 of 3) | 67% agreement | Arrayed validation required |
 | Tier 3 (1 method only) | Hypothesis; flag for follow-up | Multiple screens or arrayed required |
@@ -269,7 +269,7 @@ def custom_zscore_hit_calling(counts_df, ctrl_cols, treat_cols, genes_series, nt
 - Li W et al. 2014. *Genome Biol* 15:554. MAGeCK alpha-RRA.
 - Li W et al. 2015. *Genome Biol* 16:281. MAGeCK MLE.
 - Kim E & Hart T. 2021. *Genome Med* 13:2. BAGEL2.
-- Li G et al. 2019. *Genome Med* 11:52. drugZ.
+- Colic M et al. 2019. *Genome Med* 11:52. drugZ.
 - Allen F et al. 2019. *Genome Res* 29:464. JACKS.
 - Dempster J et al. 2021. *Genome Biol* 22:343. Chronos.
 - Meyers R et al. 2017. *Nat Genet* 49:1779. CERES.

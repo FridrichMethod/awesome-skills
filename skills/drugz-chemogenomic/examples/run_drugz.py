@@ -32,13 +32,16 @@ subprocess.run(['python', 'drugz.py',
                 '-p', '5'], check=True)
 
 # === STEP 2: drugZ EXCLUDING ESSENTIALS FROM NULL ===
+# drugZ's -r takes a COMMA-DELIMITED GENE LIST, not a file path, so read the
+# reference set and join it; passing a filename here silently removes nothing.
+ceg_genes = ','.join(line.strip() for line in ceg_file.read_text().splitlines() if line.strip())
 output_file_clean = output_dir / 'drugz_ceg_excluded.txt'
 subprocess.run(['python', 'drugz.py',
                 '-i', counts_file,
                 '-o', str(output_file_clean),
                 '-c', vehicle_samples,
                 '-x', drug_samples,
-                '-r', str(ceg_file),
+                '-r', ceg_genes,
                 '-p', '5'], check=True)
 
 # === STEP 3: INTERPRET ===

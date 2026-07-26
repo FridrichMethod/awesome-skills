@@ -1,17 +1,17 @@
 ---
 name: bio-crispr-screens-copy-number-correction
-description: Corrects the gene-independent copy-number artifact in CRISPR-Cas9 screens (Aguirre 2016 / Munoz 2016 Cancer Discov) where amplified loci appear essential from DNA-damage burden of simultaneous cuts. Covers the p53-dependent G2-arrest mechanism, CRISPRcleanR (Iorio 2018) unsupervised pre-hoc correction, CERES (Meyers 2017) joint CN + gene-effect model, Chronos (Dempster 2021) DepMap-standard population-dynamics + CN model with lowest residual bias, the decision tree by data availability, the Spearman LFC-vs-CN diagnostic, focal-amplification examples (ERBB2 in HER2+, MYC in colorectal, FGFR1 in head and neck), and CRISPRi/a alternatives that bypass the artifact. Use when screening cancer cell lines, diagnosing essentiality at amplified loci, choosing CRISPRcleanR / CERES / Chronos, deciding whether CN correction is needed before MAGeCK / BAGEL2 / drugZ, or switching from Cas9 to CRISPRi.
+description: Corrects the gene-independent copy-number artifact in CRISPR-Cas9 screens (Aguirre 2016 / Munoz 2016 Cancer Discov) where amplified loci appear essential from DNA-damage burden of simultaneous cuts. Covers the gene-independent DNA-damage / G2-arrest mechanism, CRISPRcleanR (Iorio 2018) unsupervised pre-hoc correction, CERES (Meyers 2017) joint CN + gene-effect model, Chronos (Dempster 2021) DepMap-standard population-dynamics + CN model with lowest residual bias, the decision tree by data availability, the Spearman LFC-vs-CN diagnostic, focal-amplification examples (ERBB2 in HER2+, MYC in colorectal, FGFR1 in head and neck), and CRISPRi/a alternatives that bypass the artifact. Use when screening cancer cell lines, diagnosing essentiality at amplified loci, choosing CRISPRcleanR / CERES / Chronos, deciding whether CN correction is needed before MAGeCK / BAGEL2 / drugZ, or switching from Cas9 to CRISPRi.
 tool_type: mixed
 primary_tool: CRISPRcleanR
 ---
 
 ## Version Compatibility
 
-Reference examples tested with: CRISPRcleanR 3.0+ (R/Bioconductor), Chronos 2.0+ (https://github.com/broadinstitute/chronos), CERES (legacy, superseded by Chronos), pandas 2.2+, numpy 1.26+, scipy 1.12+.
+Reference examples tested with: CRISPRcleanR 3.0+ (R; github.com/francescojm/CRISPRcleanR), Chronos 2.0+ (https://github.com/broadinstitute/chronos), CERES (legacy, superseded by Chronos), pandas 2.2+, numpy 1.26+, scipy 1.12+.
 
 Before using code patterns, verify installed versions match. If versions differ:
-- R: `packageVersion('CRISPRcleanR')`; `?ccr.CleanCN`
-- Python: `pip show chronos-cn`; `chronos --help`
+- R: `packageVersion('CRISPRcleanR')`; `?ccr.GWclean`
+- Python: `pip show crispr_chronos`; `python -c 'import chronos; print(chronos.__file__)'`
 
 If code throws ImportError, AttributeError, or TypeError, introspect the installed package and adapt the example to match the actual API rather than retrying.
 
@@ -19,8 +19,8 @@ If code throws ImportError, AttributeError, or TypeError, introspect the install
 
 **"Correct copy-number artifacts in my cancer-cell-line screen"** -> Identify gene-independent depletion at amplified loci, apply CRISPRcleanR (pre-hoc, unsupervised, position-based) or Chronos (joint model, supervised with CN profile) to remove the artifact, then proceed to hit calling on corrected data.
 
-- R: `CRISPRcleanR::ccr.CleanCN()` for unsupervised pre-hoc correction (no CN profile required)
-- Python: Chronos (`chronos-cn`) for joint cell-population dynamics + CN modeling
+- R: `CRISPRcleanR::ccr.GWclean()` for unsupervised pre-hoc correction (no CN profile required)
+- Python: Chronos (`crispr_chronos`) for joint cell-population dynamics + CN modeling
 - Python: CERES (legacy, superseded by Chronos)
 
 ## The Copy-Number Artifact (Mechanism)
@@ -29,18 +29,20 @@ If code throws ImportError, AttributeError, or TypeError, introspect the install
 
 1. A focal amplification creates 4-50+ copies of a genomic region.
 2. Each sgRNA targeting a gene in that region cuts at all copies simultaneously.
-3. Multiple cuts trigger a p53-dependent DNA-damage response.
+3. Multiple cuts trigger a DNA-damage response and G2 arrest, in both TP53-mutant and TP53-wild-type lines but with larger magnitude in wild-type (Aguirre 2016).
 4. Cells arrest in G2 phase; the sgRNA appears depleted because its bearer cells don't proliferate.
 5. The depletion is proportional to the number of simultaneous cuts, not the gene's essentiality.
 
-**Consequence:** ERBB2 appears essential in HER2-amplified SK-BR-3 (24 copies). MYC appears essential in MYC-amplified colorectal lines (10+ copies). FGFR1 appears essential in FGFR1-amplified head-and-neck lines. These are all false positives.
+**Consequence:** ERBB2 appears essential in HER2-amplified SK-BR-3. MYC appears essential in MYC-amplified colorectal lines (10+ copies). FGFR1 appears essential in FGFR1-amplified head-and-neck lines. These are all false positives.
 
 **Affects:** All Cas9-KO screens in cancer cell lines. Universal, not conditional. Cannot be remediated by sequencing depth, library size, or replicate count. Requires explicit correction.
+
+The p53-dependence of Cas9-cut toxicity in general was characterized later, by Haapaniemi 2018 and Ihry 2018.
 
 **Bypassed by:**
 - CRISPRi (catalytically dead Cas9, no DNA damage) -> no artifact
 - CRISPRa (catalytically dead Cas9) -> no artifact
-- Base editing (single-strand nick + deaminase) -> reduced artifact (Hess 2016 demonstration)
+- Base editing (single-strand nick + deaminase) -> reduced artifact
 - Prime editing (nick + RT) -> reduced artifact
 
 ## Correction Method Decision Tree
@@ -71,12 +73,12 @@ data(KY_Library_v1.0)   # KY library; replace with your library annotation
 counts <- read.table('counts.txt', header=TRUE, sep='\t')
 
 # 1. Normalize and compute logFC
-norm_counts <- ccr.NormfoldChanges(counts, min_reads=30,
+norm_counts <- ccr.NormfoldChanges(filename='counts.txt', min_reads=30,
                                      EXPname='my_screen',
                                      libraryAnnotation=KY_Library_v1.0)
 
 # 2. Compute genome-sorted sgRNA fold changes
-gw_log_fc <- ccr.logFCs2chromPos(norm_counts$norm_fold_changes,
+gw_log_fc <- ccr.logFCs2chromPos(norm_counts$logFCs,
                                    KY_Library_v1.0)
 
 # 3. Apply CRISPRcleanR correction
@@ -85,10 +87,11 @@ corrected <- ccr.GWclean(gw_log_fc, display=TRUE, label='my_screen')
 # corrected_logFCs can replace LFCs downstream
 
 # 4. Re-derive corrected counts for downstream MAGeCK
-corrected_counts <- ccr.correctCounts(my_screen=norm_counts,
-                                        correction=corrected,
-                                        outprefix='cleanr_corrected',
-                                        libraryAnnotation=KY_Library_v1.0)
+corrected_counts <- ccr.correctCounts('my_screen',
+                                        norm_counts$norm_counts,
+                                        corrected,
+                                        KY_Library_v1.0,
+                                        OutDir='./')
 ```
 
 **Key parameter:** `min_reads=30` is the lower-count threshold for inclusion. This must match the library-coverage strategy; too high removes legitimate guides, too low keeps noisy guides.
@@ -102,34 +105,33 @@ corrected_counts <- ccr.correctCounts(my_screen=norm_counts,
 **Approach:** Model the cell population over time as an ODE driven by per-gene fitness effects; add a separate term for copy-number-driven depletion; estimate all parameters via maximum-likelihood with regularization. Outputs a "gene effect score" normalized against the empirical distributions of essential and non-essential reference genes.
 
 ```python
-# Chronos via the chronos-cn package
+# Chronos (pip install crispr_chronos, or pip install git+https://github.com/broadinstitute/chronos)
 import chronos
+from chronos.hit_calling import get_probability_dependent
 
 # Inputs
 # 1. Counts: rows = sgRNA, columns = samples (per-timepoint per-cell-line)
 # 2. Sequence map: sgRNA -> cell line -> sample timepoint
-# 3. Copy-number profile per cell line per genomic region
-# 4. Guide-gene map
+# 3. Guide-gene map
+# 4. Copy-number profile per cell line (applied AFTER training, not at construction)
 
+# All three inputs are dicts of DataFrame keyed by library name, not bare DataFrames.
 model = chronos.Chronos(
-    sequence_map=sequence_map,           # which samples are from which cell line + condition
-    guide_gene_map=guide_gene_map,
-    reads=counts_df,
-    copy_number=copy_number_df,           # per-cell-line CN profile
-    pretrained_offset=None,
+    sequence_map={'screen': sequence_map},
+    guide_gene_map={'screen': guide_gene_map},
+    readcounts={'screen': counts_df},
 )
-model.train(
-    n_steps=2000,
-    learning_rate=0.1,
-    verify_normalize=True,
-)
-gene_effects = model.gene_effect()        # cells x genes; standardized score
-gene_probabilities = model.gene_probability()  # probability of being essential
+model.train(nepochs=301)
+gene_effects = model.gene_effect                      # attribute, not a method call
+
+# Copy-number correction is a separate post-hoc step, not a constructor argument
+gene_effects_cn = chronos.alternate_CN(gene_effects, copy_number_df)
+gene_probabilities = get_probability_dependent(gene_effects_cn, negative_control_genes, positive_control_genes)
 ```
 
 **DepMap convention:** A gene-effect score <-1 corresponds to "essential" in that cell line; <-0.5 is "depleting." Each DepMap release (quarterly) provides Chronos gene effects and probabilities.
 
-**Critical:** Chronos benefits most from longitudinal data (multiple timepoints per cell line) but can run with multiple cell lines at single timepoint; it cannot run with a single screen (one line, one timepoint) without matched CN profile. For single-cell-line, single-timepoint screens without matched CN, use CRISPRcleanR instead.
+**Critical:** Chronos benefits most from longitudinal data (multiple timepoints per cell line) but can run with multiple cell lines at a single timepoint. Copy number is optional: Chronos trains without it and `alternate_CN` applies the correction afterwards. For a single screen (one line, one timepoint) without a matched CN profile, use CRISPRcleanR instead.
 
 ## CERES (Legacy, Superseded by Chronos)
 
@@ -159,7 +161,7 @@ def detect_cn_bias(gene_lfc_df, cn_df):
     }
 ```
 
-**Threshold (Aguirre 2016):** Spearman ρ <-0.10 between LFC and CN indicates significant CN bias. Even modest amplifications (4+ copies) generate detectable artifact. Run this diagnostic before AND after correction.
+**Threshold (operational convention):** Spearman ρ <-0.10 between LFC and CN indicates significant CN bias. Even modest amplifications generate detectable artifact. Run this diagnostic before AND after correction.
 
 ## Reconciliation: When CN Correction Fails
 
@@ -168,7 +170,7 @@ If post-CRISPRcleanR or post-Chronos the CN-LFC Spearman is still significantly 
 1. **Insufficient CN resolution:** A specific 4-copy region went undetected. Refine CN profile with deeper WGS.
 2. **CRISPRcleanR position-based correction missed it:** The amplification is small relative to the segmentation algorithm's resolution. Use Chronos with matched CN profile.
 3. **Genomic rearrangement creates a "ghost" amplification:** A complex rearrangement appears as normal CN but Cas9 cuts at multiple sites due to translocation breakpoints. Combine WGS structural variants with the analysis.
-4. **Cell line has p53 wild-type with extreme cut-toxicity sensitivity:** The artifact may persist; use CRISPRi screens for that line.
+4. **Cell line has an unusually strong cut-toxicity response:** The artifact may persist; use CRISPRi screens for that line.
 
 ## Apply CN Correction to Pipeline
 
@@ -191,7 +193,7 @@ For DepMap-style large panels:
 Chronos handles batch + CN + screen quality in one step; no pre-correction needed.
 ```
 
-For Sanger Score-style panel (Behan 2019):
+For Project Score-style panel (Behan 2019):
 ```
 CRISPRcleanR was used historically; cross-check with Chronos when CN profile available.
 ```
@@ -235,7 +237,7 @@ CRISPRcleanR was used historically; cross-check with Chronos when CN profile ava
 
 ## CRISPRi/a Alternative
 
-**For variant-function or non-cancer-line essentiality screens, switching to CRISPRi (catalytically dead dCas9-KRAB) avoids the artifact entirely.** No DNA double-strand breaks = no p53 G2 arrest = no copy-number-driven depletion.
+**For variant-function or non-cancer-line essentiality screens, switching to CRISPRi (catalytically dead dCas9-KRAB) avoids the artifact entirely.** No DNA double-strand breaks = no DNA-damage G2 arrest = no copy-number-driven depletion.
 
 | Approach | CN artifact | When to use |
 |----------|--------------|-------------|
@@ -251,11 +253,11 @@ See [[library-design]] for CRISPRi (Dolcetto) and CRISPRa (Calabrese) library op
 
 | Threshold | Value | Source / Rationale |
 |-----------|-------|--------------------|
-| Spearman ρ (CN vs LFC) | <-0.10 -> bias present | Aguirre 2016 *Cancer Discov* 6:914 |
-| Copies for detectable artifact | 4+ | Aguirre 2016: even 4-copy regions generate measurable bias |
+| Spearman ρ (CN vs LFC) | <-0.10 -> bias present | Operational convention |
+| Copies for detectable artifact | >6 | Operational convention; response scales with copy number (Aguirre 2016) |
 | CRISPRcleanR `min_reads` | 30 (default) | Iorio 2018; lower thresholds in low-coverage screens |
 | Chronos gene-effect threshold for "essential" | <-1 (cancer line) | DepMap convention |
-| Chronos gene-probability for "essential" | >0.7 | DepMap convention |
+| Chronos gene-probability for "essential" | >0.5 | DepMap convention (dependency-probability cutoff) |
 | Post-correction Spearman ρ | abs(ρ) <0.05 | Acceptable correction quality |
 | Cell-line CN profile resolution | ≥SNP-array level | Below this, CRISPRcleanR unsupervised |
 
@@ -274,12 +276,13 @@ See [[library-design]] for CRISPRi (Dolcetto) and CRISPRa (Calabrese) library op
 
 - Aguirre AJ et al. 2016. *Cancer Discov* 6:914. Copy-number gene-independent toxicity.
 - Munoz DM et al. 2016. *Cancer Discov* 6:900. CN amplification CRISPR artifacts.
+- Haapaniemi E et al. 2018. *Nat Med* 24:927. Cas9 cutting induces a p53-mediated DNA-damage response.
+- Ihry RJ et al. 2018. *Nat Med* 24:939. p53 inhibits Cas9 engineering in human pluripotent stem cells.
 - Meyers RM et al. 2017. *Nat Genet* 49:1779. CERES; first formal CN correction at DepMap scale.
 - Iorio F et al. 2018. *BMC Genomics* 19:604. CRISPRcleanR.
 - Dempster JM et al. 2021. *Genome Biol* 22:343. Chronos.
-- Hess GT et al. 2016. *Nat Methods* 13:1036. Reduced toxicity of base editor screens (less DNA damage).
-- Behan FM et al. 2019. *Nature* 568:511. Sanger Score with CRISPRcleanR-corrected data.
-- Pacini C et al. 2024. *Nat Commun* 15:1230. DepMap quality scoring and benchmarking.
+- Behan FM et al. 2019. *Nature* 568:511. Project Score with CRISPRcleanR-corrected data.
+- Pacini C et al. 2021. *Nat Commun* 12:1661. Integrated cross-study dependencies; DepMap quality scoring.
 - DepMap Q4 2024+ data releases. https://depmap.org/portal/
 
 ## Related Skills

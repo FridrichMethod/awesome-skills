@@ -1,433 +1,332 @@
 ---
 name: pufferlib
-description: High-performance reinforcement learning framework optimized for speed and scale. Use when you need fast parallel training, vectorized environments, multi-agent systems, or integration with game environments (Atari, Procgen, NetHack). Achieves 2-10x speedups over standard implementations. For quick prototyping or standard algorithm implementations with extensive documentation, use stable-baselines3 instead.
-license: MIT license
-metadata: {"version": "1.0", "skill-author": "K-Dense Inc."}
+description: Version-aware guidance for PufferLib reinforcement-learning environments, vectorization, policies, PuffeRL training, evaluation, and safe checkpoint review. Use when adapting Gymnasium/PettingZoo environments to published PufferLib 3.0.0 or working with the redesigned native 4.0 source line.
+license: MIT
+compatibility: Bundled CLIs require Python 3.10+ and use only the standard library. Published pufferlib 3.0.0 supports Python >=3.9 but ships as a native-code source archive; current 4.0 source requires Python >=3.10, Torch >=2.9, and an audited CPU/CUDA toolchain. Network, GPU, native builds, environment plug-ins, assets, checkpoints, and external logging are never required by the bundled CLIs.
+allowed-tools:
+  - Read
+  - Bash
+  - Grep
+  - Python
+metadata:
+  version: "1.1"
+  skill-author: "K-Dense Inc."
+  last-reviewed: "2026-07-23"
 ---
 
-# PufferLib - High-Performance Reinforcement Learning
+# PufferLib
 
-## Overview
+Use PufferLib with an explicit version profile. Upstream currently has two
+incompatible surfaces:
 
-PufferLib is a high-performance reinforcement learning library designed for fast parallel environment simulation and training. It achieves training at millions of steps per second through optimized vectorization, native multi-agent support, and efficient PPO implementation (PuffeRL). The library provides the Ocean suite of 20+ environments and seamless integration with Gymnasium, PettingZoo, and specialized RL frameworks.
+| Profile | Status on 2026-07-23 | Main use |
+|---|---|---|
+| `pufferlib==3.0.0` | Latest stable PyPI release, published 2025-06-23 | Python/Gymnasium/PettingZoo emulation, `pufferlib.vector`, Torch PuffeRL |
+| source `4.0` | Upstream default branch; not the latest stable PyPI artifact | Native C Ocean environments, native CUDA trainer, optional Torch fallback |
 
-## When to Use This Skill
+Do not combine 3.0 imports with 4.0 config/CLI examples. The 4.0 redesign
+removed the 3.0 `emulation`, `vector`, and `pytorch` modules from the current
+package tree.
 
-Use this skill when:
-- **Training RL agents** with PPO on any environment (single or multi-agent)
-- **Creating custom environments** using the PufferEnv API
-- **Optimizing performance** for parallel environment simulation (vectorization)
-- **Integrating existing environments** from Gymnasium, PettingZoo, Atari, Procgen, etc.
-- **Developing policies** with CNN, LSTM, or custom architectures
-- **Scaling RL** to millions of steps per second for faster experimentation
-- **Multi-agent RL** with native multi-agent environment support
+## Safe defaults
 
-## Core Capabilities
+1. Start with bundled synthetic, CPU-only, network-free tools.
+2. Do not import an arbitrary environment by dotted path. Bundled tools accept
+   only allowlisted built-ins and slug identifiers.
+3. Do not install or execute an unreviewed environment package, native
+   extension, ROM, map, checkpoint, or pickle file.
+4. Verify official source, immutable revision, licenses, checksums or
+   attestations, and build hooks. Sandbox native builds and first execution.
+5. Cap steps, environments, agents, workers, threads, buffers, memory, disk,
+   render size, and wall time.
+6. Keep training and evaluation environments/seeds separate.
+7. Default logging to local/none. External logging requires explicit opt-in,
+   disclosure acknowledgment, and separate artifact-upload approval.
+8. Never pass W&B or Neptune credentials via CLI, INI, JSON, tags, run names, or
+   logger configuration. Never print them.
+9. Never dump all environment variables or recursively search for `.env`.
+10. Hash checkpoint bytes before trusted, sandboxed loading; metadata inspection
+    is not proof of safety.
 
-### 1. High-Performance Training (PuffeRL)
+## First local checks
 
-PuffeRL is PufferLib's optimized PPO+LSTM training algorithm achieving 1M-4M steps/second.
+All bundled CLIs are dependency-free and emit strict JSON:
 
-**Quick start training:**
 ```bash
-# CLI training
-puffer train procgen-coinrun --train.device cuda --train.learning-rate 3e-4
-
-# Distributed training
-torchrun --nproc_per_node=4 train.py
+python3 scripts/env_template.py --help
+python3 scripts/env_contract_validator.py
+python3 scripts/benchmark_vectorization.py --backend serial
+python3 scripts/train_template.py
+python3 scripts/validate_plan.py
+python3 scripts/repro_plan.py
 ```
 
-**Python training loop:**
-```python
-import pufferlib
-from pufferlib import PuffeRL
+Defaults are synthetic, deterministic, bounded, local, CPU-only, no-network,
+and dry-run where training would otherwise occur.
 
-# Create vectorized environment
-env = pufferlib.make('procgen-coinrun', num_envs=256)
+## Installation and provenance
 
-# Create trainer
-trainer = PuffeRL(
-    env=env,
-    policy=my_policy,
-    device='cuda',
-    learning_rate=3e-4,
-    batch_size=32768
-)
+### Published 3.0.0
 
-# Training loop
-for iteration in range(num_iterations):
-    trainer.evaluate()  # Collect rollouts
-    trainer.train()     # Train on batch
-    trainer.mean_and_log()  # Log results
+PyPI supplies only `pufferlib-3.0.0.tar.gz`:
+
+```text
+sha256: 7df3a3e3f5f894d78d2a1f5374097890aec01473183e748abefe4f3faa10eaa9
+Requires-Python: >=3.9
 ```
 
-**For comprehensive training guidance**, read `references/training.md` for:
-- Complete training workflow and CLI options
-- Hyperparameter tuning with Protein
-- Distributed multi-GPU/multi-node training
-- Logger integration (Weights & Biases, Neptune)
-- Checkpointing and resume training
-- Performance optimization tips
-- Curriculum learning patterns
+After source/build review, create a pinned uv project:
 
-### 2. Environment Development (PufferEnv)
-
-Create custom high-performance environments with the PufferEnv API.
-
-**Basic environment structure:**
-```python
-import numpy as np
-from pufferlib import PufferEnv
-
-class MyEnvironment(PufferEnv):
-    def __init__(self, buf=None):
-        super().__init__(buf)
-
-        # Define spaces
-        self.observation_space = self.make_space((4,))
-        self.action_space = self.make_discrete(4)
-
-        self.reset()
-
-    def reset(self):
-        # Reset state and return initial observation
-        return np.zeros(4, dtype=np.float32)
-
-    def step(self, action):
-        # Execute action, compute reward, check done
-        obs = self._get_observation()
-        reward = self._compute_reward()
-        done = self._is_done()
-        info = {}
-
-        return obs, reward, done, info
+```bash
+uv venv --python 3.11
+uv add --exact --no-sync "pufferlib==3.0.0"
+uv lock
+uv sync --frozen
 ```
 
-**Use the template script:** `scripts/env_template.py` provides complete single-agent and multi-agent environment templates with examples of:
-- Different observation space types (vector, image, dict)
-- Action space variations (discrete, continuous, multi-discrete)
-- Multi-agent environment structure
-- Testing utilities
+Commit `pyproject.toml` and `uv.lock`; verify the archive digest and every
+resolved dependency. The source build can compile native code and fetch build
+assets, so resolve/build in a sandbox without credentials or sensitive mounts.
+The uploaded metadata does not pin Torch or CUDA; do not claim a supported CUDA
+matrix that PyPI does not declare.
 
-**For complete environment development**, read `references/environments.md` for:
-- PufferEnv API details and in-place operation patterns
-- Observation and action space definitions
-- Multi-agent environment creation
-- Ocean suite (20+ pre-built environments)
-- Performance optimization (Python to C workflow)
-- Environment wrappers and best practices
-- Debugging and validation techniques
+### Current 4.0 source
 
-### 3. Vectorization and Performance
+The reviewed branch head on 2026-07-23 was:
 
-Achieve maximum throughput with optimized parallel simulation.
-
-**Vectorization setup:**
-```python
-import pufferlib
-
-# Automatic vectorization
-env = pufferlib.make('environment_name', num_envs=256, num_workers=8)
-
-# Performance benchmarks:
-# - Pure Python envs: 100k-500k SPS
-# - C-based envs: 100M+ SPS
-# - With training: 400k-4M total SPS
+```text
+25647630e1b15330bb3153a5a0d3ff8d234c3acf
 ```
 
-**Key optimizations:**
-- Shared memory buffers for zero-copy observation passing
-- Busy-wait flags instead of pipes/queues
-- Surplus environments for async returns
-- Multiple environments per worker
+Pin the commit, not branch `4.0`:
 
-**For vectorization optimization**, read `references/vectorization.md` for:
-- Architecture and performance characteristics
-- Worker and batch size configuration
-- Serial vs multiprocessing vs async modes
-- Shared memory and zero-copy patterns
-- Hierarchical vectorization for large scale
-- Multi-agent vectorization strategies
-- Performance profiling and troubleshooting
-
-### 4. Policy Development
-
-Build policies as standard PyTorch modules with optional utilities.
-
-**Basic policy structure:**
-```python
-import torch.nn as nn
-from pufferlib.pytorch import layer_init
-
-class Policy(nn.Module):
-    def __init__(self, observation_space, action_space):
-        super().__init__()
-
-        # Encoder
-        self.encoder = nn.Sequential(
-            layer_init(nn.Linear(obs_dim, 256)),
-            nn.ReLU(),
-            layer_init(nn.Linear(256, 256)),
-            nn.ReLU()
-        )
-
-        # Actor and critic heads
-        self.actor = layer_init(nn.Linear(256, num_actions), std=0.01)
-        self.critic = layer_init(nn.Linear(256, 1), std=1.0)
-
-    def forward(self, observations):
-        features = self.encoder(observations)
-        return self.actor(features), self.critic(features)
+```bash
+uv add --no-sync \
+  "pufferlib @ git+https://github.com/PufferAI/PufferLib.git@25647630e1b15330bb3153a5a0d3ff8d234c3acf"
+uv lock
 ```
 
-**For complete policy development**, read `references/policies.md` for:
-- CNN policies for image observations
-- Recurrent policies with optimized LSTM (3x faster inference)
-- Multi-input policies for complex observations
-- Continuous action policies
-- Multi-agent policies (shared vs independent parameters)
-- Advanced architectures (attention, residual)
-- Observation normalization and gradient clipping
-- Policy debugging and testing
+The current package declares Python `>=3.10` and Torch `>=2.9`. Upstream
+PufferTank currently uses Ubuntu 24.04, Python 3.12, and an NVIDIA CUDA
+13.0.2/cuDNN development image with the `cu130` Torch index, but does not pin
+the exact Torch wheel or all system packages. Treat it as a reference, not a
+complete lock. Never execute a remote installer directly from a pipe.
 
-### 5. Environment Integration
+Read `references/training.md` before any installation or build.
 
-Seamlessly integrate environments from popular RL frameworks.
+## Environment workflow
 
-**Gymnasium integration:**
+### 1. Validate the contract
+
+Gymnasium reset returns `(observation, info)`. Step returns:
+
 ```python
-import gymnasium as gym
-import pufferlib
-
-# Wrap Gymnasium environment
-gym_env = gym.make('CartPole-v1')
-env = pufferlib.emulate(gym_env, num_envs=256)
-
-# Or use make directly
-env = pufferlib.make('gym-CartPole-v1', num_envs=256)
+(observation, reward, terminated, truncated, info)
 ```
 
-**PettingZoo multi-agent:**
-```python
-# Multi-agent environment
-env = pufferlib.make('pettingzoo-knights-archers-zombies', num_envs=128)
+Validate spaces, shapes, dtypes, finite rewards, booleans, reset-before-step,
+reset-after-end, seeding, and cleanup. `terminated` is an MDP terminal;
+`truncated` is an external cutoff such as a time limit. Preserve the distinction
+for bootstrapping and metrics.
+
+```bash
+python3 scripts/env_contract_validator.py \
+  --steps 64 --episodes 8 --seed 42
 ```
 
-**Supported frameworks:**
-- Gymnasium / OpenAI Gym
-- PettingZoo (parallel and AEC)
-- Atari (ALE)
-- Procgen
-- NetHack / MiniHack
-- Minigrid
-- Neural MMO
-- Crafter
-- GPUDrive
-- MicroRTS
-- Griddly
-- And more...
+### 2. Adapt only after review
 
-**For integration details**, read `references/integration.md` for:
-- Complete integration examples for each framework
-- Custom wrappers (observation, reward, frame stacking, action repeat)
-- Space flattening and unflattening
-- Environment registration
-- Compatibility patterns
-- Performance considerations
-- Integration debugging
+Published 3.0 uses explicit wrappers:
 
-## Quick Start Workflow
-
-### For Training Existing Environments
-
-1. Choose environment from Ocean suite or compatible framework
-2. Use `scripts/train_template.py` as starting point
-3. Configure hyperparameters for your task
-4. Run training with CLI or Python script
-5. Monitor with Weights & Biases or Neptune
-6. Refer to `references/training.md` for optimization
-
-### For Creating Custom Environments
-
-1. Start with `scripts/env_template.py`
-2. Define observation and action spaces
-3. Implement `reset()` and `step()` methods
-4. Test environment locally
-5. Vectorize with `pufferlib.emulate()` or `make()`
-6. Refer to `references/environments.md` for advanced patterns
-7. Optimize with `references/vectorization.md` if needed
-
-### For Policy Development
-
-1. Choose architecture based on observations:
-   - Vector observations → MLP policy
-   - Image observations → CNN policy
-   - Sequential tasks → LSTM policy
-   - Complex observations → Multi-input policy
-2. Use `layer_init` for proper weight initialization
-3. Follow patterns in `references/policies.md`
-4. Test with environment before full training
-
-### For Performance Optimization
-
-1. Profile current throughput (steps per second)
-2. Check vectorization configuration (num_envs, num_workers)
-3. Optimize environment code (in-place ops, numpy vectorization)
-4. Consider C implementation for critical paths
-5. Use `references/vectorization.md` for systematic optimization
-
-## Resources
-
-### scripts/
-
-**train_template.py** - Complete training script template with:
-- Environment creation and configuration
-- Policy initialization
-- Logger integration (WandB, Neptune)
-- Training loop with checkpointing
-- Command-line argument parsing
-- Multi-GPU distributed training setup
-
-**env_template.py** - Environment implementation templates:
-- Single-agent PufferEnv example (grid world)
-- Multi-agent PufferEnv example (cooperative navigation)
-- Multiple observation/action space patterns
-- Testing utilities
-
-### references/
-
-**training.md** - Comprehensive training guide:
-- Training workflow and CLI options
-- Hyperparameter configuration
-- Distributed training (multi-GPU, multi-node)
-- Monitoring and logging
-- Checkpointing
-- Protein hyperparameter tuning
-- Performance optimization
-- Common training patterns
-- Troubleshooting
-
-**environments.md** - Environment development guide:
-- PufferEnv API and characteristics
-- Observation and action spaces
-- Multi-agent environments
-- Ocean suite environments
-- Custom environment development workflow
-- Python to C optimization path
-- Third-party environment integration
-- Wrappers and best practices
-- Debugging
-
-**vectorization.md** - Vectorization optimization:
-- Architecture and key optimizations
-- Vectorization modes (serial, multiprocessing, async)
-- Worker and batch configuration
-- Shared memory and zero-copy patterns
-- Advanced vectorization (hierarchical, custom)
-- Multi-agent vectorization
-- Performance monitoring and profiling
-- Troubleshooting and best practices
-
-**policies.md** - Policy architecture guide:
-- Basic policy structure
-- CNN policies for images
-- LSTM policies with optimization
-- Multi-input policies
-- Continuous action policies
-- Multi-agent policies
-- Advanced architectures (attention, residual)
-- Observation processing and unflattening
-- Initialization and normalization
-- Debugging and testing
-
-**integration.md** - Framework integration guide:
-- Gymnasium integration
-- PettingZoo integration (parallel and AEC)
-- Third-party environments (Procgen, NetHack, Minigrid, etc.)
-- Custom wrappers (observation, reward, frame stacking, etc.)
-- Space conversion and unflattening
-- Environment registration
-- Compatibility patterns
-- Performance considerations
-- Debugging integration
-
-## Tips for Success
-
-1. **Start simple**: Begin with Ocean environments or Gymnasium integration before creating custom environments
-
-2. **Profile early**: Measure steps per second from the start to identify bottlenecks
-
-3. **Use templates**: `scripts/train_template.py` and `scripts/env_template.py` provide solid starting points
-
-4. **Read references as needed**: Each reference file is self-contained and focused on a specific capability
-
-5. **Optimize progressively**: Start with Python, profile, then optimize critical paths with C if needed
-
-6. **Leverage vectorization**: PufferLib's vectorization is key to achieving high throughput
-
-7. **Monitor training**: Use WandB or Neptune to track experiments and identify issues early
-
-8. **Test environments**: Validate environment logic before scaling up training
-
-9. **Check existing environments**: Ocean suite provides 20+ pre-built environments
-
-10. **Use proper initialization**: Always use `layer_init` from `pufferlib.pytorch` for policies
-
-## Common Use Cases
-
-### Training on Standard Benchmarks
 ```python
-# Atari
-env = pufferlib.make('atari-pong', num_envs=256)
+import pufferlib.emulation
 
-# Procgen
-env = pufferlib.make('procgen-coinrun', num_envs=256)
-
-# Minigrid
-env = pufferlib.make('minigrid-empty-8x8', num_envs=256)
+wrapped = pufferlib.emulation.GymnasiumPufferEnv(reviewed_gymnasium_instance)
 ```
 
-### Multi-Agent Learning
-```python
-# PettingZoo
-env = pufferlib.make('pettingzoo-pistonball', num_envs=128)
+For a reviewed PettingZoo Parallel environment:
 
-# Shared policy for all agents
-policy = create_policy(env.observation_space, env.action_space)
-trainer = PuffeRL(env=env, policy=policy)
+```python
+wrapped = pufferlib.emulation.PettingZooPufferEnv(reviewed_parallel_instance)
 ```
 
-### Custom Task Development
-```python
-# Create custom environment
-class MyTask(PufferEnv):
-    # ... implement environment ...
+There is no supported 3.0 `pufferlib.emulate(...)` shortcut matching the old
+skill. Read `references/environments.md` and `references/integration.md`.
 
-# Vectorize and train
-env = pufferlib.emulate(MyTask, num_envs=256)
-trainer = PuffeRL(env=env, policy=my_policy)
-```
+### 3. Native environments
 
-### High-Performance Optimization
+Published 3.0 `PufferEnv` requires
+`single_observation_space`, `single_action_space`, and `num_agents` before
+`super().__init__(buf)`. It uses in-place vector buffers and returns separate
+terminal/truncation arrays plus a list of info dictionaries.
+
+Current 4.0 uses C bindings. Start from upstream `ocean/squared` (single-agent)
+or `ocean/target` (multi-agent), build one environment in local/sanitized mode,
+and verify every buffer size/type/index before optimization.
+
+## Vectorization workflow
+
+Published 3.0:
+
 ```python
-# Maximize throughput
-env = pufferlib.make(
-    'my-env',
-    num_envs=1024,      # Large batch
-    num_workers=16,     # Many workers
-    envs_per_worker=64  # Optimize per worker
+import pufferlib.vector
+
+vecenv = pufferlib.vector.make(
+    reviewed_creator,
+    backend=pufferlib.vector.Serial,
+    num_envs=4,
+    seed=42,
 )
 ```
 
-## Installation
+Move to `Multiprocessing` only after serial traces pass. Record
+`num_envs`, `num_workers`, `batch_size`, zero-copy mode, start method, agent
+count, masks, and actual returned shapes. For multi-agent environments, batch
+length is based on agent slots, not necessarily `num_envs`.
 
-```bash
-uv pip install pufferlib
+Current 4.0 config instead uses:
+
+```ini
+[vec]
+total_agents = 4096
+num_buffers = 2
+num_threads = 16
 ```
 
-## Documentation
+Read `references/vectorization.md`. Benchmark fixed work with warmup and at least
+three repeats; report simulation and end-to-end training SPS separately. The
+bundled benchmark measures only its synthetic harness.
 
-- Official docs: https://puffer.ai/docs.html
-- GitHub: https://github.com/PufferAI/PufferLib
-- Discord: Community support available
+## Policy workflow
 
+Published 3.0 policies are Torch modules sized from
+`single_observation_space`/`single_action_space`. Stable recurrent composition
+uses `encode_observations` and `decode_actions`; structured emulation uses
+`pufferlib.pytorch.nativize_dtype` and `nativize_tensor`.
+
+Current 4.0 Torch fallback composes:
+
+```python
+pufferlib.models.Policy(encoder=encoder, decoder=decoder, network=network)
+```
+
+It provides MLP, MinGRU, LSTM, and GRU network choices; `--slowly` selects this
+fallback instead of the native backend. Check output/state shapes, masks,
+finite values, gradients, and eager-versus-compiled behavior. See
+`references/policies.md`.
+
+## Training and evaluation
+
+Published 3.0 trainer import:
+
+```python
+from pufferlib import pufferl
+
+trainer = pufferl.PuffeRL(train_config, vecenv, policy)
+```
+
+Current 4.0 CLI:
+
+```bash
+puffer train ENV_NAME
+puffer eval ENV_NAME --load-model-path EXACT_TRUSTED_PATH
+puffer sweep ENV_NAME
+```
+
+Generate a plan instead of launching by default:
+
+```bash
+python3 scripts/train_template.py \
+  --profile pypi-3.0.0 \
+  --environment synthetic \
+  --device cpu \
+  --total-timesteps 10000
+```
+
+Validate a custom strict-JSON plan:
+
+```bash
+python3 scripts/validate_plan.py --root . --config plan.json
+```
+
+The schema rejects secret-bearing keys, unbounded resources, dotted environment
+paths, invalid vector divisibility, mixed-version options, and coupled
+train/eval seeds. See `references/training.md`.
+
+## Logging
+
+PufferLib 3.0 exposes W&B and Neptune; current 4.0 CLI exposes W&B. Both are
+optional external services. They may transmit configuration, metrics, source
+metadata, hardware telemetry, output, and approved artifacts, with privacy,
+retention, access-control, and cost implications.
+
+- W&B credential: named environment variable `WANDB_API_KEY`.
+- Neptune credential: named environment variable `NEPTUNE_API_TOKEN`.
+- Never put values in arguments/config/logs.
+- Sanitize config keys before logging.
+- Keep source/model upload off unless explicitly approved.
+
+The planner requires both:
+
+```bash
+python3 scripts/train_template.py \
+  --logger wandb \
+  --enable-external-logging \
+  --acknowledge-external-disclosure
+```
+
+It reports only the required variable name and never reads its value.
+
+## Checkpoint workflow
+
+PufferLib 3.0 and the 4.0 Torch fallback use Torch serialization; current native
+4.0 writes opaque `.bin` weights. PyTorch warns that untrusted models are
+programs and that `torch.load` uses unpickling.
+
+```bash
+python3 scripts/inspect_checkpoint.py checkpoint.pt \
+  --root . \
+  --expected-sha256 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+```
+
+The inspector hashes and classifies only. It does not call `torch.load`, import
+pickle/Torch, inspect archive members, or extract files. Verify source, license,
+architecture, environment revision, sidecar metadata, and checksum before any
+sandboxed load. Never use `latest` in a reproducible evaluation.
+
+## Bundled files
+
+### Scripts
+
+- `scripts/env_template.py` — deterministic synthetic Gymnasium-style template.
+- `scripts/env_contract_validator.py` — bounded contract and seed checks.
+- `scripts/benchmark_vectorization.py` — capped serial/spawn synthetic benchmark.
+- `scripts/train_template.py` — non-executing 3.0/4.0 training-plan generator.
+- `scripts/validate_plan.py` — strict config/resource/security validator.
+- `scripts/inspect_checkpoint.py` — metadata/hash inspection without deserialization.
+- `scripts/repro_plan.py` — separate-seed evaluation and benchmark plan.
+
+### References
+
+- `references/environments.md` — Gymnasium, stable PufferEnv, emulation, native C.
+- `references/vectorization.md` — backends, shapes, start methods, benchmarks.
+- `references/policies.md` — stable/current policy contracts and state safety.
+- `references/training.md` — installs, config, CLI, PuffeRL, eval, logs, checkpoints.
+- `references/integration.md` — migration matrix, third-party and credential safety.
+
+## Dated upstream sources
+
+- [PyPI pufferlib 3.0.0](https://pypi.org/project/pufferlib/3.0.0/) —
+  released 2025-06-23; checked 2026-07-23.
+- [PyPI 3.0.0 metadata](https://pypi.org/pypi/pufferlib/3.0.0/json) —
+  digest/dependencies; checked 2026-07-23.
+- [PufferLib official docs](https://puffer.ai/docs.html) — current 4.0 docs;
+  checked 2026-07-23.
+- [PufferLib source](https://github.com/PufferAI/PufferLib) — default branch and
+  implementation; checked 2026-07-23.
+- [PufferTank 4.0 Dockerfile](https://github.com/PufferAI/PufferTank/blob/4.0/puffertank.dockerfile)
+  — CUDA/Python reference; checked 2026-07-23.
+- [PufferLib 2.0 paper](https://openreview.net/forum?id=qRyteMTgn0) —
+  Reinforcement Learning Journal, 2025; use only for its stated benchmarks.
+- [PufferLib compatibility paper](https://arxiv.org/abs/2406.12905) —
+  submitted 2024-06-18; describes an earlier API/performance profile.

@@ -20,7 +20,11 @@ conda install -c bioconda crispresso2
 # Chronos for DepMap-style cancer-line CN+quality jointly (GitHub, not PyPI)
 pip install git+https://github.com/broadinstitute/chronos
 # R packages
-R -e "BiocManager::install(c('CRISPRcleanR', 'MAGeCKFlute', 'sva', 'sceptre'))"
+R -e "BiocManager::install('sva')"
+# MAGeCKFlute was removed from Bioconductor at the 3.22 release
+R -e "remotes::install_github('WubingZhang/MAGeCKFlute')"
+# CRISPRcleanR and sceptre are GitHub packages, not Bioconductor/CRAN
+R -e "devtools::install_github(c('francescojm/CRISPRcleanR', 'katsevich-lab/sceptre'))"
 # Helpers
 pip install pandas numpy scipy matplotlib seaborn scikit-learn biopython statsmodels
 ```
@@ -53,7 +57,7 @@ Tell the AI agent what to run:
 
 ### Cancer Cell Line + CN Bias
 
-> "My screen is in SK-BR-3 (HER2+, ERBB2 ~24 copies). Run CRISPRcleanR pre-hoc, then MAGeCK on corrected counts. Verify ERBB2 is no longer top hit."
+> "My screen is in SK-BR-3 (HER2+, high-level ERBB2 amplification). Run CRISPRcleanR pre-hoc, then MAGeCK on corrected counts. Verify ERBB2 is no longer top hit."
 
 > "DepMap-style screen across 12 cancer cell lines, longitudinal sampling, matched WGS CN profiles. Use Chronos as the integrated CN + screen-quality + gene-effect model."
 
@@ -107,7 +111,7 @@ Tell the AI agent what to run:
 - BAGEL2 BF >6 corresponds to FDR <3% in the Hart 2017 G3 calibration (BF >3 is the FDR <5% threshold); use this when cross-comparing methods.
 - For low-quality screens (CEGv2 PR-AUC 0.5-0.7), tighten FDR from 0.05 to 0.01 to maintain effective specificity.
 - Switching from Cas9 to CRISPRi (Dolcetto library) is the cleanest way to bypass copy-number artifact in cancer lines. The tradeoff: CRISPRi knockdown is less complete than Cas9 KO.
-- For single-cell screens, MOI 0.3 is non-negotiable; high MOI creates multi-perturbation cells that violate every analysis assumption.
+- For single-cell screens where each cell must carry exactly one sgRNA, target MOI 0.3 (~26% of cells infected, ~4% multi-infected). Higher-MOI designs are valid only when multi-guide cells are filtered or modelled as combinatorial perturbations.
 - In vivo screens cannot achieve standard 500x coverage with most syngeneic models. Use focused libraries (3,000-15,000 sgRNAs) or CRISPR-StAR temporal activation.
 
 ## Decision Cheat Sheet
@@ -130,9 +134,9 @@ Tell the AI agent what to run:
 |-------|-------|------|----------------|
 | Counting | Mapping rate | >65-70% | Check adapter / library format |
 | Plasmid | Gini | <0.1 | Re-amplify or re-clone |
-| Endpoint | Replicate Pearson on log-counts | >0.85 | Drop outlier replicate |
+| Endpoint | Replicate Pearson on log-counts | >=0.8 (MAGeCK-VISPR floor) | Drop outlier replicate |
 | Biology | CEGv2 PR-AUC | >0.7 | Cas9 selection / timepoint / TSS issue |
-| CN | Spearman LFC vs CN | abs(rho) <0.10 | Apply CRISPRcleanR / Chronos |
+| CN | Spearman LFC vs CN | abs(rho) <0.05 post-correction | Apply CRISPRcleanR / Chronos |
 | Depth | Reads per sgRNA | >300 | Re-sequence |
 | MOI | Poisson P(>=2) | <5% | Re-infect at lower MOI |
 

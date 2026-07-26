@@ -1,6 +1,6 @@
 ---
 name: bio-crispr-screens-prime-editing-screens
-description: Designs and analyzes pooled prime-editor (PE) screens for installing precise genetic variants without bystander confounding. Covers pegRNA design with PRIDICT and PRIDICT2 for predicting per-pegRNA editing efficiency, pegRNA architecture (spacer + scaffold + PBS + RTT), PE2/PE3/PE3b/PEmax/PEAR variants, MOSAIC in situ saturation mutagenesis, the PRIME pooled-screen methodology (Erwood/Doman 2023; ~3,699 ClinVar variant screens), chromatin context as a primary determinant of PE efficiency, scaffold-incorporation and indel byproduct quantification with CRISPResso2, and the cross-modal validation strategy of PE + base-editor screens for variant function. Use when designing a pegRNA library for variant installation, choosing between BE and PE for a specific edit, predicting pegRNA efficiency before library synthesis, analyzing PE screen output, distinguishing intended-edit from scaffold-incorporation, or scaling PE screens to thousands of variants.
+description: Designs and analyzes pooled prime-editor (PE) screens for installing precise genetic variants without bystander confounding. Covers pegRNA design with PRIDICT and PRIDICT2 for predicting per-pegRNA editing efficiency, pegRNA architecture (spacer + scaffold + PBS + RTT), PE2/PE3/PE3b/PEmax variants, MOSAIC in situ saturation mutagenesis, the PRIME pooled-screen methodology (Ren 2023; ~3,699 ClinVar variant screens), chromatin context as a major locus-level determinant of PE efficiency, scaffold-incorporation and indel byproduct quantification with CRISPResso2, and the cross-modal validation strategy of PE + base-editor screens for variant function. Use when designing a pegRNA library for variant installation, choosing between BE and PE for a specific edit, predicting pegRNA efficiency before library synthesis, analyzing PE screen output, distinguishing intended-edit from scaffold-incorporation, or scaling PE screens to thousands of variants.
 tool_type: mixed
 primary_tool: PRIDICT2
 ---
@@ -20,6 +20,7 @@ If code throws ImportError, AttributeError, or TypeError, introspect the install
 **"Design or analyze a pooled prime-editor screen"** -> Design pegRNAs (spacer + scaffold + PBS + RTT) for intended edits, predict efficiency with PRIDICT2, filter pre-synthesis to efficient candidates, install variants in the screen, quantify intended-edit vs scaffold-incorporation vs indel via CRISPResso2, and aggregate to per-variant fitness scores.
 
 - Python: `PRIDICT2` for pegRNA efficiency prediction
+- Python: `ePRIDICT` for chromatin-context prediction; pair with PRIDICT2 rather than replacing it
 - CLI: `CRISPResso --prime_editing_pegRNA_*` for amplicon-level analysis
 - Workflow: pegRNA library design -> PRIDICT2 filtering -> screen execution -> CRISPResso2 quantification -> per-variant scoring
 
@@ -31,11 +32,10 @@ If code throws ImportError, AttributeError, or TypeError, introspect the install
 | PE3 | 2019 | PE2 + nick of opposite strand by additional sgRNA | 2-5% | Higher editing efficiency, slightly more indels |
 | PE3b | 2019 | PE3 with edit-blocking ssgRNA | 1-3% | When PE3's added nick risks unwanted indels |
 | PEmax (Chen 2021) | 2021 | Engineered RT + nCas9 | 1-2% | Higher editing rate per pegRNA |
-| PEAR (Erwood 2023) | 2023 | PE with optimal pegRNA scaffold | 1-2% | Improved PE scaffold |
-| PE5max (Chen 2021) | 2021 | PEmax with engineered scaffold variants | 1% | Highest efficiency at favorable sites |
-| Dual-pegRNA / PE6 (2024) | 2024 | Twin pegRNA system | Variable | Specific applications |
+| PE5max (Chen 2021) | 2021 | PE3 plus MMR inhibition (MLH1dn) on the PEmax architecture | 1% | Highest efficiency at favorable sites |
+| PE6 / dual-pegRNA (2023) | 2023 | Engineered compact PE; twin-pegRNA systems | Variable | Specific applications |
 
-**Decision rule:** For pooled screens at scale, PE2 or PEmax (less RAM-intensive in cells) is preferred over PE3 (additional sgRNA complicates library architecture). For specific high-efficiency edits, PEmax + PRIDICT2-optimized pegRNA.
+**Decision rule:** For pooled screens at scale, PE2 or PEmax (single-guide architecture) is preferred over PE3, whose additional nicking sgRNA complicates library architecture. For specific high-efficiency edits, PEmax + PRIDICT2-optimized pegRNA.
 
 ## pegRNA Architecture
 
@@ -44,7 +44,7 @@ A pegRNA contains four critical elements that determine efficiency:
 ```
 5'  SPACER (20 nt)  -- standard sgRNA spacer; defines target locus via NGG PAM
     +
-    SCAFFOLD (~80 nt) -- canonical or engineered scaffold (Chen 2021 has improved scaffold)
+    SCAFFOLD (~80 nt) -- canonical or recoded scaffold (Chen 2021 recodes it to cut scaffold-incorporation byproducts)
     +
     PBS (Primer Binding Site, 8-15 nt) -- complements protospacer downstream of cut site
     +
@@ -56,7 +56,7 @@ A pegRNA contains four critical elements that determine efficiency:
 - **PBS length:** 11-13 nt typical; longer for high-GC contexts; PBS GC fraction critical (35-65% target)
 - **RTT length:** 10-20 nt typical; longer for distant edits (10+ bp away from cut)
 - **RTT-edit position:** intended edit at position 4-30 from cut site
-- **Scaffold:** standard sgRNA scaffold OR Chen 2021 engineered scaffold (5-10% higher editing)
+- **Scaffold:** standard sgRNA scaffold OR the Chen 2021 recoded scaffold, which removes homology with the genomic target and cuts scaffold-derived byproducts. The recoding does not itself raise editing efficiency; that comes from MLH1dn and the PEmax architecture.
 
 ## PRIDICT and PRIDICT2 pegRNA Efficiency Prediction
 
@@ -91,12 +91,12 @@ from pathlib import Path
 
 def load_pridict2_predictions(prediction_dir):
     '''Load PRIDICT2 batch outputs from prediction_dir/'''
-    summary = pd.read_csv(Path(prediction_dir) / 'pridict2_summary.csv')
+    summary = pd.read_csv(Path(prediction_dir) / '<timestamp>_summary_K562_batch_summary.csv')
     # summary has columns: sequence_name, PBS, RTT, predicted_efficiency, predicted_indel, etc.
     return summary
 ```
 
-**Key determinants of PE efficiency (Mathis 2024 PRIDICT2):**
+**Key determinants of PE efficiency (Mathis 2025 PRIDICT2):**
 
 | Feature | Effect on efficiency |
 |---------|----------------------|
@@ -104,30 +104,29 @@ def load_pridict2_predictions(prediction_dir):
 | PBS length | 11-13 nt optimal; longer for high-GC PBS |
 | RTT length | 10-20 nt typical; trade-off between coverage and processivity |
 | Edit position in RTT | Closest to PBS = highest efficiency |
-| Chromatin context | Open chromatin = 2-5x higher efficiency than closed |
+| Chromatin context | Dominant locus effect; H3K9me3 heterochromatin ~0.8% vs ~2.2% elsewhere |
 | Cell line / Cas9 expression | Variable; piloting required |
 | Cell cycle phase | S/G2 = higher efficiency |
 
-**Critical insight from Mathis 2024:** Chromatin context is the dominant determinant. Sequence-based predictions like PRIDICT under-predict at silenced loci and over-predict at open chromatin. For genome-scale screens, validate predictions empirically at representative loci.
+**Critical insight from Mathis 2025:** Chromatin context is a major locus-level determinant that sequence-only predictors miss, which is why ePRIDICT is designed to be combined with PRIDICT2.0 rather than replace it -- the pairing helps most in regions of lower chromatin accessibility. For genome-scale screens, validate predictions empirically at representative loci.
 
 ## PRIME Pooled Screen Methodology
 
-**Erwood S, Doman JL et al 2023 *Nat Biotechnol* 41:885** established the PRIME pooled-screen methodology (earlier 2022 bioRxiv preprint):
+**Ren X et al 2023 *Mol Cell* 83:4633** established the PRIME pooled prime-editing screen methodology (earlier 2023 bioRxiv preprint):
 
-- pegRNA library covering thousands of intended variants
-- Filter pegRNAs to PRIDICT2 efficiency >50% (or pilot top 25%)
-- Lentiviral delivery at standard MOI 0.3 in PE-expressing cell line
+- pegRNA library covering thousands of intended variants, screened for specificity at design time (Ren 2023 used GuideScan2; add PRIDICT2 efficiency prediction for new designs)
+- Lentiviral delivery in a PE-expressing cell line (Ren 2023: MOI 0.3 for the MYC-enhancer screen, MOI 0.5 for the variant screens)
 - Selection on integration marker
 - Time-course screen for variant function (e.g., drug sensitivity)
 - Endpoint amplicon sequencing of each pegRNA target locus
 - CRISPResso2 quantification of intended-edit %
 - MAGeCK / drugZ-style hit calling on edit-efficient pegRNAs
 
-**Quantified scale:** ~3,699 ClinVar variants installed in a single PRIME screen (Erwood/Doman 2023 *Nat Biotechnol* 41:885), with editing efficiency >5% at >50% of pegRNAs (validation cohort).
+**Quantified scale:** ~3,699 ClinVar variants installed in a single PRIME screen, alongside 1,304 breast-cancer GWAS variants.
 
 ## MOSAIC In Situ Saturation Mutagenesis
 
-**MOSAIC (Hsu JY, Lam KC, Shih J, Pinello L, Joung JK 2024 bioRxiv 10.1101/2024.04.25.591078)** is a higher-throughput variant of PRIME with multiplexed read-out:
+**MOSAIC (Hsu 2024, bioRxiv)** is a high-throughput in-situ saturation-mutagenesis prime-editing method with multiplexed read-out:
 
 - Tile pegRNAs across protein domains for systematic mutagenesis
 - Saturation: every possible amino acid change in a region
@@ -161,9 +160,9 @@ python pridict2_pegRNA_design.py batch \
 ```python
 # Step 3: parse and filter
 import pandas as pd
-predictions = pd.read_csv('predictions/pridict2_summary.csv')
+predictions = pd.read_csv('predictions/<timestamp>_summary_K562_batch_summary.csv')
 
-# Filter to pegRNAs with predicted efficiency > 50% (Mathis 2024 threshold)
+# Filter to pegRNAs with predicted efficiency > 50% (library-inclusion convention)
 filtered = predictions[predictions['predicted_editing_efficiency'] > 50]
 print(f'pegRNAs passing PRIDICT2 >50%: {len(filtered)} / {len(predictions)}')
 
@@ -203,14 +202,15 @@ CRISPResso \
     --amplicon_seq <amplicon_seq> \
     --guide_seq <20nt_spacer> \
     --prime_editing_pegRNA_spacer_seq <spacer> \
-    --prime_editing_pegRNA_extension_seq <PBS+RTT> \
+    --prime_editing_pegRNA_extension_seq <RTT+PBS> \
     --prime_editing_pegRNA_scaffold_seq <scaffold> \
     --quantification_window_size 25 \              # widen to cover edit
     --output_folder pe_results \
     --name sample_id
 
-# Output: Prime_editing_outcomes.txt
-# Columns: intended_edit_pct, scaffold_incorp_pct, indel_pct, unmodified_pct
+# Output: CRISPResso_quantification_of_editing_frequency.txt
+# Prime-editing outcomes appear as extra amplicon ROWS (Reference / Prime-edited /
+# Scaffold-incorporated), each with Unmodified%, Modified% and read counts.
 ```
 
 ## Failure Modes
@@ -269,8 +269,8 @@ CRISPResso \
 
 | Threshold | Value | Source / Rationale |
 |-----------|-------|--------------------|
-| PRIDICT2 efficiency for library inclusion | >50% | Mathis 2024 |
-| Intended edit % for screen power | >5% (per Anzalone 2019); >20% at favorable sites | Anzalone 2019 |
+| PRIDICT2 efficiency for library inclusion | >50% | Project-chosen cutoff; PRIDICT2 prescribes none |
+| Intended edit % for screen power | >5%; >20% at favorable sites | Field convention |
 | Scaffold incorporation | <2% (clean PE); <5% acceptable | Empirical |
 | Indel byproduct | <3% (PE2); <5% (PE3) | Anzalone 2019; Chen 2021 |
 | PBS GC content | 40-55% | PRIDICT2 |
@@ -296,9 +296,8 @@ CRISPResso \
 - Mathis N et al. 2023. *Nat Biotechnol* 41:1151. PRIDICT v1 deep-learning pegRNA prediction.
 - Mathis N et al. 2025. *Nat Biotechnol* 43(5):712 (published online June 2024). PRIDICT2 + chromatin context (current state-of-the-art).
 - Chen PJ et al. 2021. *Cell* 184:5635. PEmax + engineered RT.
-- Erwood S et al. 2023. *Nature Biotechnology* 41:885. PEAR pegRNA scaffold design.
 - Hsu JY, Lam KC, Shih J, Pinello L, Joung JK 2024 bioRxiv (doi:10.1101/2024.04.25.591078). MOSAIC in situ saturation mutagenesis via prime editing.
-- Erwood S, Doman JL et al. 2023. *Nature Biotechnology* 41:885. PRIME pooled-screen methodology (~3,699 ClinVar variants); cross-reference for variant-installation scale.
+- Ren X et al. 2023. *Mol Cell* 83:4633. PRIME pooled prime-editing screen (~3,699 ClinVar variants); variant-installation scale.
 
 ## Related Skills
 

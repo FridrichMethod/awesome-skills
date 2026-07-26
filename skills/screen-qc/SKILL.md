@@ -10,7 +10,7 @@ primary_tool: MAGeCK-VISPR
 Reference examples tested with: MAGeCK 0.5+ (count + VISPR), MAGeCKFlute 2.0+ (R), pandas 2.2+, numpy 1.26+, scikit-learn 1.4+, matplotlib 3.8+, seaborn 0.13+.
 
 Before using code patterns, verify installed versions match. If versions differ:
-- Python: `pip show mageck` then `mageck count --help`; `pip show mageckflute`
+- CLI: `mageck --version` then `mageck count --help`; R: `packageVersion('MAGeCKFlute')`
 - R: `packageVersion('MAGeCKFlute')` then `?BatchRemove` / `?FluteRRA`
 
 If code throws ImportError, AttributeError, or TypeError, introspect the installed package and adapt the example to match the actual API rather than retrying.
@@ -20,7 +20,7 @@ If code throws ImportError, AttributeError, or TypeError, introspect the install
 **"Audit my CRISPR screen quality before hit calling"** -> Assess library representation, replicate concordance, depth, drift, and biological signal recovery using DepMap-grade metrics, then decide whether the screen is usable, salvageable, or must be repeated.
 
 - Python: `pandas` + `scikit-learn` for Gini, AUC, PCA; `MAGeCKFlute` (R) for one-shot QC dashboard
-- CLI: `mageck count` `--gini`, `--mapping_summary` flags; MAGeCK-VISPR for interactive dashboard
+- CLI: `mageck count` writes Gini and mapping stats unconditionally to `<prefix>.countsummary.txt` (`GiniIndex`, `Reads`, `Mapped`, `Percentage`); MAGeCK-VISPR for an interactive dashboard
 
 ## QC Stage Hierarchy
 
@@ -28,11 +28,11 @@ A pooled screen has six distinct bottlenecks where complexity can collapse. Audi
 
 | Stage | Metric | Acceptable threshold | Failure consequence |
 |-------|--------|----------------------|----------------------|
-| Plasmid pool | Gini, skew, % zero-count guides | Gini <0.1, skew <2, zero <0.5% | Missing guides cannot be screened; dropout indistinguishable from non-coverage |
+| Plasmid pool | Gini, skew, % zero-count guides | Gini <0.1, skew <2 (Joung 2017 states <10), zero <0.5% | Missing guides cannot be screened; dropout indistinguishable from non-coverage |
 | Day-0 infection | Library coverage, MOI verification | ≥99% guide detection at 500x cells/sgRNA; MOI 0.3 | Founder effects; polyclonality with high MOI |
 | Selection (puro/blast) | % cells surviving, time-course Gini | 30-40% survival at 5-7 days; Gini drift <0.05 | Selection artifact; fast-growers enriched |
-| Endpoint | Replicate correlation, depth | Pearson >0.9 on log-counts (MAGeCK-VISPR), Spearman >0.7-0.8, ≥200 reads/sgRNA | Noise dominates; FDR inflates |
-| Biological signal | CEGv2 PR-AUC, NEGv1 false-positive rate | PR-AUC >0.7 at FDR 5% (DepMap "passing"); CEGv2 enrichment in top 1k | Screen lacks essentiality signal; hits not credible |
+| Endpoint | Replicate correlation, depth | Pearson >=0.8 on log-counts (MAGeCK-VISPR floor), Spearman >0.7-0.8, >500 reads/sgRNA (Joung 2017 screening) | Noise dominates; FDR inflates |
+| Biological signal | CEGv2 PR-AUC, NEGv1 false-positive rate | PR-AUC >0.7 at FDR 5% (community "passing" convention); CEGv2 enrichment in top 1k | Screen lacks essentiality signal; hits not credible |
 | Copy-number artifact | Amplified-region enrichment, sgRNA-cut-count correlation | No correlation between sgRNA off-target count and depletion | False-positive essentiality at amplicons; ERBB2 in HER2+ etc. |
 
 Each metric below quantifies one of these stages.
@@ -41,7 +41,7 @@ Each metric below quantifies one of these stages.
 
 **Goal:** Detect dropout, oversaturation, and library bottlenecks at each sequencing stage.
 
-**Approach:** Compute per-sample zero-count fraction, low-count fraction (<30 reads, Joung 2017 convention), and percentile-based skew, then track how these change between plasmid -> Day-0 -> endpoint to localize the bottleneck.
+**Approach:** Compute per-sample zero-count fraction, low-count fraction (<30 reads, the CRISPRcleanR `ccr.NormfoldChanges` default), and percentile-based skew, then track how these change between plasmid -> Day-0 -> endpoint to localize the bottleneck.
 
 ```python
 import pandas as pd
@@ -61,9 +61,9 @@ def library_representation(counts_df):
     return out
 
 def stage_specific_thresholds():
-    '''Joung 2017 + DepMap conventions per stage.'''
+    '''Stage conventions: Joung 2017 (zero-count, skew) + MAGeCK-VISPR (Gini).'''
     return {
-        'plasmid':  {'pct_zero_max': 0.5, 'skew_max': 2.0, 'gini_max': 0.10},
+        'plasmid':  {'pct_zero_max': 0.5, 'skew_max': 2.0, 'gini_max': 0.10},   # skew 2.0 is a stricter modern convention; Joung 2017 states <10
         'day_0':    {'pct_zero_max': 1.0, 'skew_max': 2.5, 'gini_max': 0.12},
         'endpoint': {'pct_zero_max': 5.0, 'skew_max': 10.0, 'gini_max': 0.30},
     }
@@ -89,7 +89,7 @@ def gini(x):
     return (n + 1 - 2 * np.sum(cumx) / cumx[-1]) / n
 ```
 
-**Stage-specific thresholds (Joung 2017 Nat Protoc; DepMap quality grades):**
+**Stage-specific thresholds:** only the plasmid Gini <=0.1 is a published cutoff (MAGeCK-VISPR); the remaining grades are operational convention.
 
 | Stage | Excellent | Acceptable | Concerning | Failure |
 |-------|-----------|------------|------------|---------|
@@ -103,7 +103,7 @@ A Gini that climbs from 0.10 (plasmid) to 0.45 (endpoint) is expected when the s
 
 **Goal:** Verify that biological/technical replicates agree before testing for between-condition differences.
 
-**Approach:** Compute pairwise Pearson on log10(counts+1) (MAGeCK-VISPR convention) and Spearman ρ on raw rank, between every replicate pair within a condition. Flag any pair below 0.8 Pearson on log-scale.
+**Approach:** Compute pairwise Pearson on log10(counts+1) (MAGeCK-VISPR convention) and Spearman ρ on raw rank, between every replicate pair within a condition. Flag any pair below the MAGeCK-VISPR floor of 0.8 Pearson on log-scale.
 
 ```python
 def replicate_concordance(counts_df, condition_map):
@@ -122,7 +122,7 @@ def replicate_concordance(counts_df, condition_map):
     return pd.DataFrame(rows)
 ```
 
-**Thresholds (MAGeCK-VISPR + DepMap):**
+**Thresholds:** 0.8 Pearson is the MAGeCK-VISPR floor; the stricter grades are operational convention.
 
 | Metric | Excellent | Acceptable | Failure |
 |--------|-----------|------------|---------|
@@ -135,7 +135,7 @@ def replicate_concordance(counts_df, condition_map):
 
 **Goal:** Verify the screen has detectable biological essentiality signal by checking whether known essentials (Hart 2017 CEGv2) drop out faster than known non-essentials (NEGv1).
 
-**Approach:** Compute precision-recall AUC where positives are CEGv2 genes and negatives are NEGv1; the screen "passes" if PR-AUC >0.7 (Hart 2017 calibration).
+**Approach:** Compute precision-recall AUC where positives are CEGv2 genes and negatives are NEGv1; the screen "passes" if PR-AUC >0.7 (community convention; the CEGv2/NEGv1 sets come from Hart 2017 / Hart 2014).
 
 ```python
 from sklearn.metrics import precision_recall_curve, auc, roc_auc_score
@@ -155,7 +155,7 @@ def essentialome_recovery(gene_lfc_df, cegv2_set, negv1_set):
     }
 ```
 
-**Source / threshold:** Hart 2017 *G3* 7:2719 defines CEGv2 (~684 core essentials) and NEGv1 (~927 non-essentials); both lists at https://github.com/hart-lab/bagel/blob/master/CEGv2.txt and NEGv1.txt. DepMap convention: PR-AUC >0.7 at FDR 5% is the "passing" threshold; <0.5 means the screen has no essentiality signal and is not interpretable.
+**Source / threshold:** Hart 2017 *G3* 7:2719 defines CEGv2 (~684 core essentials); NEGv1 (~927 non-essentials) comes from Hart 2014 *Mol Syst Biol* 10:733. Both lists at https://github.com/hart-lab/bagel/blob/master/CEGv2.txt and NEGv1.txt. DepMap convention: PR-AUC >0.7 at FDR 5% is the "passing" threshold; <0.5 means the screen has no essentiality signal and is not interpretable.
 
 **When PR-AUC is low despite good Gini and Pearson**: cause is usually one of (a) Cas9 was not selected for before screen start (lots of Cas9-negative cells in the pool diluting signal), (b) puromycin selection truncated too aggressively (over-bottleneck), (c) the timepoint is too early (need 14-21 days for KO + decay + selection to manifest). Each has a different remediation.
 
@@ -180,26 +180,27 @@ def cn_bias_diagnostic(gene_lfc_df, cn_df):
             'per_bin': bin_lfc}
 ```
 
-**Interpretation:** A Spearman ρ < -0.1 between copy number and LFC indicates copy-number artifact. The diagnostic threshold is conservative -- Aguirre 2016 showed that even 4-copy amplifications generate detectable artifact. Remediation: use CRISPRcleanR, CERES, or Chronos (see [[copy-number-correction]]) before hit calling.
+**Interpretation:** A Spearman ρ < -0.1 between copy number and LFC indicates copy-number artifact. The diagnostic threshold is conservative -- Aguirre 2016 showed the effect scales with copy number and with the number of cut sites per sgRNA. Remediation: use CRISPRcleanR, CERES, or Chronos (see [[copy-number-correction]]) before hit calling.
 
 ## Sequencing Depth Audit
 
 **Goal:** Verify that sequencing depth is sufficient to resolve fold changes at the smallest interesting effect size.
 
-**Approach:** Compute reads/sgRNA per sample and the coefficient of variation (CV) of total reads across samples. Compare against the 200x minimum (Joung 2017) or 300x DepMap convention.
+**Approach:** Compute reads/sgRNA per sample and the coefficient of variation (CV) of total reads across samples. Compare against Joung 2017's >100 reads/sgRNA for plasmid QC and >500 for screening, or MAGeCK-VISPR's 300x.
 
 ```python
 def depth_audit(counts_df):
-    '''Verify depth: 200x per sgRNA per sample is Joung 2017 minimum;
-    300x is DepMap convention; 500x for low-confidence-hit recovery.'''
+    '''Verify depth: Joung 2017 recommends >100 reads/sgRNA for plasmid QC and
+    >500 for screening; MAGeCK-VISPR uses 300x.'''
     total = counts_df.sum()
     n_sgrnas = len(counts_df)
     depth = total / n_sgrnas
     cv = total.std() / total.mean()
     return pd.DataFrame({'total_reads': total, 'reads_per_sgrna': depth,
-                          'depth_grade': np.where(depth < 200, 'FAIL',
+                          'depth_grade': np.where(depth < 100, 'FAIL',
                                           np.where(depth < 300, 'CAUTION',
                                           np.where(depth < 500, 'OK', 'EXCELLENT')))}).assign(across_sample_cv=cv)
+    # 100 = Joung 2017 plasmid-QC floor; 300 = MAGeCK-VISPR; 500 = Joung 2017 screening
 ```
 
 **CV interpretation:** CV >0.5 across samples in total reads indicates demultiplexing imbalance or library-pooling error; even if individual samples pass depth thresholds, the relative count is then biased.
@@ -243,12 +244,13 @@ def screen_pca(counts_df, metadata_df, condition_col='condition'):
 
 **Goal:** Generate a single quality grade combining all metrics for pipeline gating.
 
-**Approach:** Z-normalize each metric against DepMap's distribution (Pacini 2024) and aggregate to a "screen quality score." Screens scoring <-1 SD are typically excluded from DepMap.
+**Approach:** Rescale each metric to a comparable 0-1 direction and average them into a single gate score. Screens scoring <-1 SD are typically excluded from DepMap.
 
 ```python
 def composite_qc_score(per_sample_qc):
-    '''per_sample_qc: one row per sample with columns from library_representation()
-    plus pearson, spearman, pr_auc, depth.'''
+    '''per_sample_qc: one row per sample, joining library_representation() output
+    (n_sgrnas_detected, reads_per_sgrna) with gini, pearson_min_replicate, pr_auc
+    and n_sgrnas_total.'''
     metrics = {
         'gini_inv': 1 - per_sample_qc['gini'],
         'pearson': per_sample_qc['pearson_min_replicate'],
@@ -259,7 +261,7 @@ def composite_qc_score(per_sample_qc):
     return pd.DataFrame(metrics).mean(axis=1)
 ```
 
-This is a pipeline gate, not a publication metric -- DepMap reports separate scores for `gene effect score quality` (Chronos-derived) and `screen quality` (Gini-based). See Pacini 2024 *Nat Commun* for the canonical implementation.
+This is a pipeline gate, not a publication metric. DepMap reports `gene effect score quality` (Chronos-derived) separately from screen quality; Pacini 2021 scores the latter with NNMD.
 
 ## Failure Modes
 
@@ -280,7 +282,7 @@ This is a pipeline gate, not a publication metric -- DepMap reports separate sco
 ### Apparent essentiality of amplified loci
 
 **Trigger:** Cancer cell line with focal amplification (ERBB2 in SK-BR-3, MYC in colorectal, FGFR1 in head and neck).
-**Mechanism:** Aguirre 2016 / Munoz 2016: many simultaneous Cas9 cuts trigger p53-dependent DNA-damage response and G2 arrest; sgRNAs at amplified loci appear depleted independently of target essentiality.
+**Mechanism:** Aguirre 2016 / Munoz 2016: many simultaneous Cas9 cuts trigger a DNA-damage response and G2 arrest; sgRNAs at amplified loci appear depleted independently of target essentiality.
 **Symptom:** Hits include genes within known amplicons; sgRNAs with more genome-wide cut sites are more depleted.
 **Fix:** Apply CRISPRcleanR pre-hoc or use Chronos/CERES with matched CN profile (see [[copy-number-correction]]). Always required for cancer-cell-line screens, not optional.
 
@@ -309,18 +311,18 @@ This is a pipeline gate, not a publication metric -- DepMap reports separate sco
 
 | Threshold | Value | Source / Rationale |
 |-----------|-------|--------------------|
-| Plasmid Gini | <0.10 | Joung 2017 *Nat Protoc* 12:828 |
-| Plasmid skew ratio (p90/p10) | <2 | Joung 2017 |
-| % zero-count sgRNAs (plasmid) | <0.5% | DepMap convention |
-| % zero-count sgRNAs (endpoint) | <5% | MAGeCK-VISPR; >5% impairs FDR |
-| Replicate Pearson on log10(counts+1) | >0.85 acceptable, >0.95 ideal | Li et al 2014 MAGeCK paper; MAGeCK-VISPR |
-| Replicate Spearman | >0.70 | MAGeCKFlute (Wang 2019 Nat Protoc) |
-| CEGv2 PR-AUC at FDR 5% | >0.70 passing; >0.85 high quality | Hart 2017 *G3* 7:2719 |
-| Reads per sgRNA per sample | ≥200 minimum, 300+ DepMap, 500+ low-effect screens | Joung 2017; Pacini 2024 DepMap |
+| Plasmid Gini | <0.10 | Li W et al 2015 MAGeCK-VISPR *Genome Biol* 16:281 |
+| Plasmid skew ratio (p90/p10) | <10 (Joung 2017); <2 is a stricter modern convention | Joung 2017 *Nat Protoc* 12:828 |
+| % zero-count sgRNAs (plasmid) | <0.5% | Joung 2017 *Nat Protoc* 12:828 |
+| % zero-count sgRNAs (endpoint) | <1% ideal, <5% tolerated | Li W et al 2015 *Genome Biol* 16:281 |
+| Replicate Pearson on log10(counts+1) | >=0.8 (MAGeCK-VISPR floor); >0.95 ideal | Li W et al 2015 MAGeCK-VISPR *Genome Biol* 16:281 |
+| Replicate Spearman | >0.70 | Operational convention |
+| CEGv2 PR-AUC at FDR 5% | >0.70 passing; >0.85 high quality | Community convention (CEGv2 from Hart 2017 *G3* 7:2719) |
+| Reads per sgRNA per sample | >100 plasmid QC and >500 screening (Joung 2017); 300+ (MAGeCK-VISPR) | Joung 2017; Li W et al 2015 |
 | Library coverage at infection | 500x cells/sgRNA | Joung 2017; DepMap |
-| In-vivo coverage | 200-1000x bottleneck-adjusted | Chen 2015 / Manguso 2017; see [[in-vivo-screens]] |
+| In-vivo coverage | 50-200x at endpoint | Bottleneck-limited; see [[in-vivo-screens]] |
 | MOI at infection | 0.3 strict | Poisson: P(≥2)=4% at 0.3 vs 9% at 0.5 |
-| CN-bias Spearman ρ (LFC vs copy number) | abs(ρ) <0.10 | Aguirre 2016 Cancer Discov |
+| CN-bias Spearman ρ (LFC vs copy number) | abs(ρ) <0.10 | Operational convention |
 
 ## Common Errors
 
@@ -338,12 +340,14 @@ This is a pipeline gate, not a publication metric -- DepMap reports separate sco
 ## References
 
 - Joung J et al. 2017. *Nat Protoc* 12:828. Genome-wide screen protocol; coverage and depth conventions.
-- Li W et al. 2014. *Genome Biol* 15:554. MAGeCK; original Pearson cutoffs.
+- Li W et al. 2014. *Genome Biol* 15:554. MAGeCK.
+- Li W et al. 2015. *Genome Biol* 16:281. MAGeCK-VISPR; Gini, zero-count, depth and replicate-correlation QC cutoffs.
 - Wang B et al. 2019. *Nat Protoc* 14:756. MAGeCKFlute; QC dashboard.
-- Hart T et al. 2017. *G3* 7:2719. CEGv2 / NEGv1 reference essentiality gene sets.
+- Hart T et al. 2017. *G3* 7:2719. CEGv2 core-essential reference set; PR-AUC screen-quality benchmarking.
+- Hart T et al. 2014. *Mol Syst Biol* 10:733. Gold-standard essential and non-essential reference sets; source of NEGv1.
 - Aguirre AJ et al. 2016. *Cancer Discov* 6:914. Copy-number amplicon false-essentiality.
 - Munoz DM et al. 2016. *Cancer Discov* 6:900. Copy-number gene-independent toxicity.
-- Pacini C et al. 2024. *Nat Commun* 15:1230. DepMap screen-quality scoring.
+- Pacini C et al. 2021. *Nat Commun* 12:1661. Integrated cross-study dependencies; NNMD screen-quality metric and cross-study batch correction.
 - Meyers RM et al. 2017. *Nat Genet* 49:1779. CERES; mechanism of CN bias.
 - Sanson KR et al. 2018. *Nat Commun* 9:5416. Dolcetto/Calabrese TSS rules.
 - Dempster JM et al. 2021. *Genome Biol* 22:343. Chronos screen-quality model.

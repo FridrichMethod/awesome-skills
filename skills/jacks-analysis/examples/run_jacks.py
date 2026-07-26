@@ -19,7 +19,7 @@ def prepare_input_files(counts_file, output_prefix):
     if 'Gene' in counts.columns:
         guide_gene = counts[['Gene']].reset_index()
         guide_gene.columns = ['sgRNA', 'Gene']
-        guide_gene.to_csv(f'{output_prefix}_guidemap.txt', sep='\t', index=False, header=False)
+        guide_gene.to_csv(f'{output_prefix}_guidemap.txt', sep='\t', index=False)   # JACKS requires a header row
         counts = counts.drop('Gene', axis=1)
 
     # Save counts without gene column
@@ -33,13 +33,12 @@ def run_jacks_analysis(counts_file, guidemap_file, replicatemap_file, output_pre
     import subprocess
 
     cmd = [
-        'python', '-m', 'jacks.run_JACKS',
+        'python', 'run_JACKS.py',      # run from JACKS/jacks/; there is no jacks.run_JACKS module
         counts_file,
         replicatemap_file,
         guidemap_file,
-        output_prefix,
-        '--ctrl_sample_pattern', ctrl_condition,
-        '--ctrl_sample_pattern_column', 'Condition'
+        '--outprefix', output_prefix,
+        '--ctrl_sample_hdr', 'Control'
     ]
 
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -52,17 +51,21 @@ def analyze_results(gene_results_file, guide_results_file):
     genes = pd.read_csv(gene_results_file, sep='\t')
     guides = pd.read_csv(guide_results_file, sep='\t')
 
-    # fdr_threshold=-1: log10(FDR) < -1 means FDR < 0.1. Use -2 for FDR < 0.01.
-    sig_threshold = -1
+    # JACKS writes no FDR column. Call hits on effect / posterior std (a Bayesian
+    # z-equivalent); abs > 2 is the conventional cutoff.
+    sig_threshold = -2
 
-    # Essential genes (negative effect, significant)
-    essential = genes[(genes['X1'] < 0) & (genes['fdr_log10'] < sig_threshold)]
-    essential = essential.sort_values('X1')
+    cell_line = [c for c in genes.columns if c != 'Gene'][0]
+    stds = pd.read_csv(f'{output_prefix}_gene_std_JACKS_results.txt', sep='\t')
+    genes = genes[['Gene', cell_line]].merge(stds[['Gene', cell_line]], on='Gene', suffixes=('_effect', '_std'))
+    genes['z'] = genes[f'{cell_line}_effect'] / genes[f'{cell_line}_std']
+
+    essential = genes[genes['z'] < sig_threshold].sort_values('z')
 
     print(f'Total genes tested: {len(genes)}')
-    print(f'Essential genes (FDR < 0.1): {len(essential)}')
+    print(f'Essential genes (effect/std < -2): {len(essential)}')
     print('\nTop 20 essential genes:')
-    print(essential[['gene', 'X1', 'fdr_log10']].head(20).to_string(index=False))
+    print(essential[['Gene', f'{cell_line}_effect', 'z']].head(20).to_string(index=False))
 
     # sgRNA efficacy summary
     print(f'\nsgRNA efficacy stats:')
@@ -80,12 +83,13 @@ def plot_results(genes, guides, output_prefix):
 
     # Volcano plot
     ax = axes[0]
-    colors = ['red' if fdr < -1 else 'gray' for fdr in genes['fdr_log10']]
-    ax.scatter(genes['X1'], -genes['fdr_log10'], c=colors, alpha=0.5, s=10)
-    ax.axhline(1, linestyle='--', color='black', alpha=0.5, label='FDR = 0.1')
+    effect_col = [c for c in genes.columns if c.endswith('_effect')][0]
+    colors = ['red' if z < -2 else 'gray' for z in genes['z']]
+    ax.scatter(genes[effect_col], -genes['z'], c=colors, alpha=0.5, s=10)
+    ax.axhline(2, linestyle='--', color='black', alpha=0.5, label='effect/std = -2')
     ax.axvline(0, linestyle='-', color='gray', alpha=0.3)
-    ax.set_xlabel('JACKS Score (negative = essential)')
-    ax.set_ylabel('-log10(FDR)')
+    ax.set_xlabel('JACKS gene effect (negative = essential)')
+    ax.set_ylabel('-(effect / posterior std)')
     ax.set_title('Gene Essentiality')
     ax.legend()
 
@@ -119,4 +123,4 @@ if __name__ == '__main__':
         plot_results(genes, guides, output_prefix)
     except FileNotFoundError:
         print('Run JACKS first to generate result files')
-        print('Example: python -m jacks.run_JACKS counts.txt replicatemap.txt guidemap.txt output')
+        print('Example: python run_JACKS.py counts.txt replicatemap.txt guidemap.txt --outprefix output')

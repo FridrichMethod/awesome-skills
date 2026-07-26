@@ -7,14 +7,13 @@ Run MAGeCK on pooled CRISPR screens for genome-wide essentiality, drug-modifier,
 ## Prerequisites
 
 ```bash
-pip install mageck                                  # primary CLI
-pip install mageck-vispr                            # interactive QC + dashboard
-R -e "BiocManager::install('MAGeCKFlute')"         # R-based downstream visualization
-# Genome reference (for off-target during count if --map-genome used)
+conda install -c bioconda mageck   # not on PyPI                                  # primary CLI
+conda install -c bioconda -c conda-forge mageck-vispr   # not on PyPI                            # interactive QC + dashboard
+R -e "remotes::install_github('WubingZhang/MAGeCKFlute')"   # removed from Bioconductor at 3.22
 conda install -c bioconda bowtie  # MAGeCK uses for off-target check at design time
 ```
 
-Required inputs: raw FASTQ (one per sample), sgRNA library CSV with `sgRNA,Gene,Sequence` header, and a sample-condition mapping. For MLE designs, additionally a design-matrix file with `Samples` plus one column per condition (each a 0/1 indicator), and the `baseline` column always set to 1.
+Required inputs: raw FASTQ (one per sample), sgRNA library CSV ordered as sgRNA id, sequence, gene, and a sample-condition mapping. For MLE designs, additionally a design-matrix file with `Samples` plus one column per condition (each a 0/1 indicator), and the `baseline` column always set to 1.
 
 ## Quick Start
 
@@ -63,7 +62,7 @@ Tell the AI agent what to analyze:
 ## What the Agent Will Do
 
 1. Verify library CSV format and sample-to-FASTQ mapping
-2. Run `mageck count` with sample labels and `--trim-5` adapter, capturing the per-sample QC summary
+2. Run `mageck count` with sample labels and `--trim-5` (a trim length, or AUTO), capturing the per-sample QC summary
 3. Inspect Gini, mapping rate, % zero-count from countsummary.txt; if any fails, refer to screen-qc skill
 4. Decide RRA vs MLE based on experimental design (decision tree in the SKILL)
 5. For RRA: run `mageck test` with appropriate `--treatment-id`, `--control-id`, `--norm-method` (median default; control if heavy selection)
@@ -96,7 +95,7 @@ Tell the AI agent what to analyze:
 | sgRNA mapping rate | >65% | Library quality |
 | Gini coefficient (plasmid) | <0.1 | See [[screen-qc]] |
 | sgRNAs needed for MLE per gene per condition | ≥3 with non-zero counts | Below this, NaN beta |
-| Permutation iterations for RRA gene-level p-value | 1,000 default; 10,000 for tight FDR | Trades runtime |
+| RRA permutation passes per gene | 100 default; raise via `--additional-rra-parameters` | Trades runtime |
 
 ## Method Comparison Cheat Sheet
 

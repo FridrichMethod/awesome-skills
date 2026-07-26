@@ -9,7 +9,7 @@ bagel = pd.read_csv('bagel_bf.txt', sep='\t')
 
 # Standardize column names
 mageck = mageck[['id', 'neg|score', 'neg|fdr']].rename(columns={'id': 'gene'})
-bagel = bagel[['Gene', 'BF']].rename(columns={'Gene': 'gene'})
+bagel = bagel[['GENE', 'BF']].rename(columns={'GENE': 'gene'})
 
 # Merge
 merged = mageck.merge(bagel, on='gene', how='outer')

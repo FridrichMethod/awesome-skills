@@ -1,13 +1,13 @@
 ---
 name: bio-crispr-screens-combinatorial-screens
-description: Designs and analyzes combinatorial CRISPR screens covering paired-Cas9 (Big Papi, Najm 2018), enhanced AsCas12a multiplex (enCas12a, DeWeirdt 2021), in4mer 4-guide-array Cas12a (Esmaeili Anvar N et al 2024 Nat Commun 15:3577) and the Inzolia paralog-pair library, paralog-buffering detection (Dede 2020 Genome Biol; Thompson 2021 Cell Reports 36:109597), genetic-interaction (GI) scoring as observed_double_LFC minus expected_additive_double_LFC, synthetic-lethal and synthetic-rescue interaction interpretation, the half-of-essentiality buffered by paralogs phenomenon, multiplex screen statistical analysis with MAGeCK MLE interaction terms, and the relationship to single-cell combinatorial Perturb-seq. Use when designing a paralog or pathway-pair screen, choosing between paired-Cas9 (Big Papi) and Cas12a multiplex (Inzolia), interpreting genetic interaction scores, identifying synthetic-lethal targets for drug development, or scaling beyond single-gene CRISPR screens.
+description: Designs and analyzes combinatorial CRISPR screens covering paired-Cas9 (Big Papi, Najm 2018), enhanced AsCas12a multiplex (enCas12a, DeWeirdt 2021), in4mer 4-guide-array Cas12a (Esmaeili Anvar N et al 2024 Nat Commun 15:3577) and the Inzolia paralog-pair library, paralog-buffering detection (Dede 2020 Genome Biol; Thompson 2021 Nat Commun 12:1302), genetic-interaction (GI) scoring as observed_double_LFC minus expected_additive_double_LFC, synthetic-lethal and synthetic-rescue interaction interpretation, the half-of-essentiality buffered by paralogs phenomenon, multiplex screen statistical analysis with MAGeCK MLE interaction terms, and the relationship to single-cell combinatorial Perturb-seq. Use when designing a paralog or pathway-pair screen, choosing between paired-Cas9 (Big Papi) and Cas12a multiplex (Inzolia), interpreting genetic interaction scores, identifying synthetic-lethal targets for drug development, or scaling beyond single-gene CRISPR screens.
 tool_type: mixed
 primary_tool: enCas12a
 ---
 
 ## Version Compatibility
 
-Reference examples tested with: MAGeCK 0.5.9+ (for MLE with interaction terms), Inzolia library annotation (Bayle 2024), pandas 2.2+, numpy 1.26+, scipy 1.12+, matplotlib 3.8+.
+Reference examples tested with: MAGeCK 0.5.9+ (for MLE with interaction terms), Inzolia library annotation (Esmaeili Anvar 2024), pandas 2.2+, numpy 1.26+, scipy 1.12+, matplotlib 3.8+.
 
 Before using code patterns, verify installed versions match. If versions differ:
 - CLI: `mageck --version`; `mageck mle --help`
@@ -27,14 +27,14 @@ If code throws ImportError, AttributeError, or TypeError, introspect the install
 
 | Goal | Architecture | Library | Why |
 |------|--------------|---------|-----|
-| Paralog buffering, identify synthetic lethal paralog pairs | enCas12a single-array 4-guide multiplex | Inzolia (Bayle 2024) | Cas9 single-KO misses ~half of paralog-buffered essentials |
-| Test specific pathway pair (e.g., DNA repair branches) | Big Papi (paired-Cas9 dual sgRNA cassette) | Custom | Mature methodology; SpCas9 well-characterized |
+| Paralog buffering, identify synthetic lethal paralog pairs | enCas12a single-array 4-guide multiplex | Inzolia (Esmaeili Anvar 2024) | Cas9 single-KO misses paralog-buffered essentials (42% of constitutively expressed genes never score, Dede 2020) |
+| Test specific pathway pair (e.g., DNA repair branches) | Big Papi (orthologous SaCas9 + SpCas9; two sgRNAs from U6 and H1 in pPapi) | Custom | Mature methodology; orthologous enzymes avoid repeated-element recombination |
 | Combinatorial 3-way / 4-way knockout | in4mer (4-guide single Cas12a array) | Custom (in4mer) | Single transcript processed by Cas12a; multi-gene |
 | Single-cell Perturb-seq with multi-pert per cell | Combinatorial Perturb-seq + Cas9 multiplex | Custom | Single-cell readout of multi-perturbation effects |
 | Drug-modifier + KO interaction | Cas9 KO + drug treatment | Standard libraries | Drug as second "perturbation" |
 
 **Fails when:**
-- Big Papi without proper paired-guide cloning: silent fusion of two guides into one cassette gives single perturbation
+- Dual-sgRNA constructs built from repeated U6/tracr elements: lentiviral recombination collapses them to a single perturbation
 - Cas12a screens analyzed as Cas9 screens: MAGeCK normalization fails because Cas12a has different cut profile
 - in4mer 4-guide arrays without all-singleton controls: GI scoring requires single-gene baselines
 
@@ -43,20 +43,20 @@ If code throws ImportError, AttributeError, or TypeError, introspect the install
 | Property | Cas9 paired (Big Papi) | Cas12a multiplex (in4mer / Inzolia) |
 |----------|------------------------|--------------------------------------|
 | Multiplex capacity per cassette | 2 sgRNAs (paired) | 4 (in4mer); 2 (standard Cas12a) |
-| sgRNA processing | Two separate U6 promoters | Single transcript processed by Cas12a itself |
+| sgRNA processing | U6 and H1 promoters driving sgRNAs for two orthologous Cas9s | Single transcript processed by Cas12a itself |
 | sgRNA inhibition with multiple targets | None | None (Cas12a's intrinsic processing handles all) |
-| Library size for 1,000 pairs | ~2,000 paired cassettes | ~250 4-guide cassettes (in4mer) |
-| Validated libraries | Limited (mostly custom) | Inzolia: 18k 4-guide arrays for 4k paralog pairs |
+| Library size for 1,000 pairs | ~4,000-6,000 paired cassettes (4-6 per pair) | ~2,000 arrays (2 per pair) plus singleton controls |
+| Validated libraries | Limited (mostly custom) | Inzolia: ~49k 4-guide arrays covering 19,687 genes plus ~4,435 paralog pairs |
 | Per-perturbation editing efficiency | High (each sgRNA independently) | Variable (Cas12a less efficient on some targets) |
 | Best for | Pairwise GI of specific interest | Genome-scale paralog buffering; multi-gene perturbation |
 
-**Recommendation:** For modern paralog screens, use Cas12a multiplex with the Inzolia library. The 30% library-size reduction vs paired-Cas9 makes it more cost-effective for genome-scale.
+**Recommendation:** For modern paralog screens, use Cas12a multiplex with the Inzolia library. It is ~30% smaller than a typical monogenic Cas9 library while additionally covering ~4,000 paralog pairs (Esmaeili Anvar 2024), which makes it more cost-effective at genome scale.
 
 ## The Paralog Buffering Phenomenon
 
-**Dede et al 2020 *Genome Biol* 21:262; Thompson et al 2021** demonstrated that approximately half of constitutively-expressed essential genes are never detected in Cas9 single-KO screens. The reason: gene paralogs perform redundant essential functions. Loss of one paralog is buffered by the other; only loss of both creates the essentiality phenotype.
+**Dede et al 2020 *Genome Biol* 21:262** showed that a large share of constitutively expressed genes are never scored as essential in any Cas9 single-KO fitness screen (3,032 of 7,282; 42%), and that these never-essentials are strongly enriched for paralogs. The reason: gene paralogs perform redundant essential functions. Loss of one paralog is buffered by the other; only loss of both creates the essentiality phenotype.
 
-**Quantified impact:** ~24+ synthetic-lethal paralog pairs identified in Dede 2020 across 3 cell lines; 79% reproduce in ≥2 lines, 58% in all 3. These pairs were not findable by single-gene Cas9 screens, requiring combinatorial methodology.
+**Quantified impact:** 24 synthetic-lethal paralog pairs identified in Dede 2020 across 3 cell lines; 19 of 24 (79%) reproduce in >=2 lines, 14 of 24 (58%) in all 3. These pairs were not findable by single-gene Cas9 screens, requiring combinatorial methodology.
 
 **Examples:**
 - **MAPK1 (ERK2) + MAPK3 (ERK1):** ERK family redundancy in proliferation
@@ -90,6 +90,7 @@ def gi_score(paired_lfc_df, single_lfc_df):
     df['single_B_lfc'] = df['gene_B'].map(single)
     df['expected_additive'] = df['single_A_lfc'] + df['single_B_lfc']
     df['gi_score'] = df['paired_lfc'] - df['expected_additive']
+    df = df.dropna(subset=['gi_score'])          # a single missing singleton would NaN every z-score
     df['gi_z'] = zscore(df['gi_score'])
     df['gi_class'] = np.where(df['gi_z'] < -2, 'synthetic_lethal',
                                 np.where(df['gi_z'] > 2, 'synthetic_rescue', 'no_interaction'))
@@ -144,34 +145,34 @@ A significantly negative `interaction|beta` is synthetic lethal; positive is syn
 
 ## Inzolia / in4mer 4-Guide Array Analysis
 
-**Bayle 2024 *Nat Commun* 15:3375** introduced in4mer, a Cas12a multiplex library where each cassette contains 4 guides processed by Cas12a's intrinsic crRNA-processing activity. The Inzolia library is the canonical implementation covering ~4,000 paralog pairs.
+**Esmaeili Anvar 2024 *Nat Commun* 15:3577** introduced in4mer, a Cas12a multiplex architecture where each array contains 4 guides processed by Cas12a's intrinsic crRNA-processing activity. The Inzolia library is the canonical implementation, covering the protein-coding genome plus ~4,435 paralog pairs.
 
 **Library design:**
 - 4 guides per cassette (Cas12a single-transcript array)
-- Per pair: 4 cassettes with different guide combinations targeting the same paralog pair
-- Includes singleton controls: each gene targeted alone in 4-guide arrays with placeholder guides
-- ~18,000 total cassettes covering ~4,000 paralog pairs
+- Per pair: 2 arrays carrying 2 guides per gene, with the guides presented in different order across the two arrays
+- Includes singleton controls: each single gene is covered by 2 four-guide arrays (4 guides per gene, order swapped)
+- ~49,000 total arrays covering 19,687 genes, ~4,435 paralog pairs, 376 triples, and 100 quads
 
 ```python
 # Per-pair analysis from in4mer screen
-def in4mer_pair_analysis(paired_counts_df, gene_pairs):
-    '''Aggregate cassette-level counts to per-pair LFCs.
-    paired_counts_df: rows = cassettes; columns = sample counts.
-    gene_pairs: DataFrame with cassette_id -> [gene_A, gene_B, gene_C, gene_D]
+def in4mer_pair_analysis(paired_counts_df, gene_pairs, value_cols):
+    '''Aggregate cassette-level counts to per-pair statistics.
+    paired_counts_df: rows = cassettes, with a cassette_id COLUMN (reset_index first if it is the index).
+    gene_pairs: DataFrame with cassette_id and gene_A, gene_B columns.
+    value_cols: the numeric sample/LFC columns to aggregate.
     '''
-    # Aggregate by (gene_A, gene_B) pair if 2-gene pair, or by all 4 genes if multi-gene
-    pair_lfc = paired_counts_df.merge(gene_pairs, on='cassette_id').groupby(['gene_A', 'gene_B'])
-    return pair_lfc.agg(['mean', 'std', 'count'])
+    merged = paired_counts_df.merge(gene_pairs, on='cassette_id')
+    return merged.groupby(['gene_A', 'gene_B'])[value_cols].agg(['mean', 'std', 'count'])
 ```
 
 ## Failure Modes
 
-### Big Papi cassette fuses sgRNAs
+### Dual-sgRNA construct recombines in the lentiviral vector
 
-**Trigger:** Improperly designed dual sgRNA cassette where two sgRNAs are read as one fused sequence.
-**Mechanism:** Without spacer or terminator between sgRNAs, transcription doesn't terminate correctly.
-**Symptom:** Cassette appears as single perturbation (the first sgRNA dominates); GI scoring fails.
-**Fix:** Use validated Big Papi or paired-sgRNA cloning protocols; verify by amplicon sequencing of clones.
+**Trigger:** A dual-sgRNA construct built from repeated elements -- two copies of the U6 promoter, or two copies of the SpCas9 tracrRNA scaffold.
+**Mechanism:** Najm 2018 reports that repetitive elements in lentiviral vectors, including the U6 promoter and multiple copies of the tracrRNA sequence, drive high levels of recombination and reduce combinatorial screen efficiency. Big Papi avoids this by pairing two orthologous enzymes (SaCas9 + SpCas9), whose scaffolds differ, and expressing the two sgRNAs from distinct U6 and H1 promoters.
+**Symptom:** Constructs collapse to a single perturbation; measured GI scores are diluted toward zero.
+**Fix:** Use the pPapi architecture (orthologous Cas9s, U6 + H1) rather than duplicated U6/tracr elements; verify construct integrity by amplicon sequencing of clones.
 
 ### Cas12a screen with low editing efficiency
 
@@ -225,7 +226,7 @@ For high-stakes synthetic-lethal hits (drug-target nomination), validate by:
 | Synthetic rescue GI z-score | >2 | Standard convention |
 | No interaction | -1 to +1 | Within additive expectation |
 | Cas9 paired-screen cassette count per pair | 4-6 | Standard library convention |
-| Cas12a 4-guide arrays per pair (Inzolia) | 4 | Bayle 2024 |
+| Cas12a 4-guide arrays per paralog pair (Inzolia) | 2 (2 guides per gene, order swapped) | Esmaeili Anvar 2024 |
 | Singletons in combinatorial library | At least 4-6 per single gene | For stable expected_additive |
 | Cells per cassette for stable GI | 500+ at infection | Standard pooled-screen coverage |
 | Cas12a editing efficiency for inclusion | >50% | Below = unreliable signal |
@@ -234,7 +235,7 @@ For high-stakes synthetic-lethal hits (drug-target nomination), validate by:
 
 | Error / symptom | Cause | Solution |
 |-----------------|-------|----------|
-| Big Papi cassette acts as single | Fused sgRNAs in cassette | Re-derive validated paired-sgRNA protocol |
+| Dual-sgRNA construct acts as single | Recombination between repeated U6/tracr elements | Use pPapi (orthologous SaCas9 + SpCas9, U6 + H1) |
 | Cas12a low editing | Locus-specific inefficiency | Pilot loci first; use enCas12a |
 | Cannot compute GI | No singletons in library | Re-design to include all-singletons |
 | GI scores noisy | Library skew | Standard library QC; aggregate cassettes |
@@ -247,9 +248,9 @@ For high-stakes synthetic-lethal hits (drug-target nomination), validate by:
 - DeWeirdt PC et al. 2021. *Nat Biotechnol* 39:94. enAsCas12a multiplex.
 - Esmaeili Anvar N et al. 2024. *Nat Commun* 15:3577. in4mer / Inzolia paralog library.
 - Dede M et al. 2020. *Genome Biol* 21:262. Paralog buffering in Cas9 screens.
-- Thompson NA et al. 2021. *Cell Reports* 36:109597. Paralog synthetic lethals validated. (Earlier "Cell Syst 12:1132" attribution conflated with Pacini 2021.)
-- Boettcher M et al. 2018. *Nat Biotechnol* 36:170. Original paired-Cas9 combinatorial screen.
-- Horlbeck MA et al. 2018. *Cell* 174:953-967. CRISPRi/a / combinatorial work; paralog buffering as a co-essentiality pattern was characterized more directly in Dede 2020 *Genome Biol* 21:262 and Gonatopoulos-Pournatzis 2020 *Nat Biotechnol* 38:638.
+- Thompson NA et al. 2021. *Nat Commun* 12:1302. Combinatorial CRISPR screen identifying paralog fitness effects.
+- Boettcher M et al. 2018. *Nat Biotechnol* 36:170. Dual CRISPR activation + knockout directional genetic-interaction screen.
+- Horlbeck MA et al. 2018. *Cell* 174:953-967. CRISPRi combinatorial genetic-interaction map; paralog buffering as a co-essentiality pattern was characterized more directly in Dede 2020 *Genome Biol* 21:262 and Gonatopoulos-Pournatzis 2020 *Nat Biotechnol* 38:638.
 
 ## Related Skills
 

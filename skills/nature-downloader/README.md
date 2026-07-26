@@ -155,6 +155,10 @@ node scripts/batch_download.mjs \
 
 ## 输出
 
+- 本地 PDF、HTML、文本或 CNKI 原生全文文件。
+- `manifest.json` 记录每篇文献的访问路径、OA/API 回退历史、保存路径、完整性哈希、SI 选择和失败原因。
+- 可复用学校入口配置，通常保存在 `~/.config/lit-dl/school.json`。
+
 ```text
 文献自动下载/
   PDFs/
@@ -172,6 +176,18 @@ node scripts/batch_download.mjs \
 - CNKI CAJ、Springer JATS/XML：`native_fulltext_downloaded`
 - 可读 HTML 全文：`full_text_html_available`
 - 正文和 SI：`downloaded_with_si`
+
+## 边界
+
+- 不绕过付费墙，不使用镜像站，也不读取或导出 cookie、密码、localStorage 或 session 文件。
+- 对可见滑块、复选框、机器人校验或简单确认按钮，只在同一已授权浏览器标签页中最多尝试两次，并在页面确认成功后继续。
+- 图片选择、二维码确认、短信/OTP、通行密钥、硬件密钥或双重认证必须由用户本人完成。
+- 没有合法访问权限时，只报告状态、失败原因和可能替代路线。
+
+## 相关技能
+
+- `nature-reader`：把已获取的 PDF/HTML 转成全文阅读材料。
+- `nature-academic-search`：从题名、DOI 或主题查找目标文献。
 
 ## 验证
 

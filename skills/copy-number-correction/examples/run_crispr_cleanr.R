@@ -12,14 +12,14 @@ sample_cols <- c('Veh_r1', 'Veh_r2', 'Drug_r1', 'Drug_r2')
 data(KY_Library_v1.0)                              # built-in KY library; replace with custom
 
 # === LOAD AND NORMALIZE ===
-raw_counts <- read.table(counts_file, header=TRUE, sep='\t', stringsAsFactors=FALSE)
-norm <- ccr.NormfoldChanges(raw_counts,
+# ccr.NormfoldChanges takes a FILE PATH as its first argument (or NULL plus Dframe=)
+norm <- ccr.NormfoldChanges(counts_file,
                               min_reads = 30,                # min reads/sgRNA: drop low-coverage
                               EXPname   = 'cancer_screen',
                               libraryAnnotation = KY_Library_v1.0)
 
 # === GENOME-SORTED LFC ===
-gw_lfc <- ccr.logFCs2chromPos(norm$norm_fold_changes,
+gw_lfc <- ccr.logFCs2chromPos(norm$logFCs,
                                 KY_Library_v1.0)
 
 # === CN-AWARE SEGMENTATION + CORRECTION ===
@@ -30,11 +30,14 @@ cleaned <- ccr.GWclean(gw_lfc,
                          label   = 'cancer_screen')
 
 # === DERIVE CORRECTED COUNTS FOR DOWNSTREAM TOOLS ===
-corrected_counts <- ccr.correctCounts(my_screen           = norm,
-                                        correction          = cleaned,
-                                        outprefix           = 'cancer_screen_cleanr',
-                                        libraryAnnotation   = KY_Library_v1.0)
-# Output: cancer_screen_cleanr_corrected_counts.txt (MAGeCK-compatible)
+# Positional signature: (CL, normalised_counts, correctedFCs_and_segments, libraryAnnotation, ...)
+corrected_counts <- ccr.correctCounts('cancer_screen',
+                                        norm$norm_counts,
+                                        cleaned,
+                                        KY_Library_v1.0,
+                                        OutDir = './')
+# Returns the corrected count data.frame and writes <CL>_correctedCounts.RData;
+# write your own TSV for MAGeCK input.
 
 # === DIAGNOSTIC: PRE vs POST CORRECTION ===
 # (assuming CN profile is available)

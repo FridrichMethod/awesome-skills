@@ -1,17 +1,17 @@
 ---
 name: bio-crispr-screens-base-editing-analysis
-description: Analyzes base-editing screens for variant function. Covers library design (Sanson 2020 GRACE, Hanna 2021 BRCA1/2 SNV scanning, Cuella-Martin 2021), CBE vs ABE chemistry choice (BE3/BE4 vs ABE7.10/ABE8.20/ABE8e), editing-window math (positions 4-8 from PAM-distal end, wider for ABE8e), bystander-edit quantification and the variant-call ambiguity it creates, sgRNA-efficiency filtering before hit calling, indel byproduct interpretation, the substitution-vs-indel diagnostic, variant annotation against ClinVar / COSMIC, and the Broad be-validation-pipeline. Use when designing a BE variant screen, choosing CBE vs ABE for a specific edit, interpreting bystander-confounded hits, distinguishing functional signal from indel artifact, integrating CRISPResso2 output with screen scoring, or deciding BE vs PE for SNV installation.
+description: Analyzes base-editing screens for variant function. Covers library design (Hanna 2021 ClinVar-scale CBE screen benchmarked on BRCA1/2, Cuella-Martin 2021 DDR saturation), CBE vs ABE chemistry choice (BE3/BE4 vs ABE7.10/ABE8.20/ABE8e), editing-window math (positions 4-8 from PAM-distal end; 4-7 for ABE7.10), bystander-edit quantification and the variant-call ambiguity it creates, sgRNA-efficiency filtering before hit calling, indel byproduct interpretation, the substitution-vs-indel diagnostic, variant annotation against ClinVar / COSMIC, and the Broad be-validation-pipeline. Use when designing a BE variant screen, choosing CBE vs ABE for a specific edit, interpreting bystander-confounded hits, distinguishing functional signal from indel artifact, integrating CRISPResso2 output with screen scoring, or deciding BE vs PE for SNV installation.
 tool_type: mixed
 primary_tool: CRISPResso2
 ---
 
 ## Version Compatibility
 
-Reference examples tested with: CRISPResso2 2.2.14+, BE-Hive 1.0+ (BE prediction), pandas 2.2+, biopython 1.83+, numpy 1.26+, scipy 1.12+, scikit-learn 1.4+, Broad be-validation-pipeline 1.0+ (Python).
+Reference examples tested with: CRISPResso2 2.2.14+, BE-Hive 1.0+ (BE prediction), pandas 2.2+, biopython 1.83+, numpy 1.26+, scipy 1.12+, scikit-learn 1.4+; Broad be-validation-pipeline notebooks (repo HEAD).
 
 Before using code patterns, verify installed versions match. If versions differ:
-- CLI: `CRISPResso --version`; `be-validation-pipeline --help`
-- Python: `pip show CRISPResso2 be-hive`
+- CLI: `CRISPResso --version`
+- Python: `pip show CRISPResso2`; BE-Hive is a GitHub clone (maxwshen/be_predict_bystander), not a PyPI package
 
 If code throws ImportError, AttributeError, or TypeError, introspect the installed package and adapt the example to match the actual API rather than retrying.
 
@@ -21,8 +21,8 @@ If code throws ImportError, AttributeError, or TypeError, introspect the install
 
 - CLI: `CRISPResso --base_editor_output` for per-amplicon BE quantification
 - CLI: Broad `be-validation-pipeline` for end-to-end pooled-screen analysis with editing-efficiency filtering
-- Python: `BE-Hive` (Arbab 2020) for editing-efficiency prediction
-- Python: `BE-Designer` (Hwang 2019) for variant-encoding sgRNA design
+- Python: `BE-Hive` (Arbab 2020) for editing-efficiency prediction; clone maxwshen/be_predict_bystander and import via sys.path
+- Web: `BE-Designer` (Hwang 2018, RGEN Tools) for variant-encoding sgRNA design
 
 ## Base Editor Chemistry Selection
 
@@ -32,17 +32,17 @@ If code throws ImportError, AttributeError, or TypeError, introspect the install
 | BE4 / BE4max (Koblan 2018) | C->T | Pos 4-8 | <5% | CBE standard |
 | eA3A-BE3 | C->T narrow specificity | Pos 5-7 | <5% | Specifically TC contexts (eA3A prefers TC) |
 | ABE7.10 (Gaudelli 2017) | A->G (T->C opposite strand) | Pos 4-7 | <2% | First ABE; slow at non-TA contexts |
-| ABE8.20 (Richter 2020) | A->G | Pos 4-8 | <2% | Modern ABE; high activity |
-| ABE8e (Lapinaite 2020) | A->G | Pos 4-8 | <2% | Highest editing activity; broader window |
+| ABE8.20 (Gaudelli 2020) | A->G | Pos 4-8 | <2% | Modern ABE; high activity |
+| ABE8e (Richter 2020) | A->G | Pos 4-8 | <2% | Highest editing activity; more processive than ABE7.10 |
 | evoCDA-BE | C->T (broader) | Pos 1-9 | 5-10% | Larger editing window; more bystander |
 | CGBE1 (Kurt 2021) | C->G | Pos 5-7 | 5-10% | C-to-G transversion; rare use |
 | GBE (Zhao 2021) | C->G or C->A | Pos 4-7 | 5-10% | Transversions; less mature |
 
-**Decision rule:** For a target SNV at position 4-8 of a candidate spacer with no bystander Cs/As in the same window, BE3-BE4 or ABE7.10 is sufficient. For high-throughput variant scanning where bystander tolerance must be minimized, use eA3A-BE3 (TC contexts only) or ABE8e (narrower effective window).
+**Decision rule:** For a target SNV at position 4-8 of a candidate spacer with no bystander Cs/As in the same window, BE3-BE4 or ABE7.10 is sufficient. For high-throughput variant scanning where bystander tolerance must be minimized, use eA3A-BE3 (TC contexts only) for C->T, or ABE7.10 rather than ABE8e/ABE8.20 for A->G -- its 4-7 window is the narrowest ABE.
 
 ## Editing Window Math
 
-**Why this matters for postdoc-level use:** Base editors are tethered to dCas9 (or nCas9) and the deaminase acts on the displaced ssDNA "R-loop" formed when Cas9 binds. The deaminase has a fixed reach -- positions 4-8 from the PAM-distal end of the protospacer for canonical BE3/BE4/ABE7.10. Outside this window, editing efficiency drops by 10-50x.
+**Why this matters for postdoc-level use:** Base editors are tethered to dCas9 (or nCas9) and the deaminase acts on the displaced ssDNA "R-loop" formed when Cas9 binds. The deaminase has a fixed reach -- positions 4-8 from the PAM-distal end of the protospacer for canonical BE3/BE4, and 4-7 for ABE7.10. Outside this window, editing efficiency drops by 10-50x.
 
 ```
 PAM-distal end                                                            PAM-proximal
@@ -51,8 +51,8 @@ PAM-distal end                                                            PAM-pr
                   ^^^^^^^^^^^
                   Canonical editing window (positions 4-8)
 
-   For BE4max / ABE7.10: positions 4-8 are 5-50x more efficient than positions 1-3 or 9-13
-   For ABE8e: window extends to positions 4-10 due to enhanced TadA8e activity
+   For BE4max: positions 4-8 are 5-50x more efficient than positions 1-3 or 9-13 (ABE7.10: 4-7)
+   For SpABE8e: positions 4-8 (Richter 2020), matching the corresponding CBEs rather than ABE7.10's narrower 4-7
    For evoCDA-BE: window 1-9 (broader; more bystander)
 ```
 
@@ -86,7 +86,7 @@ def find_be_spacers(cds_sequence, cds_protein_start, target_aa, target_base='C',
     # Editor-specific editing window (positions from PAM-distal end of spacer)
     window_by_editor = {
         'BE3': (4, 8),       'BE4max': (4, 8),    'eA3A-BE3': (5, 7),
-        'ABE7.10': (4, 7),   'ABE8.20': (4, 8),   'ABE8e': (4, 10),    # ABE8e wider!
+        'ABE7.10': (4, 7),   'ABE8.20': (4, 8),   'ABE8e': (4, 8),     # SpABE8e matches CBE window (Richter 2020)
         'evoCDA-BE': (1, 9),
     }
     window_lo, window_hi = window_by_editor[editor]
@@ -162,7 +162,7 @@ def filter_by_editing_efficiency(crispresso_outputs_dir, target_pos, target_base
     return pd.DataFrame(results)
 ```
 
-**Convention:** Drop sgRNAs below 50% editing for variant-function screens. Hanna 2021 used a 30% threshold for primary screen and a 50% threshold for confirmed hits. Below 30%, the screen has insufficient power; above 70%, results approach saturation editing.
+**Convention:** Drop sgRNAs below 50% editing for variant-function screens. A common working split is a 30% editing floor for primary screening and a 50% floor for confirmed hits. Below 30%, the screen has insufficient power; above 70%, results approach saturation editing.
 
 ## Bystander Edit Attribution
 
@@ -211,17 +211,15 @@ def aggregate_variant_scores(mageck_sgrna_summary, variant_annotation_df):
 
 ## Hanna 2021 BRCA1/2 Variant-Function Screen Methodology
 
-**Hanna et al 2021 *Cell* 184:1066** established the gold-standard methodology for BE variant scanning:
+**Hanna et al 2021 *Cell* 184:1064** benchmarked CBE variant scanning at scale, screening 68,526 sgRNAs covering 52,034 ClinVar variants across 3,584 genes, with BRCA1 and BRCA2 as the positive/negative-selection benchmark:
 
-1. Design CBE library tiling BRCA1 and BRCA2 with 10-15 sgRNAs per amino acid
-2. Verify editing efficiency in a control timepoint via amplicon sequencing
-3. Drop sgRNAs <30% target editing
-4. Run drug-modifier screens (PARPi sensitivity) with vehicle vs drug
-5. Use drugZ to identify sensitizing variants (loss of function)
-6. Per-variant scoring: aggregate over all sgRNAs that hit that variant; cross-check against bystander-controlled sgRNAs
-7. Cross-validate hits via prime-editor scans of the same variants
+1. Design the CBE library from predicted variant impact (ClinVar annotation), covering each variant with the sgRNAs that install it
+2. Run drug-modifier screens (PARPi sensitivity) with vehicle vs drug
+3. Score per variant by aggregating over all sgRNAs that install it; cross-check against bystander-controlled sgRNAs
 
-**Quantified result:** Identified novel loss-of-function variants in BRCA1 RING and BRCT domains, MCL1 and BCL2L1, and PARP1 resistance variants. The approach validated for clinical variant interpretation.
+**Standard surrounding practice:** verify editing efficiency at a control timepoint via amplicon sequencing, drop low-efficiency sgRNAs (see the editing-efficiency convention above), and call sensitizers with a bidirectional method such as drugZ.
+
+**Quantified result:** Recovered known loss-of-function variants in BRCA1 and BRCA2 with high precision, and identified PARP1 variants conferring resistance to PARP inhibitors.
 
 ## Cuella-Martin 2021 DDR-Gene Variant Screening
 
@@ -229,10 +227,10 @@ def aggregate_variant_scores(mageck_sgrna_summary, variant_annotation_df):
 
 - Saturation CBE design across 86 DDR genes (not BRCA1/2 alone)
 - Identified pathogenic/likely-pathogenic variants in critical protein domains
-- Combined with proteomic validation
+- Combined with biochemical and genetic validation (for example the 53BP1-USP28 interaction surface)
 - Demonstrated saturation mutagenesis is feasible at protein-domain scale
 
-**Reconciliation with Hanna 2021:** Both studies converged on similar functional variant calls in BRCA1 RING and BRCT domains; the orthogonal methodology gave confidence in clinical interpretation.
+**Relationship to Hanna 2021:** the two studies appeared back-to-back in the same *Cell* issue and apply the same CBE variant-scanning strategy to complementary targets -- Hanna benchmarks against ClinVar-annotated variants genome-wide, Cuella-Martin saturates 86 DDR genes. Treat them as complementary methodology references, not as cross-validations of each other.
 
 ## Cas9 vs Base Editor vs Prime Editor for Variant Installation
 
@@ -249,27 +247,27 @@ def aggregate_variant_scores(mageck_sgrna_summary, variant_annotation_df):
 
 ## Broad be-validation-pipeline
 
-The Broad Institute's `be-validation-pipeline` (https://broadinstitute.github.io/be-validation-pipeline/) is an end-to-end snakemake workflow for BE variant-function screens:
+The Broad Institute's `be-validation-pipeline` (https://broadinstitute.github.io/be-validation-pipeline/) is a CRISPResso2 post-processing and validation toolkit for BE amplicon data -- a set of Jupyter notebooks, not a workflow-engine pipeline. Run CRISPResso2 first, then execute the notebooks in order:
 
 ```bash
-# Install
 git clone https://github.com/broadinstitute/be-validation-pipeline
 cd be-validation-pipeline
-conda env create -f environment.yaml
-conda activate bevalidation
+pip install -r requirements.txt
 
-# Configure
-edit config.yaml  # Specify library, FASTQ paths, reference, target genes
-# Run
-snakemake --use-conda --cores 16
+# Step 1: run CRISPResso2 in batch mode (or use the BEV tool on GPP LIMS).
+# The batch file is tab-delimited with columns: name, fastq_r1, amplicon_seq, guide_seq
+# (plus optional -w, -wc, --exclude_bp_from_left/right).
+docker run -v ${PWD}:/DATA -w /DATA -i pinellolab/crispresso2 \
+    CRISPRessoBatch --batch_settings batch_file.txt --skip_failed --base_edit
 
-# Outputs:
-# results/per_sgrna_editing_efficiency.tsv
-# results/per_variant_attribution.tsv
-# results/hit_calls.tsv
+# Step 2: run the notebooks in order against the CRISPResso2 output
+#   notebooks/01_BEV_allele_frequencies.ipynb
+#   notebooks/02_BEV_nucleotide_percentage_plots.ipynb
+#   notebooks/03_BEV_editing_efficiency.ipynb
+# Outputs: allele-frequency tables, nucleotide-percentage plots, editing-efficiency heat maps
 ```
 
-The pipeline handles editing-efficiency filtering, bystander attribution, and variant calling in a single end-to-end workflow optimized for the GRACE library (Sanson 2020) but adaptable.
+The notebooks cover allele-frequency tabulation, nucleotide-level editing quantification and editing-efficiency summaries. Hit calling is NOT part of this toolkit -- score the screen separately with drugZ or MAGeCK.
 
 ## Failure Modes
 
@@ -312,14 +310,13 @@ The pipeline handles editing-efficiency filtering, bystander attribution, and va
 
 | Threshold | Value | Source / Rationale |
 |-----------|-------|--------------------|
-| Editing window | Positions 4-8 from PAM-distal end (BE3/BE4); 4-10 (ABE8e) | Komor 2016; Gaudelli 2017; Lapinaite 2020 |
-| Editing efficiency for screen power | >30% (primary); >50% (validation) | Hanna 2021 conventions |
+| Editing window | Positions 4-8 from PAM-distal end (BE3/BE4); 4-7 (ABE7.10); 4-8 (SpABE8e) | Komor 2016; Gaudelli 2017; Richter 2020 |
+| Editing efficiency for screen power | >30% (primary); >50% (validation) | Field convention (BE variant screens) |
 | Indel byproduct (clean BE) | <5%; <2% for ABE | Koblan 2018 (BE4max); Gaudelli 2017 (ABE) |
 | Substitution-vs-indel ratio | >10 (clean BE); <3 (Cas9-like) | CRISPResso2 diagnostic |
-| Target editing % for variant inclusion | >30% Hanna 2021; >50% strict | Empirical |
 | Bystander rate (target attribution) | <10% acceptable; <5% ideal for clean attribution | Application-dependent |
 | Cell-line BE activity (pilot) | >30% editing at validated target | Below = wrong cell line for BE |
-| Per-amino-acid sgRNA density | 10-15 (Hanna 2021); 5-8 (smaller screens) | Tradeoff with library size |
+| Per-amino-acid sgRNA density | 10-15 (saturation designs); 5-8 (smaller screens) | Tradeoff with library size |
 
 ## Common Errors
 
@@ -337,10 +334,10 @@ The pipeline handles editing-efficiency filtering, bystander attribution, and va
 - Komor AC et al. 2016. *Nature* 533:420. BE3.
 - Gaudelli NM et al. 2017. *Nature* 551:464. ABE7.10.
 - Koblan LW et al. 2018. *Nat Biotechnol* 36:843. BE4max + improved CBE.
+- Richter MF et al. 2020. *Nat Biotechnol* 38:883. ABE8e; phage-assisted evolution of ABE7.10.
 - Lapinaite A et al. 2020. *Science* 369:566. ABE8e mechanism.
-- Richter MF et al. 2020. *Nat Biotechnol* 38:883. ABE8.20.
-- Sanson KR et al. 2020. *Nat Commun* 11:5165. GRACE library for BE screens.
-- Hanna RE et al. 2021. *Cell* 184:1066. Massively parallel BRCA1/2 variant function via CBE.
+- Gaudelli NM et al. 2020. *Nat Biotechnol* 38:892. ABE8 series (ABE8.20).
+- Hanna RE et al. 2021. *Cell* 184:1064. Massively parallel BRCA1/2 variant function via CBE.
 - Cuella-Martin R et al. 2021. *Cell* 184:1081-1097. CBE saturation across 86 DDR genes (BRCA1/2 plus others).
 - Arbab M et al. 2020. *Cell* 182:463. BE-Hive prediction of editing outcomes.
 - Anzalone AV et al. 2019. *Nature* 576:149. Prime editing (PE2/PE3).
@@ -350,7 +347,7 @@ The pipeline handles editing-efficiency filtering, bystander attribution, and va
 ## Related Skills
 
 - crispr-screens/crispresso-editing - CRISPResso2 BE/PE mode and allele tables
-- crispr-screens/library-design - GRACE-style BE library design
+- crispr-screens/library-design - base-editor library design
 - crispr-screens/prime-editing-screens - Orthogonal PE for variant attribution
 - crispr-screens/hit-calling - Variant-level hit aggregation
 - crispr-screens/screen-qc - Editing-efficiency QC

@@ -7,9 +7,7 @@ Decision-grade quantification of CRISPR editing outcomes with CRISPResso2 across
 ## Prerequisites
 
 ```bash
-pip install CRISPResso2          # primary tool
-# or via conda
-conda install -c bioconda crispresso2
+conda install -c bioconda crispresso2   # primary tool; not on PyPI
 # Visualization helpers
 pip install pandas matplotlib seaborn
 ```
@@ -20,7 +18,7 @@ Required inputs:
 - Guide protospacer sequence (20 nt; PAM not included)
 - For HDR: expected edited amplicon sequence
 - For BE: target nucleotide conversion direction (C->T for CBE; A->G for ABE)
-- For PE: pegRNA spacer + extension (PBS+RTT) + scaffold sequences
+- For PE: pegRNA spacer + extension (RTT+PBS) + scaffold sequences
 
 ## Quick Start
 
@@ -50,7 +48,7 @@ Tell the AI agent what to analyze:
 
 ### Prime Editor Analysis
 
-> "Quantify PE-2 editing for installation of MLH1 c.677A>G. Specify spacer + extension (PBS+RTT) + scaffold sequences. Report intended-edit %, scaffold incorporation %, indel %; flag if scaffold incorporation >5% (RTT design issue)."
+> "Quantify PE-2 editing for installation of MLH1 c.677A>G. Specify spacer + extension (RTT+PBS) + scaffold sequences. Report intended-edit %, scaffold incorporation %, indel %; flag if scaffold incorporation >5% (RTT design issue)."
 
 > "Compare 8 candidate pegRNAs for the same intended edit. Use CRISPRessoBatch to run on saturating-dose samples; report which pegRNA achieves highest intended/(scaffold+indel) ratio."
 
@@ -102,9 +100,9 @@ Tell the AI agent what to analyze:
 |--------|------|-----------|
 | Single amplicon | `CRISPResso` | `--amplicon_seq --guide_seq` |
 | Same amplicon, many samples | `CRISPRessoBatch` | `--batch_settings` |
-| Many amplicons in pool | `CRISPRessoPooled` | `--amplicon_file` |
-| Off-target from BAM | `CRISPRessoWGS` | `--bam --regions_file` |
-| Compare two runs | `CRISPRessoCompare` | `--crispresso_output_folder_1 _2` |
+| Many amplicons in pool | `CRISPRessoPooled` | `--amplicons_file` |
+| Off-target from BAM | `CRISPRessoWGS` | `--bam_file --reference_file --region_file` |
+| Compare two runs | `CRISPRessoCompare` | two positional output folders |
 | HDR | Add `--expected_hdr_amplicon_seq` to CRISPResso | |
 | CBE | Add `--base_editor_output --conversion_nuc_from C --conversion_nuc_to T` | |
 | ABE | Add `--base_editor_output --conversion_nuc_from A --conversion_nuc_to G` | |
@@ -118,10 +116,10 @@ Tell the AI agent what to analyze:
 | Clean BE indel byproduct | <5% | Above this = Cas9-like activity |
 | Substitution-vs-indel ratio (BE) | >10 = clean BE; <3 = Cas9 contamination | Diagnostic for BE purity |
 | Target conversion (BE) | >30% for screen power | Variable by target site and chemistry |
-| Intended-edit (PE) | >5% per-edit; >20% at favorable sites | Anzalone 2019 baseline |
+| Intended-edit (PE) | >5% per-edit; >20% at favorable sites | Field convention |
 | Scaffold incorporation (PE) | <2% | Above = RTT design issue |
 | Mapping rate | >85% | Below indicates amplicon design issue |
-| Read quality | Phred 30 minimum | Joung 2017 |
+| Read quality | Phred 30 minimum | Q30 Illumina standard |
 | Read depth per sample | 1,000+ for reliable allele table | Higher for low-frequency variants |
 
 ## Related Skills

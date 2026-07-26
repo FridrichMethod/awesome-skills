@@ -69,10 +69,10 @@ def find_pegrna_candidates(chrom, pos, ref, alt, context_seq):
 # (sequence_name, sequence with (REF/ALT) notation) and call:
 #   python pridict2_pegRNA_design.py batch --input-fname candidates.csv \
 #       --output-dir predictions/ --cores 8 --summarize
-# Then read predictions/pridict2_summary.csv. The placeholder below simulates.
+# Then read predictions/<timestamp>_summary_K562_batch_summary.csv. The placeholder below simulates.
 def predict_pridict2(spacer, pbs, rtt, context):
     '''Placeholder for PRIDICT2 batch CLI output parsing.
-    In real use: parse predictions/pridict2_summary.csv after running PRIDICT2 CLI.'''
+    In real use: parse predictions/<timestamp>_summary_K562_batch_summary.csv after running PRIDICT2 CLI.'''
     pbs_gc = (pbs.count('G') + pbs.count('C')) / len(pbs)
     sim_efficiency = max(0.05, min(0.95, 0.4 + 0.3 * (0.5 - abs(pbs_gc - 0.45))))
     return {'efficiency': sim_efficiency, 'indel_rate': 0.02, 'scaffold_incorp': 0.03}
@@ -99,7 +99,7 @@ for _, var in variants_df.iterrows():
 pegrnas_df = pd.DataFrame(all_pegrnas)
 
 # === STEP 4: FILTER AND RANK ===
-# Mathis 2024 PRIDICT2 threshold: efficiency >50%
+# Project-chosen filter: PRIDICT2 efficiency >50% (the paper prescribes no numeric cutoff)
 efficient = pegrnas_df[pegrnas_df['pridict2_efficiency'] > 0.50]
 
 # Pick top 3 per variant for library

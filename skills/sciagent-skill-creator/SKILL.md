@@ -3,7 +3,7 @@ name: sciagent-skill-creator
 description: "Scaffold a new SciAgent-Skills entry. Picks pipeline/toolkit/database/guide template,
 creates skills/{category}/{name}/SKILL.md with valid frontmatter, appends the
 registry.yaml entry, runs validation. Enforces name uniqueness, kebab-case,
-description keyword rules, schema rules from CLAUDE.md.
+description keyword rules, schema rules from AGENTS.md.
 
 TRIGGER when user says (any language): \"add a SciAgent skill\", \"add a skill for <X>\",
 \"create new skill\", \"create a SKILL.md for <X>\", \"scaffold a skill\", \"new skill entry\",
@@ -12,13 +12,13 @@ or any request to add a new SKILL.md to this repo. ALWAYS invoke this skill BEFO
 writing to skills/ or registry.yaml.
 
 DO NOT TRIGGER when: editing existing entry's content (just edit the file directly);
-migrating an existing entry (read CLAUDE.md \"Migrating from Existing Entries\" first);
+migrating an existing entry (read AGENTS.md \"Migrating from Existing Entries\" first);
 only updating registry.yaml without creating a new SKILL.md."
 ---
 
 # SciAgent Skill Creator
 
-Repo-local scaffolder for `skills/` entries. Mechanizes the boilerplate from `CLAUDE.md` Steps 1, 2, 4, 5, 6 so authoring effort stays on *content* (When to Use, Workflow, Recipes, References) and not on field plumbing.
+Repo-local scaffolder for `skills/` entries. Mechanizes the boilerplate from `AGENTS.md` Steps 1, 2, 4, 5, 6 so authoring effort stays on *content* (When to Use, Workflow, Recipes, References) and not on field plumbing.
 
 ## When to invoke this skill
 
@@ -28,7 +28,7 @@ Repo-local scaffolder for `skills/` entries. Mechanizes the boilerplate from `CL
 
 Do **not** invoke for:
 - Editing an existing entry's content (just edit the file)
-- Migrating an existing entry (read `CLAUDE.md` "Migrating from Existing Entries" first — the scaffolder generates a skeleton, but migration requires content judgment)
+- Migrating an existing entry (read `AGENTS.md` "Migrating from Existing Entries" first — the scaffolder generates a skeleton, but migration requires content judgment)
 - Updating `registry.yaml` only (use a normal edit)
 
 ## What you need to collect from the user
@@ -36,11 +36,11 @@ Do **not** invoke for:
 Before calling the scaffold script, gather these — in conversation, not via flags hidden from the user:
 
 1. **Topic** — concrete tool/library/concept name. Reject vague topics ("ML stuff") with a clarifying question.
-2. **Sub-type** — `pipeline` | `toolkit` | `database` | `guide`. Use the decision rule from CLAUDE.md Step 1b. If unsure, ask the user.
-3. **Category** — primary category directory. List the table from `CLAUDE.md` Step 2 if the user is unsure.
+2. **Sub-type** — `pipeline` | `toolkit` | `database` | `guide`. Use the decision rule from AGENTS.md Step 1b. If unsure, ask the user.
+3. **Category** — primary category directory. List the table from `AGENTS.md` Step 2 if the user is unsure.
 4. **Entry name** — kebab-case slug. Convention: `{tool-name}-{purpose}` (e.g., `pydeseq2-differential-expression`). Confirm with the user.
 5. **License** — underlying tool's license. Default to `CC-BY-4.0` for original prose-only content.
-6. **Description** — 1-2 sentences, max 1024 chars. Lead with tool/domain keyword in the first 120 chars. Anti-patterns are in CLAUDE.md Step 5 "Description writing rules".
+6. **Description** — 1-2 sentences, max 1024 chars. Lead with tool/domain keyword in the first 120 chars. Anti-patterns are in AGENTS.md Step 5 "Description writing rules".
 7. **Tags** (optional) — only if the entry meaningfully spans multiple categories (e.g., literature DB stored under `scientific-writing`, tag with `["databases", "literature"]`).
 
 ## Duplicate check before scaffolding
@@ -86,7 +86,7 @@ On any validation failure, the script aborts without writing anything. Fix the o
 The generated SKILL.md is a **skeleton with placeholders**. The agent's remaining job:
 
 1. Fill `Overview`, `When to Use`, `Prerequisites`, `Workflow` / `Core API` / `Key Concepts`, `Common Recipes`, `Troubleshooting`, `References`
-2. Match the section structure required by the sub-type (see CLAUDE.md Step 4 format rules)
+2. Match the section structure required by the sub-type (see AGENTS.md Step 4 format rules)
 3. Run `pixi run test` — full suite, not just `validate` — to catch sub-type-specific structural failures (code block counts, table row counts, section presence)
 
 The scaffold script does not pretend to write content. Content stays with the agent and the source material.

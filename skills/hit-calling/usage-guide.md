@@ -8,15 +8,15 @@ Decision-grade cross-method orchestration for calling significant hits in pooled
 
 ```bash
 # All five primary tools
-pip install mageck                                   # RRA + MLE
-pip install bagel                                    # BAGEL2 Bayes factor
-pip install jacks                                    # JACKS efficacy-aware
+conda install -c bioconda mageck                     # RRA + MLE (not on PyPI)
+git clone https://github.com/hart-lab/bagel          # BAGEL2 (PyPI 'bagel' is an unrelated package)
+git clone https://github.com/felicityallen/JACKS     # JACKS (PyPI 'jacks' is an unrelated package)
 # drugZ via PyPI or GitHub
-pip install drugz
+git clone https://github.com/hart-lab/drugz          # drugZ is not on PyPI
 # or
 git clone https://github.com/hart-lab/drugz
 # Chronos (DepMap)
-pip install chronos-cn
+pip install crispr_chronos
 # Custom analyses
 pip install pandas numpy scipy statsmodels matplotlib seaborn
 ```
@@ -44,7 +44,7 @@ Tell the AI agent what to call:
 
 ### Multi-Method Consensus
 
-> "Run MAGeCK RRA and BAGEL2 on my essentiality screen. Build a 2-method consensus hit list. Use BF >6 as BAGEL2 threshold (≈ FDR 0.05 calibrated). Output Tier 1 (both methods) and Tier 2 (one method) lists separately."
+> "Run MAGeCK RRA and BAGEL2 on my essentiality screen. Build a 2-method consensus hit list. Use BF >6 as BAGEL2 threshold (≈ 90% posterior; ~5% FDR by convention). Output Tier 1 (both methods) and Tier 2 (one method) lists separately."
 
 > "Run MAGeCK + BAGEL2 + drugZ on my drug screen. Output the tier-1 consensus (3-method agreement) at FDR <0.05 / BF >6 across all. These hits go to arrayed validation."
 
@@ -89,7 +89,7 @@ Tell the AI agent what to call:
 
 - Pick the method that matches the design, not the method you know best. RRA is great for 2-condition screens but fails on time-course; Chronos is great for cancer panels but overkill for single-line screens.
 - For high-stakes hit lists (drug-target nomination, paper-level claims), require 2-of-3 or 3-of-3 method consensus. Single-method hits at FDR 0.05 will have ~5% false discoveries; consensus shrinks this dramatically.
-- BAGEL2's BF >6 ≈ MAGeCK FDR 0.05 from Hart 2017 calibration. Use this when comparing across methods.
+- BAGEL2's BF >6 ≈ 90% posterior probability (Hart 2017); it is commonly treated as roughly MAGeCK FDR 0.05 by convention. Use this when comparing across methods.
 - Cancer-line screens ALWAYS need CN correction. Either pre-process with CRISPRcleanR before MAGeCK / BAGEL2, or use Chronos which models CN jointly.
 - The single most common silent failure: not running an essentialome PR-AUC against CEGv2 before hit calling. A screen with PR-AUC <0.5 has no signal regardless of how many "hits" MAGeCK calls.
 - For multi-cell-line studies, run per-line analysis first; pool across lines as meta-analysis downstream. Joint MLE across cell lines without indicator covariates dilutes per-line signal.

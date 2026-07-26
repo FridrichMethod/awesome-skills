@@ -2,15 +2,15 @@
 
 ## Overview
 
-Decision-grade copy-number-bias correction for cancer-cell-line CRISPR screens. Addresses the Aguirre 2016 / Munoz 2016 p53-dependent DNA-damage artifact where amplified loci appear "essential" purely from cut-count toxicity. Covers CRISPRcleanR (unsupervised pre-hoc), CERES (legacy joint model), Chronos (DepMap-standard joint cell-population-dynamics + CN), the decision tree among them by data availability, the diagnostic correlation of gene LFC with copy number, and the alternative of switching from Cas9 to CRISPRi to bypass the artifact entirely.
+Decision-grade copy-number-bias correction for cancer-cell-line CRISPR screens. Addresses the Aguirre 2016 / Munoz 2016 gene-independent DNA-damage artifact where amplified loci appear "essential" purely from cut-count toxicity. Covers CRISPRcleanR (unsupervised pre-hoc), CERES (legacy joint model), Chronos (DepMap-standard joint cell-population-dynamics + CN), the decision tree among them by data availability, the diagnostic correlation of gene LFC with copy number, and the alternative of switching from Cas9 to CRISPRi to bypass the artifact entirely.
 
 ## Prerequisites
 
 ```bash
-# CRISPRcleanR (R)
-R -e "BiocManager::install('CRISPRcleanR')"
+# CRISPRcleanR (R; GitHub, not Bioconductor)
+R -e "devtools::install_github('francescojm/CRISPRcleanR')"
 # Chronos (Python)
-pip install chronos-cn
+pip install crispr_chronos
 # or from source: git clone https://github.com/broadinstitute/chronos
 # Helpers
 pip install pandas numpy scipy
@@ -18,7 +18,7 @@ pip install pandas numpy scipy
 
 Required inputs:
 - Raw or normalized counts from mageck count
-- Copy-number profile per cell line (from WGS / SNP-array / ASCAT / matched cell-line database). Required for Chronos; optional for CRISPRcleanR.
+- Copy-number profile per cell line (from WGS / SNP-array / ASCAT / matched cell-line database). Optional for both: CRISPRcleanR corrects unsupervised, and Chronos applies CN post-hoc via `alternate_CN`.
 - Library annotation: sgRNA -> gene -> chromosomal coordinates (for CRISPRcleanR)
 
 ## Quick Start
@@ -68,7 +68,7 @@ Tell the AI agent what to do:
 4. Run pre-correction diagnostic: Spearman ρ between gene LFC and CN profile
 5. Apply correction method:
    - CRISPRcleanR: `ccr.GWclean()` -> `ccr.correctCounts()` for MAGeCK input
-   - Chronos: train model with `sequence_map`, `guide_gene_map`, `reads`, `copy_number`; extract gene_effect()
+   - Chronos: train with dict-keyed `sequence_map`, `guide_gene_map`, `readcounts`; read the `gene_effect` attribute; apply `chronos.alternate_CN` for CN correction
 6. Run post-correction diagnostic; confirm Spearman ρ near zero
 7. Pass corrected counts to downstream hit calling (see [[hit-calling]])
 8. Cross-check hits against known amplifications in the cell-line (e.g., COSMIC, DepMap)
@@ -77,8 +77,8 @@ Tell the AI agent what to do:
 ## Tips
 
 - The CN artifact is universal in cancer cell lines, not conditional. Always check; always correct. ERBB2 in HER2+, MYC in MYC-amplified, FGFR1 in head-and-neck are textbook cases.
-- CRISPRcleanR is unsupervised (no CN profile needed) and works on any screen. Chronos requires matched CN AND longitudinal data but is more rigorous.
-- For DepMap-style large panels, Chronos is the standard; no need to use CRISPRcleanR. For Sanger Score-style or single-cell-line screens without DepMap-grade data, CRISPRcleanR is the workhorse.
+- CRISPRcleanR is unsupervised (no CN profile needed) and works on any screen. Chronos benefits most from longitudinal, multi-cell-line data and applies CN correction after training.
+- For DepMap-style large panels, Chronos is the standard; no need to use CRISPRcleanR. For Project Score-style or single-cell-line screens without DepMap-grade data, CRISPRcleanR is the workhorse.
 - The artifact applies to Cas9-KO screens only; CRISPRi/a (catalytically dead Cas9), base editor, and prime editor screens are largely free of it.
 - Switching from Cas9 to CRISPRi (Dolcetto library) is the cleanest way to bypass the artifact in cancer-line essentiality screens. The tradeoff: CRISPRi knockdown is less complete than Cas9 KO, so some essentials are missed.
 - After correction, re-running the diagnostic (Spearman) is mandatory. If correction was insufficient, refine CN profile, try Chronos with the new CN, or accept the bias for specific amplified loci.
@@ -97,11 +97,9 @@ Tell the AI agent what to do:
 
 | Cell line | Amplification | Gene that looks essential |
 |-----------|---------------|----------------------------|
-| SK-BR-3 | HER2 (ERBB2) ~24 copies | ERBB2 |
+| SK-BR-3 | High-level HER2 (ERBB2) amplification | ERBB2 |
 | MCF7 | MYC moderate amp | MYC |
-| K562 | BCR-ABL | ABL1 |
 | HepG2 | MYC amp | MYC |
-| A549 | KRAS WT, but some lines have KRAS amp | KRAS |
 | Head-and-neck panel | FGFR1 11-20 copies | FGFR1 |
 | Colon panel | MYC ~10 copies | MYC |
 

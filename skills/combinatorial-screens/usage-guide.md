@@ -2,17 +2,18 @@
 
 ## Overview
 
-Decision-grade design and analysis of combinatorial CRISPR screens. Covers paired-Cas9 (Big Papi, Najm 2018), enhanced AsCas12a multiplex (enCas12a, DeWeirdt 2021), in4mer 4-guide arrays (Bayle 2024), and Inzolia paralog library; paralog buffering detection (Dede 2020, Thompson 2021) for synthetic-lethal targets; genetic-interaction (GI) scoring; and the MAGeCK MLE interaction-term approach.
+Decision-grade design and analysis of combinatorial CRISPR screens. Covers paired-Cas9 (Big Papi, Najm 2018), enhanced AsCas12a multiplex (enCas12a, DeWeirdt 2021), in4mer 4-guide arrays (Esmaeili Anvar 2024), and Inzolia paralog library; paralog buffering detection (Dede 2020, Thompson 2021) for synthetic-lethal targets; genetic-interaction (GI) scoring; and the MAGeCK MLE interaction-term approach.
 
 ## Prerequisites
 
 ```bash
-pip install mageck pandas numpy scipy matplotlib
+conda install -c bioconda mageck   # not on PyPI
+pip install pandas numpy scipy matplotlib
 # Inzolia library annotation: bioconductor or hart-lab
-R -e "BiocManager::install('inzoliaScreenData')"
+# Inzolia annotation: Nat Commun 15:3577 supplement, or Addgene #209551-2
 
 # Cas12a-aware analysis tools
-pip install crispr-cas12a-tools
+# No dedicated Cas12a helper package; use pandas/numpy with the library annotation
 ```
 
 Required inputs:
@@ -36,7 +37,7 @@ Tell the AI agent what to do:
 
 > "Build an Inzolia-style enAsCas12a 4-guide array library covering 400 receptor tyrosine kinase paralog pairs. Include singletons (gene A alone, gene B alone, double-NTC) so we can compute GI = double_LFC - sum(single_LFC). Output library.tsv."
 
-> "Design Big Papi paired-Cas9 cassettes for 150 specific DDR pathway pairs. Each cassette = U6-sgRNA_A + tracr + linker + U6-sgRNA_B + tracr. Verify by amplicon sequencing of clones."
+> "Design Big Papi constructs for 150 specific DDR pathway pairs using the pPapi architecture: SaCas9 sgRNA and SpCas9 sgRNA expressed from the U6 and H1 promoters, with SpCas9 supplied by the cell line. Verify by amplicon sequencing of clones."
 
 ### Per-Pair GI Analysis
 
@@ -60,7 +61,7 @@ Tell the AI agent what to do:
 
 > "Many GI z-scores are positive (synthetic rescue) for essential pairs (e.g., RPS3 + RPL11). Diagnose: linear-space saturation; switch to log-space (LFC) GI scoring."
 
-> "My paired-Cas9 cassettes show as single perturbation despite design. Diagnose: missing terminator between sgRNAs; re-clone with validated dual-cassette protocol."
+> "My paired-Cas9 cassettes show as single perturbation despite design. Diagnose: recombination between repeated U6/tracrRNA elements; re-clone in pPapi (orthologous SaCas9 + SpCas9, U6 + H1); re-clone with validated dual-cassette protocol."
 
 ## What the Agent Will Do
 
@@ -79,7 +80,7 @@ Tell the AI agent what to do:
 
 ## Tips
 
-- For genome-scale paralog screens, Inzolia (Cas12a, 4-guide arrays) is preferred. The 30% library-size reduction vs paired-Cas9 makes it more cost-effective at scale.
+- For genome-scale paralog screens, Inzolia (Cas12a, 4-guide arrays) is preferred. It is ~30% smaller than a typical monogenic Cas9 library while additionally covering ~4,000 paralog pairs, which makes it more cost-effective at scale.
 - Always include singleton controls in your library. Without them, you cannot compute GI; you only have paired LFCs without baseline.
 - Per-gene per-pair, include 4+ cassettes for stable GI scoring. Single-cassette per pair gives noisy z-scores.
 - Cas12a editing efficiency is locus-specific. Pilot at representative loci before screening; flag low-efficiency loci.
@@ -90,7 +91,7 @@ Tell the AI agent what to do:
   - Pharmacological inhibition with drugs
 - Linear-space GI saturation: for essential-pair tests where both genes are independently essential, the additive expectation overestimates the saturable double-effect. Use log-space (LFC) GI scoring.
 - For combinatorial Perturb-seq (single-cell readout of multi-perturbation), see [[perturb-seq-analysis]].
-- Big Papi cassettes silently fuse if dual-sgRNA cloning isn't done correctly. Verify by amplicon sequencing of clones before screening.
+- Dual-sgRNA constructs with repeated U6/tracr elements recombine in lentivirus and collapse to a single perturbation. Use the pPapi architecture and verify by amplicon sequencing of clones. Verify by amplicon sequencing of clones before screening.
 
 ## Decision Cheat Sheet
 

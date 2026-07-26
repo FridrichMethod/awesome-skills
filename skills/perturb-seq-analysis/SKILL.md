@@ -27,15 +27,15 @@ If code throws ImportError, AttributeError, or TypeError, introspect the install
 
 | Method | Year | Architecture | Readout | MOI | Single-cell sgRNA detection |
 |--------|------|--------------|---------|-----|------------------------------|
-| Perturb-seq (Dixit 2016, *Cell*) | 2016 | sgRNA expressed in cassette; direct PCR capture | scRNA-seq | High (4-50 sgRNAs/cell) | Yes via amplicon-PCR pre-sequencing |
-| CROP-seq (Datlinger 2017, *Nat Methods*) | 2017 | sgRNA expressed via tRNA-spacer-sgRNA-pgk-puro; barcoded in 3'UTR of fluorescent marker; captured in 3' droplet | scRNA-seq | Low (1-2 sgRNAs/cell) | Native via 10X 3' chemistry |
+| Perturb-seq (Dixit 2016, *Cell*) | 2016 | sgRNA expressed in cassette; direct PCR capture | scRNA-seq | Low-to-moderate (MOI ~0.35-1.4; a minority of cells receive multiple guides, enabling epistasis analysis) | Yes via amplicon-PCR pre-sequencing |
+| CROP-seq (Datlinger 2017, *Nat Methods*) | 2017 | hU6-sgRNA cassette placed in the 3' LTR of lentiGuide-Puro; LTR duplication puts the sgRNA in the 3'UTR of the Pol II puromycin-resistance transcript | scRNA-seq | Low (1-2 sgRNAs/cell) | Native via 10X 3' chemistry |
 | Perturb-CITE-seq (Frangieh 2021, *Nat Genet*) | 2021 | Adds surface-protein hashtag oligos to CROP-seq | scRNA-seq + ADT (protein) | Low | CROP-seq architecture |
 | ECCITE-seq (Mimitou 2019, *Nat Methods*) | 2019 | Surface-protein hashtag with sgRNA-marked cells | scRNA-seq + ADT | Low | Hash + sgRNA |
 | Perturb-ATAC (Rubin 2019, *Cell*) | 2019 | scATAC-seq readout | scATAC | Low | sgRNA capture via separate library prep |
 | Perturb-multiome (10X) | 2021+ | scRNA + scATAC simultaneously | scRNA + ATAC | Low | Direct capture from sgRNA cassette |
 | Replogle GW Perturb-seq (2022, *Cell*) | 2022 | Multiplexed CRISPRi with sgRNA barcoding | scRNA-seq | 1 sgRNA/cell | Direct capture |
 
-**Decision rule:** For genome-wide CRISPRi screens, Replogle's CRISPRi + 10X 3' direct-capture protocol is the gold standard (2.5M cells across 2,058 perturbations in Replogle 2022). For protein readout, Perturb-CITE-seq. For chromatin, Perturb-multiome. For low-throughput pilot, original Dixit Perturb-seq.
+**Decision rule:** For genome-wide CRISPRi screens, Replogle's CRISPRi + 10X 3' direct-capture protocol is the gold standard (>2.5M cells; the genome-scale K562 screen targeted ~9,866 expressed genes in Replogle 2022). For protein readout, Perturb-CITE-seq. For chromatin, Perturb-multiome. For low-throughput pilot, original Dixit Perturb-seq.
 
 ## MOI and sgRNA Assignment
 
@@ -71,7 +71,7 @@ def assign_sgrna(adata, sgrna_counts_layer='sgrna_counts', threshold=10):
 
 ## Escaper Cell Filtering (Mixscape)
 
-**Why this matters:** Not all sgRNA-positive cells actually edit. 30-60% of cells may receive sgRNA but fail to undergo gene knockdown ("escapers"). Including escapers dilutes the perturbation effect; Mixscape (Papalexi 2021) identifies and filters them.
+**Why this matters:** Not all sgRNA-positive cells actually edit. The escaper fraction is guide- and gene-dependent: Papalexi 2021 measured ~25% escapers for IFNGR2, perturbation rates of 39-92% across four IRF1 guides (i.e. 8-61% escapers), and no detectable perturbation at all for 15 genes. Including escapers dilutes the perturbation effect; Mixscape identifies and filters them.
 
 **Mixscape algorithm:** For each perturbed cell, compute a "perturbation signature" = (its expression) - (mean of K nearest non-targeting-control cells). This signature isolates the perturbation effect from cell-state variation. Cells with perturbation signature similar to NTC distribution are escapers.
 
@@ -100,7 +100,7 @@ mixscape.mixscape(
 # Defaults to layer='X_pert' (output of perturbation_signature)
 
 # Keep only KO cells for downstream analysis
-adata_ko = adata[adata.obs['mixscape_class'].isin(['KO'])].copy()
+adata_ko = adata[adata.obs['mixscape_class_global'].isin(['KO'])   # mixscape_class holds '<gene> KO'; the bare label is in mixscape_class_global].copy()
 print(f'KO cells: {adata_ko.n_obs} ({adata_ko.n_obs/adata.n_obs:.1%} of perturbed)')
 ```
 
@@ -123,13 +123,15 @@ library(sceptre)
 #           technical_factors (batch, n_genes, etc.)
 
 # For each gene + perturbation pair:
-results <- run_sceptre_low_moi(
-    expression_matrix    = gene_expr,            # genes x cells
-    grouping_var         = pert_indicator,       # length(cells); 0 = NTC, 1 = perturbed
-    technical_factors    = covariates_df,        # n_genes, n_umi, batch
-    response_grouping_var = 'gene_id',
-    n_permutations       = 1000
-)
+# Current sceptre API is a pipeline of composable steps:
+sceptre_object <- import_data(response_matrix, grna_matrix, grna_target_data_frame,
+                              moi = 'low', extra_covariates = covariates_df)
+sceptre_object <- set_analysis_parameters(sceptre_object, discovery_pairs = pairs_df)
+sceptre_object <- assign_grnas(sceptre_object)
+sceptre_object <- run_qc(sceptre_object)
+sceptre_object <- run_calibration_check(sceptre_object)
+sceptre_object <- run_discovery_analysis(sceptre_object)
+results <- get_result(sceptre_object, analysis = 'run_discovery_analysis')
 # Output: per-gene-per-pert p-value, log-fold-change, FDR
 ```
 
@@ -144,7 +146,8 @@ import pertpy as pt
 import scanpy as sc
 
 # Load data
-adata = pt.dt.papalexi_2021()  # built-in example from Mixscape paper
+mdata = pt.dt.papalexi_2021()      # returns a MuData object
+adata = mdata['rna']  # built-in example from Mixscape paper
 
 # Standard scRNA-seq preprocessing (scanpy)
 sc.pp.normalize_total(adata, target_sum=1e4)
@@ -171,10 +174,10 @@ results_df = de.test_contrasts(contrast=('perturbation', 'GENE_X', 'NT'))
 ## Genome-Wide Perturb-Seq (Replogle 2022)
 
 **Replogle 2022 *Cell* 185:2559** demonstrated genome-wide Perturb-seq:
-- 2.5M cells across 2,058 perturbations (essentially every expressed protein-coding gene)
+- >2.5M cells total; the genome-scale K562 screen targeted ~9,866 expressed genes (with a 2,057-gene essential subset)
 - CRISPRi via dCas9-KRAB
 - Native 10X 3' direct-capture for sgRNA
-- ~1,000 cells per perturbation (enough for per-perturbation DE)
+- Median >100 cells per perturbation as screened (Replogle 2022)
 - Cluster-based analysis of perturbed cells reveals gene-program organization
 
 **Scaling principles:**
@@ -184,11 +187,11 @@ results_df = de.test_contrasts(contrast=('perturbation', 'GENE_X', 'NT'))
 
 ```python
 # Replogle-style genome-wide design
-# Each cell -> 1 sgRNA (low MOI)
-# Each gene -> 5 sgRNAs (CRISPRi)
-# Each pert -> 1000 cells
-# Total: 19,000 genes x 5 sgRNAs = 95,000 sgRNAs
-# Cells needed: 2 million (covering all 19k genes at ~100 cells/gene/sgRNA)
+# Each cell -> 1 library element (low MOI)
+# Each gene -> 1 dual-sgRNA CRISPRi element (2 distinct sgRNAs per element)
+# Replogle 2022 retained >2.5M cells at a median >100 cells per perturbation
+# Total: ~9,900 expressed genes x 1 element = ~9,900 elements
+
 ```
 
 ## Factor-Based Analysis
@@ -198,10 +201,10 @@ For complex perturbation responses, decompose the per-cell perturbation effect i
 ```python
 import pertpy as pt
 
-# FR-Perturb (Factor-Regularized Perturb-seq) decomposes perturbations into shared factors
-fr = pt.tl.FRPerturb()
-factors = fr.fit(adata, pert_key='perturbation', n_factors=20)
-# Output: per-perturbation factor loadings; similar perturbations share factors
+# FR-Perturb ("Factorize-Recover") decomposes perturbation effects into shared factors.
+# It is NOT part of pertpy: it is a standalone CLI from douglasyao/FR-Perturb
+# (Yao et al. 2023 Nat Biotechnol). Run it outside Python:
+#   python run_FR_Perturb.py --input <expression> --perturbations <matrix> --out <prefix>
 ```
 
 ## Multiomic Perturb-seq (RNA + ATAC)
@@ -261,8 +264,8 @@ mdata = mu.MuData({'rna': adata_rna, 'atac': adata_atac})
 | MOI for single sgRNA per cell | 0.3 | Poisson math; ~26% infected, 4% multi-infected |
 | sgRNA assignment threshold | ≥10 reads of one sgRNA | Pertpy / direct-capture convention |
 | Multiplet rate (post-doublet filter) | <5% | Typical 10X 3' chemistry |
-| Mixscape escaper-filter (true KO retention) | 30-60% of perturbed cells | Papalexi 2021 |
-| Cells per perturbation (DE power) | 500-1,000 minimum | Replogle 2022 |
+| Mixscape KO retention | Guide-dependent; 39-92% observed | Papalexi 2021 |
+| Cells per perturbation (DE power) | 500-1,000 minimum | Power convention (Replogle 2022 screened at a median >100) |
 | SCEPTRE permutations | 1,000+ | Barry 2024 |
 | Genes per cell (QC) | ≥500-1,000 | Standard scRNA QC |
 | Mt% threshold | <15-20% | Standard scRNA QC |
@@ -289,8 +292,8 @@ mdata = mu.MuData({'rna': adata_rna, 'atac': adata_atac})
 - Papalexi E et al. 2021. *Nat Genet* 53:322. Mixscape.
 - Barry T, Mason K, Roeder K, Katsevich E. 2024. *Genome Biol* 25:124. SCEPTRE for low-MOI Perturb-seq.
 - Replogle JM et al. 2022. *Cell* 185:2559. Genome-wide Perturb-seq.
-- Heumos L et al. 2023. *Nat Methods* 20:1349. Pertpy framework.
-- Cao J et al. 2023. *Nat Genet* 55:1894. Mixscale (dose-response Perturb-seq).
+- Heumos L et al. 2026. *Nat Methods* 23:350-359. DOI 10.1038/s41592-025-02909-7. Pertpy framework.
+- Jiang L et al. 2025. *Nat Cell Biol* 27:505. Mixscale (perturbation-strength-aware Perturb-seq).
 
 ## Related Skills
 

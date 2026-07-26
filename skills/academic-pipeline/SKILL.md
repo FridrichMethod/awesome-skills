@@ -2,8 +2,8 @@
 name: academic-pipeline
 description: "Orchestrator for the full academic research pipeline: research -> write -> integrity check -> review -> revise -> re-review -> re-revise -> final integrity check -> finalize. Coordinates deep-research, academic-paper, and academic-paper-reviewer into a seamless 10-stage workflow with mandatory integrity verification, two-stage peer review, and reproducible quality gates. Triggers on: academic pipeline, research to paper, full paper workflow, paper pipeline, end-to-end paper, research-to-publication, complete paper workflow, 연구부터 논문까지, 연구 주제 설정부터 논문 완성까지, 논문 전체 워크플로."
 metadata:
-  version: "3.18.0"
-  last_updated: "2026-07-18"
+  version: "3.19.0"
+  last_updated: "2026-07-22"
   depends_on: "deep-research, academic-paper, academic-paper-reviewer"
   status: active
   data_access_level: verified_only
@@ -281,7 +281,7 @@ After user confirmation:
    - Stage 2  --> 2.5: Pass complete paper to integrity_verification_agent
    - Stage 2.5 --> 3: Pass verified paper to reviewer
    - Stage 3  --> 4: Pass Revision Roadmap to academic-paper revision mode
-   - Stage 4  --> 3': Pass revised draft, Response to Reviewers, and the Editorial Decision Letter (its Review Panel Provenance block feeds the #539 Judge Record) to reviewer
+   - Stage 4  --> 3': Pass revised draft, Response to Reviewers, the Editorial Decision Letter (its Review Panel Provenance block feeds the #539 Judge Record), the Round-1 Revision Roadmap being verified, the round's apply report(s) (#390), and the Round-1 Reviewer Configuration Cards (yardstick continuity — field_analyst is NOT re-run at Stage 3'; `re_review_mode_protocol.md` § Yardstick Continuity) to reviewer. This is the re-review-mode transfer, the default Stage 3'; a user-requested fresh full review at 3' instead (mid-entry quick→full path: no Roadmap or Round-1 cards exist) transfers the revised draft + available context only and runs full mode, field_analyst included
    - Stage 3' --> 4': Pass new Revision Roadmap + R&R Traceability Matrix (Schema 11) to academic-paper revision mode
    - Stage 4/4' --> 4.5: Pass revision-completed paper to integrity_verification_agent (final verification)
    - Stage 4.5 --> 5: Pass verified final draft to format-convert mode
@@ -626,8 +626,8 @@ When `ARS_MODEL_TIERING` is set, the dispatching session routes this skill's age
 
 | Item | Content |
 |------|---------|
-| Skill Version | 3.18.0 |
-| Last Updated | 2026-07-18 |
+| Skill Version | 3.19.0 |
+| Last Updated | 2026-07-22 |
 | Maintainer | Cheng-I Wu |
 | Dependent Skills | deep-research v2.0+, academic-paper v2.0+, academic-paper-reviewer v1.1+ |
 | Role | Full academic research workflow orchestrator |

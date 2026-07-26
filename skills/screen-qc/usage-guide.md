@@ -7,14 +7,15 @@ Decision-grade quality control for pooled CRISPR screens. Covers six bottleneck 
 ## Prerequisites
 
 ```bash
-pip install mageck pandas numpy scipy matplotlib seaborn scikit-learn
+conda install -c bioconda mageck   # not on PyPI
+pip install pandas numpy scipy matplotlib seaborn scikit-learn
 # MAGeCK QC dashboard
-pip install mageck-vispr
+conda install -c bioconda -c conda-forge mageck-vispr
 # R dashboard (optional)
-R -e "BiocManager::install('MAGeCKFlute')"
+R -e "remotes::install_github('WubingZhang/MAGeCKFlute')"   # removed from Bioconductor at 3.22
 ```
 
-Required inputs: MAGeCK count output (`screen.count.txt`), plasmid-pool counts (separate file or first sample), known copy-number profile per cell line (from WGS / SNP-array / ASCAT / matched cell-line database), and CEGv2 / NEGv1 reference gene sets (Hart 2017; `hart-lab/bagel` repository).
+Required inputs: MAGeCK count output (`screen.count.txt`), plasmid-pool counts (separate file or first sample), known copy-number profile per cell line (from WGS / SNP-array / ASCAT / matched cell-line database), and CEGv2 / NEGv1 reference gene sets (CEGv2 from Hart 2017, NEGv1 from Hart 2014; `hart-lab/bagel` repository).
 
 ## Quick Start
 
@@ -29,7 +30,7 @@ Tell the AI agent what to audit:
 
 ### Library and Plasmid Pool QC
 
-> "Compute Gini coefficient and skew ratio (p90/p10) on my plasmid-pool sequencing. Apply Joung 2017 thresholds: pass at Gini <0.1, skew <2, zero-count <0.5%. Decide whether to proceed."
+> "Compute Gini coefficient and skew ratio (p90/p10) on my plasmid-pool sequencing. Pass at Gini <0.1 (MAGeCK-VISPR), zero-count <0.5% (Joung 2017), and skew <2 as a stricter modern convention than Joung 2017's <10. Decide whether to proceed."
 
 > "My plasmid Gini is 0.18 and skew is 4.2. Diagnose: PCR over-amplification, synthesis defect, or cloning bottleneck? Recommend remediation."
 
@@ -39,17 +40,17 @@ Tell the AI agent what to audit:
 
 > "One of my treatment replicates shows Pearson 0.78 vs the other two replicates which are >0.95 with each other. Decide whether to drop or rescue the outlier replicate."
 
-> "Verify sequencing depth: reads per sgRNA per sample. Pass at 300x (DepMap), warn at 200x (Joung 2017 minimum), fail below."
+> "Verify sequencing depth: reads per sgRNA per sample. Fail below 100 (Joung 2017 plasmid-QC floor), warn between 100 and 300 (MAGeCK-VISPR), pass at 300+, and treat 500+ as ideal for screening (Joung 2017)."
 
 ### Biological Signal (Essentialome Recovery)
 
-> "Compute PR-AUC against CEGv2 essentials and NEGv1 non-essentials (Hart 2017). My screen passes only if PR-AUC >0.7. Tell me whether this screen has interpretable biology before I run hit calling."
+> "Compute PR-AUC against CEGv2 essentials (Hart 2017) and NEGv1 non-essentials (Hart 2014). My screen passes only if PR-AUC >0.7. Tell me whether this screen has interpretable biology before I run hit calling."
 
 > "PR-AUC is 0.45 even though Gini and Pearson pass. Diagnose: Cas9 not selected pre-screen, premature timepoint, or library targets wrong TSS?"
 
 ### Copy-Number Artifact Diagnostic
 
-> "Run Aguirre 2016 copy-number bias diagnostic. Compute Spearman ρ between gene-level LFC and copy number from the matched WGS profile. Flag CN bias if abs(ρ) >0.1 and recommend CRISPRcleanR / CERES / Chronos correction."
+> "Run the copy-number bias diagnostic. Compute Spearman ρ between gene-level LFC and copy number from the matched WGS profile. Flag CN bias if abs(ρ) >0.1 and recommend CRISPRcleanR / CERES / Chronos correction."
 
 > "Hits include ERBB2 in SK-BR-3 and FGFR1 in head-and-neck lines. Confirm whether these are copy-number artifacts before publication."
 
@@ -91,9 +92,9 @@ Tell the AI agent what to audit:
 |-------|----------------|------|----------------|
 | Plasmid | Gini, skew | <0.1, <2 | Re-clone or re-amplify |
 | Day 0 | Pearson with plasmid | >0.9 | Diagnose infection issue |
-| Endpoint | Replicate Pearson | >0.85 | Drop outlier replicate |
+| Endpoint | Replicate Pearson | >=0.8 (MAGeCK-VISPR floor) | Drop outlier replicate |
 | Biology | CEGv2 PR-AUC | >0.7 | Cas9 selection / timepoint / TSS |
-| CN | Spearman LFC vs CN | abs(ρ) <0.1 | CRISPRcleanR / Chronos |
+| CN | Spearman LFC vs CN | abs(ρ) <0.05 post-correction | CRISPRcleanR / Chronos |
 | Depth | Reads/sgRNA | >300 | Re-sequence |
 | MOI | Poisson P(≥2) | <5% | Re-infect |
 

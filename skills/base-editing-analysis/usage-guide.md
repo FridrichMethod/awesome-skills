@@ -2,17 +2,17 @@
 
 ## Overview
 
-Decision-grade analysis of base-editor variant-function screens. Covers GRACE-style library design (Sanson 2020 *Nat Commun*), the Hanna 2021 BRCA1/2 SNV-scanning methodology (*Cell* 184:1066), Cuella-Martin 2021 corroboration (*Mol Cell* 81:1107), CBE vs ABE chemistry selection (BE3/BE4 vs ABE7.10/ABE8.20/ABE8e), editing window math (positions 4-8 from PAM-distal end), bystander attribution strategies, editing-efficiency filtering before hit calling, indel-byproduct interpretation, and the Broad be-validation-pipeline end-to-end workflow.
+Decision-grade analysis of base-editor variant-function screens. Covers base-editor library design, the Hanna 2021 BRCA1/2 SNV-scanning methodology (*Cell* 184:1064), Cuella-Martin 2021 complementary DDR-gene saturation screen (*Cell* 184:1081-1097), CBE vs ABE chemistry selection (BE3/BE4 vs ABE7.10/ABE8.20/ABE8e), editing window math (positions 4-8 from PAM-distal end), bystander attribution strategies, editing-efficiency filtering before hit calling, indel-byproduct interpretation, and the Broad be-validation-pipeline notebooks for CRISPResso2 post-processing.
 
 ## Prerequisites
 
 ```bash
-pip install CRISPResso2 pandas biopython numpy scipy
+conda install -c bioconda crispresso2   # not on PyPI pandas biopython numpy scipy
 # BE-Hive for editing efficiency prediction
-pip install be-hive
+git clone https://github.com/maxwshen/be_predict_bystander   # BE-Hive is not on PyPI
 # Broad end-to-end pipeline
 git clone https://github.com/broadinstitute/be-validation-pipeline
-cd be-validation-pipeline && conda env create -f environment.yaml
+cd be-validation-pipeline && pip install -r requirements.txt
 ```
 
 Required inputs:
@@ -41,7 +41,7 @@ Tell the AI agent what to do:
 
 ### Editing Efficiency Filtering
 
-> "Run CRISPResso2 on my pilot timepoint samples. Compute target editing % per sgRNA. Apply Hanna 2021 threshold: keep sgRNAs >30% target editing for primary screen; flag >50% as validation-grade. Output filtered library and editing efficiency report."
+> "Run CRISPResso2 on my pilot timepoint samples. Compute target editing % per sgRNA. Keep sgRNAs >30% target editing for the primary screen; flag >50% as validation-grade. Output filtered library and editing efficiency report."
 
 > "My library shows median 22% editing across guides. Diagnose: cell-line BE activity issue, vector mismatch, or BE chemistry choice (CBE vs ABE)?"
 
@@ -49,7 +49,7 @@ Tell the AI agent what to do:
 
 > "Apply MAGeCK MLE to the BE screen counts (vehicle vs PARPi drug). Use only editing-efficient sgRNAs. Aggregate per-sgRNA LFC to per-variant scores; deconvolute bystanders via allele tables; output per-variant fitness with confidence based on the number of sgRNAs hitting each variant."
 
-> "Compare drugZ vs MAGeCK MLE on the same BE drug-modifier screen; identify novel resistance/sensitivity variants in MCL1, BCL2L1, PARP1 (Hanna 2021 method)."
+> "Compare drugZ vs MAGeCK MLE on the same BE drug-modifier screen; identify resistance and sensitivity variants using the Hanna 2021 CBE variant-scanning approach."
 
 ### Bystander Deconvolution
 
@@ -87,15 +87,15 @@ Tell the AI agent what to do:
 
 ## Tips
 
-- Editing efficiency filtering is non-negotiable. Unedited reads carry no biological perturbation; including <30% efficiency sgRNAs adds noise and dilutes signal. Hanna 2021 set the field-standard 30% primary / 50% validation threshold.
-- Bystander confounding is the central interpretation challenge in BE screens. Plan the library with multiple sgRNAs per target (10-15 in Hanna 2021) so bystander patterns vary; consistent signal across diverse bystanders attributes to target.
+- Editing efficiency filtering is non-negotiable. Unedited reads carry no biological perturbation; including <30% efficiency sgRNAs adds noise and dilutes signal. A 30% primary / 50% validation split is the common working convention.
+- Bystander confounding is the central interpretation challenge in BE screens. Plan the library with multiple sgRNAs per target (10-15 in saturation designs) so bystander patterns vary; consistent signal across diverse bystanders attributes to target.
 - For pristine variant-function calls (clinical-grade), validate with prime editor (zero bystanders). Convergent BE + PE signal is the gold standard for variant pathogenicity in pooled screens.
 - Cell-line BE activity varies; pilot in your target line before designing the full library. Median library editing <30% is a cell-line issue, not a library issue.
 - ABE7.10 has lower indel rate (<2%) than CBE (5-10%); when target is A->G, ABE is the cleaner choice.
 - For C->T variants with target at position 4-5 (PAM-distal end) and bystander at position 6-7, both will edit; this is the most common interpretation trap.
-- Editor chemistries have different windows: BE3/BE4 = 4-8, eA3A = 5-7 (narrower; good for bystander minimization), ABE8e = 4-10 (wider; more bystanders), evoCDA = 1-9 (broadest; high bystander rate).
+- Editor chemistries have different windows: BE3/BE4 = 4-8, eA3A = 5-7 (narrower; good for bystander minimization), ABE7.10 = 4-7 (narrowest ABE), SpABE8e = 4-8 (Richter 2020; more processive, so more bystander editing within the window), evoCDA = 1-9 (broadest; high bystander rate).
 - Run substitution-vs-indel ratio per sgRNA as a per-sample QC. <3 means Cas9-like activity (vector mismatch or contamination); >10 means clean BE.
-- The Broad be-validation-pipeline is the canonical reference workflow; reuse it before writing custom scripts.
+- The Broad be-validation-pipeline notebooks are the canonical post-processing reference for BE amplicon data; reuse them before writing custom parsers. They do not do hit calling, so score the screen with drugZ or MAGeCK.
 - For drug-modifier BE screens (like Hanna 2021 PARPi), drugZ is more sensitive than MAGeCK for chemogenomic interactions.
 
 ## Chemistry Cheat Sheet
@@ -120,7 +120,7 @@ Tell the AI agent what to do:
 ## Related Skills
 
 - crispr-screens/crispresso-editing - CRISPResso2 modes and allele tables
-- crispr-screens/library-design - GRACE-style BE library design
+- crispr-screens/library-design - base-editor library design
 - crispr-screens/prime-editing-screens - Orthogonal PE for variant attribution
 - crispr-screens/hit-calling - Variant-level hit aggregation
 - crispr-screens/screen-qc - Editing-efficiency QC

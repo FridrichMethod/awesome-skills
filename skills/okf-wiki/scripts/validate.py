@@ -17,7 +17,9 @@ Checks:
                   An unquoted '#' in a block-style element (which YAML would silently
                   drop as a comment, losing the rest) is rejected — quote it.
        - tags     is a list.
-       - verified, timestamp parse as ISO dates (YYYY-MM-DD).
+       - verified   parses as an ISO date (YYYY-MM-DD).
+       - timestamp parses as an ISO date, or under okf_version 0.3 as a full
+                    ISO 8601 datetime (upstream OKF writes a datetime).
   3. Reserved filenames (index.md, log.md) name no concept and carry no
      frontmatter — except the bundle-root index.md may carry okf_version only.
   4. Internal markdown links resolve. Links must be relative — a root-relative
@@ -39,6 +41,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import math
 import re
 import sys
 from collections import Counter
@@ -49,6 +52,12 @@ import yaml
 REQUIRED_KEYS = ("type", "title", "description", "source", "verified", "timestamp", "tags")
 LIST_KEYS = ("source", "tags")
 DATE_KEYS = ("verified", "timestamp")
+# Keys that may also carry a full ISO 8601 datetime (see check_dates). The
+# bundle must explicitly opt into this grammar through okf_version 0.3 so an
+# older validator rejects the format at its version gate instead of later on a
+# timestamp it does not understand.
+DATETIME_KEYS = ("timestamp",)
+DATETIME_TIMESTAMP_VERSION = "0.3"
 ALLOWED_TYPES = {
     # Infrastructure / ops (fleet maps, system docs)
     "Machine", "Network", "Service", "Session", "Project",
@@ -62,8 +71,9 @@ RESERVED = {"index.md", "log.md"}
 # okf_version values this validator accepts. The last entry is the current format
 # version (what scaffold writes for a new bundle); older entries stay supported so a
 # newer validator still reads an older bundle. Adding allowed types is backward
-# compatible and bumps the format version (0.1 -> 0.2).
-SUPPORTED_VERSIONS = ("0.1", "0.2")
+# compatible and bumps the format version (0.1 -> 0.2). Accepting a datetime in
+# timestamp changes the field grammar and bumps it again (0.2 -> 0.3).
+SUPPORTED_VERSIONS = ("0.1", "0.2", DATETIME_TIMESTAMP_VERSION)
 SPEC_VERSION = SUPPORTED_VERSIONS[-1]  # current format version, written by new scaffolds
 # Inline markdown link. The destination group allows one level of balanced
 # parens so a filename like `missing(v2).md` is still captured (a plain [^)]+
@@ -79,6 +89,14 @@ WIKILINK_RE = re.compile(r"\[\[([^\[\]]+)\]\]")
 # a credential concept is allowed to document. The generic assignment pattern
 # requires a separator (`:`/`=`) directly before a high-entropy blob, so a
 # documented key name like `service/api/...-secret` does not trip it.
+#
+# The key labels that mark a value as a credential, shared by the generic base64
+# assignment pattern and the opt-in entropy scan so the two agree on what counts
+# as a labeled secret.
+SECRET_LABEL = (
+    r"(?:password|passwd|secret|api[_-]?key|apikey|client[_-]?secret"
+    r"|access[_-]?token|auth[_-]?token)")
+
 SECRET_PATTERNS = [
     ("Tailscale key", re.compile(r"tskey-(?:api|auth|client)-[A-Za-z0-9]+-[A-Za-z0-9]{10,}")),
     ("private-key block", re.compile(r"-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP )?PRIVATE KEY-----")),
@@ -87,15 +105,121 @@ SECRET_PATTERNS = [
     ("Slack token", re.compile(r"\bxox[baprs]-[0-9A-Za-z-]{10,}")),
     ("GitHub token", re.compile(r"\bgh[pousr]_[0-9A-Za-z]{36,}\b")),
     ("GitHub fine-grained PAT", re.compile(r"\bgithub_pat_[0-9A-Za-z_]{22,}\b")),
+    # More provider tokens with fixed literal prefixes and exact or narrow shapes.
+    # Providers whose token bodies allow path-like hyphens and underscores use the
+    # entropy-gated patterns below instead.
+    ("Stripe secret key", re.compile(r"\b[sr]k_(?:live|test)_[0-9A-Za-z]{24,}\b")),
+    ("Stripe organization key", re.compile(r"\bsk_org_[0-9A-Za-z]{24,}\b")),
+    ("Stripe webhook secret", re.compile(r"\bwhsec_[0-9A-Za-z]{32,}\b")),
+    # GitLab documents this exact cookie label as a token prefix. Keep the value
+    # shape narrow enough that its `_gitlab_session=...` documentation placeholder
+    # stays clean while an actual serialized cookie is caught.
+    ("GitLab session cookie", re.compile(
+        r"(?i)\b_gitlab_session\s*=\s*['\"]?"
+        r"[0-9A-Za-z%+/_=-]{20,}(?![0-9A-Za-z%+/_=.\-])")),
+    ("npm token", re.compile(r"\bnpm_[0-9A-Za-z]{36}\b")),
+    ("SendGrid API key", re.compile(r"\bSG\.[0-9A-Za-z_-]{22}\.[0-9A-Za-z_-]{43}")),
+    # Legacy personal OpenAI keys carry no project/service segment. `sk-` alone is a
+    # weak prefix, so the 40-char solid-base62 run does the signal work; it stays
+    # disjoint from the entropy-gated project-key detector below, whose `-` breaks
+    # the run.
+    ("OpenAI legacy key", re.compile(r"\bsk-[0-9A-Za-z]{40,}\b")),
     ("secret assignment", re.compile(
-        r"(?i)(?:password|passwd|secret|api[_-]?key|apikey|client[_-]?secret|access[_-]?token|auth[_-]?token)"
+        r"(?i)" + SECRET_LABEL +
         # Base64-standard value charset only -- deliberately excludes - and _. A
         # credential concept documents key paths like `secret: svc/api/prod-key-path`,
         # and a hyphen/underscore-rich path must not read as a high-entropy value.
         # Structured tokens that use -/_ (fine-grained PATs, Slack, etc.) have their
-        # own specific patterns above.
+        # own specific patterns above; the opt-in entropy scan below covers the rest.
         r"\s*[:=]\s*['\"]?[A-Za-z0-9+/]{24,}['\"]?")),
 ]
+
+# Some provider token bodies allow the same hyphens and underscores used in
+# human-readable vault paths. A prefix alone would therefore flag documentation
+# such as `openai/sk-proj-production-primary-key-path`. These patterns capture a
+# complete base64url-like body. They still run by default because the provider
+# prefix is strong, but the entropy gate keeps path documentation clean. OpenAI
+# and Anthropic use the generic 4.0 bits/character floor. GitLab accepts 20-char
+# bodies, whose repeated characters lower their observable entropy; its narrower
+# floor is 88% of the maximum entropy observable at the captured body length,
+# capped at 4.0. That is 3.80 bits/character at 20 chars and rises to 4.0 at 24,
+# so short tokens are not judged against a longer sample's ceiling while the
+# longer path regressions stay clean.
+#
+# GitLab prefixes are from its token overview (checked 2026-07-23):
+# https://docs.gitlab.com/security/tokens/#token-prefixes
+PREFIXED_SECRET_PATTERNS = [
+    ("GitLab token", re.compile(
+        r"\b(?:glpat|gloas|gldt|glrtr?|glcbt|glptt|glft|glimt|glagent|glwt"
+        r"|glsoat|glffct)-([0-9A-Za-z_-]{20,})(?![0-9A-Za-z_/-])"), 0.88),
+    ("Anthropic API key", re.compile(
+        r"\bsk-ant-([0-9A-Za-z_-]{20,})(?![0-9A-Za-z_/-])"), 1.0),
+    ("OpenAI project key", re.compile(
+        r"\bsk-(?:proj|svcacct)-([0-9A-Za-z_-]{20,})(?![0-9A-Za-z_/-])"), 1.0),
+]
+
+# Opt-in entropy scan (--secret-entropy-scan). The generic assignment pattern
+# above uses a base64-standard value charset that excludes - and _, so a labeled
+# secret whose value is URL-safe (base64url: - _ =) slips past it. Widening that
+# charset would re-flag OKF key paths like `secret: svc/api/prod-key-path`, the
+# precision an earlier review round asked us to keep. This optional pass instead
+# matches only the base64url charset -- base64-standard values with `/` stay the
+# generic pattern's job -- and keeps precision two ways. Structurally (the primary
+# guard), the captured run must be a complete token: the trailing lookahead rejects
+# a run that is followed by another value char (we truncated a longer token) or a
+# `/` (it is a path segment, not a standalone value), so a documented key path like
+# `secret: prd-usw2-...-key-path/service` cannot leak its first segment as a value.
+# Excluding `/` from the class alone did not do this -- it stopped the match at the
+# separator but still captured a >=24-char leading segment. Statistically, a
+# Shannon-entropy floor backstops the slashless case: a random token scores above a
+# short dictionary-and-separator name (measured: 24-char base64url secrets land
+# ~4.05-4.4 bits/char, short human-readable names stay under 4.0). The floor is
+# imperfect -- a long, varied slashless name can clear it, the acknowledged
+# precision-for-recall tradeoff -- which is why the structural check, not this
+# threshold, is the primary guard. It is off by default so a normal run keeps the
+# narrow, zero-false-positive base64 behavior; the flag trades some precision for
+# recall.
+SECRET_ENTROPY_RE = re.compile(
+    r"(?i)" + SECRET_LABEL + r"\s*[:=]\s*['\"]?([A-Za-z0-9_=-]{24,})"
+    r"(?![A-Za-z0-9_=/-])['\"]?")
+SECRET_ENTROPY_MIN_BITS = 4.0
+
+
+def shannon_entropy(s: str) -> float:
+    """Shannon entropy of s in bits per character (0.0 for the empty string)."""
+    if not s:
+        return 0.0
+    n = len(s)
+    return -sum((c / n) * math.log2(c / n) for c in Counter(s).values())
+
+
+def prefixed_secret_labels(text: str):
+    """Yield each provider label with a complete, random-looking token body."""
+    for label, pattern, max_entropy_fraction in PREFIXED_SECRET_PATTERNS:
+        for match in pattern.finditer(text):
+            body = match.group(1)
+            # A sample of n characters cannot exhibit more than log2(n) bits of
+            # entropy per character, even when every character is unique.
+            min_entropy = min(
+                SECRET_ENTROPY_MIN_BITS,
+                max_entropy_fraction * math.log2(len(body)),
+            )
+            if shannon_entropy(body) >= min_entropy:
+                yield label
+                break
+
+
+def entropy_secret_values(text: str):
+    """Yield the labeled, high-entropy base64url values in text that the generic
+    base64 pattern misses. A value must carry a base64url-only character (- _ =) --
+    otherwise the generic pattern already covers it -- and clear the entropy floor,
+    so a low-entropy hyphenated name is left alone."""
+    for m in SECRET_ENTROPY_RE.finditer(text):
+        value = m.group(1)
+        if not any(ch in value for ch in "-_="):
+            continue  # plain base64/alnum -- already covered by SECRET_PATTERNS
+        if shannon_entropy(value) >= SECRET_ENTROPY_MIN_BITS:
+            yield value
 
 
 FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n?(.*)$", re.DOTALL)
@@ -377,16 +501,111 @@ def check_source_quoting(rel, fm, raw_fm, errors):
             return  # one report per concept is enough
 
 
-def check_dates(rel, fm, errors):
+ISO_DATE_RE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}\Z")
+ISO_DATETIME_RE = re.compile(
+    r"[0-9]{4}-[0-9]{2}-[0-9]{2}[T ][0-9]{2}:[0-9]{2}:[0-9]{2}"
+    r"(?:[.,][0-9]+)?(?:Z|[+-][0-9]{2}:[0-9]{2})?\Z"
+)
+
+
+def _is_iso_date(s):
+    """True only for the literal YYYY-MM-DD form required by the SPEC."""
+    if not ISO_DATE_RE.fullmatch(s):
+        return False
+    try:
+        dt.datetime.strptime(s, "%Y-%m-%d")
+    except ValueError:
+        return False
+    return True
+
+
+def _is_iso_datetime(s):
+    """True for the SPEC's full ISO 8601 datetime spelling.
+
+    ``fromisoformat`` checks calendar and clock ranges, but it is deliberately
+    not the lexical contract: both it and PyYAML accept wider timestamp forms.
+    The regular expression first requires the exact zero-padded source shape.
+    A trailing ``Z`` is normalised for Python versions that do not parse it.
+    """
+    if not ISO_DATETIME_RE.fullmatch(s):
+        return False
+    try:
+        dt.datetime.fromisoformat(s[:-1] + "+00:00" if s.endswith("Z") else s)
+    except ValueError:
+        return False
+    return True
+
+
+def _raw_top_level_scalar(raw_fm, key):
+    """Return a literal top-level scalar's unnormalised text, or None.
+
+    ``safe_load`` constructs a broad family of YAML timestamp spellings as
+    ``date``/``datetime`` objects. Calling ``isoformat`` on those objects would
+    silently turn a malformed source spelling into a conforming value. Compose
+    the same frontmatter into a node tree and inspect the effective (last)
+    literal key instead. Simple quoted strings remain supported; YAML aliases,
+    tags, block scalars, and escape-based spellings are not literal date fields.
+    """
+    if not raw_fm:
+        return None
+    try:
+        root = yaml.compose(raw_fm, Loader=yaml.SafeLoader)
+    except yaml.YAMLError:
+        return None
+    if not isinstance(root, yaml.MappingNode):
+        return None
+
+    counts = _child_ref_counts(root)
+    candidates = [
+        (key_node, val_node)
+        for key_node, val_node in root.value
+        if isinstance(key_node, yaml.ScalarNode)
+        and key_node.value == key
+        and key_node.tag != _MERGE_TAG
+        and counts.get(id(key_node), 0) < 2
+    ]
+    if not candidates:
+        return None
+    _, val_node = candidates[-1]  # safe_load keeps the last duplicate key
+    if not isinstance(val_node, yaml.ScalarNode) or counts.get(id(val_node), 0) >= 2:
+        return None
+
+    written = raw_fm[val_node.start_mark.index:val_node.end_mark.index]
+    if val_node.style is None and written == val_node.value:
+        return written
+    if val_node.style in ("'", '"') and written == val_node.style + val_node.value + val_node.style:
+        return val_node.value
+    return None
+
+
+def check_dates(rel, fm, raw_fm, bundle_version, errors):
     for key in DATE_KEYS:
         val = fm.get(key)
         if val is None:
             continue  # missing/empty already reported by required-key check
-        s = val.isoformat() if isinstance(val, dt.date) else str(val)
-        try:
-            dt.datetime.strptime(s, "%Y-%m-%d")
-        except ValueError:
-            errors.append(f"{rel}: '{key}' must be an ISO date YYYY-MM-DD, got {val!r}")
+        raw = _raw_top_level_scalar(raw_fm, key)
+        if raw is not None and _is_iso_date(raw):
+            continue
+        # `timestamp` is upstream OKF's key and upstream writes it as a full ISO
+        # 8601 datetime. Version 0.3 accepts and carries that precision; older
+        # formats remain date-only. `verified` is this spec's own key and always
+        # stays date-only because a time of day invites false precision.
+        if (key in DATETIME_KEYS
+                and bundle_version == DATETIME_TIMESTAMP_VERSION
+                and raw is not None
+                and _is_iso_datetime(raw)):
+            continue
+        if key in DATETIME_KEYS and bundle_version != DATETIME_TIMESTAMP_VERSION:
+            expected = (
+                f"an ISO date YYYY-MM-DD under okf_version {bundle_version or '<missing>'}; "
+                f"full ISO 8601 datetimes require okf_version {DATETIME_TIMESTAMP_VERSION}"
+            )
+        elif key in DATETIME_KEYS:
+            expected = "an ISO date YYYY-MM-DD or a full ISO 8601 datetime"
+        else:
+            expected = "an ISO date YYYY-MM-DD"
+        shown = raw if raw is not None else val
+        errors.append(f"{rel}: '{key}' must be {expected}, got {shown!r}")
 
 
 def check_lists(rel, fm, errors):
@@ -404,9 +623,34 @@ def check_lists(rel, fm, errors):
                 errors.append(f"{rel}: '{key}' has a non-string/empty element {el!r}")
 
 
+def declared_bundle_version(bundle):
+    """Read the root marker for version-dependent field checks.
+
+    This is a non-reporting pre-pass; the main file loop remains responsible for
+    all root-index diagnostics. Reading it up front means a root-level concept
+    named ``a.md`` receives the right grammar even though it sorts before
+    ``index.md``.
+    """
+    root_index = bundle / "index.md"
+    if not root_index.is_file():
+        return None
+    try:
+        fm, _ = parse_frontmatter(root_index.read_text(encoding="utf-8-sig"))
+    except (OSError, yaml.YAMLError, ValueError):
+        return None
+    if not isinstance(fm, dict) or fm.get("okf_version") is None:
+        return None
+    return str(fm["okf_version"]).strip()
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--bundle", default="bundle", help="path to the OKF bundle directory (default: bundle)")
+    ap.add_argument(
+        "--secret-entropy-scan", action="store_true",
+        help="also flag a labeled URL-safe/base64url value whose Shannon entropy "
+             "clears the secret floor (opt-in; trades some precision for recall on "
+             "hyphenated secret values the base64 pattern misses)")
     args = ap.parse_args()
     bundle = Path(args.bundle).resolve()
 
@@ -433,6 +677,7 @@ def main() -> int:
     # index (or an empty directory) would validate clean and bypass version gating.
     if not (bundle / "index.md").is_file():
         errors.append("index.md: bundle-root index is required and must declare okf_version")
+    bundle_version = declared_bundle_version(bundle)
     type_counts: Counter = Counter()
     concepts = 0
 
@@ -450,6 +695,15 @@ def main() -> int:
                 errors.append(
                     f"{rel}: possible secret leak ({label}) — remove the value, "
                     f"document the key name/path instead")
+        for label in prefixed_secret_labels(text):
+            errors.append(
+                f"{rel}: possible secret leak ({label}) — remove the value, "
+                f"document the key name/path instead")
+        if args.secret_entropy_scan and next(entropy_secret_values(text), None):
+            errors.append(
+                f"{rel}: possible secret leak (high-entropy assignment flagged by "
+                f"--secret-entropy-scan) — remove the value, document the key "
+                f"name/path instead")
 
         # OKF concept and index files use a lowercase .md extension. A non-lowercase
         # extension (Foo.MD) is non-conforming: it was discovered case-insensitively
@@ -528,8 +782,9 @@ def main() -> int:
             errors.append(f"{rel}: type '{ctype}' not in the spec vocab {sorted(ALLOWED_TYPES)}")
 
         check_lists(rel, fm, errors)
-        check_dates(rel, fm, errors)
-        check_source_quoting(rel, fm, frontmatter_block(text), errors)
+        raw_fm = frontmatter_block(text)
+        check_dates(rel, fm, raw_fm, bundle_version, errors)
+        check_source_quoting(rel, fm, raw_fm, errors)
 
     # Link resolution: every internal link to a .md file must resolve to a file
     # that exists inside the bundle. A link escaping the bundle root or pointing at

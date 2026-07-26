@@ -2,16 +2,16 @@
 
 ## Overview
 
-Decision-grade analysis of CRISPR drug-modifier screens with drugZ (Li & Hart 2019 *Genome Medicine*). Uses bidirectional Z-scores comparing drug vs vehicle (NOT Day-0) to identify sensitizing (synthetic-lethal) genes and resistance-conferring (suppressor) genes. 2-3x more sensitive than MAGeCK / STARS / edgeR / RIGER on drug screens. Covers vehicle-vs-Day-0 reference choice, sumZ / normZ math, per-direction FDR, and reconciliation with MAGeCK MLE.
+Decision-grade analysis of CRISPR drug-modifier screens with drugZ (Colic et al. 2019 *Genome Medicine*). Uses bidirectional Z-scores comparing drug vs vehicle (NOT Day-0) to identify sensitizing (synthetic-lethal) genes and resistance-conferring (suppressor) genes. More sensitive to small-effect hits than MAGeCK / STARS / edgeR / RIGER on drug screens. Covers vehicle-vs-Day-0 reference choice, sumZ / normZ math, per-direction FDR, and reconciliation with MAGeCK MLE.
 
 ## Prerequisites
 
 ```bash
 # drugZ (Python)
 git clone https://github.com/hart-lab/drugz
-cd drugz && pip install -e .
+cd drugz   # run python drugz.py directly; the repo has no setup.py
 # OR (if available)
-pip install drugz
+# drugZ is not on PyPI; use the GitHub clone above
 
 # Helpers
 pip install pandas numpy scipy statsmodels matplotlib
@@ -27,9 +27,9 @@ Required inputs:
 
 Tell the AI agent what to do:
 - "Run drugZ on PARPi screen: vehicle vs olaparib at 14 days; identify sensitizers (BRCA1/2) and suppressors (PARP1 paradox)"
-- "Compare drugZ vs MAGeCK MLE on the same chemogenomic screen; expect drugZ to call 2-3x more hits"
+- "Compare drugZ vs MAGeCK MLE on the same chemogenomic screen; expect drugZ to recover more small-effect sensitizers with stronger expected-pathway enrichment"
 - "Drug screen at 3 doses: run drugZ per dose; require consistent direction across doses for high-confidence hits"
-- "Diagnose drugZ calling many essentials as sensitizers -- recommend `--remove-genes-file` with CEGv2"
+- "Diagnose drugZ calling many essentials as sensitizers -- recommend `-r` with a comma-list of essential gene names to excludele` with CEGv2"
 
 ## Example Prompts
 
@@ -49,7 +49,7 @@ Tell the AI agent what to do:
 
 ### Removing Essentials from Null
 
-> "Run drugZ with `-r CEGv2.txt` containing CEGv2 essentials. Compare to default output; the difference is the artifact from essentiality inflating the null."
+> "Run drugZ with `-r` set to a comma-delimited list of CEGv2 essential gene names. Compare to default output; the difference is the artifact from essentiality inflating the null."
 
 ### Method Comparison
 
@@ -69,7 +69,7 @@ Tell the AI agent what to do:
 2. Confirm replicate count: 3+ each arm
 3. Run drugZ via CLI with vehicle as control, drug as treatment
 4. Apply pseudocount (default 5; increase for low-count screens)
-5. Optionally exclude essentials via `--remove-genes-file`
+5. Optionally exclude essentials via `-r` (comma-delimited gene names)
 6. Output ranked hits: sensitizers (fdr_synth) and suppressors (fdr_supp)
 7. For multi-dose: per-dose drugZ then consistency check
 8. Cross-check against MAGeCK MLE on same data (consensus tier)
@@ -80,7 +80,7 @@ Tell the AI agent what to do:
 
 - The single most common silent failure: comparing drug to Day-0 instead of drug to vehicle. Always use vehicle as control. Day-0 comparison conflates drug effect with normal-culture proliferation.
 - drugZ is bidirectional. The sensitizer (synth) and suppressor (supp) lists are independent. Drug target genes often appear as suppressors (loss of drug target = resistance); this is correct biology.
-- drugZ's 2-3x sensitivity advantage over MAGeCK comes from parametric Z-scoring of small effects; this is the right tool for low-effect chemogenomic screens. For high-effect screens (essentiality), MAGeCK and BAGEL2 work equally well.
+- drugZ's sensitivity advantage over MAGeCK comes from parametric Z-scoring of small effects; this is the right tool for low-effect chemogenomic screens. For high-effect screens (essentiality), MAGeCK and BAGEL2 work equally well.
 - For multi-dose, multi-condition, or multi-cell-line screens, drugZ does not natively handle the additional dimensions. Run drugZ per-condition and require consistency.
 - The `-r` option excludes specified genes from the null distribution. Use it to remove CEGv2 essentials when they dominate the sensitizer list -- this is a common pitfall in dropout-heavy drug screens.
 - For consensus hit calling, run BOTH drugZ and MAGeCK MLE on the same data. Hits in both are high confidence; drugZ-only at low LFC need orthogonal validation.
@@ -103,12 +103,12 @@ Tell the AI agent what to do:
 
 | Threshold | Value | Rationale |
 |-----------|-------|-----------|
-| Sensitizer FDR | `fdr_synth < 0.05` | Li & Hart 2019 |
+| Sensitizer FDR | `fdr_synth < 0.05` | Colic et al. 2019 |
 | Suppressor FDR | `fdr_supp < 0.05` | Same |
 | High-confidence sensitizer | `fdr_synth < 0.01 AND normZ < -3` | Conservative |
 | Replicate Pearson | >0.85 | Pre-drugZ QC |
 | Min sgRNAs/gene | 4-6 (Brunello-style) | Stable Z |
-| Pseudocount | 5 (default); higher for low-count | Li & Hart 2019 |
+| Pseudocount | 5 (default); higher for low-count | Colic et al. 2019 |
 
 ## Validation Checklist
 

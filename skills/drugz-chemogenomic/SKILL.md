@@ -1,6 +1,6 @@
 ---
 name: bio-crispr-screens-drugz-chemogenomic
-description: Analyzes CRISPR drug-modifier (chemogenomic) screens with drugZ (Li & Hart 2019 Genome Med), a bidirectional Z-score method that identifies synthetic-lethal sensitizing genes and resistance-conferring suppressor genes from vehicle vs drug comparisons. Covers vehicle-anchored design (not Day-0), the bidirectional Z math giving 2-3x sensitivity over MAGeCK / STARS / edgeR / RIGER on drug screens, per-gene sumZ and normZ, synth (sensitizer) vs supp (suppressor) FDR, multi-dose handling, integration with control sgRNAs, and comparison with MAGeCK MLE with dose covariate. Use when running a drug-modifier CRISPR screen, identifying sensitizing or resistance genes for a drug candidate, choosing drugZ vs MAGeCK MLE for chemogenomic analysis, troubleshooting low-effect drug screens where MAGeCK lacks sensitivity, or designing a drug-screen layout (vehicle vs drug arms).
+description: Analyzes CRISPR drug-modifier (chemogenomic) screens with drugZ (Colic et al. 2019 Genome Med), a bidirectional Z-score method that identifies synthetic-lethal sensitizing genes and resistance-conferring suppressor genes from vehicle vs drug comparisons. Covers vehicle-anchored design (not Day-0), the bidirectional Z math giving greater sensitivity to small-effect hits than MAGeCK / STARS / edgeR / RIGER on drug screens, per-gene sumZ and normZ, synth (sensitizer) vs supp (suppressor) FDR, multi-dose handling, integration with control sgRNAs, and comparison with MAGeCK MLE with dose covariate. Use when running a drug-modifier CRISPR screen, identifying sensitizing or resistance genes for a drug candidate, choosing drugZ vs MAGeCK MLE for chemogenomic analysis, troubleshooting low-effect drug screens where MAGeCK lacks sensitivity, or designing a drug-screen layout (vehicle vs drug arms).
 tool_type: cli
 primary_tool: drugZ
 ---
@@ -10,7 +10,7 @@ primary_tool: drugZ
 Reference examples tested with: drugZ Aug-2019+ (hart-lab/drugz; Python 3.6+), MAGeCK 0.5.9+, pandas 2.2+, numpy 1.26+, scipy 1.12+, statsmodels 0.14+, matplotlib 3.8+.
 
 Before using code patterns, verify installed versions match. If versions differ:
-- CLI: `drugz --version`; `python drugz.py --help`
+- CLI: `python drugz.py --help` (the repo has no setup.py, so there is no `drugz` console script)
 - GitHub: install via `git clone https://github.com/hart-lab/drugz`
 
 If code throws ImportError, AttributeError, or TypeError, introspect the installed package and adapt the example to match the actual API rather than retrying.
@@ -20,7 +20,7 @@ If code throws ImportError, AttributeError, or TypeError, introspect the install
 **"Identify genes that sensitize or confer resistance to my drug in a CRISPR screen"** -> Compare drug-treated vs vehicle-treated arms (NOT Day-0 baseline) using bidirectional Z-scores per sgRNA, sum to per-gene normalized Z, and rank genes for sensitizer (synthetic lethal) vs suppressor (resistance) phenotype.
 
 - CLI: `python drugz.py -i counts.txt -o drugz.txt -c Vehicle_r1,Vehicle_r2 -x Drug_r1,Drug_r2`
-- Python: programmatic via `drugz.drugz_analysis()` (internal Python module)
+- Python: programmatic via `drugz.drugZ_analysis(args)` (takes an argparse Namespace)
 - Workflow: vehicle-anchored counts -> Z-scoring -> per-gene summation -> direction-specific FDR
 
 ## Why drugZ for Drug Screens (not MAGeCK)
@@ -29,22 +29,22 @@ If code throws ImportError, AttributeError, or TypeError, introspect the install
 |----------|-------|------------|-------------|
 | Bidirectional sensitivity | YES (sensitizer + resistance same scale) | Asymmetric (neg/pos separately) | Asymmetric |
 | Drug-anchored baseline | YES (drug vs vehicle) | Either (drug vs vehicle or vs Day 0) | Either |
-| Sensitivity to small effects | 2-3x higher (Li & Hart 2019 benchmark) | Lower | Lower |
-| Statistical framework | Z-score from per-sgRNA NB residuals | NB + alpha-RRA | NB GLM with design matrix |
+| Sensitivity to small effects | Highest (bidirectional Z; Colic et al. 2019) | Moderate | Moderate |
+| Statistical framework | Empirical-Bayes windowed Z-score on guide-level log fold change | NB + alpha-RRA | NB GLM with design matrix |
 | Handles guide-level noise | sgRNA-level z aggregation | Rank-based aggregation | Built-in guide-efficacy term (optional) |
 | Best for | Drug-modifier / chemogenomic screens | General essentiality / standard 2-condition | Time course / multi-condition |
 
 **Why MAGeCK is suboptimal for drug screens:** MAGeCK's RRA was designed for two-condition essentiality; drug-vs-vehicle screens often have small effect sizes (10-30% sgRNA shift) that RRA rank-based aggregation under-detects. drugZ uses parametric Z-scoring tuned for these small effects.
 
-**Quantified gain (Li & Hart 2019):** On DNA damage response chemogenomic screens, drugZ identified 2-3x more hits than STARS, MAGeCK, edgeR, or RIGER at the same FDR threshold; the additional hits were enriched in the expected pathway (DDR).
+**Benchmark (Colic et al. 2019):** On DNA-damage-response chemogenomic screens, drugZ hits were far more strongly enriched for the expected pathway (DDR) than STARS, MAGeCK, edgeR or RIGER hits across FDR thresholds, reflecting better sensitivity to the moderate fitness defects typical of drug-gene interactions. Compare methods on expected-pathway enrichment, not raw hit count.
 
 ## The drugZ Algorithm (under the hood)
 
 1. For each sgRNA, compute log2-fold-change drug vs vehicle: `LFC_drug_vs_veh`
-2. Compute the empirical Z-score from a fitted Gaussian over the bulk distribution: `Z = (LFC - median(LFC)) / MAD(LFC)`
+2. Compute an empirical-Bayes Z per sgRNA: `Z = LFC / eb_std`, where `eb_std` is the standard deviation of a sliding window of guides with similar control abundance (`--half_window_size`, default 500), smoothed monotonically
 3. Per gene, sum Z across all sgRNAs targeting it: `sumZ = sum(Z_sgRNA)`
-4. Normalize for the number of sgRNAs: `normZ = sumZ / sqrt(N_sgrna)`
-5. Compute two-sided p-value per gene: synth (sensitizer = negative normZ) and supp (resistance = positive normZ)
+4. Normalize and re-standardize across genes: `normZ = zscore(sumZ / sqrt(numObs))`
+5. Compute a one-sided p-value per direction: synth (sensitizer = negative normZ) and supp (resistance = positive normZ)
 6. Benjamini-Hochberg FDR correction per direction
 
 **Critical:** Vehicle vs drug, NOT Day 0 vs drug. Day-0 baseline conflates proliferation effects with drug effects.
@@ -68,11 +68,11 @@ python drugz.py \
     -o drugz_output.txt \                  # output file
     -c Veh_r1,Veh_r2,Veh_r3 \              # control samples (comma-separated)
     -x Drug_r1,Drug_r2,Drug_r3 \           # treated samples (comma-separated)
-    -r control_genes.txt \                 # OPTIONAL: genes to exclude
+    -r RPS3,RPL11,EIF3A \                  # OPTIONAL: comma-delimited GENE NAMES to exclude (not a file)
     -p 5                                   # pseudocount (default 5)
 
 # Output: drugz_output.txt with columns:
-#   GENE, numObs, sumZ, normZ, pval_synth, rank_synth, fdr_synth, pval_supp, rank_supp, fdr_supp
+#   GENE, sumZ, numObs, normZ, pval_synth, rank_synth, fdr_synth, pval_supp, rank_supp, fdr_supp
 ```
 
 **Output columns:**
@@ -80,9 +80,9 @@ python drugz.py \
 | Column | Meaning |
 |--------|---------|
 | `GENE` | Gene symbol |
-| `numObs` | Number of sgRNAs contributing |
+| `numObs` | Number of non-zero guide x replicate observations |
 | `sumZ` | Summed per-sgRNA Z-score |
-| `normZ` | Normalized Z = sumZ / sqrt(N) |
+| `normZ` | sumZ / sqrt(numObs), re-standardized across genes |
 | `pval_synth` | One-sided p-value for sensitizer (negative effect; gene KO sensitizes to drug) |
 | `rank_synth` | Rank for sensitizers |
 | `fdr_synth` | BH-corrected FDR for sensitizers |
@@ -112,7 +112,7 @@ Drug effect = LFC(Drug vs Vehicle)         # CORRECT
 Wrong:       LFC(Drug vs Day 0)            # confounds drug with general proliferation
 ```
 
-drugZ specifically requires `--control-samples` to be vehicle samples. Always include matched vehicle controls in drug screens.
+drugZ specifically requires `-c` to name the vehicle samples. Always include matched vehicle controls in drug screens.
 
 ## Drug-Dose and Time-Course Designs
 
@@ -182,14 +182,14 @@ python drugz.py \
 **Trigger:** Comparing drug vs Day-0 instead of drug vs vehicle.
 **Mechanism:** Day-0 comparison conflates drug effect with normal-culture proliferation; essential genes drop in both conditions, masking drug-specific sensitization.
 **Symptom:** PARPi screen shows no sensitization at BRCA1/BRCA2 despite expected biology.
-**Fix:** Re-run with vehicle samples as `--control-samples`. The drug-vs-vehicle is the canonical comparison.
+**Fix:** Re-run with vehicle samples passed to `-c`. The drug-vs-vehicle is the canonical comparison.
 
 ### High false-positive rate among essential genes
 
 **Trigger:** Essential genes drop out in both vehicle and drug arms; small relative shift gives misleadingly high Z.
 **Mechanism:** drugZ's Z-score is symmetric; essential genes drop in both arms but slightly more in drug -> "synthetic lethal" call.
 **Symptom:** Hit list dominated by RPS, RPL, EIF essentials.
-**Fix:** Use `--remove-genes-file` to exclude CEGv2 essentials; or filter the output post-hoc.
+**Fix:** Use `-r` with a comma-delimited list of essential gene names to exclude; or filter the output post-hoc.
 
 ### Inconsistent results between repeats of drugZ
 
@@ -216,10 +216,10 @@ python drugz.py \
 
 | Threshold | Value | Source / Rationale |
 |-----------|-------|--------------------|
-| Sensitizer hit | `fdr_synth < 0.05` | Li & Hart 2019; BH-corrected |
+| Sensitizer hit | `fdr_synth < 0.05` | Colic et al. 2019; BH-corrected |
 | Suppressor hit | `fdr_supp < 0.05` | Same |
 | High-confidence sensitizer | `fdr_synth < 0.01 AND normZ < -3` | Conservative |
-| Pseudocount default | 5 | Li & Hart 2019 |
+| Pseudocount default | 5 | Colic et al. 2019 |
 | Min sgRNAs per gene for stable Z | 4-6 | Below this, Z varies between runs |
 | Vehicle replicates needed | 3+ | For stable Z null distribution |
 | Drug replicates needed | 3+ | For per-gene sumZ stability |
@@ -229,7 +229,7 @@ python drugz.py \
 | Error / symptom | Cause | Solution |
 |-----------------|-------|----------|
 | No hits | Wrong control samples (Day-0 instead of vehicle) | Re-run with vehicle |
-| Hits dominated by essentials | Essentials inflate null | Use `--remove-genes-file` with CEGv2 |
+| Hits dominated by essentials | Essentials inflate null | Use `-r` with a comma-list of CEGv2 |
 | Unstable hits across runs | Too few sgRNAs/gene | Use 6+ sgRNAs/gene library |
 | Drug-target appears in suppressor | Real biology | Annotate separately |
 | MAGeCK and drugZ disagree | Different statistical sensitivity | drugZ more sensitive; trust for chemogenomic |
@@ -237,11 +237,9 @@ python drugz.py \
 
 ## References
 
-- Li G & Hart T. 2019. *Genome Medicine* 11:52. drugZ algorithm and benchmark.
-- Aregger M et al. 2020. *Mol Cell* 80:577. Original chemogenomic screens with TKOv3 library.
+- Colic M et al. 2019. *Genome Medicine* 11:52. drugZ algorithm and chemogenomic-interaction benchmark.
 - Olivieri M et al. 2020. *Cell* 182:481. DDR chemogenomic screens with drugZ.
-- Behan FM et al. 2019. *Nature* 568:511. Sanger Score; drug-modifier panels.
-- Pacini C et al. 2021. *Cell Syst* 12:1132. Benchmark of drug-modifier methods.
+- Behan FM et al. 2019. *Nature* 568:511. Project Score; genome-wide cancer-dependency screens for target prioritization.
 
 ## Related Skills
 

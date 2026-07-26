@@ -65,7 +65,7 @@ sr_pairs.to_csv('synthetic_rescue_pairs.tsv', sep='\t', index=False)
 # === VALIDATION ===
 # For top synthetic-lethal hits, cross-validate against:
 # 1. Known paralog pairs (e.g., MAPK1/MAPK3, AKT1/AKT2)
-# 2. Multiple cell lines (Dede 2020 reported 79% reproducibility across 3 lines)
+# 2. Multiple cell lines (Dede 2020: 19 of 24 (79%) SL pairs reproduce in at least 2 of 3 lines; 14 of 24 (58%) in all 3)
 # 3. Orthogonal modality (CRISPRi if originally Cas9, or vice versa)
 # 4. Arrayed validation in target cell line
 known_paralog_pairs = [('MAPK1', 'MAPK3'), ('AKT1', 'AKT2'),
