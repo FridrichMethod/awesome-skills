@@ -2,7 +2,9 @@
 name: primekg
 description: Query the Precision Medicine Knowledge Graph (PrimeKG) for multiscale biological data including genes, drugs, diseases, phenotypes, and more.
 license: Unknown
-metadata: {"version": "1.0", "skill-author": "K-Dense Inc. (PrimeKG original from Harvard MIMS)"}
+metadata:
+  version: "1.1"
+  skill-author: K-Dense Inc. (PrimeKG original from Harvard MIMS)
 ---
 
 # PrimeKG Knowledge Graph Skill
@@ -90,7 +92,8 @@ The graph contains several key relationship types including:
 - `scripts/query_primekg.py`: Core functions for searching and querying the knowledge graph.
 
 ### Data Path
-- Data: `/mnt/c/Users/eamon/Documents/Data/PrimeKG/kg.csv`
+- Data: `kg.csv`, downloaded from the [PrimeKG Harvard Dataverse](https://dataverse.harvard.edu/dataverse/primekg).
+- Point the scripts at it with `export PRIMEKG_DATA=/path/to/kg.csv` (default: `data/PrimeKG/kg.csv`).
 - Total nodes: ~129,000
 - Total edges: ~4,000,000
 - Database: CSV-based, optimized for pandas querying.

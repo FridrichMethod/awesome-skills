@@ -51,7 +51,7 @@ This template is used by `editorial_synthesizer_agent` to produce the final Edit
 
 | Reviewer | Role | Recommendation | Confidence |
 |----------|------|---------------|------------|
-| EIC | [Journal editor identity] | [Accept/Minor/Major/Reject] | [1-5] |
+| Journal-Fit Reviewer | [Senior-editor or associate-editor identity] | [Accept/Minor/Major/Reject] | [1-5] |
 | Reviewer 1 | [Methodology expert identity] | [Accept/Minor/Major/Reject] | [1-5] |
 | Reviewer 2 | [Domain expert identity] | [Accept/Minor/Major/Reject] | [1-5] |
 | Reviewer 3 | [Cross-disciplinary expert identity] | [Accept/Minor/Major/Reject] | [1-5] |
@@ -110,6 +110,8 @@ Requirements:
 The `Sub-Claim(s)` column carries the Step 1b `sub_claim_id`(s) the item traces to (e.g. `SC-1`); a DA-CRITICAL or non-decomposed item uses `—`.
 
 ### Required Item Details
+
+> **Ordinal contract (#576 §5.1):** `R<n>` numbering here FOLLOWS the Revision Roadmap's `must_fix` order — the letter and the Roadmap are the same synthesizer emission, so the nth Required block corresponds to the Roadmap's nth `must_fix` item, and the blocks appear as exactly the contiguous sequence `R1..Rn` (no gaps, duplicates, or extras). This is the derivation basis for the Stage 3' criterion inheritance join (`letter_item_ref`) and is checker-recomputed; a violated sequence degrades the whole letter criterion layer (`[CRITERIA-LAYER-ABSENT: letter/roadmap ordinal mismatch]`). The pin covers the R side ONLY — the Suggested table legitimately mixes P2/P3 items, so `S<n>` carries no ordinal contract. The **Acceptance criteria** field stays a SINGLE-LINE bullet (`- **Acceptance criteria**: <text>`) — the machine grammar `scripts/check_re_review_synthesis.py` parses.
 
 **R1: [Title]**
 - **Problem**: [Specific description]

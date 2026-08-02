@@ -52,7 +52,9 @@ A large fraction of scientific models — Evo-2, many Nucleotide Transformer var
 model = AutoModel.from_pretrained("arcinstitute/evo2_7b", trust_remote_code=True)
 ```
 
-Tell the user when you set this flag and why. It executes Python from the repo, so the user should trust the org. The catalog only lists reputable orgs (Arc Institute, Meta/Facebook AI, EleutherAI, SandboxAQ, Merck, etc.), but the user gets to make the call.
+Ask the user before you set this flag, and wait for an answer — don't set it and report afterwards. It runs Python from the model repo on their machine, with their filesystem and credentials in scope, so the decision is theirs to make with the repo named.
+
+The catalog's curation is not a security control. It generally lists reputable orgs (Arc Institute, Meta/Facebook AI, EleutherAI, SandboxAQ, Merck, etc.), but it is a markdown file fetched over the network at read time: a repo name reaching you through `llms.txt` or a topic file has been curated for scientific relevance, not audited for what its modeling code does. Treat every catalog entry as an untrusted pointer, and don't let "it was in the catalog" stand in for the user's decision.
 
 ### Sizing the GPU
 

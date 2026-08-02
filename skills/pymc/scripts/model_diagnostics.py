@@ -15,7 +15,6 @@ Usage:
 """
 
 import arviz as az
-import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 
@@ -44,8 +43,10 @@ def check_diagnostics(idata, var_names=None, ess_threshold=400, rhat_threshold=1
     print(" " * 20 + "MCMC DIAGNOSTICS REPORT")
     print("="*70)
 
-    # Get summary statistics
-    summary = az.summary(idata, var_names=var_names)
+    # Get summary statistics. round_to="none" is required: ArviZ 1.x formats the
+    # default summary for display, returning strings, which makes every numeric
+    # comparison below raise TypeError.
+    summary = az.summary(idata, var_names=var_names, round_to="none")
 
     results = {
         'summary': summary,
@@ -197,60 +198,51 @@ def create_diagnostic_report(idata, var_names=None, output_dir='diagnostics/', s
 
     print(f"\nGenerating diagnostic plots in '{output_dir}'...")
 
-    # 1. Trace plots
-    az.plot_trace_dist(idata, var_names=var_names)
-    plt.tight_layout()
-    plt.savefig(output_path / 'trace_plots.png', dpi=300, bbox_inches='tight')
-    print(f"  ✓ Saved trace plots")
-    if show:
-        plt.show()
-    else:
-        plt.close()
-
-    # 2. Rank plots (check mixing)
-    fig = plt.figure(figsize=(12, 8))
-    az.plot_rank(idata, var_names=var_names)
-    plt.tight_layout()
-    plt.savefig(output_path / 'rank_plots.png', dpi=300, bbox_inches='tight')
-    print(f"  ✓ Saved rank plots")
-    if show:
-        plt.show()
-    else:
-        plt.close()
-
-    # 3. Autocorrelation plots
-    fig = plt.figure(figsize=(12, 8))
-    az.plot_autocorr(idata, var_names=var_names, combined=True)
-    plt.tight_layout()
-    plt.savefig(output_path / 'autocorr_plots.png', dpi=300, bbox_inches='tight')
-    print(f"  ✓ Saved autocorrelation plots")
-    if show:
-        plt.show()
-    else:
-        plt.close()
-
-    # 4. Energy plot (if available)
-    if hasattr(idata.sample_stats, 'energy'):
-        fig = plt.figure(figsize=(10, 6))
-        az.plot_energy(idata)
-        plt.tight_layout()
-        plt.savefig(output_path / 'energy_plot.png', dpi=300, bbox_inches='tight')
-        print(f"  ✓ Saved energy plot")
+    # ArviZ 1.x plots return a PlotCollection and do not draw into pyplot's
+    # current figure, so the figure must be saved through the collection --
+    # plt.savefig() would write a blank image.
+    def _save(plot_collection, filename, label):
+        plot_collection.savefig(
+            output_path / filename, dpi=300, bbox_inches='tight'
+        )
+        print(f"  ✓ Saved {label}")
         if show:
             plt.show()
         else:
-            plt.close()
+            plt.close(plot_collection.viz['figure'].item())
 
-    # 5. ESS plot
-    fig = plt.figure(figsize=(10, 6))
-    az.plot_ess(idata, var_names=var_names, kind='evolution')
-    plt.tight_layout()
-    plt.savefig(output_path / 'ess_evolution.png', dpi=300, bbox_inches='tight')
-    print(f"  ✓ Saved ESS evolution plot")
-    if show:
-        plt.show()
-    else:
-        plt.close()
+    # 1. Trace plots
+    _save(
+        az.plot_trace_dist(idata, var_names=var_names),
+        'trace_plots.png',
+        'trace plots',
+    )
+
+    # 2. Rank plots (check mixing)
+    _save(
+        az.plot_rank(idata, var_names=var_names),
+        'rank_plots.png',
+        'rank plots',
+    )
+
+    # 3. Autocorrelation plots
+    _save(
+        az.plot_autocorr(idata, var_names=var_names),
+        'autocorr_plots.png',
+        'autocorrelation plots',
+    )
+
+    # 4. Energy plot (if available)
+    if hasattr(idata.sample_stats, 'energy'):
+        _save(az.plot_energy(idata), 'energy_plot.png', 'energy plot')
+
+    # 5. ESS plot. ArviZ 1.x offers 'local' and 'quantile'; the old
+    # 'evolution' kind no longer exists.
+    _save(
+        az.plot_ess(idata, var_names=var_names, kind='local'),
+        'ess_local.png',
+        'local ESS plot',
+    )
 
     # Save summary to CSV
     results['summary'].to_csv(output_path / 'summary_statistics.csv')
@@ -272,52 +264,43 @@ def compare_prior_posterior(idata, prior_idata, var_names=None, output_path=None
     prior_idata : xarray.DataTree or arviz.InferenceData
         Prior object with prior samples
     var_names : list, optional
-        Variables to compare
+        Variables to compare. Defaults to the first three posterior variables.
     output_path : str, optional
         If provided, save plot to this path
 
     Returns
     -------
-    None
+    arviz_plots.PlotCollection
+        The overlaid prior/posterior figure.
     """
-    fig, axes = plt.subplots(
-        len(var_names) if var_names else 3,
-        1,
-        figsize=(10, 8)
+    if var_names is None:
+        var_names = list(idata.posterior.data_vars)[:3]
+
+    # ArviZ 1.x plot functions take a DataTree and a group name, not a flat
+    # array plus an axis. Passing the first call's PlotCollection back into the
+    # second is what overlays the two distributions on the same axes.
+    collection = az.plot_dist(
+        prior_idata,
+        group='prior',
+        var_names=var_names,
+        visuals={'dist': {'color': 'blue'}},
+    )
+    az.plot_dist(
+        idata,
+        group='posterior',
+        var_names=var_names,
+        plot_collection=collection,
+        visuals={'dist': {'color': 'green'}},
     )
 
-    if not isinstance(axes, np.ndarray):
-        axes = [axes]
-
-    for idx, var in enumerate(var_names if var_names else list(idata.posterior.data_vars)[:3]):
-        # Plot prior
-        az.plot_dist(
-            prior_idata.prior[var].values.flatten(),
-            label='Prior',
-            ax=axes[idx],
-            color='blue',
-            alpha=0.3
-        )
-
-        # Plot posterior
-        az.plot_dist(
-            idata.posterior[var].values.flatten(),
-            label='Posterior',
-            ax=axes[idx],
-            color='green',
-            alpha=0.3
-        )
-
-        axes[idx].set_title(f'{var}: Prior vs Posterior')
-        axes[idx].legend()
-
-    plt.tight_layout()
-
     if output_path:
-        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        collection.savefig(output_path, dpi=300, bbox_inches='tight')
         print(f"Prior-posterior comparison saved to {output_path}")
+        print("Prior is blue, posterior is green")
     else:
         plt.show()
+
+    return collection
 
 
 # Example usage

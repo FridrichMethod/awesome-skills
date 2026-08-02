@@ -1,6 +1,6 @@
 ---
 name: nature-reviewer
-description: "Simulate a Nature-style reviewer assessment from the referee perspective rather than an author rebuttal. Use when the user wants a pre-submission review, reviewer report, peer-review style critique, novelty/significance/technical soundness assessment, reviewer-style manuscript evaluation, 审稿人视角评估, 预审稿意见, or Nature reviewer report. Return 3 reviewer reports plus a cross-review synthesis, grounded only in the local Nature reviewer source basis. Also trigger on general pre-submission review requests during academic writing even without the word \"Nature\", such as getting a mock peer review for any journal, critiquing a draft as a reviewer would, assessing novelty/rigor before submission, and Chinese phrasings like 审稿人视角、模拟审稿、预审、帮我审一下论文、投稿前自审、审稿意见模拟、找论文问题."
+description: "Simulate a Nature-style reviewer assessment from the referee perspective rather than an author rebuttal. Use when the user wants a pre-submission review, reviewer report, peer-review style critique, novelty/significance/technical soundness assessment, reviewer-style manuscript evaluation, 审稿人视角评估, 预审稿意见, or Nature reviewer report. Return 3 reviewer reports with evidence-grounded Major Concerns, Minor Comments, blocking flags, and a cross-review synthesis, grounded only in the local Nature reviewer source basis. Also trigger on general pre-submission review requests during academic writing even without the word \"Nature\", such as getting a mock peer review for any journal, critiquing a draft as a reviewer would, assessing novelty/rigor before submission, and Chinese phrasings like 审稿人视角、模拟审稿、预审、帮我审一下论文、投稿前自审、审稿意见模拟、找论文问题."
 ---
 
 # Nature Reviewer Assessment Skill
@@ -21,6 +21,13 @@ response. If the user wants rebuttal writing, route to `nature-response`.
 - Identify who would be interested in the results and why.
 - Identify technical failings that must be addressed before the authors' case is established.
 - Give every substantive concern a stable ID, a faithful `claim_pointer`, and a verifiable `evidence_pointer`; mark missing locations instead of inventing them.
+- Separate user-visible concerns into `Major Concerns` and `Minor Comments`. Mark a Major Concern
+  `Blocking: Yes` only when the current manuscript cannot establish its central case until that
+  concern is resolved; Minor Comments are never blocking.
+- Do not impose a concern quota. If no grounded concern exists at a level, state that explicitly
+  instead of inventing one.
+- Keep the critique intellectually sharp but professionally phrased; severity comes from impact
+  on the manuscript's case, not from hostile wording.
 - Distinguish clearly between what is supported, what is weak, and what is not assessable from the provided material.
 - When the manuscript has a clear technical domain, use claim-dependent domain gates as supporting checks, but keep the output inside the same 3-reviewer `nature-reviewer` structure.
 - Do not claim the editor's final decision or certainty about fit to `Nature`.
@@ -44,11 +51,11 @@ If the provided material is partial, perform a bounded review and mark the asses
 2. Extract a shared manuscript fact base: main claim, visible evidence, claimed significance, likely readership, and visible limitations.
 3. Check readiness and label missing evidence or missing sections instead of inventing them.
 4. Assess the manuscript using the source-grounded axes.
-5. Build an internal concern ledger using `references/technical-concern-taxonomy.md`; record applicability, claim/evidence pointers, severity, and the resolution test for each supported concern.
+5. Build an internal concern ledger using `references/technical-concern-taxonomy.md`; record applicability, claim/evidence pointers, `major` or `minor` severity, a blocking flag for Major Concerns, and the resolution test for each supported concern.
 6. If the manuscript clearly falls into a technical domain covered by `references/domain-specific-review-gates.md`, load only the relevant domain section and use it to sharpen the technical-soundness critique.
-7. Generate `Reviewer 1`, `Reviewer 2`, and `Reviewer 3` using shared facts but different emphasis. Reuse ledger issue keys internally so repeated concerns can be measured and cross-referenced.
-8. Generate a `Cross-review synthesis` that captures consensus and weighting differences. Label an issue as consensus only when at least two reviewer reports raise the same underlying concern.
-9. Run QA for evidence anchoring, overlap, groundedness, coverage, role boundaries, and non-invention.
+7. Generate `Reviewer 1`, `Reviewer 2`, and `Reviewer 3` using shared facts but different emphasis. Show separate Major Concerns and Minor Comments in each report, or explicitly say no supported concern was identified at that level. Reuse ledger issue keys internally so repeated concerns can be measured and cross-referenced.
+8. Generate a `Cross-review synthesis` that separates consensus blocking concerns, other major concerns, and the minor-revision checklist. Label an issue as consensus only when at least two reviewer reports raise the same underlying concern.
+9. Run QA for severity calibration, blocking calibration, evidence anchoring, overlap, groundedness, coverage, role boundaries, and non-invention.
 
 ## Output format
 
@@ -66,17 +73,31 @@ Reviewer 1
 - Overall assessment:
 - Who would be interested in the results, and why:
 - Major strengths:
-- Major concerns:
+- Major Concerns:
+- Minor Comments:
 - Technical failings that need to be addressed before the case is established:
 - Assessment against Nature-style criteria:
 - Recommendation posture:
 
-For each substantive concern:
+For each Major Concern:
 - Concern ID: R1-M1
+- Severity: Major
+- Blocking: Yes / No
 - Axis:
 - Claim pointer:
 - Evidence pointer:
-- Concern and resolution test:
+- Concern:
+- Why it matters:
+- Resolution test:
+
+For each Minor Comment:
+- Concern ID: R1-m1
+- Severity: Minor
+- Axis:
+- Affected element:
+- Evidence pointer:
+- Issue:
+- Required correction:
 
 Reviewer 2
 [Same structure]
@@ -86,8 +107,10 @@ Reviewer 3
 
 Cross-review synthesis
 - Consensus strengths:
-- Consensus technical risks:
+- Consensus blocking concerns:
+- Other consensus major concerns:
 - Where emphasis differs across reviewers:
+- Minor revision checklist:
 - Broad-interest / significance readout:
 - Most important issues to resolve before a strong Nature-style case is established:
 
@@ -103,6 +126,9 @@ Risk / unsupported claims
 - Do not present the review as an editorial decision letter.
 - Do not state that the manuscript belongs in `Nature` as a settled fact.
 - Do not omit technical failings when the provided evidence does not establish the authors' case.
+- Do not create Major or Minor concerns merely to fill a quota or make reviewer reports look balanced.
+- Do not downgrade a core evidence, validity, ethics, or integrity problem to Minor because it is
+  easy to describe, and do not upgrade a local presentation issue merely to sound severe.
 
 ## Related files
 

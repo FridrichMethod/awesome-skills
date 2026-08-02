@@ -4,7 +4,9 @@ description: Data structure for annotated matrices in single-cell analysis. Use 
 license: BSD-3-Clause license
 allowed-tools: Read Write Edit Bash
 compatibility: Requires Python 3.11+ and uv. Examples target AnnData 0.12.16, with experimental APIs clearly marked where used.
-metadata: {"version": "1.1", "skill-author": "K-Dense Inc."}
+metadata:
+  version: "1.1"
+  skill-author: K-Dense Inc.
 ---
 
 # AnnData

@@ -45,6 +45,7 @@
 - Python 3 is required.
 - PDF processing uses the bundled scripts and PDF libraries available in the current environment.
 - When PDF page indices are reliable, the card uses both PDF-page and structural locators. If page extraction fails, it falls back to structural locators without inventing page numbers.
+- Missing or invalid source-map page locators remain explicitly unlocated with a warning; they are never assigned to PDF page 1.
 - External search is limited to field-history checks, knowledge connections, bibliographic verification, or an explicitly requested novelty check.
 
 ## Tutorial

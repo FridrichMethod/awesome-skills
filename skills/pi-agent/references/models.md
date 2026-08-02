@@ -26,41 +26,78 @@ Add custom providers and models through `~/.pi/agent/models.json` for Ollama, LM
 }
 ```
 
-The `apiKey` is required even when the server ignores it. Edit during a session; `/model` reloads the file.
+Only `id` is required per model. The `apiKey` placeholder matters because Pi treats models as requiring auth before they appear in `/model`; keyless local servers should keep a dummy value, store a key via `/login`, or pass `--api-key`. Set `compat.supportsDeveloperRole: false` for OpenAI-compatible servers that reject the `developer` role, and `compat.supportsReasoningEffort: false` when `reasoning_effort` is unsupported. `compat` can be set at provider level (all models) or model level (override). The file reloads each time `/model` opens — no restart needed.
+
+For `google-generative-ai` custom models, `baseUrl` is required (for example `https://generativelanguage.googleapis.com/v1beta`).
 
 ## Supported APIs
 
-- `openai-completions`: OpenAI Chat Completions and compatibles.
-- `openai-responses`: OpenAI Responses API.
-- `anthropic-messages`: Anthropic Messages API.
-- `google-generative-ai`: Google Generative AI.
+`openai-completions` (most compatible), `openai-responses`, `anthropic-messages`, `google-generative-ai`. Set `api` at provider level as the default, or per model to override.
 
 ## Provider Fields
 
-`baseUrl`, `api`, `apiKey`, `headers`, `authHeader`, `models`, `modelOverrides`.
+`baseUrl`, `api`, `apiKey`, `oauth`, `headers`, `authHeader`, `models`, `modelOverrides`.
 
-`apiKey` and `headers` support command execution (`!command`), env interpolation (`$ENV`/`${ENV}`), escapes (`$$`, `$!`), and literals. Shell commands in `models.json` resolve at request time and do not get built-in TTL/recovery; wrap slow or flaky secret commands yourself.
+- `oauth`: dynamic OAuth provider type; currently `"radius"`, which requires the gateway `baseUrl`.
+- `authHeader: true` adds `Authorization: Bearer <apiKey>`.
+- `apiKey` is optional — omit it when auth comes from `/login`/`auth.json`/`--api-key`. Non-built-in providers with `models` need `baseUrl` and an `api` value at provider or model level. Without any auth, models load but stay unavailable in `/model` and `--list-models`.
+
+`apiKey` and `headers` support command execution (`!command`, whole value), env interpolation (`$ENV` / `${ENV}`, works inside larger literals), escapes (`$$`, `$!`), and literals (plain uppercase strings are literals). Shell commands in `models.json` resolve at request time with no built-in TTL, stale reuse, or recovery — wrap slow or flaky secret commands yourself. `/model` availability checks use configured auth presence and do not execute shell commands.
 
 ## Model Fields
 
-Required: `id`.
+Required: `id`. Optional: `name` (defaults to `id`), `api`, `reasoning` (`false`), `thinkingLevelMap`, `input` (`["text"]` or `["text","image"]`), `contextWindow` (`128000`), `maxTokens` (`16384`), `cost` (zeros), `compat` (merged with provider `compat`).
 
-Optional: `name`, `api`, `reasoning`, `thinkingLevelMap`, `input`, `contextWindow`, `maxTokens`, `cost`, `compat`.
+`/model`, `--list-models`, and the footer display entries by model `id`; `name` is used for `--model` pattern matching and secondary detail text.
 
-`thinkingLevelMap` maps Pi levels (`off`, `minimal`, `low`, `medium`, `high`, `xhigh`) to provider values; `null` hides unsupported levels.
+`cost` is per million tokens and supports request-wide input pricing tiers. A tier supplies a complete alternate rate set and applies to the whole request when `input + cacheRead + cacheWrite` exceeds `inputTokensAbove`; the highest matching threshold wins.
 
-## Built-in Overrides
+```json
+{
+  "cost": {
+    "input": 5, "output": 30, "cacheRead": 0.5, "cacheWrite": 6.25,
+    "tiers": [{ "inputTokensAbove": 272000, "input": 10, "output": 45, "cacheRead": 1, "cacheWrite": 12.5 }]
+  }
+}
+```
 
-Override a provider base URL without redefining models:
+## Thinking Level Map
+
+Keys are Pi levels: `off`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`. Maps may have holes. Values are tristate: omitted means standard levels through `high` use the provider default mapping while `xhigh`/`max` are unsupported; a string is sent to the provider; `null` marks the level unsupported so it is hidden/skipped/clamped away.
+
+```json
+{ "id": "deepseek-v4-pro", "reasoning": true,
+  "thinkingLevelMap": { "minimal": null, "low": null, "medium": null, "high": "high", "xhigh": null, "max": "max" } }
+```
+
+Use `{ "off": null }` for models where thinking cannot be disabled. Older `compat.reasoningEffortMap` configs should move to model-level `thinkingLevelMap`.
+
+## Overriding Built-in Providers
+
+Base-URL-only overrides keep all built-in models and existing auth:
 
 ```json
 { "providers": { "anthropic": { "baseUrl": "https://my-proxy.example.com/v1" } } }
 ```
 
-If `models` is included, custom models merge into built-ins by `id`; matching IDs replace built-ins. Use `modelOverrides` to modify specific built-in models without replacing the provider list.
+If `models` is included, built-in models are kept and custom models are upserted by `id` — a matching `id` replaces the built-in, a new `id` is added.
 
-## Compatibility Flags
+`modelOverrides` customizes built-in and matching extension-registered models without replacing the provider list. Supported per-model fields: `name`, `reasoning`, `thinkingLevelMap`, `input`, `cost` (partial), `contextWindow`, `maxTokens`, `headers`, `compat`. Unknown model IDs are ignored; provider-level `baseUrl`/`headers` can be combined with it. If `models` is also defined, custom models merge after built-in overrides.
 
-Anthropic flags include `supportsEagerToolInputStreaming`, `supportsLongCacheRetention`, `sendSessionAffinityHeaders`, `supportsCacheControlOnTools`, `forceAdaptiveThinking`, and `allowEmptySignature`.
+Example — opt a direct OpenAI GPT-5.6 model into the 1.05M context window (they default to `272000` to stay in the short-context pricing tier):
 
-OpenAI compatibility flags include `supportsStore`, `supportsDeveloperRole`, `supportsReasoningEffort`, `supportsUsageInStreaming`, `maxTokensField`, `requiresToolResultName`, `requiresAssistantAfterToolResult`, `requiresThinkingAsText`, `requiresReasoningContentOnAssistantMessages`, `thinkingFormat`, `cacheControlFormat`, `supportsStrictMode`, `supportsLongCacheRetention`, `openRouterRouting`, and `vercelGatewayRouting`.
+```json
+{ "providers": { "openai": { "modelOverrides": { "gpt-5.6-sol": { "contextWindow": 1050000 } } } } }
+```
+
+## Anthropic Messages Compatibility Flags
+
+`supportsEagerToolInputStreaming` (default `true`; `false` omits `tools[].eager_input_streaming` and sends the legacy fine-grained-tool-streaming beta header), `supportsLongCacheRetention` (default `true`, `cache_control.ttl: "1h"`), `sendSessionAffinityHeaders` (auto-detected), `supportsCacheControlOnTools` (default `true`), `forceAdaptiveThinking` (`thinking.type: "adaptive"` plus `output_config.effort`; built-in adaptive models set it automatically), `allowEmptySignature` (replay empty thinking signatures as `signature: ""`), `supportsStrictTools` (default `false`; built-in Anthropic models enable it).
+
+## OpenAI Compatibility Flags
+
+`supportsStore`, `supportsDeveloperRole`, `supportsReasoningEffort`, `supportsUsageInStreaming` (default `true`), `maxTokensField` (`max_completion_tokens` | `max_tokens`), `requiresToolResultName`, `requiresAssistantAfterToolResult`, `requiresThinkingAsText`, `requiresReasoningContentOnAssistantMessages`, `thinkingFormat` (`reasoning_effort`, `openrouter`, `deepseek`, `together`, `zai`, `qwen`, `chat-template`, `qwen-chat-template`), `chatTemplateKwargs`, `cacheControlFormat` (`anthropic`), `sendSessionAffinityHeaders` (default `false`), `sessionAffinityFormat` (`openai`, `openai-nosession`, `openrouter`), `supportsStrictMode`, `supportsOpenAIGrammarTools` (default `false`; the built-in catalog enables it for GPT-5+ on OpenAI, OpenAI Codex, Azure OpenAI, GitHub Copilot, opencode, Cloudflare AI Gateway), `deferredToolsMode` (`"kimi"`), `supportsLongCacheRetention` (default `true`; `prompt_cache_retention: "24h"`), `openRouterRouting`, `vercelGatewayRouting`.
+
+Thinking-format notes: `openrouter` uses `reasoning: { effort }`; `together` uses `reasoning: { enabled }` plus `reasoning_effort` when `supportsReasoningEffort`; `qwen` uses top-level `enable_thinking`; `qwen-chat-template` targets local Qwen servers needing `chat_template_kwargs.enable_thinking` and `preserve_thinking`; `chat-template` plus `chatTemplateKwargs` targets vLLM/Hugging Face templates, e.g. `chatTemplateKwargs: { "thinking": { "$var": "thinking.enabled" } }` for DeepSeek V3.x. `$var` accepts `thinking.enabled` or `thinking.effort`.
+
+`openRouterRouting` is sent as-is in the OpenRouter `provider` field (`only`, `order`, `ignore`, `sort`, `max_price`, `quantizations`, `zdr`, …). `vercelGatewayRouting` takes `only`/`order`.

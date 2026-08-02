@@ -5,7 +5,7 @@ Demonstrates ingesting various content types (URLs, files, text) into
 Open Notebook and monitoring processing status.
 
 Prerequisites:
-    pip install requests
+    uv pip install requests
 
 Usage:
     export OPEN_NOTEBOOK_URL="http://localhost:5055"

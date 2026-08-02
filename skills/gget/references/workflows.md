@@ -39,11 +39,12 @@ print("\nStep 3: Retrieving sequences...")
 nucleotide_seqs = gget.seq(gene_ids)
 protein_seqs = gget.seq(gene_ids, translate=True)
 
-# Save sequences
+# Save sequences. gget.seq returns a list of FASTA lines, so join it first --
+# f.write(list) raises TypeError.
 with open("gaba_receptors_nt.fasta", "w") as f:
-    f.write(nucleotide_seqs)
+    f.write("\n".join(nucleotide_seqs) + "\n")
 with open("gaba_receptors_aa.fasta", "w") as f:
-    f.write(protein_seqs)
+    f.write("\n".join(protein_seqs) + "\n")
 
 # Step 4: Get expression data
 print("\nStep 4: Getting tissue expression...")
@@ -108,22 +109,20 @@ print("\n2. Retrieving protein sequences...")
 human_seq = gget.seq(human_gene, translate=True)
 mouse_seq = gget.seq(mouse_gene, translate=True)
 
-# Save to file for alignment
+# Save to file for alignment (gget.seq returns a list of FASTA lines)
 with open("pcsk9_sequences.fasta", "w") as f:
-    f.write(human_seq)
-    f.write("\n")
-    f.write(mouse_seq)
+    f.write("\n".join(human_seq) + "\n")
+    f.write("\n".join(mouse_seq) + "\n")
 
-# Step 3: Align sequences
+# Step 3: Align sequences. gget.muscle returns None -- it writes to `out`, or
+# prints the ClustalW alignment when `out` is omitted.
 print("\n3. Aligning sequences...")
-alignment = gget.muscle("pcsk9_sequences.fasta")
-print("Alignment completed. Visualizing in ClustalW format:")
-print(alignment)
+gget.muscle("pcsk9_sequences.fasta", out="pcsk9_aligned.afa")
 
 # Step 4: Get existing structures from PDB
 print("\n4. Searching PDB for existing structures...")
-# Search by sequence using BLAST
-pdb_results = gget.blast(human_seq, database="pdbaa", limit=5)
+# Search by sequence using BLAST (the amino-acid line, not the FASTA header)
+pdb_results = gget.blast(human_seq[1], database="pdbaa", limit=5)
 print("Top PDB matches:")
 print(pdb_results[["Description", "Max Score", "Query Coverage"]])
 

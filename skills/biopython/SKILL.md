@@ -4,8 +4,17 @@ description: Comprehensive molecular biology toolkit. Use for sequence manipulat
 allowed-tools: Read Write Edit Bash
 compatibility: Requires Python 3.10+, NumPy, and Biopython. Entrez and web BLAST examples require network access; local BLAST/MUSCLE examples require those command-line tools installed separately.
 license: Biopython License Agreement
-required_environment_variables: [{"name": "NCBI_EMAIL", "prompt": "Email for NCBI Entrez identification (required by NCBI policy for Entrez calls).", "required_for": "optional features"}, {"name": "NCBI_API_KEY", "prompt": "NCBI API key to raise Entrez rate limits.", "required_for": "optional features"}]
-metadata: {"version": "1.2", "skill-author": "K-Dense Inc.", "openclaw": {"envVars": [{"name": "NCBI_EMAIL", "required": false, "description": "Email for NCBI Entrez identification (required by NCBI policy for Entrez calls)."}, {"name": "NCBI_API_KEY", "required": false, "description": "NCBI API key to raise Entrez rate limits."}]}}
+metadata:
+  version: "1.2"
+  skill-author: K-Dense Inc.
+  openclaw:
+    envVars:
+    - name: NCBI_EMAIL
+      required: false
+      description: Email for NCBI Entrez identification (required by NCBI policy for Entrez calls).
+    - name: NCBI_API_KEY
+      required: false
+      description: NCBI API key to raise Entrez rate limits.
 ---
 
 # Biopython: Computational Molecular Biology in Python

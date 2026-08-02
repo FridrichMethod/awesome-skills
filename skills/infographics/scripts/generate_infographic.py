@@ -3,8 +3,8 @@
 Generate professional infographics using Nano Banana Pro.
 
 This script generates infographics with smart iterative refinement:
-- Uses Nano Banana Pro (Gemini 3 Pro Image Preview) for generation
-- Uses Gemini 3 Pro for quality review
+- Uses Nano Banana Pro (Gemini 3.1 Flash Image) for generation
+- Uses Gemini 3.6 Flash for quality review
 - Only regenerates if quality is below threshold
 - Supports 10 infographic types and industry style presets
 
@@ -37,6 +37,65 @@ PALETTE_PRESETS = ["wong", "ibm", "tol"]
 DOC_TYPES = [
     "marketing", "report", "presentation", "social", "internal", "draft", "default"
 ]
+
+# Variables forwarded to the generation subprocess. The child needs the
+# OpenRouter credential; the rest keep networking, TLS, and locale working.
+# Copying the whole parent environment instead would hand the child every
+# unrelated secret that happens to be exported in the calling shell.
+FORWARDED_ENV_VARS = (
+    "PATH", "HOME", "LANG", "LC_ALL", "TMPDIR", "PYTHONPATH",
+    "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY",
+    "http_proxy", "https_proxy", "no_proxy",
+    "SSL_CERT_FILE", "SSL_CERT_DIR", "REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE",
+    # Windows needs these for sockets, temp files, and interpreter startup.
+    "SYSTEMROOT", "WINDIR", "COMSPEC", "PATHEXT",
+    "APPDATA", "LOCALAPPDATA", "USERPROFILE", "TEMP", "TMP",
+)
+
+
+def resolve_api_key(explicit=None):
+    """Resolve the OpenRouter key from --api-key, the environment, then any .env file.
+
+    The .env scan walks up from the working directory and finally checks the
+    script's own directory, so running from anywhere inside a project picks up
+    the key at its root. The child process is handed the resolved value through
+    build_subprocess_env, so it never has to repeat this search.
+    """
+    if explicit:
+        return explicit
+
+    from_env = os.environ.get("OPENROUTER_API_KEY", "").strip()
+    if from_env:
+        return from_env
+
+    cwd = Path.cwd()
+    for directory in [cwd, *cwd.parents, Path(__file__).resolve().parent]:
+        env_file = directory / ".env"
+        if not env_file.is_file():
+            continue
+        try:
+            content = env_file.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        for raw in content.splitlines():
+            line = raw.strip()
+            if line.startswith("#") or "=" not in line:
+                continue
+            name, _, value = line.partition("=")
+            if name.strip() == "OPENROUTER_API_KEY":
+                value = value.strip().strip('"').strip("'")
+                if value:
+                    return value
+
+    return None
+
+
+def build_subprocess_env(api_key):
+    """Return a minimal environment for the AI generation subprocess."""
+    env = {name: os.environ[name] for name in FORWARDED_ENV_VARS if name in os.environ}
+    if api_key:
+        env["OPENROUTER_API_KEY"] = api_key
+    return env
 
 
 def list_options():
@@ -106,7 +165,7 @@ How it works:
   2. Describe your infographic in natural language
   3. Nano Banana Pro generates it automatically with:
      - Smart iteration (only regenerates if quality is below threshold)
-     - Quality review by Gemini 3 Pro
+     - Quality review by Gemini 3.6 Flash
      - Document-type aware quality thresholds
      - Professional-quality output
 
@@ -172,15 +231,16 @@ Environment Variables:
     if not args.output:
         parser.error("--output is required")
     
-    # Check for API key
-    api_key = args.api_key or os.getenv("OPENROUTER_API_KEY")
+    # Check for API key — resolves --api-key, the environment, then any .env file
+    api_key = resolve_api_key(args.api_key)
     if not api_key:
-        print("Error: OPENROUTER_API_KEY environment variable not set")
+        print("Error: OPENROUTER_API_KEY not found")
         print("\nFor AI generation, you need an OpenRouter API key.")
         print("Get one at: https://openrouter.ai/keys")
         print("\nSet it with:")
         print("  export OPENROUTER_API_KEY='your_api_key'")
-        print("\nOr use --api-key flag")
+        print("\nOr add OPENROUTER_API_KEY=your_api_key to a .env file")
+        print("Or use --api-key flag")
         sys.exit(1)
     
     # Find AI generation script
@@ -220,10 +280,7 @@ Environment Variables:
     
     # Execute — pass API key via environment to avoid exposure in process listings
     try:
-        env = os.environ.copy()
-        if api_key:
-            env["OPENROUTER_API_KEY"] = api_key
-        result = subprocess.run(cmd, check=False, env=env)
+        result = subprocess.run(cmd, check=False, env=build_subprocess_env(api_key))
         sys.exit(result.returncode)
     except Exception as e:
         print(f"Error executing AI generation: {e}")

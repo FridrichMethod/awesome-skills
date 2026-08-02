@@ -36,6 +36,8 @@ Emit a concern only when it is supported by the supplied manuscript material. Re
 - `issue_key`: a concise normalized key used to detect overlap;
 - `axis`: one primary technical axis;
 - `severity`: `major` or `minor` according to effect on the authors' case;
+- `blocking`: `yes` or `no`; only a Major Concern may be blocking;
+- `severity_rationale`: one sentence explaining the concern's effect on the central case;
 - `claim_pointer`: a faithful paraphrase of the challenged claim or affected reporting element;
 - `evidence_pointer`: a verified section, figure, table, page, or line location;
 - `evidence_status`: `located`, `location_missing`, or `not_assessable`;
@@ -44,9 +46,36 @@ Emit a concern only when it is supported by the supplied manuscript material. Re
 
 Use `location not provided` when the critique is grounded but the exact location cannot be verified. Never manufacture a location to make the ledger look complete.
 
+## Severity and blocking calibration
+
+Classify impact, not tone, difficulty, cost, or preferred reviewer style.
+
+| Classification | Use when | Typical resolution |
+|---|---|---|
+| `major`, `blocking: yes` | The current evidence cannot establish a central conclusion, or a validity, ethics, governance, or data-integrity problem prevents a credible scientific case. | Decisive evidence or analysis, correction of the invalid design/reporting, transparent integrity resolution, or narrowing/removal of the unsupported central claim. |
+| `major`, `blocking: no` | The issue materially weakens inference, novelty, significance, generalizability, reproducibility, or an important part of the evidence chain, but does not by itself invalidate the entire central case. | Substantive analysis, validation, methodological clarification, structural revision, stronger comparison, or meaningful claim moderation. |
+| `minor`, `blocking: no` | The issue is localized and does not change the central conclusion or interpretation of the core evidence. | Precise wording, definition, citation, figure/table/legend correction, localized reporting detail, or limited clarification. |
+
+Calibration rules:
+
+- A missing detail is Major when it prevents evaluation or reproduction of a result central to the
+  paper; it is Minor when the result remains interpretable and the correction is localized.
+- A figure or statistical issue is not automatically Minor. Misleading uncertainty, denominators,
+  scales, tests, or replicate definitions may be Major or blocking when they affect inference.
+- A writing issue is Major when ambiguity changes the main claim or scientific interpretation;
+  ordinary clarity, terminology, and formatting issues are Minor.
+- `not assessable` is an evidence-status label, not a severity. Do not convert absent material into
+  a Major Concern unless the supplied package was expected to contain it and the omission itself is
+  verifiable.
+- Minor Comments must be actionable and manuscript-specific; omit taste-only copyediting.
+- Never manufacture concerns to meet a numeric quota. Use `None identified from the supplied
+  material` when a severity tier has no grounded item.
+
 ## Reviewer allocation
 
 - Keep the visible roles as `Reviewer 1`, `Reviewer 2`, and `Reviewer 3` with allowed emphasis labels.
 - Allocate applicable axes across the three reports to improve coverage, but ensure every emitted concern remains relevant to that report's emphasis.
 - Do not expose specialist personas such as `Statistics Reviewer` or infer reviewer-selection history.
 - Reuse the same `issue_key` when more than one reviewer independently raises the same underlying issue; this enables honest consensus and overlap checks.
+- Allocate Major and Minor concerns according to evidence and emphasis, not fixed counts. A reviewer
+  may legitimately have no concern at one severity level.

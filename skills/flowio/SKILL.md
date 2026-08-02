@@ -1,13 +1,12 @@
 ---
 name: flowio
 description: Read, inspect, and write Flow Cytometry Standard (FCS) 2.0, 3.0, and 3.1 files with FlowIO. Use for low-level FCS metadata and channel inspection, NumPy event extraction, multi-dataset files, table export, and FCS 3.1 creation; use FlowKit for compensation, cytometry transforms, gating, or FlowJo workspaces.
-allowed-tools:
-  - Read
-  - Write
-  - Bash
+allowed-tools: Read Write Bash
 license: BSD-3-Clause license
 compatibility: Requires Python 3.9-3.13, uv, and FlowIO 1.4.0. NumPy is installed with FlowIO; pandas is optional for DataFrame workflows. Runtime parsing is local and needs no credentials or network access.
-metadata: {"version": "2.0", "skill-author": "K-Dense Inc."}
+metadata:
+  version: "2.0"
+  skill-author: K-Dense Inc.
 ---
 
 # FlowIO

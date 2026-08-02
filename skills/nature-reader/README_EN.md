@@ -2,13 +2,15 @@
 
 [中文说明](README.md)
 
-`nature-reader` converts paper PDFs, DOIs, arXiv links, publisher HTML, or pasted text into traceable full-paper Markdown readers with Chinese-English text, figure/table placement, and a source map.
+`nature-reader` converts paper PDFs, DOIs, arXiv links, publisher HTML, or pasted text into traceable full-paper Markdown readers with Chinese-English text, figure/table placement, rendered equations, and a source map.
 
 ## What To Use It For
 
 - Create full-paper Chinese-English Markdown readers.
 - Insert figures, tables, and translated legends near the first substantive discussion.
 - Build page and source anchors for every paragraph, figure, and table.
+- Render equations as Markdown math and assign a stable `E...` anchor to every display equation.
+- Preserve original equation crops when a scanned or image-only expression cannot be transcribed reliably.
 - Extract reviewable reading materials from PDFs, HTML, or preprint text.
 - Produce reading notes that can support later writing, presentations, or citation checks.
 
@@ -30,11 +32,12 @@
 - `source_map.json`: mapping for pages, text blocks, and figures/tables.
 - `translation_notes.md`: terminology, uncertain content, and translation notes.
 - `assets/`: figures, cropped images, and required attachments.
+- `assets/equations/`: original crops for low-confidence or image-only equations when needed.
 
 ## Boundaries
 
 - The default output is Markdown-centered; it does not generate an interactive Q&A panel by default.
-- Scanned PDFs, two-column ordering, image-only formulas, or copyright-restricted full text may need additional human checking.
+- Scanned PDFs, two-column ordering, or copyright-restricted full text may need additional human checking; image-only equations retain an original crop and an explicit transcription confidence.
 - If full text cannot be legally obtained, the skill states the limitation and works from available abstract/metadata.
 
 ## Related Skills

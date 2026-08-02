@@ -4,7 +4,9 @@ description: High-performance DataFrame library for Python ETL, analytics, and p
 license: https://github.com/pola-rs/polars/blob/main/LICENSE
 allowed-tools: Read
 compatibility: Requires Python 3.10+ for polars 1.41.x. Install with uv pip install; optional extras enable Excel, database, cloud, pandas/NumPy, and GPU integrations.
-metadata: {"version": "1.1", "skill-author": "K-Dense Inc."}
+metadata:
+  version: "1.1"
+  skill-author: K-Dense Inc.
 ---
 
 # Polars

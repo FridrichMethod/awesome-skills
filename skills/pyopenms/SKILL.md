@@ -4,7 +4,9 @@ description: Complete mass spectrometry analysis platform. Use for proteomics an
 license: 3 clause BSD license
 allowed-tools: Read Write Edit Bash
 compatibility: Requires Python 3.9+ and uv. Examples and scripts target pyOpenMS 3.5.0.
-metadata: {"version": "2.0", "skill-author": "K-Dense Inc."}
+metadata:
+  version: "2.0"
+  skill-author: K-Dense Inc.
 ---
 
 # PyOpenMS

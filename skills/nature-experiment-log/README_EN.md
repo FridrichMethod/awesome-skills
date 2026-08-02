@@ -4,6 +4,13 @@
 
 `nature-experiment-log` turns experiment images, voice notes, text, and scattered observations into traceable structured experiment logs for Obsidian or plain Markdown workflows.
 
+## Ways To Use It
+
+- Upload images, audio, voice transcripts, or text directly in the current session.
+- Provide a local file or folder path for the agent to read and organize.
+- Optionally use `feishu-cli-integration` to retrieve messages and attachments from a Feishu group.
+- Save the output to a normal local folder or an Obsidian vault; when no target directory is provided, return save-ready Markdown first.
+
 ## What To Use It For
 
 - Turn a day's experiment record into a standard log with YAML frontmatter.
@@ -33,7 +40,7 @@
 
 - The skill does not invent temperature, duration, recipe, device model, or results.
 - Unconfirmed information is preserved as `AUTHOR_INPUT_NEEDED` or Chinese confirmation items.
-- Feishu, Obsidian, or other external write paths depend on local CLI configuration or directory permissions.
+- The core workflow does not require Feishu or Obsidian. Their CLI, bot permissions, or vault access are needed only when those optional integrations are used.
 
 ## Related Skills
 

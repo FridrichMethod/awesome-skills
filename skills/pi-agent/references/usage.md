@@ -4,67 +4,122 @@ Source: https://pi.dev/docs/latest/usage
 
 ## Interface
 
-Interactive mode has a startup header, message area, editor, and footer. The footer shows cwd, session name, token/cache usage, cost, context usage, and current model. The editor border indicates thinking level.
+Interactive mode has four areas: startup header (shortcuts, loaded context files, prompt templates, skills, extensions), messages, editor, and footer. The footer shows cwd, session name, token/cache usage, cost, context usage, and current model; totals include assistant responses, usage reported by tools, and summary generation. The editor border indicates thinking level. Built-in UI (`/settings`) or extension UI can temporarily replace the editor.
 
 ## Editor Features
 
-- Type `@` to fuzzy-search project files.
-- Press Tab for path completion.
-- Use Shift+Enter, or Ctrl+Enter on Windows Terminal, for multi-line input.
-- Paste or drag images in supported terminals.
-- Prefix with `!` to run a shell command and include output in context.
-- Prefix with `!!` to run a hidden shell command outside model context.
-- Ctrl+G opens `$VISUAL` or `$EDITOR`.
+| Feature | How |
+|---|---|
+| File reference | Type `@` to fuzzy-search project files |
+| Path completion | Tab |
+| Multi-line input | Shift+Enter, or Ctrl+Enter on Windows Terminal |
+| Copy response | Ctrl+X copies the last assistant message; in `/tree` it copies the selected message |
+| Images | Paste with Ctrl+V (Alt+V on Windows), or drag into the terminal |
+| Shell command | `!command` runs and sends output to the model |
+| Hidden shell command | `!!command` runs without sending output to the model |
+| External editor | Ctrl+G opens `externalEditor`, `$VISUAL`, `$EDITOR`, Notepad on Windows, or `nano` elsewhere |
 
 ## Slash Commands
 
-Important commands: `/login`, `/logout`, `/model`, `/scoped-models`, `/settings`, `/resume`, `/new`, `/name`, `/session`, `/tree`, `/fork`, `/clone`, `/compact [prompt]`, `/copy`, `/export [file]`, `/share`, `/reload`, `/hotkeys`, `/changelog`, `/quit`.
+| Command | Description |
+|---|---|
+| `/login`, `/logout` | Manage OAuth or API-key credentials |
+| `/llama` | Download, load, unload llama.cpp router models (`references/llama-cpp.md`) |
+| `/model` | Switch models |
+| `/scoped-models` | Enable/disable models for Ctrl+P cycling |
+| `/settings` | Thinking level, theme, message delivery, transport |
+| `/resume`, `/new`, `/name <name>`, `/session` | Session management |
+| `/tree` | Jump to any point in the session and continue from there |
+| `/trust` | Save project trust decision for future sessions |
+| `/fork`, `/clone` | New session from a previous user message / duplicate active branch |
+| `/compact [prompt]` | Manually compact context, optionally with custom instructions |
+| `/copy` | Copy last assistant message to clipboard |
+| `/export [file]` | Export session to HTML or JSONL |
+| `/import <file>` | Import and resume a session from a JSONL file |
+| `/share` | Upload as private GitHub gist with shareable HTML link |
+| `/reload` | Reload keybindings, extensions, skills, prompts, themes, context files |
+| `/hotkeys`, `/changelog`, `/quit` | Shortcuts, version history, quit |
 
-Skills are available as `/skill:name`; prompt templates expand as `/template-name`; extensions can register custom commands.
+Skills are available as `/skill:name`; prompt templates expand as `/templatename`; extensions can register custom commands.
 
 ## Message Queue
 
-- Enter while the agent is running queues a steering message.
-- Alt+Enter queues a follow-up message for after all current work finishes.
-- Escape aborts and restores queued messages to the editor.
-- Alt+Up retrieves queued messages.
+- Enter queues a steering message, delivered after the current assistant turn finishes its tool calls.
+- Alt+Enter queues a follow-up message, delivered after the agent finishes all work.
+- Escape aborts and restores queued messages to the editor; Alt+Up retrieves them.
 - `steeringMode` and `followUpMode` control one-at-a-time vs all-at-once delivery.
+
+On Windows Terminal, Alt+Enter is fullscreen by default — remap it (`references/terminal-setup.md`).
+
+## Context and System Prompt Files
+
+Pi loads `AGENTS.md` or `CLAUDE.md` from `~/.pi/agent/AGENTS.md`, parent directories walking up from cwd, and the current directory. Disable with `--no-context-files` / `-nc`.
+
+Replace the default system prompt with `.pi/SYSTEM.md` (project) or `~/.pi/agent/SYSTEM.md` (global). Append instead of replacing with `APPEND_SYSTEM.md` in either location.
+
+## Project Trust
+
+Interactive startup asks before trusting a project folder that has project-local settings, resources, or project `.agents/skills` and no saved decision for that folder or a parent in `~/.pi/agent/trust.json`. Before the decision, Pi loads only context files, user/global extensions, and CLI `-e` extensions so they can handle `project_trust`. Non-interactive modes (`-p`, `--mode json`, `--mode rpc`) never prompt and follow `defaultProjectTrust` (`ask` default, `never`, `always`); `--approve`/`-a` and `--no-approve`/`-na` override for one run. `/trust` saves a decision (including for the immediate parent folder) to `trust.json` without reloading the session. `pi config` and package commands use the same flow, except `pi update` never prompts.
+
+## Exporting and Sharing
+
+`/export [file]` writes HTML; `/share` uploads a private GitHub gist with a shareable HTML link. `badlogic/pi-share-hf` publishes sessions to Hugging Face datasets for research.
 
 ## CLI Modes
 
 ```bash
 pi [options] [@files...] [messages...]
-pi -p "prompt"
-pi --mode json "prompt"
-pi --mode rpc
-pi --export [out]
+pi -p "prompt"                # print and exit
+pi --mode json "prompt"       # JSONL event stream
+pi --mode rpc                 # RPC over stdin/stdout
+pi --export <in> [out]        # export a session to HTML
 ```
 
 Print mode reads piped stdin and merges it into the initial prompt.
 
-## Common Options
+## Package Commands
 
-Model: `--provider`, `--model`, `--api-key`, `--thinking`, `--models`, `--list-models`.
+```bash
+pi install <source> [-l]     # -l writes to project settings
+pi remove <source> [-l]      # pi uninstall is an alias
+pi update [source|self|pi]   # update pi only, or one package source
+pi update --all              # pi + packages; reconcile pinned git refs
+pi update --extensions       # packages only
+pi update --models           # refresh model catalogs only
+pi update --self             # update pi only
+pi update --extension <src>  # update one package
+pi list                      # list installed packages
+pi config                    # enable/disable package resources
+```
 
-Session: `-c/--continue`, `-r/--resume`, `--session`, `--fork`, `--session-dir`, `--no-session`, `--name/-n`.
+## Options
 
-Tools: `--tools/-t`, `--exclude-tools/-xt`, `--no-builtin-tools/-nbt`, `--no-tools/-nt`. Built-ins are `read`, `bash`, `edit`, `write`, `grep`, `find`, `ls`.
+Model: `--provider <name>`, `--model <pattern>` (supports `provider/id` and `:<thinking>`), `--api-key`, `--thinking <off|minimal|low|medium|high|xhigh|max>`, `--models <patterns>`, `--list-models [search]`.
 
-Resources: `-e/--extension`, `--skill`, `--prompt-template`, `--theme`, and corresponding `--no-*` flags. `--no-context-files` disables `AGENTS.md`/`CLAUDE.md` discovery.
+Session: `-c/--continue`, `-r/--resume`, `--session <path|id>`, `--fork <path|id>`, `--session-dir`, `--no-session`, `-n/--name`.
 
-Other: `--system-prompt`, `--append-system-prompt`, `--verbose`, `--approve`, `--no-approve`, `--help`, `--version`.
+Tools: `-t/--tools`, `-xt/--exclude-tools`, `-nbt/--no-builtin-tools` (keeps extension/custom tools), `-nt/--no-tools`. Built-ins: `read`, `bash`, `edit`, `write`, `grep`, `find`, `ls`.
 
-## Environment Variables
+Resources: `-e/--extension <source>` (path, npm, or git; repeatable), `--no-extensions`, `--skill`, `--no-skills`, `--prompt-template`, `--no-prompt-templates`, `--theme`, `--no-themes`, `-nc/--no-context-files`. Combine `--no-*` with explicit flags to load exactly what you need: `pi --no-extensions -e ./my-extension.ts`.
 
-- `PI_CODING_AGENT_DIR`: config directory, default `~/.pi/agent`.
-- `PI_CODING_AGENT_SESSION_DIR`: session storage override.
-- `PI_PACKAGE_DIR`: package directory override.
-- `PI_OFFLINE`: disable startup network operations.
-- `PI_SKIP_VERSION_CHECK`: skip version check.
-- `PI_TELEMETRY`: override install/update telemetry and provider attribution headers.
-- `PI_CACHE_RETENTION`: set `long` where supported.
-- `VISUAL`, `EDITOR`: external editor.
+Other: `--system-prompt <text>` (context files and skills are still appended), `--append-system-prompt`, `--verbose`, `-a/--approve`, `-na/--no-approve`, `-h/--help`, `-v/--version`.
+
+File arguments: prefix with `@` to include in the message (`pi @code.ts @test.ts "Review these"`).
+
+Environment variables are documented separately in `references/environment-variables.md`.
+
+## Examples
+
+```bash
+pi "List all .ts files in src/"
+pi --name "release audit" -p "Audit this repository"
+pi --model openai/gpt-4o "Help me refactor"
+pi --model sonnet:high "Solve this complex problem"
+pi --models "claude-*,gpt-4o"
+pi --tools read,grep,find,ls -p "Review the code"
+pi --exclude-tools ask_question
+```
 
 ## Design Principles
 
-Pi intentionally does not include built-in MCP, sub-agents, permission popups, plan mode, to-dos, or background bash. Build or install those workflows as extensions/packages, or use containers/tmux/external tools.
+Pi keeps the core small and pushes workflow-specific behavior into extensions, skills, prompt templates, and packages. It intentionally does not include built-in MCP, sub-agents, permission popups, plan mode, to-dos, or background bash. Build or install those workflows as extensions/packages, or use external tools such as containers and tmux.

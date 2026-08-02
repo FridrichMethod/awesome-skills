@@ -2,26 +2,23 @@
 
 Source: https://pi.dev/docs/latest/sdk
 
-Install the main package; the SDK is included:
+The SDK ships in the main package:
 
 ```bash
 npm install @earendil-works/pi-coding-agent
 ```
 
-Use the SDK to embed Pi in apps, build custom UIs, automate workflows, spawn sub-agents, test behavior, or customize tools/resources in process.
+Use it to embed Pi, build custom UIs, automate workflows, spawn sub-agents, test behavior, or customize tools/resources in process.
 
 ## Quick Start
 
 ```ts
-import { AuthStorage, createAgentSession, ModelRegistry, SessionManager } from "@earendil-works/pi-coding-agent";
+import { createAgentSession, ModelRuntime, SessionManager } from "@earendil-works/pi-coding-agent";
 
-const authStorage = AuthStorage.create();
-const modelRegistry = ModelRegistry.create(authStorage);
-
+const modelRuntime = await ModelRuntime.create();
 const { session } = await createAgentSession({
   sessionManager: SessionManager.inMemory(),
-  authStorage,
-  modelRegistry,
+  modelRuntime,
 });
 
 session.subscribe((event) => {
@@ -33,62 +30,106 @@ session.subscribe((event) => {
 await session.prompt("What files are in the current directory?");
 ```
 
+`createAgentSession()` returns `{ session, extensionsResult, modelFallbackMessage? }` and uses `DefaultResourceLoader` when no `resourceLoader` is passed.
+
 ## `AgentSession`
 
-Core methods: `prompt`, `steer`, `followUp`, `subscribe`, `setModel`, `setThinkingLevel`, `cycleModel`, `cycleThinkingLevel`, `navigateTree`, `compact`, `abortCompaction`, `abort`, and `dispose`.
+Methods: `prompt(text, options?)`, `steer(text)`, `followUp(text)`, `subscribe(listener)` (returns unsubscribe), `setModel`, `setThinkingLevel`, `cycleModel`, `cycleThinkingLevel`, `navigateTree(targetId, { summarize, customInstructions, replaceInstructions, label })`, `compact(customInstructions?)`, `abortCompaction()`, `abort()`, `dispose()`.
 
 State: `sessionFile`, `sessionId`, `agent`, `model`, `thinkingLevel`, `messages`, `isStreaming`.
 
-Session replacement (`new`, `resume`, `fork`, import) belongs to `AgentSessionRuntime`, not `AgentSession`.
+`session.agent.state` exposes `messages`, `model`, `thinkingLevel`, `systemPrompt`, `tools`, `streamingMessage`, `errorMessage`; `state.messages` and `state.tools` can be replaced (top-level array is copied) and `session.agent.waitForIdle()` waits for completion.
+
+Session replacement (new/resume/fork/clone/import) lives on `AgentSessionRuntime`, not `AgentSession`.
 
 ## Runtime API
 
-Use `createAgentSessionRuntime()` when replacing the active session and rebuilding cwd-bound services. After `runtime.newSession()`, `runtime.switchSession()`, or `runtime.fork()`, `runtime.session` changes; re-subscribe to events and re-bind extensions if you manage them manually.
+```ts
+const createRuntime: CreateAgentSessionRuntimeFactory = async ({ cwd, sessionManager, sessionStartEvent }) => {
+  const services = await createAgentSessionServices({ cwd });
+  return {
+    ...(await createAgentSessionFromServices({ services, sessionManager, sessionStartEvent })),
+    services,
+    diagnostics: services.diagnostics,
+  };
+};
+
+const runtime = await createAgentSessionRuntime(createRuntime, {
+  cwd: process.cwd(),
+  agentDir: getAgentDir(),
+  sessionManager: SessionManager.create(process.cwd()),
+});
+```
+
+`AgentSessionRuntime` owns `newSession()`, `switchSession(path)`, `fork(entryId)`, clone via `fork(entryId, { position: "at" })`, and `importFromJsonl()`. `runtime.session` changes after each, so re-subscribe to events and call `runtime.session.bindExtensions(...)` again if you manage extensions manually. Creation returns `runtime.diagnostics`; failures throw.
 
 ## Prompting and Queueing
 
-`PromptOptions` supports `expandPromptTemplates`, `images`, `streamingBehavior` (`steer` or `followUp`), `source`, and `preflightResult`.
+```ts
+interface PromptOptions {
+  expandPromptTemplates?: boolean;
+  images?: ImageContent[];
+  streamingBehavior?: "steer" | "followUp";
+  source?: InputSource;
+  preflightResult?: (success: boolean) => void;
+}
+```
 
-During streaming, `prompt()` without `streamingBehavior` throws. Use `session.steer()` for steering delivered after current assistant turn tool calls, or `session.followUp()` for after all work finishes. Extension commands execute immediately and cannot be queued by `steer`/`followUp`.
+`preflightResult` fires once before `prompt()` resolves: `true` when accepted, queued, or handled immediately; `false` when preflight rejected before acceptance. Failures after acceptance surface through events and messages, not `preflightResult(false)`. `prompt()` resolves only after the full accepted run finishes, including retries.
+
+Extension commands execute immediately even during streaming. File-based prompt templates expand before sending or queueing. Calling `prompt()` while streaming without `streamingBehavior` throws — use `session.steer()` (delivered after the current assistant turn's tool calls) or `session.followUp()` (after all work finishes). Both expand templates but error on extension commands.
 
 ## Events
 
-Subscribe to `AgentSessionEvent` for `message_update` text/thinking deltas, tool execution events, message lifecycle, agent lifecycle, turn lifecycle, queue updates, compaction, and retry events.
+`message_update` (with `assistantMessageEvent` deltas such as `text_delta`, `thinking_delta`), `tool_execution_start` / `_update` / `_end`, `message_start` / `message_end`, `agent_start` / `agent_end`, `turn_start` / `turn_end`, `queue_update`, `compaction_start` / `compaction_end`, `auto_retry_start` / `auto_retry_end`, `summarization_retry_scheduled` / `summarization_retry_attempt_start` / `summarization_retry_finished`.
 
 ## Models and Auth
 
-Use `AuthStorage.create()` and `ModelRegistry.create(authStorage)`. API key priority: runtime overrides, `auth.json`, environment variables, then custom provider fallback from `models.json`.
+`ModelRuntime` replaces the older `AuthStorage` + `ModelRegistry` pair (a synchronous `ModelRegistry` facade remains exported for extension compatibility).
 
-Use `getModel(provider, id)` for built-in model lookup and `modelRegistry.find(provider, id)` for built-in plus custom. `modelRegistry.getAvailable()` checks auth availability.
+```ts
+const modelRuntime = await ModelRuntime.create({ authPath, modelsPath, credentials });
+modelRuntime.getModel(provider, id);        // built-ins + models.json, no auth check
+await modelRuntime.getAvailable();          // only models with valid auth
+await modelRuntime.checkAuth(providerId);
+modelRuntime.getProviders();                // provider.auth methods and status
+modelRuntime.setRuntimeApiKey(provider, key); // not persisted
+```
+
+Credential priority: runtime overrides → `auth.json` → environment variables → custom fallback from `models.json`. `getModel(provider, id)` from `@earendil-works/pi-ai` looks up built-ins only. Inject any pi-ai `CredentialStore` (for example `InMemoryCredentialStore`) via `credentials`.
+
+To match CLI parsing, use `resolveCliModel({ cliModel, modelRuntime })` (uses all registered models so `--api-key` first-run flows resolve before stored auth exists) and `resolveModelScopeWithDiagnostics(patterns, modelRuntime)` (matches `--models`/`enabledModels` semantics and returns warnings instead of printing).
+
+Session options also accept `model`, `thinkingLevel` (`off`…`max`), and `scopedModels: [{ model, thinkingLevel }]` for Ctrl+P cycling. With no model: restore from session, then settings default, then first available.
 
 ## Tools
 
-Built-in names: `read`, `bash`, `edit`, `write`, `grep`, `find`, `ls`. Defaults: `read`, `bash`, `edit`, `write`. `tools` allowlists tools; `excludeTools` disables specific tools. `noTools: "all"` disables all tools; `noTools: "builtin"` disables built-ins but keeps custom/extension tools.
+Built-ins: `read`, `bash`, `edit`, `write`, `grep`, `find`, `ls`. Defaults: `read`, `bash`, `edit`, `write`. `tools` allowlists, `excludeTools` disables specific names after the allowlist, `noTools: "all"` disables everything, `noTools: "builtin"` keeps extension/custom tools. The `edit` tool returns `details.diff` for the TUI and `details.patch` as a standard unified patch for SDK consumers.
 
-The `edit` tool returns `details.diff` for TUI display and `details.patch` as standard unified patch for SDK consumers.
+Define custom tools with `defineTool()` and pass them as `customTools`; include their names in `tools` if you use an allowlist. Tool factories are exported too: `createCodingTools`, `createReadOnlyTools`, `createReadTool`, `createBashTool`, `createEditTool`, `createWriteTool`, `createGrepTool`, `createFindTool`, `createLsTool`.
 
-Define custom tools with `defineTool()` and pass `customTools`; include custom names in `tools` if using an allowlist.
+Passing a custom `cwd` makes `createAgentSession()` build the selected built-in tools for that directory.
 
 ## Resource Loading
 
-`DefaultResourceLoader` discovers extensions, skills, prompts, themes, and context files. It supports additional extension paths, inline extension factories, overrides for skills/prompts/context, and a shared event bus.
+`DefaultResourceLoader` discovers extensions, skills, prompts, themes, and context files. Options: `cwd`, `agentDir`, `additionalExtensionPaths`, `extensionFactories` (bare functions or `InlineExtension { name, factory }` so the startup list shows `<inline:my-provider>` instead of `<inline:1>`), `settingsManager`, `systemPromptOverride`, `skillsOverride`, `promptsOverride`, `agentsFilesOverride`, `eventBus` (from `createEventBus()`). Call `await loader.reload()`, then read `getExtensions()`, `getSkills()`, `getPrompts()`, `getThemes()`, `getAgentsFiles().agentsFiles`.
 
-`cwd` controls project discovery and tool path resolution. `agentDir` controls global resources such as `~/.pi/agent`.
+`cwd` drives project discovery (`.pi/extensions`, `.pi/skills`, `.agents/skills` up to the git root, `.pi/prompts`, `AGENTS.md` walk-up, session naming); `agentDir` drives global resources (`extensions/`, `skills/`, `~/.agents/skills/`, `prompts/`, `AGENTS.md`, `settings.json`, `models.json`, `auth.json`, `sessions/`). With a custom `ResourceLoader`, `cwd`/`agentDir` still influence session naming and tool path resolution but no longer control discovery.
 
 ## Sessions and Settings
 
-Use `SessionManager.inMemory()`, `create()`, `continueRecent()`, `open()`, `list()`, and `listAll()`. Tree APIs include `getEntries`, `getTree`, `getPath`, `getLeafEntry`, `getEntry`, `getChildren`, `appendLabelChange`, `branch`, `branchWithSummary`, and `createBranchedSession`.
+`SessionManager.inMemory(cwd?)`, `create(cwd)`, `continueRecent(cwd)`, `open(path)`, `list(cwd)`, `listAll(cwd)`. Tree API: `getEntries`, `getTree`, `getPath`, `getLeafEntry`, `getEntry`, `getChildren`, `getLabel`, `appendLabelChange`, `branch`, `branchWithSummary`, `createBranchedSession`. Full API in `references/session-format.md`.
 
-`SettingsManager.create()` loads global plus project settings; `SettingsManager.inMemory()` is useful for tests. Setters persist asynchronously; call `flush()` for durability and `drainErrors()` to report write errors.
+`SettingsManager.create(cwd?, agentDir?)` merges global plus project settings; `SettingsManager.inMemory(settings?)` avoids file I/O for tests. `applyOverrides({ compaction, retry, ... })` layers overrides. Getters/setters are synchronous for in-memory state and enqueue writes asynchronously — call `await flush()` for a durability boundary and `drainErrors()` to report write errors yourself (the manager never prints them).
 
 ## Run Modes
 
-The SDK exports run helpers: `InteractiveMode`, `runPrintMode`, and `runRpcMode`. Use these when building custom launchers while reusing Pi's mode implementations.
+`InteractiveMode` (full TUI), `runPrintMode(runtime, { mode: "text", initialMessage, initialImages, messages })`, `runRpcMode(runtime)`. All take an `AgentSessionRuntime`. `InteractiveMode` options include `migratedProviders`, `modelFallbackMessage`, `initialMessage`, `initialImages`, `initialMessages`.
 
 ## SDK vs RPC
 
-Prefer SDK when you want type safety, same Node.js process, direct state access, or programmatic tools/extensions. Prefer RPC when integrating from another language, needing process isolation, or building a language-agnostic client.
+Prefer the SDK for type safety, same-process integration, direct state access, or programmatic tools/extensions. Prefer RPC for other languages, process isolation, or language-agnostic clients.
 
 ## Important Exports
 
-`createAgentSession`, `createAgentSessionRuntime`, `AgentSessionRuntime`, `AuthStorage`, `ModelRegistry`, `DefaultResourceLoader`, `defineTool`, `getAgentDir`, `SessionManager`, `SettingsManager`, tool factories, and types for options, results, extensions, tools, skills, and prompt templates.
+`createAgentSession`, `createAgentSessionRuntime`, `AgentSessionRuntime`, `createAgentSessionServices`, `createAgentSessionFromServices`, `ModelRuntime`, `ModelRegistry`, `resolveCliModel`, `resolveModelScopeWithDiagnostics`, `DefaultResourceLoader`, `ResourceLoader` type, `createEventBus`, `CONFIG_DIR_NAME`, `defineTool`, `getAgentDir`, `getPackageDir`, `getReadmePath`, `getDocsPath`, `getExamplesPath`, `SessionManager`, `SettingsManager`, the tool factories above, `InteractiveMode`, `runPrintMode`, `runRpcMode`, and types for options, results, extensions (`ExtensionAPI`, `ExtensionFactory`, `InlineExtension`), tools, skills, and prompt templates.

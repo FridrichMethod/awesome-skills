@@ -151,7 +151,7 @@ def request_images(payload: dict[str, Any], args: argparse.Namespace) -> dict[st
         headers["X-Title"] = app_name
 
     request = urllib.request.Request(
-        API_URL,
+        args.api_url,
         data=json.dumps(payload).encode("utf-8"),
         headers=headers,
         method="POST",
@@ -161,9 +161,9 @@ def request_images(payload: dict[str, Any], args: argparse.Namespace) -> dict[st
             return json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")
-        raise SystemExit(f"OpenRouter request failed ({exc.code}): {body}") from exc
+        raise SystemExit(f"Image request failed ({exc.code}) at {args.api_url}: {body}") from exc
     except urllib.error.URLError as exc:
-        raise SystemExit(f"OpenRouter request failed: {exc}") from exc
+        raise SystemExit(f"Image request failed at {args.api_url}: {exc}") from exc
 
 
 def save_outputs(response: dict[str, Any], payload: dict[str, Any], args: argparse.Namespace) -> None:
@@ -189,7 +189,7 @@ def save_outputs(response: dict[str, Any], payload: dict[str, Any], args: argpar
             raise SystemExit(f"No image bytes or URL in response item {index}: {item}")
 
     metadata = {
-        "api_url": API_URL,
+        "api_url": args.api_url,
         "request": payload,
         "response_usage": response.get("usage"),
         "created": response.get("created"),
@@ -228,10 +228,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--background", choices=["auto", "transparent", "opaque"])
     parser.add_argument("--n", type=int, default=1)
     parser.add_argument("--api-key-env", default="OPENROUTER_API_KEY")
+    parser.add_argument(
+        "--api-url",
+        default=os.environ.get("SCHEMATIC_IMAGE_API_URL", API_URL),
+        help=(
+            "Images endpoint to call. Defaults to OpenRouter; point it at any "
+            "OpenAI-compatible images endpoint to use that service instead."
+        ),
+    )
     parser.add_argument("--site-url")
     parser.add_argument("--app-name")
     parser.add_argument("--timeout", type=int, default=180)
-    parser.add_argument("--dry-run", action="store_true", help="Print request payload without calling OpenRouter.")
+    parser.add_argument("--dry-run", action="store_true", help="Print request payload without calling the API.")
     return parser.parse_args()
 
 

@@ -3,12 +3,7 @@ name: matlab
 description: Build, review, migrate, and safely plan MATLAB or GNU Octave numerical workflows, including arrays, tabular/time data, tests, projects, graphics, MAT files, and explicit Python interoperability.
 license: MIT
 compatibility: "Documentation is pinned where noted to proprietary MATLAB R2026a and free GNU Octave 11.3.0. Bundled Python CLIs require Python 3.11+ and run locally without MATLAB or Octave; optional MAT inventory uses scipy and/or h5py."
-allowed-tools:
-  - Read
-  - Write
-  - Bash
-  - Glob
-  - Python
+allowed-tools: Read Write Bash Glob Python
 metadata:
   version: "1.1"
   skill-author: "K-Dense Inc."

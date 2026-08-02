@@ -2,7 +2,7 @@
 name: pytdc
 description: Use Therapeutics Data Commons through the PyTDC Python package for registry discovery, approved dataset access, task-aware splits, evaluator metrics, benchmark groups, and bounded molecular-oracle workflows.
 license: MIT
-allowed-tools: Read, Write, Edit, Bash
+allowed-tools: Read Write Edit Bash
 compatibility: Requires uv, CPython 3.11, PyTDC 1.1.15, and setuptools 80.9.0 for its legacy pkg_resources runtime import. Dataset, benchmark, checkpoint, and remote-oracle operations require network/storage review and explicit user approval.
 metadata:
   version: "1.1"

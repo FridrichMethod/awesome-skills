@@ -24,12 +24,16 @@ import matplotlib.pyplot as plt
 from typing import Any, Dict
 
 
+#: ArviZ 1.x compares models on PSIS-LOO ELPD only; there is no `ic=` switch and
+#: no deviance scale. WAIC is still available on its own via `az.waic()`.
+SUPPORTED_IC = ('loo', 'elpd')
+
+
 def compare_models(models_dict: Dict[str, Any],
                    ic='loo',
-                   scale='deviance',
                    verbose=True):
     """
-    Compare multiple models using information criteria.
+    Compare multiple models by expected log pointwise predictive density.
 
     Parameters
     ----------
@@ -37,29 +41,38 @@ def compare_models(models_dict: Dict[str, Any],
         Dictionary mapping model names to PyMC posterior objects.
         All models must have log_likelihood computed.
     ic : str
-        Information criterion to use: 'loo' (default) or 'waic'
-    scale : str
-        Scale for IC: 'deviance' (default), 'log', or 'negative_log'
+        Information criterion. Only 'loo' (equivalently 'elpd') is supported:
+        ArviZ 1.x ranks models on PSIS-LOO ELPD.
     verbose : bool
         Print detailed comparison results (default: True)
 
     Returns
     -------
     pd.DataFrame
-        Comparison DataFrame with model rankings and statistics
+        Comparison DataFrame with model rankings and statistics, on the ELPD
+        scale (higher is better, so `elpd_diff` is 0 for the best model and
+        negative for the others).
 
     Notes
     -----
-    Models must be fit with idata_kwargs={'log_likelihood': True} or
-    log-likelihood computed afterwards with pm.compute_log_likelihood().
+    Models must have a log_likelihood group, computed during sampling or
+    afterwards with pm.compute_log_likelihood(idata).
     """
+    if ic.lower() not in SUPPORTED_IC:
+        raise ValueError(
+            f"unknown information criterion {ic!r}: ArviZ 1.x ranks models on "
+            "PSIS-LOO ELPD, so pass ic='loo'. For WAIC, call az.waic() per "
+            "model directly."
+        )
+
     if verbose:
         print("="*70)
-        print(f" " * 25 + f"MODEL COMPARISON ({ic.upper()})")
+        print(" " * 25 + "MODEL COMPARISON (LOO)")
         print("="*70)
 
-    # Perform comparison
-    comparison = az.compare(models_dict, ic=ic, scale=scale)
+    # round_to='none' keeps the columns numeric; the default formats them for
+    # display, which turns every comparison below into a string comparison.
+    comparison = az.compare(models_dict, round_to='none')
 
     if verbose:
         print("\nModel Rankings:")
@@ -69,15 +82,15 @@ def compare_models(models_dict: Dict[str, Any],
         print("\n" + "="*70)
         print("INTERPRETATION GUIDE")
         print("="*70)
-        print(f"• rank:     Model ranking (0 = best)")
-        print(f"• {ic}:       {ic.upper()} estimate (lower is better)")
-        print(f"• p_{ic}:     Effective number of parameters")
-        print(f"• d{ic}:      Difference from best model")
-        print(f"• weight:   Model probability (pseudo-BMA)")
-        print(f"• se:       Standard error of {ic.upper()}")
-        print(f"• dse:      Standard error of the difference")
-        print(f"• warning:  True if model has reliability issues")
-        print(f"• scale:    {scale}")
+        print("• rank:       Model ranking (0 = best)")
+        print("• elpd:       PSIS-LOO ELPD estimate (higher is better)")
+        print("• p:          Effective number of parameters")
+        print("• elpd_diff:  ELPD minus the best model's ELPD (0 for the best)")
+        print("• weight:     Model probability (stacking weights)")
+        print("• se:         Standard error of the ELPD estimate")
+        print("• dse:        Standard error of the difference")
+        print("• p_worse:    Probability the model is worse than the best one")
+        print("• diag_elpd:  Reliability diagnostic for the ELPD estimate")
 
         print("\n" + "="*70)
         print("MODEL SELECTION GUIDELINES")
@@ -86,33 +99,38 @@ def compare_models(models_dict: Dict[str, Any],
         best_model = comparison.index[0]
         print(f"\n✓ Best model: {best_model}")
 
-        # Check for clear winner
+        # Check for a clear winner. Vehtari et al. recommend treating an ELPD
+        # difference below 4 as small, and otherwise judging it against the
+        # standard error of the difference.
         if len(comparison) > 1:
-            delta = comparison.iloc[1][f'd{ic}']
+            delta = abs(comparison.iloc[1]['elpd_diff'])
             delta_se = comparison.iloc[1]['dse']
 
-            if delta > 10:
-                print(f"  → STRONG evidence for {best_model} (Δ{ic} > 10)")
-            elif delta > 4:
-                print(f"  → MODERATE evidence for {best_model} (4 < Δ{ic} < 10)")
-            elif delta > 2:
-                print(f"  → WEAK evidence for {best_model} (2 < Δ{ic} < 4)")
+            if delta < 4:
+                print(f"  → Models are SIMILAR (ELPD difference {delta:.1f} < 4)")
+                print("    Consider model averaging or choose based on simplicity")
+            elif delta > 2 * delta_se:
+                print(
+                    f"  → STRONG evidence for {best_model} "
+                    f"(ELPD difference {delta:.1f} > 2 SE)"
+                )
             else:
-                print(f"  → Models are SIMILAR (Δ{ic} < 2)")
-                print(f"    Consider model averaging or choose based on simplicity")
+                print(
+                    f"  → MODERATE evidence for {best_model} "
+                    f"(ELPD difference {delta:.1f}, within 2 SE)"
+                )
 
-            # Check if difference is significant relative to SE
-            if delta > 2 * delta_se:
-                print(f"  → Difference is > 2 SE, likely reliable")
-            else:
-                print(f"  → Difference is < 2 SE, uncertain distinction")
-
-        # Check for warnings
-        if comparison['warning'].any():
+        # Reliability. ArviZ 1.x reports this per row as a diagnostic string
+        # instead of the old boolean `warning` column.
+        flagged = [
+            name
+            for name, diagnostic in comparison['diag_elpd'].items()
+            if isinstance(diagnostic, str) and diagnostic.strip() not in ('', 'ok')
+        ]
+        if flagged:
             print("\n⚠️  WARNING: Some models have reliability issues")
-            warned_models = comparison[comparison['warning']].index.tolist()
-            print(f"   Models with warnings: {', '.join(warned_models)}")
-            print(f"   → Check Pareto-k diagnostics with check_loo_reliability()")
+            print(f"   Models with warnings: {', '.join(flagged)}")
+            print("   → Check Pareto-k diagnostics with check_loo_reliability()")
 
     return comparison
 
@@ -210,19 +228,21 @@ def plot_model_comparison(comparison, output_path=None, show=True):
     matplotlib.figure.Figure
         The comparison figure
     """
-    fig = plt.figure(figsize=(10, 6))
-    az.plot_compare(comparison)
-    plt.title('Model Comparison', fontsize=14, fontweight='bold')
-    plt.tight_layout()
+    # ArviZ 1.x returns a PlotCollection and does not draw into pyplot's
+    # current figure, so the figure has to come back out of the collection --
+    # plt.savefig() would write a blank image.
+    collection = az.plot_compare(comparison)
+    fig = collection.viz['figure'].item()
+    fig.suptitle('Model Comparison', fontsize=14, fontweight='bold')
 
     if output_path:
-        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        fig.savefig(output_path, dpi=300, bbox_inches='tight')
         print(f"Comparison plot saved to {output_path}")
 
     if show:
         plt.show()
     else:
-        plt.close()
+        plt.close(fig)
 
     return fig
 
@@ -239,7 +259,7 @@ def model_averaging(models_dict: Dict[str, Any],
     models_dict : dict
         Dictionary mapping model names to PyMC posterior objects
     weights : array-like, optional
-        Model weights. If None, computed from IC (pseudo-BMA weights)
+        Model weights. If None, taken from `compare_models` (stacking weights)
     var_name : str
         Name of the predicted variable (default: 'y_obs')
     ic : str
@@ -253,7 +273,7 @@ def model_averaging(models_dict: Dict[str, Any],
         Model weights used
     """
     if weights is None:
-        comparison = az.compare(models_dict, ic=ic)
+        comparison = compare_models(models_dict, ic=ic, verbose=False)
         weights = comparison['weight'].values
         model_names = comparison.index.tolist()
     else:

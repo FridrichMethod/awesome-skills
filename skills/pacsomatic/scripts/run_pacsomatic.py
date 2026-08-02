@@ -435,7 +435,51 @@ def verify_bam_and_index(label, bam_path, pbi_path):
         fail(f"{label} .pbi path was provided but does not exist: {pbi_path}")
 
 
+#: Characters that would let --module-load smuggle something other than a module
+#: command into the generated launch script. Everything else written into that
+#: script goes through shlex.quote(); this argument is emitted as a bare shell
+#: line, so it is constrained here instead.
+_SHELL_METACHARACTERS = set("$`|><&(){}[]*?!~\n\r\\\"'")
+
+
+def normalize_module_load(raw):
+    """Validate --module-load and return it as a safe shell line.
+
+    Accepts one or more `module ...` commands separated by `&&` or `;` -- the
+    documented shape, e.g. "module purge && module load nextflow/23.10.0".
+    Rejects anything else so a caller-supplied string cannot become arbitrary
+    shell in the launch script the operator later executes.
+    """
+    if not raw or not raw.strip():
+        return ""
+
+    segments = [seg.strip() for seg in re.split(r"&&|;", raw) if seg.strip()]
+    if not segments:
+        fail("--module-load contained no command.")
+
+    normalized = []
+    for segment in segments:
+        if any(ch in _SHELL_METACHARACTERS for ch in segment):
+            fail(
+                f"--module-load segment {segment!r} contains shell metacharacters. "
+                "Only plain 'module ...' commands are accepted."
+            )
+        try:
+            tokens = shlex.split(segment)
+        except ValueError as exc:
+            fail(f"--module-load segment {segment!r} could not be parsed: {exc}")
+        if not tokens or tokens[0] != "module":
+            fail(
+                f"--module-load segment {segment!r} does not start with 'module'. "
+                "Pass module commands only, e.g. 'module load nextflow/23.10.0'."
+            )
+        normalized.append(" ".join(shlex.quote(token) for token in tokens))
+
+    return " && ".join(normalized)
+
+
 def validate_inputs(args):
+    args.module_load = normalize_module_load(args.module_load)
     ensure_no_spaces("patient-id", args.patient_id)
     ensure_no_spaces("tumor-sample-id", args.tumor_sample_id)
     ensure_no_spaces("normal-sample-id", args.normal_sample_id)
@@ -545,14 +589,28 @@ def ensure_dependency_tools(args):
 
 
 def submit_command_for_executor(executor, script_path):
-    quoted = shlex.quote(script_path)
+    """Return (argv, stdin_path) for submitting the launch script.
+
+    lsf reads the script from stdin (`bsub < script`); every other executor
+    takes it as an argument. Returning an argv list rather than a shell string
+    keeps submission off a shell entirely, so a script path containing shell
+    metacharacters cannot extend the command that runs.
+    """
     if executor == "lsf":
-        return f"bsub < {quoted}"
+        return ["bsub"], script_path
     if executor == "slurm":
-        return f"sbatch {quoted}"
+        return ["sbatch", script_path], None
     if executor in {"pbs", "sge"}:
-        return f"qsub {quoted}"
-    return f"bash {quoted}"
+        return ["qsub", script_path], None
+    return ["bash", script_path], None
+
+
+def format_submit_command(argv, stdin_path):
+    """Render a submission as a copy-pasteable shell line, for display only."""
+    line = shlex.join(argv)
+    if stdin_path:
+        line += f" < {shlex.quote(stdin_path)}"
+    return line
 
 
 def extract_job_id(executor, output):
@@ -574,8 +632,12 @@ def extract_job_id(executor, output):
 
 
 def execute_launch(args, script_path):
-    cmd = submit_command_for_executor(args.executor, script_path)
-    completed = subprocess.run(cmd, shell=True, text=True, capture_output=True)
+    argv, stdin_path = submit_command_for_executor(args.executor, script_path)
+    if stdin_path:
+        with open(stdin_path, "rb") as handle:
+            completed = subprocess.run(argv, stdin=handle, text=True, capture_output=True)
+    else:
+        completed = subprocess.run(argv, text=True, capture_output=True)
     stdout = (completed.stdout or "").strip()
     stderr = (completed.stderr or "").strip()
 
@@ -708,14 +770,14 @@ def main():
     nextflow_cmd = build_nextflow_command(args, samplesheet_path)
     write_launch_script(args, launch_script_path, nextflow_cmd)
 
-    submit_cmd = submit_command_for_executor(args.executor, launch_script_path)
+    submit_argv, submit_stdin = submit_command_for_executor(args.executor, launch_script_path)
 
     print("--- Pacsomatic Launch Assets Prepared ---")
     print(f"Samplesheet : {os.path.abspath(samplesheet_path)}")
     print(f"Launch script: {os.path.abspath(launch_script_path)}")
     print(f"Params YAML : {os.path.abspath(args.generated_params_file)}")
     print(f"Executor    : {args.executor}")
-    print(f"Run cmd     : {submit_cmd}")
+    print(f"Run cmd     : {format_submit_command(submit_argv, submit_stdin)}")
 
     if args.dry_run and not args.run:
         info("Dry run complete. Inputs and runtime dependencies validated.")

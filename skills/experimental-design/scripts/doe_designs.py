@@ -148,10 +148,12 @@ def latin_hypercube(factors, n_samples, criterion="maximin", seed=0,
     'center'/'centermaximin'/'correlation' are alternatives.
     """
     from pyDOE3 import lhs
-    rng_state = int(seed)  # pyDOE3 lhs uses numpy global RNG; seed it for repeatability
-    np.random.seed(rng_state)
+    # pyDOE3 draws from its own default_rng, so seeding numpy's global RNG has
+    # no effect -- the seed has to be handed to lhs itself.
     names = list(factors)
-    unit = lhs(len(names), samples=n_samples, criterion=criterion)  # in [0,1]
+    unit = lhs(  # in [0,1]
+        len(names), samples=n_samples, criterion=criterion, seed=int(seed)
+    )
     out = {}
     for j, n in enumerate(names):
         low, high = factors[n][0], factors[n][1]

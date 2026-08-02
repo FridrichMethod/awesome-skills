@@ -7,6 +7,7 @@
 ## What To Use It For
 
 - Parse editor decision letters, revision emails, and reviewer reports.
+- Confirm whether the decision is Major Revision or Minor Revision before applying the corresponding revision strategy.
 - Split comments into stable IDs such as `E.1`, `R1.1`, and `R2.3`.
 - Build response strategy, manuscript-change actions, and evidence needs for each comment.
 - Track response action, task progress, and package readiness separately, with inspectable evidence for completed work.
@@ -22,6 +23,7 @@
 ## What You Need To Provide
 
 - Editor decision letter, reviewer comments, revision requirements, or existing rebuttal draft.
+- If the decision letter does not state it, whether this is a Major Revision or Minor Revision.
 - Completed or planned experiments, analyses, figures, line numbers, and manuscript-change locations.
 - Target journal, manuscript ID, title, and required submission files.
 

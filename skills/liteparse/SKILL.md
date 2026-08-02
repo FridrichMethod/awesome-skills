@@ -1,10 +1,12 @@
 ---
 name: liteparse
-description: Local document and PDF parsing with spatial text and bounding boxes. Use for extracting text from PDFs, DOCX, Office files, and images; OCR on scans; layout-preserved JSON for RAG; batch-ingesting paper folders; or page screenshots for multimodal agents — even when the user does not name liteparse. Prefer over MarkItDown when you need bboxes, fast local parsing, or PNG page renders; prefer over the pdf skill for merge/split/forms.
+description: Local document and PDF parsing that returns spatial text with bounding boxes. Use for extracting text from PDFs, DOCX, Office files, and images; running OCR on scans; producing layout-preserved JSON for RAG; batch-ingesting folders of papers; or rendering pages to PNG for multimodal agents. Distinguishing capabilities are per-token bounding boxes, page raster output, and fully local processing with no cloud API.
 license: Apache-2.0
 allowed-tools: Read Write Edit Bash
 compatibility: Python 3.10+. Optional LibreOffice (Office formats) and ImageMagick (images). Bundled Tesseract for OCR. All processing is local — no cloud API required.
-metadata: {"version": "1.0", "skill-author": "K-Dense Inc."}
+metadata:
+  version: "1.1"
+  skill-author: K-Dense Inc.
 ---
 
 # LiteParse — Local Document Parsing

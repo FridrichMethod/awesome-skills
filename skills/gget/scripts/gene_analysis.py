@@ -9,6 +9,20 @@ import sys
 import gget
 
 
+def fasta_text(sequences):
+    """Render what gget.seq returned as FASTA text.
+
+    gget.seq returns a list of FASTA lines (header, sequence, ...); older
+    releases returned one already-joined string. Writing the list straight to a
+    file raises TypeError, so normalise both shapes here.
+    """
+    if sequences is None:
+        return ""
+    if isinstance(sequences, str):
+        return sequences if sequences.endswith("\n") else sequences + "\n"
+    return "\n".join(sequences) + "\n"
+
+
 def analyze_gene(gene_name, species="homo_sapiens", output_prefix=None):
     """
     Perform comprehensive analysis of a gene.
@@ -53,11 +67,11 @@ def analyze_gene(gene_name, species="homo_sapiens", output_prefix=None):
     protein_seq = gget.seq([gene_id], translate=True)
 
     with open(f"{output_prefix}_nucleotide.fasta", "w") as f:
-        f.write(nucleotide_seq)
+        f.write(fasta_text(nucleotide_seq))
     print(f"   Nucleotide sequence saved to: {output_prefix}_nucleotide.fasta")
 
     with open(f"{output_prefix}_protein.fasta", "w") as f:
-        f.write(protein_seq)
+        f.write(fasta_text(protein_seq))
     print(f"   Protein sequence saved to: {output_prefix}_protein.fasta")
 
     # Step 4: Get tissue expression

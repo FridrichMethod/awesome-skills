@@ -258,7 +258,7 @@ result. Increase a cap only after diagnosing why it was reached.
 ```bash
 PYTHONDONTWRITEBYTECODE=1 uv run --isolated --no-project \
   --python 3.13 --with "simpy==4.1.2" \
-  python -m unittest discover -s skills/simpy/tests -v
+  python -m unittest discover -s tests/simpy -v
 ```
 
 Tests cover scheduler boundaries, deterministic ties, Conditions, all resource

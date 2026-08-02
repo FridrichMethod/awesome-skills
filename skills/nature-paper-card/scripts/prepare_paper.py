@@ -39,6 +39,8 @@ SECTION_NAMES = {
 CAPTION_RE = re.compile(r"^\s*(Figure|Fig\.|Table)\s+(\d+[A-Za-z]?)\s*:\s*(.*)$", re.I)
 EQUATION_RE = re.compile(r"\((\d{1,2})\)\s*$")
 PRINTED_PAGE_RE = re.compile(r"^\s*(\d{4,6})\s*$", re.M)
+PAGE_LOCATOR_FIELDS = ("page", "page_number", "pdf_page")
+POSITIVE_INTEGER_RE = re.compile(r"^[1-9]\d*$")
 
 
 def sha256_file(path: Path) -> str:
@@ -59,7 +61,9 @@ def printed_page_label(text: str) -> str | None:
     return candidates[-1] if candidates else None
 
 
-def heading_candidates(text: str, pdf_page: int, printed_page: str | None) -> list[dict[str, Any]]:
+def heading_candidates(
+    text: str, pdf_page: int | None, printed_page: str | None
+) -> list[dict[str, Any]]:
     headings: list[dict[str, Any]] = []
     for line in text.splitlines():
         value = " ".join(line.split()).strip(" :")
@@ -209,25 +213,97 @@ def flatten_source_map(data: Any) -> list[dict[str, Any]]:
     return []
 
 
+def page_locator(block: dict[str, Any]) -> tuple[int | None, str, str | None, Any]:
+    """Return a verified 1-based page or an explicit missing/invalid state."""
+    locator_field: str | None = None
+    locator_value: Any = None
+    for field in PAGE_LOCATOR_FIELDS:
+        if field not in block:
+            continue
+        value = block[field]
+        if value is None or (isinstance(value, str) and not value.strip()):
+            if locator_field is None:
+                locator_field = field
+                locator_value = value
+            continue
+        locator_field = field
+        locator_value = value
+        break
+    else:
+        return None, "missing", locator_field, locator_value
+
+    if isinstance(locator_value, bool):
+        return None, "invalid", locator_field, locator_value
+    if isinstance(locator_value, int):
+        return (
+            (locator_value, "verified", locator_field, locator_value)
+            if locator_value > 0
+            else (None, "invalid", locator_field, locator_value)
+        )
+    if isinstance(locator_value, float):
+        return (
+            (int(locator_value), "verified", locator_field, locator_value)
+            if locator_value.is_integer() and locator_value > 0
+            else (None, "invalid", locator_field, locator_value)
+        )
+    if isinstance(locator_value, str) and POSITIVE_INTEGER_RE.fullmatch(locator_value.strip()):
+        return int(locator_value.strip()), "verified", locator_field, locator_value
+    return None, "invalid", locator_field, locator_value
+
+
+def source_block_text(block: dict[str, Any]) -> str:
+    text = (
+        block.get("original")
+        or block.get("source_text")
+        or block.get("text")
+        or block.get("content")
+        or ""
+    )
+    return clean_text(str(text)) if text else ""
+
+
+def unlocated_block_record(
+    block: dict[str, Any], index: int, text: str, status: str, field: str | None, value: Any
+) -> dict[str, Any]:
+    source_id = block.get("id") or block.get("block_id") or f"U{index:03d}"
+    return {
+        "id": str(source_id),
+        "block_type": block.get("type"),
+        "section": block.get("section") or block.get("section_title"),
+        "text": text,
+        "character_count": len(text),
+        "locator_status": status,
+        "locator_field": field,
+        "locator_value": value,
+    }
+
+
 def prepare_source_map(path: Path) -> dict[str, Any]:
     data = json.loads(path.read_text(encoding="utf-8"))
     grouped: dict[int, list[str]] = defaultdict(list)
+    unlocated_blocks: list[dict[str, Any]] = []
+    verified_block_count = 0
+    missing_locator_count = 0
+    invalid_locator_count = 0
 
-    for block in flatten_source_map(data):
-        page_value = block.get("page") or block.get("page_number") or block.get("pdf_page") or 1
-        try:
-            page_number = int(page_value)
-        except (TypeError, ValueError):
-            page_number = 1
-        text = (
-            block.get("original")
-            or block.get("source_text")
-            or block.get("text")
-            or block.get("content")
-            or ""
+    for index, block in enumerate(flatten_source_map(data), start=1):
+        text = source_block_text(block)
+        if not text:
+            continue
+        page_number, locator_status, locator_field, locator_value = page_locator(block)
+        if locator_status == "verified" and page_number is not None:
+            verified_block_count += 1
+            grouped[page_number].append(text)
+            continue
+        if locator_status == "missing":
+            missing_locator_count += 1
+        else:
+            invalid_locator_count += 1
+        unlocated_blocks.append(
+            unlocated_block_record(
+                block, index, text, locator_status, locator_field, locator_value
+            )
         )
-        if text:
-            grouped[page_number].append(str(text))
 
     pages = [
         {
@@ -238,26 +314,49 @@ def prepare_source_map(path: Path) -> dict[str, Any]:
         }
         for page_number in sorted(grouped)
     ]
+    structure_units = pages + [
+        {
+            "pdf_page": None,
+            "printed_page": None,
+            "text": block["text"],
+            "character_count": block["character_count"],
+        }
+        for block in unlocated_blocks
+    ]
     sections = [
         heading
-        for page in pages
+        for page in structure_units
         for heading in heading_candidates(page["text"], page["pdf_page"], page["printed_page"])
     ]
+    if unlocated_blocks and verified_block_count:
+        locator_reliability = "mixed"
+    elif unlocated_blocks:
+        locator_reliability = "unavailable"
+    else:
+        locator_reliability = "reliable"
     return {
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "source_type": "source_map",
         "source_path": str(path.resolve()),
         "source_sha256": sha256_file(path),
         "metadata": data.get("metadata", {}) if isinstance(data, dict) else {},
         "page_count": len(pages),
         "pages": pages,
+        "unlocated_blocks": unlocated_blocks,
+        "locator_summary": {
+            "verified_page_blocks": verified_block_count,
+            "missing_page_locator_blocks": missing_locator_count,
+            "invalid_page_locator_blocks": invalid_locator_count,
+            "page_locator_reliability": locator_reliability,
+        },
         "sections": sections,
-        "evidence_inventory": evidence_from_pages(pages),
+        "evidence_inventory": evidence_from_pages(structure_units),
         "rendered_pages_dir": None,
         "extraction": {
             "engine": "source-map-normalizer",
             "visual_pages_rendered": False,
             "confidence": "mixed",
+            "page_locator_reliability": locator_reliability,
         },
     }
 
@@ -269,13 +368,43 @@ def validate_bundle(bundle: dict[str, Any]) -> dict[str, Any]:
     pages = bundle.get("pages", [])
     metadata = bundle.get("metadata", {})
     inventory = bundle.get("evidence_inventory", {})
+    source_type = bundle.get("source_type")
+    unlocated_blocks = bundle.get("unlocated_blocks", [])
+    locator_summary = bundle.get("locator_summary", {})
 
-    if not isinstance(page_count, int) or page_count <= 0:
-        errors.append("page_count must be a positive integer")
+    if not isinstance(page_count, int) or page_count < 0:
+        errors.append("page_count must be a non-negative integer")
     if not isinstance(pages, list) or len(pages) != page_count:
         errors.append("pages must contain exactly page_count records")
-    elif not any(page.get("character_count", 0) >= 50 for page in pages):
-        errors.append("no page contains enough extractable text")
+    else:
+        located_text_available = any(page.get("character_count", 0) >= 50 for page in pages)
+        unlocated_text_available = isinstance(unlocated_blocks, list) and any(
+            block.get("character_count", 0) >= 50
+            for block in unlocated_blocks
+            if isinstance(block, dict)
+        )
+        if not located_text_available and not unlocated_text_available:
+            errors.append("no source block contains enough extractable text")
+
+    if source_type == "pdf" and page_count <= 0:
+        errors.append("PDF page_count must be a positive integer")
+
+    if source_type == "source_map":
+        if not isinstance(unlocated_blocks, list):
+            errors.append("unlocated_blocks must be an array")
+        if not isinstance(locator_summary, dict):
+            errors.append("locator_summary must be an object")
+        else:
+            missing_count = locator_summary.get("missing_page_locator_blocks", 0)
+            invalid_count = locator_summary.get("invalid_page_locator_blocks", 0)
+            if isinstance(missing_count, int) and missing_count > 0:
+                warnings.append(
+                    f"{missing_count} source block(s) have no page locator; retained in unlocated_blocks"
+                )
+            if isinstance(invalid_count, int) and invalid_count > 0:
+                warnings.append(
+                    f"{invalid_count} source block(s) have invalid page locators; retained in unlocated_blocks"
+                )
 
     if not isinstance(metadata, dict) or not metadata.get("title"):
         warnings.append("document title is unavailable")
@@ -289,7 +418,6 @@ def validate_bundle(bundle: dict[str, Any]) -> dict[str, Any]:
     else:
         errors.append("evidence_inventory must be an object")
 
-    source_type = bundle.get("source_type")
     if errors:
         locator_mode = "source-limited"
     elif source_type == "pdf":

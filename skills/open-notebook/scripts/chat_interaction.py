@@ -5,7 +5,7 @@ Demonstrates creating chat sessions, sending messages with context,
 and searching across research materials.
 
 Prerequisites:
-    pip install requests
+    uv pip install requests
 
 Usage:
     export OPEN_NOTEBOOK_URL="http://localhost:5055"

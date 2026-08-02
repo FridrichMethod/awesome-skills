@@ -256,6 +256,8 @@ def deepspeed_trainer(
     checkpoint_callback = ModelCheckpoint(
         dirpath=checkpoint_dir,
         filename="{epoch:02d}-{step:06d}",
+        monitor="val_loss",          # Required: save_top_k > 1 needs a quantity
+        mode="min",
         save_top_k=3,
         save_last=True,
         every_n_train_steps=1000,    # Save every N steps
@@ -351,6 +353,8 @@ def time_limited_trainer(
 
     checkpoint_callback = ModelCheckpoint(
         dirpath=checkpoint_dir,
+        monitor="val_loss",          # Required: save_top_k > 1 needs a quantity
+        mode="min",
         save_top_k=3,
         save_last=True,              # Important for resuming
         every_n_epochs=5,
@@ -410,6 +414,12 @@ def reproducible_trainer(seed=42, max_epochs=100):
 # =============================================================================
 
 if __name__ == "__main__":
+    from lightning.pytorch.accelerators import CUDAAccelerator
+
+    # Trainer construction validates the requested hardware, so the GPU-only
+    # configurations below can only be built where that hardware exists.
+    cuda_devices = CUDAAccelerator.auto_device_count() if CUDAAccelerator.is_available() else 0
+
     print("PyTorch Lightning Trainer Configurations\n")
 
     # Example 1: Basic training
@@ -423,29 +433,38 @@ if __name__ == "__main__":
     print("2. Debug Trainer:")
     trainer = debug_trainer()
     print(f"   - Fast dev run: {trainer.fast_dev_run}")
-    print(f"   - Detect anomaly: {trainer.detect_anomaly}")
+    print(f"   - Accelerator: {trainer.accelerator}")
     print()
 
     # Example 3: Production single GPU
     print("3. Production Single GPU Trainer:")
-    trainer = production_single_gpu_trainer(max_epochs=100)
-    print(f"   - Max epochs: {trainer.max_epochs}")
-    print(f"   - Precision: {trainer.precision}")
-    print(f"   - Callbacks: {len(trainer.callbacks)}")
+    if cuda_devices >= 1:
+        trainer = production_single_gpu_trainer(max_epochs=100)
+        print(f"   - Max epochs: {trainer.max_epochs}")
+        print(f"   - Precision: {trainer.precision}")
+        print(f"   - Callbacks: {len(trainer.callbacks)}")
+    else:
+        print("   - skipped: no CUDA GPU on this machine")
     print()
 
     # Example 4: Multi-GPU DDP
     print("4. Multi-GPU DDP Trainer:")
-    trainer = multi_gpu_ddp_trainer(num_gpus=4)
-    print(f"   - Strategy: {trainer.strategy}")
-    print(f"   - Devices: {trainer.num_devices}")
+    if cuda_devices >= 4:
+        trainer = multi_gpu_ddp_trainer(num_gpus=4)
+        print(f"   - Strategy: {trainer.strategy}")
+        print(f"   - Devices: {trainer.num_devices}")
+    else:
+        print(f"   - skipped: needs 4 CUDA GPUs, found {cuda_devices}")
     print()
 
     # Example 5: FSDP for large models
     print("5. FSDP Trainer for Large Models:")
-    trainer = large_model_fsdp_trainer(num_gpus=8)
-    print(f"   - Strategy: {trainer.strategy}")
-    print(f"   - Precision: {trainer.precision}")
+    if cuda_devices >= 8:
+        trainer = large_model_fsdp_trainer(num_gpus=8)
+        print(f"   - Strategy: {trainer.strategy}")
+        print(f"   - Precision: {trainer.precision}")
+    else:
+        print(f"   - skipped: needs 8 CUDA GPUs, found {cuda_devices}")
     print()
 
     print("\nTo use these configurations:")

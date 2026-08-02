@@ -5,7 +5,7 @@ AI-powered infographic generation using Nano Banana Pro.
 This script uses a smart iterative refinement approach:
 1. (Optional) Research phase - gather facts and data using Perplexity Sonar
 2. Generate initial infographic with Nano Banana Pro
-3. AI quality review using Gemini 3.1 Pro for infographic critique
+3. AI quality review using Gemini 3.6 Flash for infographic critique
 4. Only regenerate if quality is below threshold for document type
 5. Repeat until quality meets standards (max iterations)
 
@@ -36,19 +36,42 @@ except ImportError:
     sys.exit(1)
 
 
-def _load_env_file():
-    """Load .env file from current directory or script directory only."""
-    try:
-        from dotenv import load_dotenv
-    except ImportError:
-        return False
+def _resolve_api_key(explicit: Optional[str] = None) -> Optional[str]:
+    """Resolve the OpenRouter key from --api-key, the environment, then any .env file.
 
-    for candidate in [Path.cwd() / ".env", Path(__file__).resolve().parent / ".env"]:
-        if candidate.exists():
-            load_dotenv(dotenv_path=candidate, override=False)
-            return True
+    The .env scan walks up from the working directory and finally checks the
+    script's own directory, so running from anywhere inside a project picks up
+    the key at its root. Only the standard library is used: python-dotenv is a
+    common omission, and a missing optional dependency should not read as a
+    missing credential.
+    """
+    if explicit:
+        return explicit
 
-    return False
+    from_env = os.environ.get("OPENROUTER_API_KEY", "").strip()
+    if from_env:
+        return from_env
+
+    cwd = Path.cwd()
+    for directory in [cwd, *cwd.parents, Path(__file__).resolve().parent]:
+        env_file = directory / ".env"
+        if not env_file.is_file():
+            continue
+        try:
+            content = env_file.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        for raw in content.splitlines():
+            line = raw.strip()
+            if line.startswith("#") or "=" not in line:
+                continue
+            name, _, value = line.partition("=")
+            if name.strip() == "OPENROUTER_API_KEY":
+                value = value.strip().strip('"').strip("'")
+                if value:
+                    return value
+
+    return None
 
 
 # Infographic type configurations with detailed prompting
@@ -249,7 +272,7 @@ PALETTE_PRESETS = {
 class InfographicGenerator:
     """Generate infographics using AI with smart iterative refinement.
     
-    Uses Gemini 3.1 Pro for quality review to determine if regeneration is needed.
+    Uses Gemini 3.6 Flash for quality review to determine if regeneration is needed.
     Multiple passes only occur if the generated infographic doesn't meet the
     quality threshold for the target document type.
     """
@@ -315,12 +338,8 @@ IMPORTANT - NO META CONTENT:
 
     def __init__(self, api_key: Optional[str] = None, verbose: bool = False):
         """Initialize the generator."""
-        self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
-        
-        if not self.api_key:
-            _load_env_file()
-            self.api_key = os.getenv("OPENROUTER_API_KEY")
-        
+        self.api_key = _resolve_api_key(api_key)
+
         if not self.api_key:
             raise ValueError(
                 "OPENROUTER_API_KEY not found. Please either:\n"
@@ -333,10 +352,13 @@ IMPORTANT - NO META CONTENT:
         self.verbose = verbose
         self._last_error = None
         self.base_url = "https://openrouter.ai/api/v1"
-        # Nano Banana Pro for image generation
-        self.image_model = "google/gemini-3-pro-image-preview"
-        # Gemini 3.1 Pro for quality review
-        self.review_model = "google/gemini-3.1-pro-preview"
+        # Nano Banana Pro for image generation. The slug must be an image-output
+        # model; a text-only chat model is rejected with "No endpoints found that
+        # support the requested output modalities".
+        # https://openrouter.ai/google/gemini-3.1-flash-image
+        self.image_model = "google/gemini-3.1-flash-image"
+        # Gemini 3.6 Flash for quality review - reads the image, answers in text
+        self.review_model = "google/gemini-3.6-flash"
         
     def _log(self, message: str):
         """Log message if verbose mode is enabled."""
@@ -787,7 +809,7 @@ Incorporate specific numbers, percentages, and dates from the research."""
                     iteration: int, doc_type: str = "default",
                     max_iterations: int = 3) -> Tuple[str, Optional[float], bool]:
         """
-        Review generated infographic using Gemini 3.1 Pro for quality analysis.
+        Review generated infographic using Gemini 3.6 Flash for quality analysis.
         
         Evaluates the infographic on multiple criteria specific to good
         infographic design and determines if regeneration is needed.
@@ -1117,8 +1139,8 @@ Generate an improved version that:
                 f.write(image_data)
             print(f"✓ Saved: {iter_path}")
             
-            # Review image using Gemini 3.1 Pro
-            print(f"Reviewing with Gemini 3.1 Pro...")
+            # Review image using Gemini 3.6 Flash
+            print(f"Reviewing with Gemini 3.6 Flash...")
             critique, score, needs_improvement = self.review_image(
                 str(iter_path), user_prompt, infographic_type, i, doc_type, iterations
             )
@@ -1278,13 +1300,14 @@ Environment:
     
     args = parser.parse_args()
     
-    # Check for API key
-    api_key = args.api_key or os.getenv("OPENROUTER_API_KEY")
+    # Check for API key — resolves --api-key, the environment, then any .env file
+    api_key = _resolve_api_key(args.api_key)
     if not api_key:
-        print("Error: OPENROUTER_API_KEY environment variable not set")
+        print("Error: OPENROUTER_API_KEY not found")
         print("\nSet it with:")
         print("  export OPENROUTER_API_KEY='your_api_key'")
-        print("\nOr provide via --api-key flag")
+        print("\nOr add OPENROUTER_API_KEY=your_api_key to a .env file")
+        print("Or provide via --api-key flag")
         sys.exit(1)
     
     try:

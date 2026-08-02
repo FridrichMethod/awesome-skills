@@ -4,7 +4,9 @@ description: Sample-size and statistical power calculations for planning studies
 allowed-tools: Read Write Edit Bash
 compatibility: Requires Python >=3.10. Examples target statsmodels >=0.14.6, scipy >=1.11, pingouin >=0.6, numpy >=1.26, and matplotlib. Optional extras are statsmodels mixed models and lifelines for simulation-based power.
 license: MIT license
-metadata: {"version": "1.0", "skill-author": "K-Dense Inc."}
+metadata:
+  version: "1.0"
+  skill-author: K-Dense Inc.
 ---
 
 # Statistical Power & Sample Size

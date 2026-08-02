@@ -3,8 +3,17 @@ name: exa-search
 description: "Web toolkit powered by Exa, tuned for scientific and technical content. Use this skill when the user needs to search the web or fetch/extract URL content. Covers: web search (semantic lookups, research, current info — with optional research-paper category and academic domain filtering) and URL extraction (fetching pages, articles, academic PDFs in batch). Use this skill for web-related tasks when the user wants high-quality search or scholarly filtering via category=research paper. Triggers on requests to search, look up, fetch a page, or extract an article."
 compatibility: Requires exa-py Python SDK, an EXA_API_KEY, and internet access.
 license: MIT
-required_environment_variables: [{"name": "EXA_API_KEY", "prompt": "Exa search API key.", "required_for": "full functionality"}]
-metadata: {"version": "1.1", "skill-author": "Exa", "website": "https://exa.ai", "docs": "https://exa.ai/docs", "openclaw": {"primaryEnv": "EXA_API_KEY", "envVars": [{"name": "EXA_API_KEY", "required": true, "description": "Exa search API key."}]}}
+metadata:
+  version: "1.2"
+  skill-author: Exa
+  website: https://exa.ai
+  docs: https://exa.ai/docs
+  openclaw:
+    primaryEnv: EXA_API_KEY
+    envVars:
+    - name: EXA_API_KEY
+      required: true
+      description: Exa search API key.
 ---
 
 # Exa Web Toolkit
@@ -68,7 +77,7 @@ First, check if a `.env` file exists in the project root and contains `EXA_API_K
 dotenv -f .env run -- uv run --with exa-py python "$SKILL_PATH/scripts/exa_search.py" "your query"
 ```
 
-If `dotenv` isn't available, install it: `pip install python-dotenv[cli]` or `uv pip install python-dotenv[cli]`.
+If `dotenv` isn't available, install it: `uv pip install python-dotenv[cli]`.
 
 If there's no `.env`, export the key for the session:
 

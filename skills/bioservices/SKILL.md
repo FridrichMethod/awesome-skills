@@ -4,8 +4,14 @@ description: Unified Python interface to 40+ bioinformatics services. Use when q
 license: GPLv3 license
 allowed-tools: Read Write Edit Bash
 compatibility: Requires Python 3.9–3.12 and internet access to 40+ bioinformatics web APIs. NCBI BLAST requires a contact email (`NCBI_EMAIL` env var or explicit parameter).
-required_environment_variables: [{"name": "NCBI_EMAIL", "prompt": "Email for NCBI service identification.", "required_for": "optional features"}]
-metadata: {"version": "1.2", "skill-author": "K-Dense Inc.", "openclaw": {"envVars": [{"name": "NCBI_EMAIL", "required": false, "description": "Email for NCBI service identification."}]}}
+metadata:
+  version: "1.3"
+  skill-author: K-Dense Inc.
+  openclaw:
+    envVars:
+    - name: NCBI_EMAIL
+      required: false
+      description: Email for NCBI service identification.
 ---
 
 # BioServices
@@ -116,6 +122,12 @@ u = UniChem()
 chembl_id = u.get_compound_id_from_kegg("C11222")  # Returns CHEMBL278315
 ```
 
+**Version caveat:** the per-source `get_compound_id_from_*` helpers are gone from
+bioservices 1.16.0 — check `hasattr(u, "get_compound_id_from_kegg")` first, and
+otherwise use the current UniChem API (`u.get_compounds(compound, source_type)`
+and read `res["compounds"][0]["sources"]`). ChEMBL lookups follow the same rule:
+`get_molecule`, not the pre-1.6 `get_compound_by_chemblId`.
+
 **Common workflow:**
 1. Search compound by name in KEGG
 2. Extract KEGG compound ID
@@ -200,7 +212,9 @@ annotations = g.Annotation(protein="P43403", format="tsv")
 
 ### 7. Protein-Protein Interactions
 
-Query interaction databases via PSICQUIC:
+Query interaction databases via PSICQUIC. **PSICQUIC is not shipped by every
+release — it is absent from 1.16.0** — so import it defensively and fall back to
+`IntactComplex`, `OmniPath`, or `STRING` when it is missing:
 
 ```python
 from bioservices import PSICQUIC

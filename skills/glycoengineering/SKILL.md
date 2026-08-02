@@ -2,7 +2,9 @@
 name: glycoengineering
 description: Analyze and engineer protein glycosylation. Scan sequences for N-glycosylation sequons (N-X-S/T), predict O-glycosylation hotspots, and access curated glycoengineering tools (NetOGlyc, GlycoShield, GlycoWorkbench). For glycoprotein engineering, therapeutic antibody optimization, and vaccine design.
 license: Unknown
-metadata: {"version": "1.0", "skill-author": "Kuan-lin Huang"}
+metadata:
+  version: "1.1"
+  skill-author: Kuan-lin Huang
 ---
 
 # Glycoengineering
@@ -229,7 +231,7 @@ GlycoShield-MD analyzes how glycans shield protein surfaces during MD simulation
 
 ```bash
 # Installation
-pip install glycoshield
+uv pip install glycoshield
 
 # Basic usage: analyze glycan shielding from glycosylated protein MD trajectory
 glycoshield \

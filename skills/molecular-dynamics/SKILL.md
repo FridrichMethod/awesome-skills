@@ -2,7 +2,9 @@
 name: molecular-dynamics
 description: Run and analyze molecular dynamics simulations with OpenMM and MDAnalysis. Set up protein/small molecule systems, define force fields, run energy minimization and production MD, analyze trajectories (RMSD, RMSF, contact maps, free energy surfaces). For structural biology, drug binding, and biophysics.
 license: MIT
-metadata: {"version": "1.0", "skill-author": "Kuan-lin Huang"}
+metadata:
+  version: "1.1"
+  skill-author: Kuan-lin Huang
 ---
 
 # Molecular Dynamics
@@ -18,7 +20,7 @@ Molecular dynamics (MD) simulation computationally models the time evolution of 
 ```bash
 conda install -c conda-forge openmm mdanalysis nglview
 # or
-pip install openmm mdanalysis
+uv pip install openmm mdanalysis
 ```
 
 ## When to Use This Skill
@@ -419,7 +421,7 @@ def fix_pdb(input_pdb, output_pdb, ph=7.0):
 
 ```python
 # For ligand parameterization, use OpenFF toolkit or ACPYPE
-# pip install openff-toolkit
+# uv pip install openff-toolkit
 from openff.toolkit import Molecule, ForceField as OFFForceField
 from openff.interchange import Interchange
 

@@ -15,6 +15,8 @@ audit-report.json
 
 In fallback modes, `source_bundle.json` may be unavailable, but `audit-report.json` remains required when the bundled auditor can run. These are machine-readable support artifacts, not additional Paper Card sections.
 
+For normalized source-map input, `pages` contains only blocks with verified positive page locators. Blocks with missing or invalid locators remain in `unlocated_blocks`; `locator_summary` reports the counts and reliability. A `null` page in structural evidence means unknown location and must never be rendered as page 1.
+
 The file must contain:
 
 - title and evidence-status header;

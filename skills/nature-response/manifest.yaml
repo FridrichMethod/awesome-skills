@@ -1,5 +1,5 @@
 name: nature-response
-version: 1.1.0
+version: 1.2.0
 description: >
   Declarative manifest for the static/dynamic split. SKILL.md uses this to
   decide which fragments and templates to load for a reviewer-response or
@@ -22,7 +22,7 @@ always_load:
 
 references:
   on_demand:
-    - condition: before drafting — identify task mode, parse pasted decision emails, minimum inputs, editor IDs, readiness state, clarifying-question need
+    - condition: before drafting — identify task mode, enforce the Major/Minor decision-type gate, parse pasted decision emails, minimum inputs, editor IDs, readiness state, and clarifying-question need
       path: references/intake-and-routing.md
     - condition: source hierarchy, rule provenance, or policy-vs-advice boundaries
       path: references/source-basis.md

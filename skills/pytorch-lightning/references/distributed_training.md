@@ -636,6 +636,7 @@ Save checkpoints to resume from failures:
 
 ```python
 checkpoint_callback = ModelCheckpoint(
+    monitor="val_loss",  # save_top_k > 1 needs a quantity to rank on
     save_top_k=3,
     save_last=True,  # Always save last for resuming
     every_n_epochs=5

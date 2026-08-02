@@ -4,6 +4,10 @@
 > Schema: `shared/sprint_contract.schema.json` (Schema 13.2).
 > Templates: `shared/contracts/reviewer/*.json`.
 > Design spec: `docs/design/2026-04-23-ars-v3.6.2-sprint-contract-design.md`.
+> Canonical inline prompt source: `references/reviewer_sprint_prompt_source.md`.
+> Its rendered fragments remain in the five reviewer agents and synthesizer because
+> the dispatcher sends those prompt sections verbatim; `scripts/check_reviewer_sprint_prompt_sync.py`
+> enforces byte-exact mirrors plus an explicit content-hash re-pin.
 >
 > **v3.6.6 cross-reference**: this reviewer protocol is byte-equivalent across v3.6.2 → v3.6.6 (zero-touch promise per §3.6 of `docs/design/2026-04-27-ars-v3.6.6-generator-evaluator-contract-design.md`). The v3.6.6 release adds a parallel generator-evaluator protocol inside `academic-paper` for the in-pair writer / evaluator pair (see `academic-paper/SKILL.md` § "v3.6.6 Generator-Evaluator Contract Protocol" and design doc §5).
 
@@ -42,11 +46,22 @@ For each reviewer in `range(panel_size)`:
 
 Structural checks (orchestrator, not validator). On failure retry Phase 1 once with the specific lint gap hinted in the system prompt; second failure aborts that reviewer.
 
+Run these as `scripts/check_phase_conformance.py --contract <C> --role <dispatch-role> --phase1 <P1> --phase1-only --manuscript <paper> --metadata <metadata.json>`, the Phase-1 counterpart of §8.1's `--layer1-only`: the retry decision is taken while Phase 2 has not been requested yet, so the gate has to be answerable on Phase 1 alone. Exit codes carry the same §11 meanings — exit 3 is the reviewer-conformance failure that the one permitted retry addresses, and every exit-2 class aborts the round without a retry.
+
 - Required sections in order: `## Contract Paraphrase`, `## Scoring Plan`, terminal `[CONTRACT-ACKNOWLEDGED]`.
 - Paraphrase paragraph count ≥ `measurement_procedure.paraphrase_minimum_dimensions` (for `"all"`, one paragraph per dimension; for integer `k`, at least `k` paragraphs each matching a distinct dimension).
 - `## Scoring Plan` has one `### <Dn>: <name>` subsection per dimension whose `eligible_roles` includes this dispatch role, and none for ineligible dimensions.
-- Every subsection uses the pinned, unbulleted line grammar exactly once: `dimension_id:`, `what_to_look_for:`, `what_triggers_block:`, `what_triggers_warn:`; a mandatory dimension also requires `what_triggers_fatal:`, which is forbidden on non-mandatory dimensions. The block/warn/fatal trigger strings are pairwise distinct.
+- Every subsection uses the pinned, unbulleted line grammar exactly once: `dimension_id:`, `what_to_look_for:`, `what_triggers_block:`, `what_triggers_warn:`; a mandatory dimension also requires `what_triggers_fatal:`, which is forbidden on non-mandatory dimensions. Copy each dimension ID and name exactly from the contract. For a non-mandatory dimension, omit the entire `what_triggers_fatal:` line; never emit that key with `NOT_APPLICABLE`, `none`, or another sentinel. The block/warn/fatal trigger strings are pairwise distinct.
 - `check_phase_conformance.py` searches every 12-word full-manuscript shingle against Phase 1 after whitespace normalization and case-folding. A hit fails unless it also occurs in the actual metadata-envelope values or the contract JSON. `--manuscript` and `--metadata` are mandatory, so this family cannot be skipped.
+
+Terminal Phase 1 structural preflight (mandatory). Silently inspect the exact text you are about to send:
+1. The only H2 sections are exactly one `## Contract Paraphrase` followed by exactly one `## Scoring Plan`. The paraphrase meets `measurement_procedure.paraphrase_minimum_dimensions`: `"all"` means one paragraph per contract dimension; integer `k` means at least `k` paragraphs tied to distinct dimensions.
+2. Every `### <Dn>: <name>` heading copies the contract ID and name exactly, and only dimensions eligible for your dispatch role appear.
+3. Each scoring-plan subsection contains exactly one unbulleted `dimension_id:`, `what_to_look_for:`, `what_triggers_block:`, and `what_triggers_warn:` line; its block and warn texts are distinct.
+4. In every non-mandatory subsection, the literal key `what_triggers_fatal:` occurs zero times; delete the entire line and any sentinel if it appears. In every mandatory subsection, that key occurs exactly once and its text is distinct from block and warn.
+5. No `## Dimension Scores`, `## Review Body`, `## Failure Condition Checks`, `## Editorial Decision`, `dimension_scores`, `review_body`, or bare `editorial_decision=` appears, and no manuscript-specific claim appears.
+6. The final nonblank output line is exactly `[CONTRACT-ACKNOWLEDGED]`.
+Do not send until every check holds.
 
 **Lint is structural, not semantic.** A reviewer can in principle pass this lint by emitting generic boilerplate triggers — semantic judgement (whether triggers are concrete and discriminating) is deferred to a post-v3.6.2 judge-agent layer.
 
@@ -56,13 +71,25 @@ On second Phase 1 failure: emit `[PROTOCOL-VIOLATION: reviewer=<role>, contract=
 
 Structural checks run before handoff to synthesizer. **No Phase 2 retry** (reviewer has seen the paper; a second call is tainted) EXCEPT the multi-dissent case below.
 
-- Required sections: `## Dimension Scores`, `## Review Body`. `## Failure Condition Checks` and `## Editorial Decision` are forbidden v1 grammar.
+- Required sections: `## Dimension Scores`, `## Review Body`. `## Failure Condition Checks` and `## Editorial Decision` are forbidden v1 grammar. `## Scoring Plan Dissent` is optional only when a dimension actually dissents; when there is no dissent, omit the whole section rather than emitting an empty or `none` placeholder.
+- Each report declares its dispatch role exactly once on one `contract_role: <role>` line immediately before `## Dimension Scores`; never repeat that report-level line inside dimension subsections.
 - `## Dimension Scores` has one `### <Dn>: <name>` subsection per contract dimension. Eligible roles use `block | warn | pass`, or `not_assessed` with `abstain_reason`; ineligible roles must use structural `not_assessed` without a reason. An ineligible real score is an out-of-role vote and fails.
 - An eligible `warn`/`block` carries a quoted `trigger:` substring of the matching Phase-1 commitment. A mandatory block also carries `block_class: fatal|repairable`; fatal binds only to `what_triggers_fatal`, is forbidden on dissent, and non-mandatory dimensions never carry `block_class`.
 - **Multi-dissent rule:** If `## Scoring Plan Dissent` names two or more `dimension_id` entries, orchestrator aborts this reviewer and retries from **Phase 1** once. If the retried Phase 1/2 also multi-dissents, mark the reviewer unusable (`[PROTOCOL-VIOLATION]`). One-dimension-per-reviewer-per-Phase-2-call is the cap.
-- **Anchor gate:** under `## Review Body`, each non-DA finding with a Severity occupies its own `### W<n>: <title>` subsection with exactly one Severity; every Critical/Major finding also carries its own valid typed Evidence Anchor, never shared with another finding. `text` includes a quoted excerpt of at most 25 words; `absence` names checked surfaces.
-- The finding field labels may be unindented or Markdown-list-indented and may be separate or pipe-delimited; anchor values may be bare or backtick-wrapped. These are presentation variants only. A Severity outside `## Review Body`, under a non-`W<n>` H3, or nested under H4 fails.
-- **DA table gate:** the DA emits exactly one `#### CRITICAL` table and exactly one `#### MAJOR` table, both always present even when empty, with exact `#` and `Evidence Anchor` header columns. The CRITICAL table uses unique dense IDs `C1..Cn`; both tables use the shared parser and anchor checks.
+- **Anchor gate:** under `## Review Body`, each non-DA finding with a Severity occupies its own `### W<n>: <title>` subsection with exactly one Severity; every Critical/Major finding also carries its own valid typed Evidence Anchor, never shared with another finding. Strength subsections never carry a `Severity` field or a `Severity: Strength` sentinel. Every Evidence Anchor value begins with the literal `<type>: <locator>` grammar. An opening backtick or `[` immediately before `<type>` starts an outer wrapper and requires its matching closer; nothing may appear between the type and its colon, so `` `text`: §3 `` and `` `text` — §3 `` are both invalid. Wrapper-like characters inside a locator are content and must be locally balanced — a bracketed locator such as `equation: Eq. [3]` and a locator naming inline code such as ``text: §3 "quote" per `df``` are valid. A `text:` anchor contains one or more verbatim excerpts, each inside a balanced pair of straight or curly double quotes, and every quoted excerpt is at most 25 words. Before output, confirm at least one quoted excerpt exists, count each quoted excerpt in a `text:` anchor, and shorten any excerpt over 25 words; never place commentary inside the quotation. An `absence:` anchor uses the exact grammar `absence: <where> — expected <item>; checked <surfaces>`, including the literal single space after the semicolon and non-empty content for every placeholder. The reserved ` — expected ` and `; checked ` separator sequences each occur exactly once.
+- The finding field labels may be unindented or Markdown-list-indented and may be separate or pipe-delimited; the complete typed anchor value, including its type and locator, may be bare, backtick-wrapped, or square-bracketed. These are presentation variants only. A Severity outside `## Review Body`, under a non-`W<n>` H3, or nested under H4 fails.
+- **DA table gate:** the DA emits exactly one `#### CRITICAL` table and exactly one `#### MAJOR` table, both always present even when empty, with exact `#` and `Evidence Anchor` header columns. The CRITICAL table uses unique dense IDs `C1..Cn`; both tables use the shared parser and anchor checks. The two tables are the terminal suffix of `## Review Body`: every prose paragraph precedes `#### CRITICAL`; only blank lines may separate the end of CRITICAL from `#### MAJOR` or follow MAJOR to the end of Review Body. DA reports may not contain HTML comments.
+
+Terminal Phase 2 structural preflight (mandatory). Silently inspect the exact text you are about to send against your supplied Phase 1:
+1. Dissent: if your Phase 2 view differs on exactly one dimension, include `## Scoring Plan Dissent` with exactly one unbulleted `dimension_id: <Dn>` line and exactly one unbulleted `rationale: <nonempty explanation>` line. If it differs on two or more, abort with `[PROTOCOL-VIOLATION: multi_dissent=true]` instead of drafting a card. If none differs, delete the heading and every placeholder beneath it; `none`, `omitted`, and `not applicable` are never a dissent.
+2. Sections and role: emit exactly one `## Dimension Scores` followed by exactly one `## Review Body`. Put exactly one report-level `contract_role: <your dispatch role>` immediately before `## Dimension Scores` and nowhere else. Delete `## Failure Condition Checks`, `## Editorial Decision`, and every bare `editorial_decision=` line.
+3. Dimensions and abstentions: emit every contract dimension exactly once with its exact ID/name. An eligible dimension uses `block`, `warn`, `pass`, or `not_assessed`; eligible `not_assessed` has exactly one non-empty `abstain_reason:`, while an ineligible dimension uses only `score: not_assessed` with no `abstain_reason:`. No other score carries `abstain_reason:`.
+4. Trigger binding: for every `warn` or `block`, the quoted `trigger:` text is a character-for-character substring of the matching Phase 1 trigger kind for the same dimension. Never paraphrase it. `pass` and `not_assessed` have no `trigger:`.
+5. Fatality: every mandatory `block` has exactly one `block_class:`; `fatal` binds to the Phase 1 fatal trigger, a dissented dimension cannot be fatal, and a non-mandatory dimension has no `block_class:`.
+6. Finding grammar: apply the role-specific grammar above. For a scoring seat, every weakness is its own `### W<n>` subsection with exactly one parseable Severity, one typed Evidence Anchor, and one Confidence; every strength has a typed Evidence Anchor and no Severity. If either finding polarity is empty, include its required Coverage Receipt. For the DA, emit exactly one `#### CRITICAL` table and one `#### MAJOR` table, both present even when empty, with no standalone Severity. Each table header contains exactly one column named `#` and exactly one named `Evidence Anchor`; every row is outer-pipe-delimited with the header's column count, and CRITICAL IDs are unique and dense `C1..Cn`. For the DA, these tables are the terminal suffix of `## Review Body`: put every prose paragraph before `#### CRITICAL`; after the CRITICAL table emit only blank lines until `#### MAJOR`, and after the MAJOR table emit only blank lines to the end of Review Body. Do not emit HTML comments anywhere in a DA report.
+7. Anchors: no findings share an anchor. Every anchor uses a valid typed `<type>: <locator>` value with balanced wrappers. Every `text:` anchor contains at least one balanced quoted verbatim excerpt, and each quoted excerpt is at most 25 words. Every `absence:` anchor uses the exact required separators and non-empty fields.
+8. Bands: assign each weakness by its own decision impact, never by a target distribution or bundled cluster; a Critical is singleton rejection-level.
+Do not send until every check holds.
 
 On any Phase 2 lint failure other than multi-dissent: emit `[PROTOCOL-VIOLATION]` and mark reviewer unusable. Do not synthesise a substitute score for the synthesizer.
 
@@ -76,9 +103,9 @@ On any Phase 2 lint failure other than multi-dissent: emit `[PROTOCOL-VIOLATION]
 
 | mode                          | panel_size | invoked reviewers |
 |-------------------------------|------------|-------------------|
-| `reviewer_full`               | 5          | EIC + methodology + domain + perspective + DA |
-| `reviewer_methodology_focus`  | 2          | EIC + methodology (only) |
-| `reviewer_re_review`          | —          | not shipped in v3.6.2; continues pre-v3.6.2 behaviour |
+| `reviewer_full`               | 5          | Journal-Fit Reviewer (`eic`) + methodology + domain + perspective + DA |
+| `reviewer_methodology_focus`  | 2          | Journal-Fit Reviewer (`eic`) + methodology (only) |
+| `reviewer_re_review`          | —          | NOT a Schema 13 mode (#576 Spec B — removed from the enum): governed by the dedicated contract family `shared/contracts/re_review/` + `scripts/check_re_review_synthesis.py`; see `re_review_mode_protocol.md` § Three-Gate Orchestration |
 | `reviewer_calibration`        | —          | not shipped in v3.6.2 |
 | `reviewer_guided`             | —          | not shipped in v3.6.2 |
 

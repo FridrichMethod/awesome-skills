@@ -3,8 +3,24 @@ name: autoskill
 description: Observe the user's screen via screenpipe, detect repeated research workflows, match them against existing scientific-agent-skills, and draft new skills (or composition recipes that chain existing ones) for the patterns not yet covered. Use when the user asks to analyze their recent work and propose skills based on what they actually do. Requires the screenpipe daemon (https://github.com/screenpipe/screenpipe) running locally on port 3030 — the skill has no other data source and will refuse to run if screenpipe is unreachable. All detection runs locally; only redacted cluster summaries reach the LLM.
 allowed-tools: Read Write Edit Bash
 license: MIT license
-required_environment_variables: [{"name": "SCREENPIPE_TOKEN", "prompt": "Auth token for the local screenpipe daemon.", "required_for": "full functionality"}, {"name": "ANTHROPIC_API_KEY", "prompt": "For Claude API calls during skill drafting.", "required_for": "optional features"}, {"name": "FOUNDRY_API_KEY", "prompt": "Optional Foundry access for drafting.", "required_for": "optional features"}]
-metadata: {"version": "1.1", "skill-author": "K-Dense Inc.", "openclaw": {"requires": {"bins": ["screenpipe"]}, "primaryEnv": "SCREENPIPE_TOKEN", "envVars": [{"name": "SCREENPIPE_TOKEN", "required": true, "description": "Auth token for the local screenpipe daemon."}, {"name": "ANTHROPIC_API_KEY", "required": false, "description": "For Claude API calls during skill drafting."}, {"name": "FOUNDRY_API_KEY", "required": false, "description": "Optional Foundry access for drafting."}]}}
+metadata:
+  version: "1.3"
+  skill-author: K-Dense Inc.
+  openclaw:
+    requires:
+      bins:
+      - screenpipe
+    primaryEnv: SCREENPIPE_TOKEN
+    envVars:
+    - name: SCREENPIPE_TOKEN
+      required: true
+      description: Auth token for the local screenpipe daemon.
+    - name: ANTHROPIC_API_KEY
+      required: false
+      description: For Claude API calls during skill drafting.
+    - name: FOUNDRY_API_KEY
+      required: false
+      description: Optional Foundry access for drafting.
 ---
 
 # autoskill
@@ -206,11 +222,10 @@ claude:
 
 ## Testing
 
-The skill is covered by a small pytest suite at `tests/`. Each script is unit-tested in isolation with dependency injection (mock HTTP transport, stub backend, stub embedder):
+The skill is covered by a small pytest suite at `tests/autoskill/` in the repository root. Each script is unit-tested in isolation with dependency injection (mock HTTP transport, stub backend, stub embedder):
 
 ```bash
-cd skills/autoskill
-python -m pytest tests/ -v
+python -m pytest tests/autoskill -v
 ```
 
 ## Composition with other skills in this repo

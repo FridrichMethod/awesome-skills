@@ -1,5 +1,5 @@
 name: nature-experiment-log
-version: 1.0.0
+version: 1.0.1
 description: >
   Declarative manifest for the experiment-log workflow. SKILL.md uses this to
   route raw images, voice transcripts, and text notes into standardized

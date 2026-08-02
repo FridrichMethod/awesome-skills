@@ -2,7 +2,9 @@
 name: tiledbvcf
 description: Efficient storage and retrieval of genomic variant data using TileDB. Scalable VCF/BCF ingestion, incremental sample addition, compressed storage, parallel queries, and export capabilities for population genomics.
 license: MIT license
-metadata: {"version": "1.0", "skill-author": "Jeremy Leipzig"}
+metadata:
+  version: "1.1"
+  skill-author: Jeremy Leipzig
 ---
 
 # TileDB-VCF
@@ -338,10 +340,10 @@ When your genomics workloads outgrow single-node processing, TileDB-Cloud provid
 **2. Install TileDB-Cloud Python Client**
 ```bash
 # Base installation
-pip install tiledb-cloud
+uv pip install tiledb-cloud
 
 # With genomics-specific functionality
-pip install tiledb-cloud[life-sciences]
+uv pip install tiledb-cloud[life-sciences]
 ```
 
 **3. Configure Authentication**

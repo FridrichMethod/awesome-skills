@@ -3,9 +3,9 @@ name: simpy
 description: Build, inspect, test, and analyze bounded process-based discrete-event simulations with SimPy, including events, resources, interrupts, monitoring, replications, warm-up, and reproducible output analysis.
 license: MIT
 compatibility: Upstream SimPy 4.1.2 supports Python 3.8+; bundled CLIs require Python 3.10+, uv, and SimPy 4.1.2. They use only SimPy and the standard library, operate on local bounded inputs, and make no network calls.
-allowed-tools: Read, Write, Edit, Bash, Glob
+allowed-tools: Read Write Edit Bash Glob
 metadata:
-  version: "1.1"
+  version: "1.2"
   skill-author: K-Dense Inc.
 ---
 
@@ -263,12 +263,12 @@ all resource disciplines, conservation, event/entity limits, seed reproducibilit
 and monitor non-interference. Add stochastic tests only as broad distributional
 checks with fixed seeds; avoid brittle exact sample estimates.
 
-Run the bundled suite in the exact pinned environment without bytecode artifacts:
+Run the skill's suite in the exact pinned environment without bytecode artifacts:
 
 ```bash
 PYTHONDONTWRITEBYTECODE=1 uv run --isolated --no-project \
   --python 3.13 --with "simpy==4.1.2" \
-  python -m unittest discover -s skills/simpy/tests -v
+  python -m unittest discover -s tests/simpy -v
 ```
 
 ## References

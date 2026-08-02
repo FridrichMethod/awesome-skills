@@ -4,7 +4,7 @@
 
 Record the available source, completeness, figure/table availability, supplementary-material availability, extraction confidence, and page-number systems. Resolve DOI or arXiv metadata when possible. Never imply full-paper coverage from an abstract-only input.
 
-For PDF or source-map JSON input, resolve and run the bundled `scripts/prepare_paper.py` before manual analysis. Do not create a replacement script. Inspect the generated metadata, page count, section list, evidence inventory, extraction confidence, and validation block. If rendered pages were requested, visually check the pages that contain central figures, tables, equations, or extraction anomalies.
+For PDF or source-map JSON input, resolve and run the bundled `scripts/prepare_paper.py` before manual analysis. Do not create a replacement script. Inspect the generated metadata, page count, section list, evidence inventory, extraction confidence, and validation block. For source maps, inspect `locator_summary` and `unlocated_blocks`: missing or invalid locators remain structurally usable but have no PDF page. If rendered pages were requested, visually check the pages that contain central figures, tables, equations, or extraction anomalies.
 
 Choose and record exactly one locator mode:
 

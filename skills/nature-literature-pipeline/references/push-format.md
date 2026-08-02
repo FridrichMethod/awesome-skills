@@ -43,14 +43,16 @@ Daily pushes should NOT include a fixed "与 vault 的关联" field or forced wi
 
 ## Example
 
+All papers, identifiers, dates, and numerical results in this example are synthetic.
+
 ```markdown
-📅 2026-05-09 文献日报 | Research Field Daily
+📅 YYYY-MM-DD 文献日报 | Research Field Daily
 
 ━━━━━━━━━━━━━━━━━━━━
 
 🏅 #1 | Electrochemical monitoring of impurity X in compound A-B-C system via advanced voltammetry
 Electrochimica Acta, 2026 | Zhang, Li, Wang et al. | CAS Institute | ⭐ 9.2/10 | 分流：A_核心主线
-DOI: 10.xxxx/example | arXiv: 2405.12345
+DOI: <DOI> | arXiv: <ARXIV_ID>
 
 💡 一句话：First application of method X to system Y for impurity quantification, detection limit improved ~5× over prior art。
 
@@ -63,7 +65,7 @@ DOI: 10.xxxx/example | arXiv: 2405.12345
 
 🧭 点评：A 类候选。价值在于把杂质监测灵敏度从 CV 推到 SWV，直接服务监测-控制-验证闭环；需要全文核查参比电极稳定性和标定方法。
 
-📎 https://arxiv.org/abs/2405.12345
+📎 https://example.org/paper
 
 ━━━━━━━━━━━━━━━━━━━━
 

@@ -162,13 +162,13 @@ class TemplateLightningModule(L.LightningModule):
             weight_decay=1e-5,
         )
 
-        # Define scheduler
+        # Define scheduler. PyTorch removed the schedulers' `verbose` argument;
+        # use LearningRateMonitor or the logged learning_rate metric instead.
         scheduler = ReduceLROnPlateau(
             optimizer,
             mode="min",
             factor=0.5,
             patience=5,
-            verbose=True,
         )
 
         # Return configuration
@@ -215,5 +215,6 @@ if __name__ == "__main__":
     # Train (you need to provide train_dataloader and val_dataloader)
     # trainer.fit(model, train_dataloader, val_dataloader)
 
-    print(f"Model created with {model.num_parameters:,} parameters")
+    n_parameters = sum(p.numel() for p in model.parameters())
+    print(f"Model created with {n_parameters:,} parameters")
     print(f"Hyperparameters: {model.hparams}")

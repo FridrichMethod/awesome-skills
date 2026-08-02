@@ -104,13 +104,24 @@ def add_io_args(parser, default_output=None):
     return parser
 
 
+def _named_keys(mapping):
+    """Named keys of an AnnData mapping, in order.
+
+    anndata >= 0.13 reports an unnamed `None` key on `.layers` standing for X
+    itself. Joining that into a string raises TypeError, so filter it out.
+    """
+    return [key for key in mapping.keys() if isinstance(key, str)]
+
+
 def summarize(adata):
     """Return a short human-readable summary string of an AnnData object."""
     lines = [f"{adata.n_obs} cells x {adata.n_vars} genes"]
     if len(adata.obs.columns):
         lines.append("obs: " + ", ".join(adata.obs.columns[:20]))
-    if list(adata.obsm.keys()):
-        lines.append("obsm: " + ", ".join(adata.obsm.keys()))
-    if list(adata.layers.keys()):
-        lines.append("layers: " + ", ".join(adata.layers.keys()))
+    obsm = _named_keys(adata.obsm)
+    if obsm:
+        lines.append("obsm: " + ", ".join(obsm))
+    layers = _named_keys(adata.layers)
+    if layers:
+        lines.append("layers: " + ", ".join(layers))
     return "\n".join(lines)

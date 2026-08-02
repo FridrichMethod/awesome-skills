@@ -27,7 +27,15 @@ import re
 import sys
 import time
 import argparse
-from bioservices import UniProt, KEGG, NCBIblast, PSICQUIC, QuickGO
+from bioservices import UniProt, KEGG, NCBIblast, QuickGO
+
+try:
+    # PSICQUIC is not shipped by every bioservices release (it is absent from
+    # 1.16.0). Importing it unconditionally would take the whole workflow down
+    # over one optional step, so degrade instead.
+    from bioservices import PSICQUIC
+except ImportError:  # pragma: no cover - depends on the installed release
+    PSICQUIC = None
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -259,6 +267,10 @@ def find_interactions(protein_query):
     print(f"\n{'='*70}")
     print("STEP 5: Protein-Protein Interactions")
     print(f"{'='*70}")
+
+    if PSICQUIC is None:
+        print("⊘ Skipped (this bioservices release does not ship PSICQUIC)")
+        return []
 
     try:
         p = PSICQUIC()

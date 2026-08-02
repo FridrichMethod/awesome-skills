@@ -10,17 +10,23 @@ pi --mode json "Your prompt"
 
 ## Event Types
 
-`AgentSessionEvent` includes base agent events plus queue, compaction, and retry events:
+`AgentSessionEvent` is `AgentEvent` plus session-level events:
 
-- `agent_start`, `agent_end`
-- `turn_start`, `turn_end`
-- `message_start`, `message_update`, `message_end`
-- `tool_execution_start`, `tool_execution_update`, `tool_execution_end`
-- `queue_update`
-- `compaction_start`, `compaction_end`
-- `auto_retry_start`, `auto_retry_end`
+- `queue_update` — `{ steering: readonly string[], followUp: readonly string[] }`, emitted whenever either queue changes
+- `compaction_start` — `{ reason: "manual" | "threshold" | "overflow" }`
+- `compaction_end` — `{ reason, result: CompactionResult | undefined, aborted, willRetry, errorMessage? }`
+- `auto_retry_start` — `{ attempt, maxAttempts, delayMs, errorMessage }`
+- `auto_retry_end` — `{ success, attempt, finalError? }`
+- `summarization_retry_scheduled` — `{ attempt, maxAttempts, delayMs, errorMessage }`
+- `summarization_retry_attempt_start` — `{ source: "branchSummary" }` or `{ source: "compaction", reason }`
+- `summarization_retry_finished`
 
-`queue_update` emits full pending steering and follow-up queues. Compaction events cover manual and automatic compaction.
+Base `AgentEvent` types:
+
+- `agent_start`, `agent_end` (`messages`)
+- `turn_start`, `turn_end` (`message`, `toolResults`)
+- `message_start` (`message`), `message_update` (`message`, `assistantMessageEvent`), `message_end` (`message`)
+- `tool_execution_start` (`toolCallId`, `toolName`, `args`), `tool_execution_update` (+ `partialResult`), `tool_execution_end` (`result`, `isError`)
 
 ## Output Format
 
@@ -30,12 +36,15 @@ First line is the session header:
 {"type":"session","version":3,"id":"uuid","timestamp":"...","cwd":"/path"}
 ```
 
-Subsequent lines are events:
+Then events as they occur:
 
 ```json
 {"type":"agent_start"}
 {"type":"turn_start"}
+{"type":"message_start","message":{"role":"assistant","content":[]}}
 {"type":"message_update","message":{},"assistantMessageEvent":{"type":"text_delta","delta":"Hello"}}
+{"type":"message_end","message":{}}
+{"type":"turn_end","message":{},"toolResults":[]}
 {"type":"agent_end","messages":[]}
 ```
 

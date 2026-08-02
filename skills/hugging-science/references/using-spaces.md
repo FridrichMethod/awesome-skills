@@ -35,6 +35,8 @@ from dotenv import load_dotenv
 load_dotenv()    # gradio_client picks up HF_TOKEN automatically
 ```
 
+Note what that convenience implies: once `HF_TOKEN` is loaded, `gradio_client` sends it to whatever Space you call, and `file(...)` uploads local data to that Space's operator. Both are fine for the `hugging-science` org's own Spaces. Neither is fine for a Space name you picked up from the catalog and haven't looked at — catalog entries are curated for scientific relevance, not audited, and the catalog is fetched over the network at read time. Before calling a Space outside the `hugging-science` org, name it to the user along with the files you intend to upload, and let them decide.
+
 ## The general pattern
 
 ```python

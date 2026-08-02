@@ -1,13 +1,12 @@
 ---
 name: matplotlib
 description: Low-level plotting library for full customization. Use when you need fine-grained control over every plot element, creating novel plot types, or integrating with specific scientific workflows. Export to PNG/PDF/SVG for publication. For quick statistical plots use seaborn; for interactive plots use plotly; for publication-ready multi-panel figures with journal styling, use scientific-visualization.
-allowed-tools:
-  - Read
-  - Write
-  - Bash
+allowed-tools: Read Write Bash
 license: https://github.com/matplotlib/matplotlib/tree/main/LICENSE
 compatibility: Requires Python 3.10+ and Matplotlib 3.10.x. Use `uv add matplotlib` in projects; interactive Jupyter widgets require `ipympl`.
-metadata: {"version": "1.1", "skill-author": "K-Dense Inc."}
+metadata:
+  version: "1.1"
+  skill-author: K-Dense Inc.
 ---
 
 # Matplotlib

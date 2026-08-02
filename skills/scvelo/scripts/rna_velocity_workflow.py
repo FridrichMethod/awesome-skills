@@ -65,7 +65,15 @@ def run_velocity_analysis(
 
     # ── Step 2: Preprocessing ─────────────────────────────────────────────────
     print("Step 1/5: Preprocessing...")
-    scv.pp.filter_and_normalize(adata, min_shared_counts=20, n_top_genes=n_top_genes)
+    # scVelo 0.3 narrowed filter_and_normalize() to gene filtering plus
+    # per-cell normalization: it no longer accepts n_top_genes and no longer
+    # log-transforms, so the log step and HVG selection come from Scanpy.
+    scv.pp.filter_and_normalize(adata, min_shared_counts=20)
+    if "log1p" not in adata.uns:
+        sc.pp.log1p(adata)
+    sc.pp.highly_variable_genes(
+        adata, n_top_genes=min(n_top_genes, adata.n_vars), subset=True
+    )
 
     if "neighbors" not in adata.uns:
         sc.pp.neighbors(adata, n_neighbors=n_neighbors, n_pcs=30)

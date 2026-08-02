@@ -22,8 +22,9 @@ Create stable IDs for source blocks:
 - `C001`, `C002`, ... for captions
 - `F001`, `F002`, ... for figures
 - `T001`, `T002`, ... for tables
+- `E001`, `E002`, ... for display equations
 
-For each block, capture: page number, block type, original text, translation, reading-order index, nearby figure or table references, first substantive figure/table mention when applicable, and confidence level when extraction is uncertain.
+For each block, capture: page number, block type, original text, translation, reading-order index, nearby figure or table references, first substantive figure/table mention when applicable, and confidence level when extraction is uncertain. For equations, also capture the printed equation number (if any), normalized LaTeX, bounding box, and original-crop path when a visual fallback is needed.
 
 Keep the source map stable so later questions can point back to the same IDs. For long papers, add a page index so the reader can jump across the whole document without losing location.
 
@@ -41,6 +42,8 @@ Translate every extractable substantive block with these rules:
 - do not silently skip Methods, limitations, data availability, code availability, competing interests, or extended captions
 - if the paper is too long for one pass, write `paper.md` incrementally by page/section and mark pending blocks rather than switching to summary mode
 
+Render inline expressions with `$...$` and display equations with `$$...$$`. Do not put equations in ordinary code spans or code fences. For low-confidence OCR, custom macros that the target renderer cannot support, or image-only formulae, follow `references/equation-handling.md`: show the original crop and an explicitly labelled best-effort transcription rather than raw or guessed LaTeX.
+
 If a sentence contains multiple claims, keep the translation readable but do not split away the original evidence chain. Build the Terminology Ledger (`../../../nature-shared/core/terminology-ledger.md`) as you translate so recurring terms stay consistent across the whole document.
 
 ## 4. Extract and place figures and tables near the relevant discussion
@@ -56,12 +59,16 @@ Default output is a single full-paper `paper.md` file. It must include:
 - page-level or section-level divisions for long papers
 - paragraph-level original/Chinese pairs for all extractable substantive text
 - figure and table blocks placed near the relevant discussion
+- rendered equation blocks with stable `E...` anchors and visible source locations
+- a compact equation index when the paper contains three or more display equations
 - source anchors on every substantive text, figure, caption, and table block
 - a terminology table for recurring technical terms (from the Terminology Ledger)
 - a short `阅读提示` / `critical reading notes` section only after the bilingual body, not as a replacement for it
 - short uncertainty notes only when extraction is weak
 
 Do not add an interactive Q&A panel or follow-up widget in the Markdown deliverable. If a browser preview is explicitly requested, a companion `reader.html` can be generated as a secondary artifact, but the Markdown file remains the primary output.
+
+Before delivery, run `scripts/validate_reader_math.py paper.md --source-map source_map.json`. Resolve every failure. Use `--strict` when preparing a reusable or published artifact.
 
 ## 6. Answer follow-up questions with source grounding
 

@@ -1,41 +1,42 @@
 ---
 name: nature-experiment-log
-description: "标准化实验日志记录——接收原始材料（图/语音/文字），产出带 YAML frontmatter 的标准日志到 Obsidian vault。需配合飞书 CLI 或手动输入使用。"
-version: 1.0.0
-author: 十五 (JL Lab)
+description: "标准化实验日志记录——直接上传或读取本地图片、语音和文字，产出带 YAML frontmatter 的 Markdown；可选集成飞书 CLI 与 Obsidian。"
+version: 1.0.1
+author: Jiahao8595
 license: MIT
 metadata:
   hermes:
     tags: [research, experiment, logging, feishu, obsidian, automation]
-    related_skills: [nature-literature-pipeline, feishu-cli-integration]
+    related_skills: [nature-literature-pipeline, feishu-cli-integration, obsidian]
 ---
 
 # experiment-log — 实验日志标准化
 
-## 触发条件
+## 输入方式
 
 用户通过以下任一方式提交实验原始材料时自动加载：
 
-- **路径 A** — CLI 直接提交（图片 / 语音转录 / 文字）
-- **路径 B** — 发到飞书科研群，通过 `feishu-cli-integration` 扫描
+- **直接上传** — 在当前会话提交图片、音频、语音转录或文字。
+- **本地材料** — 提供本地文件或文件夹路径，由 agent 读取并整理。
+- **飞书群** — 通过可选的 `feishu-cli-integration` 读取群消息和附件。
 
-## 前置依赖
+## 输出方式
 
-需要配合 `feishu-cli-integration` skill 使用。确保：
-- 飞书 bot 已添加到目标群
-- bot 权限：`im:message` + `im:resource` + `im:message.group_msg`
-- 群 ID 配置在 skill 上下文中
+- **本地 Markdown** — 将日志和原始附件保存到用户指定的普通本地文件夹；未指定目录时，先返回可保存的 Markdown，不擅自选择路径。
+- **Obsidian vault** — 通过可选的 `obsidian` skill 写入 vault，并使用附带模板建立索引、异常记录和设备追踪。
+
+核心流程不要求安装飞书或 Obsidian。使用飞书群输入时，才需要 bot 已加入目标群并具备 `im:message`、`im:message.group_msg` 和 `im:resource` 权限。
 
 ## 处理流程
 
-1. 接收材料 → vision_analyze 读图 + 提取结构化信息
-2. 生成实验 ID + 样品批次 ID
-3. 写出标准日志到 `wiki/实验日志/{体系}/{类型}/{exp_id}.md`
-4. 原始材料（图片等）归档到 `raw/experiments/YYYY.MM.DD_描述_EXPID/`
-5. 日志末尾加「原始材料」段落，引用 raw 路径
-6. 检查异常 → 有则追加 `异常记录.md`
-7. 追加操作记录到日志索引
-8. 告知用户写入位置
+1. 接收上传材料、读取本地文件，或从已配置的飞书群获取材料。
+2. 通过 vision_analyze 和文本解析提取结构化信息。
+3. 对缺失或模糊字段向用户确认，不猜测实验条件或结果。
+4. 确认输出方式和目标目录，生成实验 ID 与样品批次 ID。
+5. 写出 `{OUTPUT_ROOT}/实验日志/{体系}/{类型}/{exp_id}.md`。
+6. 将原始附件归档到 `{OUTPUT_ROOT}/raw/experiments/YYYY.MM.DD_描述_EXPID/`，并在日志中建立引用。
+7. 如启用索引模板，更新实验索引；发现异常时追加异常记录。
+8. 告知用户生成文件及原始材料的具体位置。
 
 模糊信息（温度记不清、样品编号不明）主动询问，不猜测写入。
 
@@ -96,9 +97,9 @@ wiki/实验日志/                              ← 标准层（产出）
 
 按实际设备扩展。
 
-## Obsidian 集成
+## 可选的 Obsidian 集成
 
-本 skill 设计为与 [Obsidian](https://obsidian.md) vault 配合使用。Obsidian 是一个基于本地 Markdown 文件的笔记系统，配合 [Dataview](https://github.com/blacksmithgu/obsidian-dataview) 插件可实现实验数据的动态查询和仪表盘。
+本 skill 可以只向普通本地文件夹输出 Markdown，也可以与 [Obsidian](https://obsidian.md) vault 配合使用。Obsidian 是一个基于本地 Markdown 文件的笔记系统，配合 [Dataview](https://github.com/blacksmithgu/obsidian-dataview) 插件可实现实验数据的动态查询和仪表盘。
 
 **为什么用 Obsidian：**
 - 所有日志为纯文本 Markdown，可版本控制、可全文搜索
@@ -127,9 +128,9 @@ wiki/实验日志/                              ← 标准层（产出）
 
 每个示例均包含完整的 YAML frontmatter 和 Markdown 正文，可直接作为模板修改使用。
 
-## 飞书 CLI 操作要点
+## 可选的飞书 CLI 集成
 
-路径 B 使用 `feishu-cli-integration` skill：
+需要从飞书群获取材料时，使用 `feishu-cli-integration` skill：
 
 - 拉消息：`lark-cli im +chat-messages-list --chat-id oc_*** --page-size 30 --sort asc`
 - 下载图片：`lark-cli im +messages-resources-download --message-id *** --file-key *** --type image --output <相对路径>`
@@ -143,6 +144,7 @@ wiki/实验日志/                              ← 标准层（产出）
 - **实验类型**：在 `wiki/实验日志/{体系}/` 下按需创建子目录
 - **YAML 字段**：模板是建议结构，可增删字段
 - **设备代码**：按实际实验室设备扩展
+- **输出根目录**：可以是普通本地文件夹，也可以是 Obsidian vault 根目录
 
 ## 相关文件
 

@@ -3,7 +3,7 @@ name: scikit-survival
 description: Build, evaluate, and audit right-censored or competing-risk survival workflows with scikit-survival, including leakage-safe preprocessing, model selection, probability prediction, and censoring-aware metrics.
 license: MIT
 compatibility: Requires Python 3.11+, uv, and the pinned scikit-survival 0.28.0 stack for executable examples. Bundled CLIs are local and network-free by default.
-allowed-tools: Read, Write, Edit, Bash
+allowed-tools: Read Write Edit Bash
 metadata:
   version: "1.1"
   skill-author: K-Dense Inc.

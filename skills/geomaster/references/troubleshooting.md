@@ -16,10 +16,10 @@ conda install -c conda-forge gdal rasterio
 sudo apt-get install gdal-bin libgdal-dev
 export CPLUS_INCLUDE_PATH=/usr/include/gdal
 export C_INCLUDE_PATH=/usr/include/gdal
-pip install rasterio
+uv pip install rasterio
 
 # Solution 3: Wheel files
-pip install rasterio --find-links=https://gis.wheelwrights.com/
+uv pip install rasterio --find-links=https://gis.wheelwrights.com/
 
 # Verify installation
 python -c "from osgeo import gdal; print(gdal.__version__)"
@@ -36,11 +36,11 @@ conda install -c conda-forge --force-reinstall gdal rasterio fiona
 # Problem: "Symbol not found" on macOS
 # Solution: Rebuild from source or use conda
 brew install gdal
-pip install rasterio --no-binary rasterio
+uv pip install rasterio --no-binary rasterio
 
 # Problem: GEOS errors
 brew install geos
-pip install shapely --no-binary shapely
+uv pip install shapely --no-binary shapely
 ```
 
 ## Runtime Errors

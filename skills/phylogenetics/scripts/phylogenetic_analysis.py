@@ -5,7 +5,7 @@ Complete workflow: MAFFT alignment → IQ-TREE tree → ETE3 visualization.
 
 Requirements:
     conda install -c bioconda mafft iqtree
-    pip install ete3
+    uv pip install ete3
 
 Usage:
     python phylogenetic_analysis.py sequences.fasta --type nt --threads 4
@@ -138,9 +138,11 @@ def visualize_tree(tree_file: str, output_png: str, outgroup: str = None) -> Non
     """Visualize the phylogenetic tree with ETE3."""
     try:
         from ete3 import Tree, TreeStyle, NodeStyle
-    except ImportError:
-        print("ETE3 not installed. Skipping visualization.")
-        print("  Install: pip install ete3")
+    except ImportError as exc:
+        # TreeStyle and NodeStyle live in ete3's Qt-backed treeview module, so
+        # this also fires when ete3 itself imported fine but PyQt5 is missing.
+        print(f"ETE3 rendering unavailable ({exc}). Skipping visualization.")
+        print("  Install: uv pip install ete3 PyQt5")
         return
 
     t = Tree(tree_file)

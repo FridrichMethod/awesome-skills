@@ -5,7 +5,7 @@ Demonstrates creating, listing, updating, and deleting notebooks
 using the Open Notebook REST API.
 
 Prerequisites:
-    pip install requests
+    uv pip install requests
 
 Usage:
     export OPEN_NOTEBOOK_URL="http://localhost:5055"

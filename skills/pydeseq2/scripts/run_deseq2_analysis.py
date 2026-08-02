@@ -47,8 +47,10 @@ def load_and_validate_data(counts_path, metadata_path, transpose_counts=True):
     print(f"  Counts shape: {counts_df.shape} (samples × genes)")
     print(f"  Metadata shape: {metadata.shape} (samples × variables)")
 
-    # Validate
-    if not all(counts_df.index == metadata.index):
+    # Validate. `Index.equals` also covers a length mismatch, which element-wise
+    # comparison cannot: `index_a == index_b` raises when the two differ in
+    # length, so the intersection fallback below would never be reached.
+    if not counts_df.index.equals(metadata.index):
         print("\nWarning: Sample indices don't match perfectly. Taking intersection...")
         common_samples = counts_df.index.intersection(metadata.index)
         counts_df = counts_df.loc[common_samples]

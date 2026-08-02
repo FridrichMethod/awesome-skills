@@ -1,6 +1,6 @@
 # Peer Review Report Template
 
-This template is used by all reviewer agents (EIC, Reviewers 1-3). Each reviewer uses the same structure but fills in review content from their respective perspectives.
+This template is used by the Journal-Fit Reviewer and Reviewers 1-3. Each reviewer uses the same structure but fills in review content from their respective perspectives.
 
 ---
 
@@ -29,7 +29,7 @@ This template is used by all reviewer agents (EIC, Reviewers 1-3). Each reviewer
 ## Reviewer Information
 
 ### Reviewer Role *
-[EIC / Peer Reviewer 1 (Methodology) / Peer Reviewer 2 (Domain) / Peer Reviewer 3 (Perspective)]
+[Journal-Fit Reviewer / Peer Reviewer 1 (Methodology) / Peer Reviewer 2 (Domain) / Peer Reviewer 3 (Perspective)]
 
 ### Reviewer Identity *
 [Identity description configured by field_analyst_agent]
@@ -75,10 +75,12 @@ List every genuine strength you actually found — no minimum, no maximum (#574 
 - Have a specific title
 - Carry a typed evidence anchor (see § Evidence Anchor Types under Format Guidelines)
 - Explain why it is a strength
+- Omit the Severity field entirely — never emit `Severity: Strength`; Severity is weakness-only
 
 ### S1: [Strength title]
 [Specific description. E.g., "The research design uses a quasi-experimental pretest-posttest control group design (p. X), effectively controlling for..."]
-**Evidence Anchor**: [`<type>: <locator>` — see § Evidence Anchor Types]
+**Evidence Anchor**: [`<type>: <locator>`]
+[Replace the complete backticked value above; never wrap `<type>` alone. See § Evidence Anchor Types.]
 
 ### S2..Sn
 [Repeat the S1 structure for each additional strength — as many entries as the evidence supports, including zero.]
@@ -96,13 +98,16 @@ List every weakness you actually found — no minimum, no maximum (#574 A1). Do 
 
 ### W1: [Weakness title]
 **Problem**: [Specific description of the problem]
-**Evidence Anchor**: [`<type>: <locator>` per § Evidence Anchor Types — REQUIRED with an adequate, applicable type for Critical/Major findings (#574 A2)]
+**Evidence Anchor**: [`<type>: <locator>`]
+[Replace the complete backticked value above; never wrap `<type>` alone. Critical/Major findings require an adequate, applicable type (#574 A2); see § Evidence Anchor Types.]
 **Why it matters**: [Explain the impact of this problem]
 **Suggestion**: [Specific improvement direction]
 **Severity**: [Critical / Major / Minor] — the Schema 6 enum (§ Severity Levels below); set by decision impact alone (#574 A3/B1)
 **Confidence**: [1-5] — [competence basis, one phrase: e.g. "core expertise: psychometrics" / "adjacent field: applying general standards"] (#574 A3)
 
-Finding fields may be unindented or Markdown-list-indented, and may be separate lines or pipe-delimited on one line. A typed anchor value may be bare or backtick-wrapped; these presentation variants do not weaken the one-finding/one-Severity/one-anchor gate.
+Finding fields may be unindented or Markdown-list-indented, and may be separate lines or pipe-delimited on one line. The complete typed anchor value, including its type and locator, may be bare, backtick-wrapped, or square-bracketed; these presentation variants do not weaken the one-finding/one-Severity/one-anchor gate.
+
+Every Evidence Anchor value begins with the literal `<type>: <locator>` grammar. An opening backtick or `[` immediately before `<type>` starts an outer wrapper and requires its matching closer; nothing may appear between the type and its colon, so `` `text`: §3 `` and `` `text` — §3 `` are both invalid. Wrapper-like characters inside a locator are content and must be locally balanced — a bracketed locator such as `equation: Eq. [3]` and a locator naming inline code such as ``text: §3 "quote" per `df``` are valid. A `text:` anchor contains one or more verbatim excerpts, each inside a balanced pair of straight or curly double quotes, and every quoted excerpt is at most 25 words. Before output, confirm at least one quoted excerpt exists, count each quoted excerpt in a `text:` anchor, and shorten any excerpt over 25 words; never place commentary inside the quotation. An `absence:` anchor uses the exact grammar `absence: <where> — expected <item>; checked <surfaces>`, including the literal single space after the semicolon and non-empty content for every placeholder. The reserved ` — expected ` and `; checked ` separator sequences each occur exactly once.
 
 ### W2..Wn
 [Repeat the W1 structure for each additional weakness — as many entries as the evidence supports, including zero.]

@@ -92,6 +92,13 @@ def get_kegg_info(kegg, kegg_id):
         current_section = None
 
         for line in entry.split("\n"):
+            # KEGG field names start in column 1 and their continuation lines are
+            # indented. A new field therefore ends any multi-line section --
+            # without this reset, the indented DBLINKS lines that follow PATHWAY
+            # would be collected as pathways.
+            if line and not line.startswith(" "):
+                current_section = None
+
             if line.startswith("NAME"):
                 compound_info['name'] = line.replace("NAME", "").strip().rstrip(";")
 
@@ -234,7 +241,9 @@ def get_chembl_info(chembl_id):
 
         print(f"Retrieving ChEMBL entry for {chembl_id}...")
 
-        compound = c.get_compound_by_chemblId(chembl_id)
+        # `get_compound_by_chemblId` was a pre-1.6 name; current releases expose
+        # the same lookup as `get_molecule`.
+        compound = c.get_molecule(chembl_id)
 
         if compound:
             print(f"\n✓ ChEMBL Information:")

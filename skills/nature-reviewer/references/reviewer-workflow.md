@@ -13,14 +13,17 @@
    - Apply `originality`, `scientific importance`, `interdisciplinary interest`, `technical soundness`, and `readability for nonspecialists`.
 5. Build an internal concern ledger.
    - Load `technical-concern-taxonomy.md` and mark each axis `applicable`, `not applicable`, or `not assessable`.
-   - Give every supported concern an issue key, severity, `claim_pointer`, `evidence_pointer`, and resolution test.
+   - Give every supported concern an issue key, `major` or `minor` severity, a blocking flag for Major Concerns, severity rationale, `claim_pointer`, `evidence_pointer`, and resolution test.
    - Keep the ledger internal; expose only the fields needed to make each emitted concern traceable.
 6. Generate `3` reviewer reports with different emphasis.
    - Use the same fact base for all three reports.
    - Do not invent different reviewer identities or hidden information.
    - Assign concerns from the shared ledger; do not create artificial differences merely to reduce overlap.
+   - Render separate `Major Concerns` and `Minor Comments` sections. If a tier has no grounded item,
+     write `None identified from the supplied material` rather than filling a quota.
 7. Generate a cross-review synthesis.
-   - Summarize consensus, points of emphasis divergence, and the most decision-relevant technical and significance risks.
+   - Summarize consensus blocking concerns, other major concerns, the minor-revision checklist,
+     points of emphasis divergence, and the most decision-relevant technical and significance risks.
    - Treat an issue as consensus only when at least two reviewer reports independently raise the same issue key.
 8. Run final QA.
    - Check evidence anchors, pairwise concern overlap, groundedness, consistency, coverage, and non-invention.
@@ -55,6 +58,8 @@ issue_key: experimental-design-control-selection
 axis: experimental-design
 applicability: applicable
 severity: major
+blocking: yes
+severity_rationale: The missing control prevents the supplied comparison from isolating the central treatment effect.
 claim_pointer: The treatment effect is attributed to the intervention.
 evidence_pointer: Results, "Primary outcome"; Figure 2
 evidence_status: located
@@ -66,6 +71,9 @@ assigned_to: [Reviewer 1]
 - Use section headings and supplied figure/table identifiers before page or line numbers.
 - Use `location not provided` or `not assessable from supplied material` when an exact pointer cannot be verified.
 - Never infer an absent figure, analysis, control, or manuscript location.
+- Use `blocking: yes` only for a grounded Major Concern that prevents the current manuscript from
+  establishing its central case. Minor Comments always use `blocking: no` internally and do not
+  need to display the field in the final report.
 
 ## Cross-review generation rule
 
@@ -74,7 +82,9 @@ assigned_to: [Reviewer 1]
 - Preserve consequential single-reviewer concerns under weighting differences; do not drop them merely because they lack consensus.
 - It must separate:
   - shared strengths
-  - shared technical concerns
+  - consensus blocking concerns
+  - other shared major concerns
+  - minor revision checklist
   - differences in significance weighting
   - differences in readership/readability judgment
 

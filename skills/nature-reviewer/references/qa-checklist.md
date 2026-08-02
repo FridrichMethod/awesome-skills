@@ -16,11 +16,27 @@
 - Each axis is marked internally as `applicable`, `not applicable`, or `not assessable`; absence of evidence is not silently treated as a defect.
 - The technical taxonomy supplements the five source-grounded Nature axes and does not create policy claims or severity statistics.
 
+## Severity and blocking checks
+
+- Every emitted concern is classified as Major or Minor from its impact on the manuscript's case,
+  not from tone, difficulty, cost, or a desired quota.
+- Every Major Concern displays `Blocking: Yes` or `Blocking: No` and gives a rationale consistent
+  with the concern and resolution test.
+- `Blocking: Yes` is used only when the current manuscript cannot establish its central case until
+  the concern is resolved.
+- No Minor Comment is blocking, and no core evidence, validity, ethics, or integrity problem is
+  downgraded to Minor merely because it can be described briefly.
+- Localized presentation, terminology, citation, and reporting issues remain Minor unless they
+  materially affect inference or reproducibility.
+- Empty tiers say `None identified from the supplied material`; concerns are never invented to fill
+  Major/Minor sections or equalize reviewer counts.
+
 ## Coverage checks
 
 - Confirm all three reviewer reports exist.
 - Confirm the three reports differ in `emphasis` only.
 - Confirm each reviewer still addresses all core axes, even if briefly.
+- Confirm each reviewer visibly contains both `Major Concerns` and `Minor Comments` sections.
 - Confirm a `Cross-review synthesis` section exists.
 - Confirm a `Risk / unsupported claims` section exists.
 
@@ -42,6 +58,9 @@
 - Divergence across reviewers should reflect weighting differences, not contradictory factual claims.
 - Technical failings listed in the synthesis should match issues already raised in at least one individual report.
 - Consensus issues were raised by at least two reviewer reports and map to the same underlying issue key.
+- Consensus blocking and other consensus major concerns preserve the original severity and
+  blocking status of the source concerns.
+- The minor-revision checklist contains only supported Minor Comments and cross-references their IDs.
 - Preserve important single-reviewer concerns as weighting differences instead of deleting them.
 
 ## Overlap checks
@@ -54,3 +73,5 @@
 ## Final release rule
 
 - If the skill cannot produce a grounded three-reviewer package without major invention, it should return a bounded draft review with explicit missing-information flags rather than pretending certainty.
+- Do not release the report when Major/Minor labels or Blocking flags conflict with their stated
+  rationale, manuscript impact, or resolution test.

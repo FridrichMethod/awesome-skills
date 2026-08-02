@@ -1,5 +1,5 @@
 name: nature-paper-card
-version: 1.1.0
+version: 1.2.0
 description: >
   Declarative routing for a source-grounded Sections 01-16 Paper Card. The paper_type
   axis changes the analytical checks while the final card structure remains

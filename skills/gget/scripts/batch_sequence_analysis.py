@@ -92,10 +92,11 @@ def analyze_sequences(
         print("\n\nStep 2: Multiple sequence alignment...")
         print("-" * 60)
         try:
-            alignment = gget.muscle(fasta_file)
+            # gget.muscle returns None: it writes the alignment to `out` (or
+            # prints it when `out` is omitted), so the file must be requested
+            # rather than written from the return value.
             alignment_file = output_path / "alignment.afa"
-            with open(alignment_file, "w") as f:
-                f.write(alignment)
+            gget.muscle(fasta_file, out=str(alignment_file))
             print(f"Alignment saved to: {alignment_file}")
         except Exception as e:
             print(f"Error in alignment: {e}")

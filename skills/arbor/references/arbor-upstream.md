@@ -19,7 +19,7 @@ Requires Python ≥ 3.10 and Git.
 git clone https://github.com/RUC-NLPIR/Arbor.git
 cd Arbor
 python -m venv .venv && source .venv/bin/activate
-pip install -e .
+uv pip install -e .
 arbor doctor      # verify install, PATH, git, API keys
 ```
 

@@ -1,68 +1,78 @@
-# 2026-05-09 一次性文献推送未触发：排查与补跑记录
+# Scheduled literature delivery: verification and recovery
 
-## 症状
+This synthetic example shows how to verify a one-shot or recurring literature-delivery job and recover when a scheduled run does not appear. All identifiers, dates, targets, and paths below are placeholders.
 
-大哥反馈：早上快 9 点仍未收到前一晚设置的 08:30 一次性文献推送。
+## Scenario
 
-原 job 信息：
+A user reports that a scheduled literature digest was not delivered at the expected time.
 
-- job_id: `a20ff6e2672d`
-- name: `一次性文献推送-5篇-明早`
-- scheduled: `2026-05-09T08:30:00+08:00`
-- repeat: once
+Example job configuration:
 
-## 排查结果
+- job ID: `<JOB_ID>`
+- name: `literature-digest`
+- schedule: `<SCHEDULE>`
+- delivery target: `<DELIVERY_TARGET>`
 
-- `cronjob(action="list")` 返回 `count=0`，没有任何 jobs。
-- `cronjob(action="run", job_id="a20ff6e2672d")` 返回 `Job with ID ... not found`。
-- `send_message(action="list")` 显示 `feishu:your-group-name` 可用。
-- shell 中 `hermes` CLI 不可见：`bash: hermes: command not found`，无法用 CLI 侧进一步核查。
-- 当前容器无 `~/.hermes/logs/gateway.log`。
+## Verification sequence
 
-结论：不是飞书不可达，而是一次性 cron job 没有保留在当前 cron 存储/profile，或当前 scheduler 未接管。可能与重启、profile/runtime 变化、WSL/Docker/gateway/scheduler 停止有关。
+1. List scheduled jobs and confirm that `<JOB_ID>` exists in the current profile.
+2. Inspect the job's schedule, repeat policy, delivery target, and enabled state.
+3. Run the job manually in a test mode.
+4. Verify delivery independently from archival.
+5. Confirm that the archive contains the expected note and deduplication marker.
 
-## 补救动作
+A successful create response is not sufficient: always read the stored job back from the scheduler.
 
-立即手动补跑小规模检索，使用 OpenAlex API，关键词包括：
+## Recovery path
 
-- `molten chloride salt corrosion MgCl2 KCl NaCl`
-- `molten chloride salt electrochemical monitoring corrosion`
-- `MgOHCl molten chloride salt corrosion`
-- `chloride salt purification electrochemical corrosion`
-- `institution keyword1 keyword2 author1 author2`
+If the job is missing or cannot run:
 
-筛出并推送 5 篇：
+1. Recreate it from the intended configuration.
+2. Run a reduced retrieval query manually.
+3. Deliver a short test digest to `<DELIVERY_TARGET>`.
+4. Archive the result under a generic project-relative path.
+5. Re-list the scheduler and record the new job ID outside the public template.
 
-1. Gong & Ding 2022 — MgOHCl 低浓度腐蚀性杂质电化学监测，A 类。
-2. Gong 2022 — purified MgCl2-KCl-NaCl at 700 °C / Fe-based alloys，A 类。
-3. Witteman 2024 — 连续电化学纯化反应器，A 类。
-4. Ding 2021 — 双 Mg 电极连续电解纯化，A 类。
-5. Hao 2025 — Ni 基合金在 NaCl-KCl-MgCl2 中的 CA 腐蚀模拟，B 类。
+Example retrieval themes:
 
-飞书补发成功：
+- `topic keyword method`
+- `material property application`
+- `author institution research question`
 
-- target: `feishu:your-group-name`
-- chat_id: `oc_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
-- message_id: `om_x100b50dc2a1a40a8c108780f4171def`
+Example result set:
 
-## 归档结果
+1. Study A — monitoring method for a representative system.
+2. Study B — processing route and performance evaluation.
+3. Study C — continuous purification or separation method.
+4. Study D — electrochemical characterization workflow.
+5. Study E — modeling study for a generic alloy system.
 
-写入 Obsidian raw 文献库：
+## Placeholder delivery record
 
-- `/vault/raw/氯盐储能/文献/A_核心主线/笔记/gong2022_mgohcl_monitoring.md`
-- `/vault/raw/氯盐储能/文献/A_核心主线/笔记/gong2022_purified_mgcl2_fe_alloys_700c.md`
-- `/vault/raw/氯盐储能/文献/A_核心主线/笔记/witteman2024_continuous_electrochemical_purification.md`
-- `/vault/raw/氯盐储能/文献/A_核心主线/笔记/ding2021_continuous_electrolytic_purification_mg_electrodes.md`
-- `/vault/raw/氯盐储能/文献/B_章节支撑/笔记/hao2025_ca_ni_alloys_nacl_kcl_mgcl2.md`
+- target: `<DELIVERY_TARGET>`
+- chat ID: `<CHAT_ID>`
+- message ID: `<MESSAGE_ID>`
 
-并尝试更新：
+Never publish real chat IDs, message IDs, group names, scheduler IDs, or delivery logs in an example.
 
-- `/vault/raw/氯盐储能/文献/A_核心主线/references.ris`
-- `/vault/raw/氯盐储能/文献/B_章节支撑/references.ris`
+## Placeholder archive layout
 
-## Lessons
+```text
+<ARCHIVE_ROOT>/literature/
+├── core/
+│   ├── study-a.md
+│   └── study-b.md
+├── supporting/
+│   └── study-c.md
+└── references.ris
+```
 
-- 创建 cron 后必须立即 `cronjob(action="list")` 验证当前 profile 可见；只看到 create success 不够。
-- 对一次性、次日早晨任务，必须说明 Hermes cron 是本机/profile 调度，不是云端闹钟。
-- 到点未收到时，优先补发，不要长时间排查；飞书和 Obsidian 链路可手动跑通。
-- 若需要长期每日任务，应单独部署并做：list 验证、manual run 验证、飞书投递验证、Obsidian 归档验证、失败提醒。
+Use project-relative placeholders in public documentation. Keep machine-specific home, mount, vault, and organization paths in private configuration.
+
+## Operational lessons
+
+- Verify every created job by listing it from the same profile and runtime.
+- Test retrieval, delivery, and archival as separate stages.
+- For time-sensitive digests, restore delivery first and investigate the scheduler second.
+- Recurring jobs need a manual-run check, delivery check, archive check, deduplication check, and failure alert.
+- Document troubleshooting as a synthetic scenario rather than publishing a real incident transcript.

@@ -3,7 +3,9 @@ name: dhdna-profiler
 description: Extract cognitive patterns and thinking fingerprints from any text. Use this skill when the user wants to analyze how someone thinks, understand cognitive style, profile writing or speech patterns, compare thinking styles between people, asks "what's my thinking style", "analyze how this person reasons", "cognitive profile", "thinking pattern", "DHDNA", "digital DNA", or wants to understand the mind behind any text. Also trigger when the user provides text and wants deeper insight into the author's reasoning patterns, decision-making style, or cognitive signature.
 allowed-tools: Read Write
 license: MIT license
-metadata: {"version": "1.0", "skill-author": "AHK Strategies (ashrafkahoush-ux)"}
+metadata:
+  version: "1.1"
+  skill-author: AHK Strategies (ashrafkahoush-ux)
 ---
 
 # DHDNA Profiler — Cognitive Pattern Extraction
@@ -143,10 +145,31 @@ When the user provides two or more texts from different authors, produce individ
 
 If the user asks to profile their own thinking (using the conversation history as text), be transparent:
 
+- **Ask before reading back through the conversation.** Say what you intend to use as source
+  material and wait for an answer. Prior turns were written for a different purpose, and mining
+  them for psychological inference is not something to do silently.
 - Score based on the conversation so far
 - Acknowledge that conversational text may not represent the full range
 - Note that people often think differently when writing for an AI vs. writing for humans
 - Offer to re-profile if the user provides other writing samples
+
+## Consent and Scope
+
+This skill infers personal cognitive and psychological attributes. That is a different thing from
+summarizing a document, and the boundaries matter:
+
+- **Profile the text the user brings you for the current request.** Do not go looking for more
+  material about the same author — other files, earlier sessions, or anything you happened to read.
+- **A profile of a third party is speculative and must say so.** When the author is someone who is
+  not in the conversation and has not agreed to be analyzed — a colleague from a forwarded email, a
+  candidate from an application, an author from a paper — label the output as an inference from one
+  text sample, not a finding about that person.
+- **Decline profiling that feeds a consequential decision about someone.** Hiring, promotion,
+  admission, clinical, disciplinary, or credit decisions are out of bounds; this framework has no
+  validation supporting that use, and a 1–10 cognitive score reads as far more authoritative than
+  it is.
+- **Everything stays local to the session.** Profiles are not written anywhere the user did not ask
+  for and are not sent to any service.
 
 ## What This Is NOT
 

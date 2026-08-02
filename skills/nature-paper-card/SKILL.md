@@ -45,6 +45,8 @@ python "SKILL_DIR/scripts/prepare_paper.py" INPUT \
 
 Add `--render-dir WORKDIR/rendered-pages` when visual page review is needed. Inspect the script exit code and the bundle validation block before drafting.
 
+For source-map input, also inspect `locator_summary` and `unlocated_blocks`. Only records under `pages` have verified positive PDF page locators. Missing or invalid page locators remain in `unlocated_blocks` with an explicit status and must be cited structurally, never as page 1.
+
 Never write inline Python, a temporary extraction script, or a replacement script during a Paper Card run. Never patch the bundled scripts during a normal Paper Card run. Modify these scripts only when the user explicitly asks to develop, debug, or improve the skill itself.
 
 Use this fixed locator state machine:

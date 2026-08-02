@@ -1,9 +1,11 @@
 ---
 name: pi-agent
-description: Build with and use Pi, the minimal terminal coding harness. Use for installing Pi, configuring providers/models/settings, creating Pi skills/extensions/packages/themes/prompt templates, embedding Pi through the SDK, integrating over RPC or JSON event streams, parsing sessions, developing custom Pi providers and TUI components, or using ecosystem packages such as pi-subagents (delegation/orchestration), pi-mcp-adapter (MCP servers), pi-interview (interactive forms), and pi-web-access (web search, fetching, video understanding).
+description: Build with and use Pi, the minimal terminal coding harness. Use for installing Pi, configuring providers/models/settings/environment variables, creating Pi skills/extensions/packages/themes/prompt templates, embedding Pi through the SDK, integrating over RPC or JSON event streams, parsing sessions, running local models through the llama.cpp router, developing custom Pi providers and TUI components, or using ecosystem packages such as pi-subagents (delegation/orchestration), pi-mcp-adapter (MCP servers), pi-interview (interactive forms), and pi-web-access (web search, fetching, video understanding).
 license: MIT
 compatibility: Requires Node.js/npm for Pi CLI and SDK usage. Pi package name is @earendil-works/pi-coding-agent.
-metadata: {"version": "1.1", "skill-author": "K-Dense Inc."}
+metadata:
+  version: "1.2"
+  skill-author: K-Dense Inc.
 ---
 
 # Pi Agent
@@ -16,10 +18,14 @@ Pick the reference before answering or coding:
 
 | User intent | Read |
 |---|---|
+| What Pi is, docs map, install methods | `references/overview.md` |
 | Install, authenticate, first run | `references/quickstart.md` |
-| Day-to-day CLI usage, commands, modes, flags | `references/usage.md` |
+| Day-to-day CLI usage, commands, modes, flags, project trust | `references/usage.md` |
 | Provider auth, API keys, cloud provider setup | `references/providers.md` |
-| Custom model entries, local models, proxies | `references/models.md` |
+| Custom model entries, local models, proxies, compat flags | `references/models.md` |
+| Local llama.cpp router, `/llama`, model download/load | `references/llama-cpp.md` |
+| Settings keys and defaults | `references/settings.md` |
+| `PI_*` and other environment variables | `references/environment-variables.md` |
 | Extension development, custom tools, events, commands | `references/extensions.md` |
 | Custom provider implementation, OAuth, custom streaming | `references/custom-provider.md` |
 | Embed Pi in Node/TypeScript | `references/sdk.md` |
@@ -40,9 +46,9 @@ Pick the reference before answering or coding:
 
 ## Build-On-Pi Defaults
 
-Prefer the SDK for Node/TypeScript apps that need type safety, direct state access, in-process custom tools/extensions, or custom resource loading. Use `createAgentSession()` for a single stable session; use `createAgentSessionRuntime()` when the app must replace sessions through new/resume/fork/clone/import flows.
+Prefer the SDK for Node/TypeScript apps that need type safety, direct state access, in-process custom tools/extensions, or custom resource loading. Use `createAgentSession()` for a single stable session; use `createAgentSessionRuntime()` when the app must replace sessions through new/resume/fork/clone/import flows. Auth and model lookup go through `ModelRuntime.create()`.
 
-Prefer RPC mode when the client is not Node.js, needs process isolation, or wants a language-agnostic JSONL protocol. Start with `pi --mode rpc --no-session` for stateless subprocess integration, then add session flags when persistence matters.
+Prefer RPC mode when the client is not Node.js, needs process isolation, or wants a language-agnostic JSONL protocol. Start with `pi --mode rpc --no-session` for stateless subprocess integration, then add session flags when persistence matters. Split records on `\n` only — Node `readline` is not protocol-compliant.
 
 Prefer JSON mode for one-shot command-line pipelines that only need streamed events, not bidirectional control: `pi --mode json "prompt"`.
 
@@ -52,7 +58,7 @@ Use packages when sharing or installing reusable extensions, skills, prompt temp
 
 ## Safety Defaults
 
-Pi is local and not sandboxed by default. Treat extensions, packages, skills, shell commands, and project-local `.pi` resources as code with the permissions of the Pi process. For untrusted repos or unattended automation, isolate with Docker, OpenShell, Gondolin, a VM, or a remote sandbox.
+Pi is local and not sandboxed by default. Treat extensions, packages, skills, shell commands, and project-local `.pi` resources as code with the permissions of the Pi process. Project trust only guards which project inputs load — it is not a sandbox. For untrusted repos or unattended automation, isolate with Docker, OpenShell, Gondolin, a VM, or a remote sandbox.
 
 Do not store secrets in project files. Prefer env vars, `~/.pi/agent/auth.json`, OAuth via `/login`, or command-backed secret lookups in `models.json`/provider config.
 
@@ -65,9 +71,12 @@ pi -p "Summarize this codebase"
 pi --mode json "List files"
 pi --mode rpc --no-session
 pi --provider anthropic --model claude-sonnet-4-5
+pi --model sonnet:high "Solve this complex problem"
 pi --tools read,grep,find,ls -p "Review this repository"
+pi install npm:pi-subagents
+pi update --all
 ```
 
 ## Source Coverage
 
-These references summarize the Pi documentation at `https://pi.dev/docs/latest` and each docs page found under it as of this skill version, plus the package pages for `pi-subagents`, `pi-mcp-adapter`, `pi-interview`, and `pi-web-access` at `https://pi.dev/packages/`. When exact API behavior matters, prefer the cited reference page and inspect installed TypeScript definitions under `node_modules/@earendil-works/pi-coding-agent/dist/` and `node_modules/@earendil-works/pi-ai/dist/`.
+These references summarize the Pi documentation at `https://pi.dev/docs/latest` and every docs page found under it as of this skill version, plus the package pages for `pi-subagents`, `pi-mcp-adapter`, `pi-interview`, and `pi-web-access` at `https://pi.dev/packages/`. Package details were cross-checked against the published npm READMEs (`pi-web-access` 0.14.0, `pi-mcp-adapter` 2.15.0, `pi-subagents` 0.37.0, `pi-interview` 0.9.0). When exact API behavior matters, prefer the cited reference page and inspect installed TypeScript definitions under `node_modules/@earendil-works/pi-coding-agent/dist/` and `node_modules/@earendil-works/pi-ai/dist/`.

@@ -10,6 +10,8 @@
 - Evaluate originality, scientific importance, interdisciplinary readership, technical soundness, and readability using Nature-style review dimensions.
 - Generate three differently focused reviewer reports and one cross-review synthesis.
 - Mark unsupported claims, technical defects, evidence-chain breaks, and barriers for non-specialist readers.
+- Separate comments into `Major Concerns` and `Minor Comments`, marking Major issues that block the central case as `Blocking: Yes`.
+- Keep severe criticism direct, professional, and evidence-grounded; keep minor comments specific and actionable without inventing issues to fill a quota.
 - Use an internal 12-axis technical checklist and bind each substantive concern to a claim pointer and verifiable evidence location.
 - Check redundancy across the three reports; treat an issue as consensus only when at least two reviewers raise it.
 - Identify which readers would care about the work and why.
@@ -31,6 +33,7 @@
 - Three peer-review style reports.
 - Cross-review synthesis: consensus problems, divergent emphases, and editor-level risks.
 - Traceable concerns with stable IDs, claim pointers, evidence pointers, and resolution tests.
+- Tiered Major/Minor comments, blocking risks, and a deduplicated minor-revision checklist.
 - List of experiments, analyses, narrative changes, or figure evidence that must be strengthened.
 - Explicit labels for judgments that cannot be made from the supplied evidence.
 

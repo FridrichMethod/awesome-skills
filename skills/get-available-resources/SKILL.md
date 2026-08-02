@@ -4,7 +4,7 @@ description: Detect host inventory and effective CPU, memory, disk, scheduler, c
 license: MIT
 compatibility: Python 3.11+ on Linux, macOS, or Windows; standard library by default, optional psutil 7.2.2; accelerator and scheduler CLIs are optional read-only probes.
 metadata:
-  version: "1.1"
+  version: "1.2"
   skill-author: K-Dense Inc.
 ---
 
@@ -249,8 +249,8 @@ because they can contain identifiers or paths.
 - `scripts/snapshot_tools.py` — schema validator and bounded structural diff.
 - `scripts/accelerator_diagnostics.py` — non-executing read-only diagnostic
   plan.
-- `tests/test_scripts.py` and `tests/fixtures/resource_cases.json` —
-  network-free Linux, macOS, Windows, cgroup, Slurm, and accelerator cases.
+- `tests/get-available-resources/` in the repository root — network-free
+  Linux, macOS, Windows, cgroup, Slurm, and accelerator cases.
 - `references/resource_semantics.md` — interpretation and platform details.
 - `references/snapshot_schema.md` — schema 1.1 contract.
 - `references/sources.md` — dated official-source ledger.

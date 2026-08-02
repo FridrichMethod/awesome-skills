@@ -1,8 +1,9 @@
 ---
 name: nature-reader
-description: Build full-paper Chinese-English side-by-side, figure/table-aware, source-grounded Markdown readers for journal or conference papers from PDF, DOI, arXiv, publisher HTML, or pasted text. Use whenever the user asks to translate or read a paper, make 中英文对照/原文对照/全文翻译解读, extract figures or tables into the right positions, preserve figure/table placement near relevant prose, or keep exact source anchors for every block. This skill must not degrade into a summary-only output unless the user explicitly asks for a summary. Also trigger on general paper-reading and translation requests even without the word "Nature", such as reading/translating an academic paper, literature reading, understanding a paper, and Chinese phrasings like 读论文、精读论文、论文翻译、文献翻译、文献阅读、学术阅读、帮我读这篇文章、翻译这篇paper.
-version: 2.0.0
-author: Community contribution, refactored into static/dynamic layers
+description: Build full-paper Chinese-English side-by-side, figure/table/equation-aware, source-grounded Markdown readers for journal or conference papers from PDF, DOI, arXiv, publisher HTML, or pasted text. Use whenever the user asks to translate or read a paper, make 中英文对照/原文对照/全文翻译解读, render equations instead of exposing raw LaTeX, extract figures or tables into the right positions, preserve figure/table placement near relevant prose, or keep exact source anchors for every block. This skill must not degrade into a summary-only output unless the user explicitly asks for a summary. Also trigger on general paper-reading and translation requests even without the word "Nature", such as reading/translating an academic paper, literature reading, understanding a paper, and Chinese phrasings like 读论文、精读论文、论文翻译、文献翻译、文献阅读、学术阅读、帮我读这篇文章、翻译这篇paper.
+metadata:
+  version: "2.1.0"
+  author: Community contribution, refactored into static/dynamic layers
 ---
 
 # Full-Paper Markdown Reader — Router
@@ -59,6 +60,7 @@ The files under `references/` are deep references, not defaults. Open them on de
 
 - detailed figure/table cropping and placement → `references/figure-extraction.md`.
 - exact field schema for `paper.md` / `source_map.json` → `references/output-spec.md`.
+- equations, mathematical expressions, chemical formulae, or image-only formulae → `references/equation-handling.md`.
 - answering follow-up questions with source citations → `references/grounding-rules.md`.
 
 ## Why this split

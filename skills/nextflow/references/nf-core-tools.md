@@ -5,7 +5,7 @@
 ## Install
 
 ```bash
-pip install nf-core            # PyPI
+uv pip install nf-core            # PyPI
 conda install -c bioconda nf-core
 nf-core --version
 ```

@@ -3,8 +3,16 @@ name: genomic-intelligence
 description: "Predict regulatory features, gene structure, and expression directly from DNA sequence using Genomic Intelligence's hosted transformer DNA language models — no local GPU or model weights. Six tasks over a REST API and a hosted MCP server (keyless public demo): promoter regions, splice donor/acceptor sites, enhancer activity, chromatin state, sequence-to-expression (log TPM), and de-novo gene annotation, plus a composite find-genes-then-predict-expression workflow. Use when the user has a gene symbol, a genomic region, or a DNA/FASTA sequence and wants any of these predictions, mentions Genomic Intelligence, genomicintelligence.ai, api.genomicintelligence.ai, or mcp.genomicintelligence.ai."
 license: MIT
 compatibility: Python 3.10+ with the `requests` library for the REST path (no dedicated SDK). Network access required. The REST `/v1` API needs a `GI_API_KEY` (a `gi_` bearer); the hosted MCP server at mcp.genomicintelligence.ai/mcp works keyless against a capped public demo quota, key optional.
-metadata: {"version": "1.0", "skill-author": "Genomic Intelligence", "trigger-keywords": "DNA sequence prediction, regulatory genomics, promoter prediction, splice site prediction, enhancer activity, chromatin state, gene expression prediction, sequence to expression, log TPM, gene annotation, transcript prediction, DNA language model, genomic intelligence, hosted inference, Ensembl sequence, FASTA prediction, cis-regulatory, TSS window, DeepSEA, DeepSTARR, BigBird splice, MCP genomics", "openclaw": {"primaryEnv": "GI_API_KEY", "envVars": [{"name": "GI_API_KEY", "required": false, "description": "Optional gi_ bearer key for the REST /v1 API and a higher MCP quota. The hosted MCP demo runs keyless; request a key at contact@genomicintelligence.ai."}]}}
-required_environment_variables: [{"name": "GI_API_KEY", "prompt": "Genomic Intelligence API key (gi_ bearer). Optional — the hosted MCP demo works keyless; a key unlocks the REST /v1 API and a higher quota.", "required_for": "optional features"}]
+metadata:
+  version: "1.0"
+  skill-author: Genomic Intelligence
+  trigger-keywords: DNA sequence prediction, regulatory genomics, promoter prediction, splice site prediction, enhancer activity, chromatin state, gene expression prediction, sequence to expression, log TPM, gene annotation, transcript prediction, DNA language model, genomic intelligence, hosted inference, Ensembl sequence, FASTA prediction, cis-regulatory, TSS window, DeepSEA, DeepSTARR, BigBird splice, MCP genomics
+  openclaw:
+    primaryEnv: GI_API_KEY
+    envVars:
+    - name: GI_API_KEY
+      required: false
+      description: Optional gi_ bearer key for the REST /v1 API and a higher MCP quota. The hosted MCP demo runs keyless; request a key at contact@genomicintelligence.ai.
 ---
 
 # Genomic Intelligence — DNA Sequence Models

@@ -2,7 +2,9 @@
 name: nextflow
 description: Build, run, and debug Nextflow data pipelines and nf-core workflows end to end. Use whenever the user mentions Nextflow, nf-core, .nf files, nextflow.config, DSL2, processes/channels/operators, samplesheets, or wants to run a community pipeline (e.g. nf-core/rnaseq, nf-core/sarek), write or test a module/subworkflow with nf-test, configure executors/containers (Docker, Singularity/Apptainer, Conda, Wave), scale a workflow to HPC/SLURM or cloud (AWS Batch, Google Batch, Azure, Kubernetes), or debug a failed/-resume run. Make sure to use this skill for any reproducible scientific/bioinformatics workflow work even if the user does not say the word "Nextflow", and for authoring nf-core-compliant pipelines, modules, configs, and linting.
 license: Apache-2.0
-metadata: {"version": "1.0", "skill-author": "K-Dense Inc."}
+metadata:
+  version: "1.1"
+  skill-author: K-Dense Inc.
 ---
 
 # Nextflow
@@ -45,7 +47,7 @@ conda create -n nf -c bioconda -c conda-forge nextflow nf-core
 
 ```bash
 # nf-core tools (Python) for creating/linting/running nf-core assets
-pip install nf-core            # or: conda install -c bioconda nf-core
+uv pip install nf-core            # or: conda install -c bioconda nf-core
 nf-core --version
 ```
 

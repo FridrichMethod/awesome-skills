@@ -31,11 +31,16 @@ Unlike nature-writing or nature-figure, nature-response has no fragment axis. It
 - **decision type** — minor revision, major revision, revise-and-resubmit, transfer after review, or unclear.
 - **user language** — if the user writes Chinese, also produce the 中文核对 block.
 
+Decision type is a required intake gate for normal revision work. First extract it from an
+editor decision letter when available. If it is still unclear, ask the user whether this is a
+`Major Revision` or `Minor Revision` before drafting a response strategy or response prose. Do
+not infer the decision from the number, tone, or apparent difficulty of reviewer comments.
+
 Use `references/intake-and-routing.md` to fix the task mode, minimum inputs, and readiness state before drafting. Route appeal-like cases separately; do not draft an appeal as the default path.
 
 ### 3. Run the workflow
 
-Follow the workflow in `core/workflow.md`: if the user pasted a journal email, first parse manuscript metadata, decision type, editor instructions, reviewer reports, required files, and deadlines from the email; identify mode and decision type; extract editor instructions (IDs `E.1`) then reviewer comments (`R1.1`, `R2.1`) when present; classify each item by response action and independently verified work status; build a strategy summary; draft point-by-point responses and/or a revision cover letter; map every claimed change to a manuscript location or explicit placeholder; mark changed manuscript text in red on a backed-up copy when editing; format quoted revised manuscript text in the response letter in italics; start each new reviewer response on a new page in LaTeX/print-oriented outputs; flag missing author input; run QA; and derive package readiness from the per-item statuses and blocking state.
+Follow the workflow in `core/workflow.md`: if the user pasted a journal email, first parse manuscript metadata, decision type, editor instructions, reviewer reports, required files, and deadlines from the email; identify mode and pass the decision-type gate; apply the Major- or Minor-Revision strategy without downgrading the severity of individual comments; extract editor instructions (IDs `E.1`) then reviewer comments (`R1.1`, `R2.1`) when present; classify each item by response action and independently verified work status; build a strategy summary; draft point-by-point responses and/or a revision cover letter; map every claimed change to a manuscript location or explicit placeholder; mark changed manuscript text in red on a backed-up copy when editing; format quoted revised manuscript text in the response letter in italics; start each new reviewer response on a new page in LaTeX/print-oriented outputs; flag missing author input; run QA; and derive package readiness from the per-item statuses and blocking state.
 
 Never invent experiments, citations, line numbers, figure panels, supplementary items, editor instructions, or manuscript changes. Mark anything the author must supply as `AUTHOR_INPUT_NEEDED`.
 
