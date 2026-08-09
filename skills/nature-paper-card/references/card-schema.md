@@ -1,5 +1,25 @@
 # Paper Card schema
 
+## Contents
+
+- [01 Basic Information](#01-basic-information)
+- [02 One-Sentence Summary](#02-one-sentence-summary)
+- [03 Research Question](#03-research-question)
+- [04 Research Background and Development Path](#04-research-background-and-development-path)
+- [05 Core Pain Points Identified by the Paper](#05-core-pain-points-identified-by-the-paper)
+- [06 Core Idea](#06-core-idea)
+- [07 Method Overview](#07-method-overview)
+- [08 Core Module Breakdown](#08-core-module-breakdown)
+- [09 Essential Formulas and Symbols](#09-essential-formulas-and-symbols)
+- [10 Experimental Design and Evidence Chain](#10-experimental-design-and-evidence-chain)
+- [11 Correct Interpretation of the Conclusions](#11-correct-interpretation-of-the-conclusions)
+- [12 Limitations Explicitly Acknowledged by the Authors](#12-limitations-explicitly-acknowledged-by-the-authors)
+- [13 Critical Analysis](#13-critical-analysis)
+- [14 Knowledge Learned](#14-knowledge-learned)
+- [15 Connections to Existing Knowledge](#15-connections-to-existing-knowledge)
+- [16 Research Ideas](#16-research-ideas)
+
+
 Use all headings in this order. Translate the headings and tables into the user's language when needed. Keep a section concise when the paper does not require extensive treatment.
 
 ## 01 Basic Information

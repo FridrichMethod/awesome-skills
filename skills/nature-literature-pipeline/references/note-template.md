@@ -1,5 +1,20 @@
 # Literature Note Template (v2 — 2026-06-03)
 
+## Contents
+
+- [Standardized Frontmatter](#standardized-frontmatter)
+- [Body Structure (6 sections)](#body-structure-6-sections)
+- [核心主张](#核心主张)
+- [方法](#方法)
+- [关键发现](#关键发现)
+- [批判](#批判)
+- [Connection to Research](#connection-to-research)
+- [下一步](#下一步)
+- [File Naming Convention](#file-naming-convention)
+- [Directory Discipline](#directory-discipline)
+- [Bulk Standardization](#bulk-standardization)
+
+
 > Standardized template for literature notes. Use for all new vault literature notes.
 > Replaces the v1 template (date/建议分类/是否值得全文精读 format).
 

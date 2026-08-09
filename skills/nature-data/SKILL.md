@@ -1,8 +1,8 @@
 ---
 name: nature-data
 description: "Prepare, audit, or revise Nature-ready Data Availability statements, data repository plans, dataset citations, and FAIR metadata checklists for manuscripts. Use when the user asks about Nature data availability, research data sharing, repository selection, accession numbers, restricted or sensitive data, source data, supplementary datasets, DataCite-style dataset references, FAIR metadata for academic publication, or Chinese-to-English data availability wording for Chinese-speaking authors preparing Nature-family submissions. Also trigger on general academic-writing data needs even without the word \"Nature\", such as writing a data availability statement for any journal, code/data sharing sections, repository selection while writing a paper, and Chinese phrasings like 数据可用性声明、数据可用性、 数据共享、代码可用性、学术写作数据声明、写数据声明、数据存放、数据仓库选择."
-version: 2.0.0
-author: Yuan1z skill, refactored into static/dynamic layers
+metadata:
+  author: Yuan1z skill, refactored into static/dynamic layers
 ---
 
 # Nature Data Availability — Router
@@ -43,6 +43,11 @@ Do not invent DOIs, accession numbers, repository names, licences, embargo dates
 ### 4. Reach for references only when needed
 
 The files under `references/` are deep references, not defaults. Open them on demand per the `references.on_demand` table in the manifest — for example `references/policy-principles.md` for the governing rules and edge cases, `references/repository-and-identifiers.md` for repository/accession/DOI choices, `references/statement-patterns.md` for ready-to-adapt statements, `references/fair-metadata-checklist.md` for the FAIR audit, `references/chinese-author-alignment.md` for Chinese wording, and `references/source-basis.md` to justify a rule with its official source.
+
+When the target is the flagship journal Nature, also open
+`references/nature-article-requirements.md` for statement placement,
+mandatory-deposition routing, central-code review access, materials and
+structure-file checks.
 
 ## Why this split
 

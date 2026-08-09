@@ -1,6 +1,9 @@
 # cuML Reference
 
-cuML is NVIDIA's GPU-accelerated machine learning library within the RAPIDS ecosystem. It provides scikit-learn-compatible APIs for 50+ algorithms, delivering 10-50x faster performance on average, with some algorithms (HDBSCAN, t-SNE, UMAP, KNN) reaching 60-600x speedup. It follows the familiar fit/predict/transform pattern from sklearn.
+cuML is NVIDIA's GPU-accelerated machine learning library within the RAPIDS ecosystem. It
+provides scikit-learn-compatible APIs for classification, regression, clustering, dimensionality
+reduction, preprocessing, and model selection. Performance depends on algorithm, shape, dtype,
+fallback behavior, and transfer cost; benchmark the complete pipeline on representative data.
 
 > **Full documentation:** https://docs.rapids.ai/api/cuml/stable/
 
@@ -28,11 +31,12 @@ cuML is NVIDIA's GPU-accelerated machine learning library within the RAPIDS ecos
 
 ## Installation and Setup
 
-Always use `uv add` (never `pip install` or `conda install`) in all install instructions, docstrings, comments, and error messages.
+Use `uv add` in standalone examples; follow the user's existing project package manager when one
+is already configured.
 
 ```bash
-uv add cuml-cu12    # For CUDA 12.x
-uv add cuml-cu13    # For CUDA 13.x
+uv add "cuml-cu12==26.6.*"    # For CUDA 12.x
+uv add "cuml-cu13==26.6.*"    # For CUDA 13.x
 ```
 
 cuML wheels are published directly to PyPI (since RAPIDS 25.10) — the `--extra-index-url=https://pypi.nvidia.com` extra index is no longer required.
@@ -407,7 +411,9 @@ X, y = make_regression(n_samples=100_000, n_features=50, noise=0.1)
 
 ## Forest Inference Library
 
-FIL provides high-performance GPU inference for tree-based models trained in any framework — 80x+ faster than sklearn inference.
+FIL provides GPU inference for supported tree-based models trained in other frameworks. Its value
+depends on model structure and inference batch size, so compare warm and end-to-end latency with
+the deployment baseline.
 
 ```python
 from cuml.fil import ForestInference
@@ -418,7 +424,7 @@ fil_model = ForestInference.load("xgboost_model.ubj", is_classifier=True)
 # Optional: optimize for specific batch size
 fil_model.optimize()
 
-# Predict (80x+ faster than sklearn)
+# Predict on GPU
 predictions = fil_model.predict(X_test)
 probas = fil_model.predict_proba(X_test)
 ```
@@ -536,33 +542,39 @@ cuml.accel uses managed memory by default (host RAM augments GPU VRAM). Disable 
 
 ## Performance Optimization
 
-### Expected Speedups by Algorithm
+### Benchmarking
 
-| Category | Typical Speedup | Notes |
-|----------|----------------|-------|
-| HDBSCAN, t-SNE, UMAP | 60-300x | Complex algorithms benefit most |
-| KNN | Up to 600x | Scales dramatically with data size |
-| KMeans, Random Forest | 15-80x | RF: 20-45x single GPU |
-| FIL inference | 80x+ | Tree model inference from any framework |
-| Linear models, PCA, Ridge | 2-10x | Simpler algorithms, lower but consistent gains |
+1. Verify whether `cuml.accel` used a GPU implementation or fell back to scikit-learn.
+2. Compare the same estimator parameters, train/test split, random seed, and output semantics.
+3. Warm the CUDA context and any lazy compilation before timed repetitions.
+4. Report fit, transform/predict, and end-to-end times separately, including conversion and
+   transfer costs paid by the application.
+5. Record rows, features, sparsity, dtype, estimator parameters, CPU/GPU models, and software
+   versions.
+6. For stochastic or approximate algorithms, compare quality metrics as well as time.
 
 ### Key Optimization Tips
 
-1. **Use float32.** GPU float32 throughput is 2x-32x higher than float64. Most ML algorithms don't need double precision.
+1. **Use float32 when the model's accuracy and stability permit it.** Validate metrics after
+changing precision; architecture-specific throughput ratios are not a correctness argument.
 
 2. **Keep data on GPU.** Pass CuPy arrays or cuDF DataFrames. Every NumPy/pandas conversion triggers a device-host transfer.
 
-3. **Larger datasets = larger speedup.** GPU parallelism advantage grows with data size. Minimum ~10K rows to see benefit.
+3. **Use enough work to amortize setup and transfer.** Do not rely on a fixed row threshold;
+features, sparsity, estimator, batch size, and reuse all matter.
 
-4. **Wide data benefits more.** 128-512 features see higher speedups than 8-16 features.
+4. **Benchmark the actual feature shape.** Width affects compute, memory traffic, and temporary
+storage differently for each estimator.
 
 5. **First call has JIT overhead.** Benchmark on subsequent calls, not the first.
 
-6. **Use RMM pools.** Pre-allocated memory pools are 1000x faster than raw cudaMalloc.
+6. **Use RMM pools when allocation overhead or fragmentation is visible in profiling.** Pools
+amortize allocator costs but reserve device memory and should be sized deliberately.
 
 7. **Use dask-ml for hyperparameter tuning,** not sklearn's GridSearchCV — it avoids excessive CPU-GPU transfers.
 
-8. **Use FIL for tree model inference.** Even if the model was trained on CPU (XGBoost, LightGBM, sklearn RF), FIL gives 80x+ inference speedup.
+8. **Evaluate FIL for supported tree-model inference.** Benchmark the target model and production
+batch sizes against the existing serving path.
 
 ---
 
@@ -692,7 +704,7 @@ print(f"Accuracy: {model.score(X_test, y_test):.4f}")
 ```python
 from cuml.fil import ForestInference
 
-# Load XGBoost/LightGBM/sklearn model for 80x+ faster inference
+# Load a supported XGBoost/LightGBM/sklearn model for GPU inference
 fil_model = ForestInference.load("my_xgboost_model.ubj", is_classifier=True)
 predictions = fil_model.predict(X_test)
 ```

@@ -24,13 +24,13 @@ KvikIO is part of the RAPIDS ecosystem and interoperates with CuPy, cuDF, Numba,
 
 ```bash
 # CUDA 12.x
-uv add kvikio-cu12
+uv add "kvikio-cu12==26.6.*"
 
 # CUDA 13.x
-uv add kvikio-cu13
+uv add "kvikio-cu13==26.6.*"
 
 # For Zarr support (optional)
-uv add zarr
+uv add "zarr==3.*"
 ```
 
 Verify installation:
@@ -278,7 +278,7 @@ Zarr + KvikIO is useful for:
 - Bioinformatics (genomic arrays)
 - Any workload using chunked arrays that need GPU processing
 
-Requires: `uv add zarr` in addition to kvikio.
+Requires: `uv add "zarr==3.*"` in addition to KvikIO 26.06.
 
 ---
 

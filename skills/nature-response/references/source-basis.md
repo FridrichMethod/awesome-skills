@@ -26,7 +26,7 @@ If a current journal page conflicts with this file, follow the current journal p
 ## Implementation implications
 
 - Point-by-point response is the default structure for revision cases.
-- Every referee criticism must be answered, justified, cross-referenced, or flagged as unresolved.
+- Every referee criticism must be answered, justified, or flagged as unresolved. Cross-references are allowed only within the same reviewer's own response, never across mutually blind reviewers.
 - A cover letter is adjacent revision-package material: draft it when the user asks for a cover letter or a complete revision package, but do not duplicate the full point-by-point response inside it.
 - The skill should copy or preserve reviewer wording supplied by the user unless the user asks for anonymization or summarization.
 - Tone, accuracy, and traceability should meet the standard of material that may later be reviewed by editors, reviewers, or public readers.

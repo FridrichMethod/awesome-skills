@@ -9,7 +9,8 @@
 - Generate Python / R plotting scripts and editable figures from data, legends, or manuscript claims.
 - Redraw existing figures into clearer multi-panel manuscript figures.
 - Plan Figure 1, mechanism diagrams, workflows, graphical abstracts, or supplementary figures.
-- Check panel labels, color, typography, statistical annotations, source data, and export formats.
+- Check panel labels, color hierarchy, panel-by-panel uncertainty, actual PDF glyph sizes, statistical annotations, source data, and export formats.
+- Separate flagship `Nature` initial, final main-figure, and Extended Data file contracts, including the under-250-word legend limit.
 - When explicitly requested, call `openai/gpt-image-2` through the OpenRouter Images API to draft AI concept schematics.
 
 ## Workflow
@@ -37,7 +38,7 @@ Start with a figure contract rather than a template:
 |-----------|---------|------------------|
 | Multi-panel manuscript figure | <a href="assets/gallery/fig1-material-mechanism-rich.png"><img src="assets/gallery/fig1-material-mechanism-rich.png" width="220" alt="Material design and physical validation"></a> | Mechanism schematic, image panels, quantitative results, and correlation in one evidence chain |
 | Chart-type atlas | <a href="assets/chart-atlas/atlas-03-heatmaps.png"><img src="assets/chart-atlas/atlas-03-heatmaps.png" width="220" alt="Heatmap atlas"></a> | Heatmaps, annotation matrices, cluster blocks, and diverging color scales |
-| figures4papers demo | <a href="assets/figures4papers/figure_VIGIL/figures/comparison_radar.png"><img src="assets/figures4papers/figure_VIGIL/figures/comparison_radar.png" width="220" alt="VIGIL comparison radar"></a> | Layout, legend, and multi-metric comparison grammar from real paper scripts |
+| Third-party figures4papers reference | <a href="assets/figures4papers/figure_VIGIL/figures/comparison_radar.png"><img src="assets/figures4papers/figure_VIGIL/figures/comparison_radar.png" width="220" alt="VIGIL comparison radar"></a> | Study layout, legend, and multi-metric comparison grammar only; read the separate copyright notice before use |
 
 ## What You Need To Provide
 
@@ -49,7 +50,7 @@ Start with a figure contract rather than a template:
 
 - Runnable Python or R plotting script.
 - SVG/PDF/TIFF/PNG figure files, with editable vector output preferred.
-- Panel notes, source-data mapping, exclusion counts, and a pre-submission QA record.
+- Panel notes, source-data mapping, exclusion counts, a panel-by-panel visual audit, and a pre-submission QA record.
 - For AI-schematic tasks, a concept draft and a list of elements that need human redrawing or verification.
 
 ## Built-In References
@@ -58,17 +59,21 @@ Start with a figure contract rather than a template:
 - `references/asset-adaptation.md`: semantic matching, field mapping, and data-integrity rules for templates.
 - `references/template-catalog.md`: validated Python CSV templates for volcano, ROC, marker dot plot, marginal, and paired figures.
 - `references/chart-types.md`: chart selection and visual rules.
-- `references/demos.md`: `figures4papers` demos and reusable patterns.
+- `references/demos.md`: third-party `figures4papers` index, use boundaries, and original adaptation patterns.
 - `references/qa-contract.md`: export QA, source-data constraints, and static-preflight entry points.
 - `scripts/validate_figure.py`: reproducible static QA for Python and R plotting source.
-- `assets/figures4papers/`: packaged demo scripts and previews.
+- `scripts/audit_pdf_text.py`: scan exported PDF `Tf` operators for real glyph runs below the 5 pt floor, including reduced mathtext scripts.
+- `scripts/figure_safety.py`: strict monotone interpolation and data/uncertainty-driven label positioning helpers.
+- `assets/figures4papers/`: retained third-party scripts and previews; the repository MIT License does not automatically apply, so read `THIRD_PARTY_NOTICES.md` before use.
 
 ## Boundaries
 
 - AI-generated images are not treated as real experimental results or quantitative data panels.
 - The skill does not invent statistical tests, sample sizes, error-bar meanings, or experiment conditions.
 - The skill does not silently sample for rendering convenience, ignore requested variables, or remove incomplete observations.
+- Passing automated checks is not treated as visual acceptance; uncertainty, label collisions, spacing, and salience still require panel-by-panel inspection.
 - Private templates can be used locally, but user-facing outputs should not expose private paths, filenames, or sources.
+- Third-party reference materials remain subject to their source terms and `THIRD_PARTY_NOTICES.md`; this repository grants no additional rights to those files.
 
 ## Related Skills
 

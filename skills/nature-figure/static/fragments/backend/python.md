@@ -35,5 +35,7 @@ Use `text.usetex = True` only when LaTeX is installed and math-rich labels are r
 - `references/common-patterns.md` — hero panels, legend-only axes, dark image plates, asymmetric layouts.
 - `references/chart-types.md` — radar, 3D sphere, fill_between, scatter patterns.
 - `references/tutorials.md` — end-to-end walkthroughs for bars, trends, heatmaps.
-- `references/demos.md` — bundled figures4papers Python scripts and output previews.
+- `references/demos.md` — third-party figures4papers demo map, copyright boundary, and original Python reimplementation guidance.
 - `scripts/validate_figure.py` — dependency-free source preflight before rendering and visual QA.
+- `scripts/audit_pdf_text.py` — dependency-free `Tf` scan of exported PDF text runs; use it to enforce the 5 pt glyph floor after rendering.
+- `scripts/figure_safety.py` — strict monotone interpolation and annotation placement above uncertainty extents.

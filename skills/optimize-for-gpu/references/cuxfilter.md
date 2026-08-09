@@ -29,11 +29,12 @@ cuxfilter is a GPU-accelerated cross-filtering dashboard library from the NVIDIA
 
 ## Installation and Setup
 
-Always use `uv add` (never `pip install` or `conda install`) in all install instructions, docstrings, comments, and error messages.
+Use `uv add` in standalone examples; follow the user's existing project package manager when one
+is already configured.
 
 ```bash
-uv add --extra-index-url=https://pypi.nvidia.com cuxfilter-cu12   # For CUDA 12.x
-uv add --extra-index-url=https://pypi.nvidia.com cuxfilter-cu13   # For CUDA 13.x
+uv add --extra-index-url=https://pypi.nvidia.com "cuxfilter-cu12==26.6.*"   # For CUDA 12.x
+uv add --extra-index-url=https://pypi.nvidia.com "cuxfilter-cu13==26.6.*"   # For CUDA 13.x
 ```
 
 Both install the final 26.06 release — no further updates will be published. cuxfilter wheels are also on PyPI directly, so the extra index is optional. cuxfilter depends on cuDF, so `cudf-cu12` (or `cudf-cu13`) will be pulled in automatically.
@@ -95,7 +96,7 @@ import cugraph
 
 edges = cudf.DataFrame({"source": [0, 1, 2], "target": [1, 2, 3], "weight": [1.0, 2.0, 3.0]})
 G = cugraph.Graph()
-G.from_cudf_edgelist(edges, destination="target")
+G.from_cudf_edgelist(edges, source="source", destination="target", edge_attr="weight")
 cux_df = cuxfilter.DataFrame.load_graph((G.nodes(), G.edges()))
 ```
 
@@ -421,7 +422,7 @@ edges = cudf.DataFrame({
     "target": [1, 2, 2, 3, 3]
 })
 G = cugraph.Graph()
-G.from_cudf_edgelist(edges, destination="target")
+G.from_cudf_edgelist(edges, source="source", destination="target")
 
 # Load into cuxfilter (needs node positions — use force_atlas2 or similar layout)
 positions = cugraph.force_atlas2(G)

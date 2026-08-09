@@ -6,10 +6,10 @@ A manuscript excerpt claims that treatment X causes outcome Y. The supplied Resu
 
 ## Expected behavior
 
-- Keep exactly three anonymous reviewer reports plus cross-review synthesis.
+- Keep exactly three mutually blind anonymous reviewer reports plus a post-review synthesis generated only after the reports are frozen.
 - Create at least one grounded concern under `causal-vs-correlative` or `experimental-design`.
 - Classify the unsupported central causal claim as a Major Concern and display a calibrated
-  `Blocking: Yes` flag.
+  `Blocking Yes` flag.
 - Give the concern a stable ID, a faithful claim pointer, and an evidence pointer to `Results; Figure 2`.
 - Use a resolution test that allows either stronger causal evidence or narrower associative language.
 - Mark missing Methods detail as `not assessable` rather than asserting that controls were absent from the full manuscript.
@@ -24,3 +24,4 @@ A manuscript excerpt claims that treatment X causes outcome Y. The supplied Resu
 - Present the internal 12-axis matrix in the user-facing report.
 - Claim that the editor should accept or reject the manuscript.
 - Add unrelated concerns merely to reduce reviewer overlap.
+- Pass another reviewer's report, ledger, or suspected concern into an individual reviewer context.

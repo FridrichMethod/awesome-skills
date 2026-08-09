@@ -1,5 +1,5 @@
 name: nature-literature-pipeline
-version: 1.0.0
+version: 1.0.1
 description: >
   Declarative manifest for the automated literature-discovery pipeline. SKILL.md
   uses this to keep the default cron/search/deliver/archive workflow concise

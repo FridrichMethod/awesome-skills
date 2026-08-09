@@ -1,5 +1,16 @@
 # R Workflow
 
+## Contents
+
+- [R-only execution rule](#r-only-execution-rule)
+- [Required packages by task](#required-packages-by-task)
+- [Contract scaffold](#contract-scaffold)
+- [Panel labels in R](#panel-labels-in-r)
+- [Patchwork layout patterns](#patchwork-layout-patterns)
+- [ComplexHeatmap export](#complexheatmap-export)
+- [Template reuse rule](#template-reuse-rule)
+
+
 Use this when the user chooses R, brings R data/scripts, or asks to reuse the local
 R plotting templates. The R track should still follow the same figure contract:
 claim first, evidence hierarchy second, plotting code third.

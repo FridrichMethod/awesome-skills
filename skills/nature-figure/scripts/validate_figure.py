@@ -137,6 +137,247 @@ def check_font_sizes(source: str, _backend: str) -> Finding:
     return finding("FONT-SIZE", "PASS", f"All detected text sizes are at least 5 pt (minimum {minimum:g} pt)")
 
 
+def check_mathtext_glyph_floor(source: str, backend: str) -> Finding:
+    if backend != "python":
+        return finding("FONT-GLYPH-FLOOR", "PASS", "Python mathtext superscript scaling is not applicable")
+    hits = regex_hits([r"\$[^$\n]*[\^_](?:\{[^}]+\}|[^$\s])[^$\n]*\$"], source, flags=0)
+    if not hits:
+        return finding("FONT-GLYPH-FLOOR", "PASS", "No mathtext superscript/subscript expression detected")
+    sizes = explicit_font_sizes(source)
+    if not sizes:
+        return finding(
+            "FONT-GLYPH-FLOOR",
+            "WARN",
+            "Mathtext superscript/subscript detected without an auditable parent font size; inspect the exported PDF",
+            hits,
+        )
+    minimum_parent = min(sizes)
+    estimated_script = minimum_parent * 0.7
+    if estimated_script < 5:
+        return finding(
+            "FONT-GLYPH-FLOOR",
+            "WARN",
+            f"Mathtext may shrink script glyphs below 5 pt (about {estimated_script:.2f} pt from a {minimum_parent:g} pt parent); use a Unicode glyph or audit PDF Tf operators",
+            hits,
+        )
+    return finding(
+        "FONT-GLYPH-FLOOR",
+        "PASS",
+        f"Detected mathtext parent sizes imply script glyphs of about {estimated_script:.2f} pt or larger; confirm in the PDF",
+        hits,
+    )
+
+
+def literal_legend_labels(source: str, backend: str) -> list[str]:
+    if backend == "python":
+        try:
+            tree = ast.parse(source)
+        except SyntaxError:
+            return []
+        labels: list[str] = []
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            call_name = ""
+            if isinstance(node.func, ast.Attribute):
+                call_name = node.func.attr
+            elif isinstance(node.func, ast.Name):
+                call_name = node.func.id
+            label_calls = {
+                "plot",
+                "bar",
+                "barh",
+                "scatter",
+                "errorbar",
+                "fill_between",
+                "hist",
+                "axhline",
+                "axvline",
+                "legend",
+            }
+            for keyword in node.keywords:
+                if (
+                    call_name in label_calls
+                    and keyword.arg == "label"
+                    and isinstance(keyword.value, ast.Constant)
+                    and isinstance(keyword.value.value, str)
+                ):
+                    labels.append(keyword.value.value)
+                elif call_name == "legend" and keyword.arg == "labels" and isinstance(keyword.value, (ast.List, ast.Tuple)):
+                    labels.extend(
+                        item.value
+                        for item in keyword.value.elts
+                        if isinstance(item, ast.Constant) and isinstance(item.value, str)
+                    )
+        return labels
+
+    labels: list[str] = []
+    for content in re.findall(r"labels\s*=\s*c\(([^)]*)\)", source, re.IGNORECASE | re.DOTALL):
+        labels.extend(re.findall(r"['\"]([^'\"]+)['\"]", content))
+    return labels
+
+
+def check_legend_label_case(source: str, backend: str) -> Finding:
+    labels = [label for label in literal_legend_labels(source, backend) if label and label != "_nolegend_"]
+    lower_initial = []
+    for label in labels:
+        first_alpha = re.search(r"[A-Za-z]", re.sub(r"^\s*\+\s*", "", label))
+        if first_alpha and first_alpha.group(0).islower():
+            lower_initial.append(label)
+    if lower_initial:
+        return finding(
+            "LEGEND-LABEL-CASE",
+            "WARN",
+            "Literal legend labels should start with display-style capitalization while preserving canonical model names",
+            lower_initial,
+        )
+    if labels:
+        return finding("LEGEND-LABEL-CASE", "PASS", "Detected literal legend labels start with display-style capitalization")
+    return finding("LEGEND-LABEL-CASE", "PASS", "No auditable literal legend labels detected")
+
+
+def check_interpolation_monotonicity(source: str, backend: str) -> Finding:
+    if backend != "python" or not re.search(r"\bnp\.interp\s*\(", source):
+        return finding("INTERP-MONOTONIC", "PASS", "No NumPy interpolation requiring an increasing x-grid detected")
+    guards = regex_hits(
+        [
+            r"interp_(?:need_dec|monotone|strict)",
+            r"np\.diff\s*\([^)]*\)\s*[><]=?\s*0",
+            r"np\.argsort\s*\(",
+            r"\[\s*::\s*-1\s*\]",
+        ],
+        source,
+    )
+    if guards:
+        return finding(
+            "INTERP-MONOTONIC",
+            "PASS",
+            "NumPy interpolation has an explicit monotonicity/reordering safeguard",
+            guards,
+        )
+    return finding(
+        "INTERP-MONOTONIC",
+        "WARN",
+        "np.interp requires an increasing xp grid and can silently return plausible wrong values for decreasing curves; assert monotonicity or reverse/sort xp and fp together",
+        ["np.interp("],
+    )
+
+
+def check_uncertainty_encoding(source: str, _backend: str) -> Finding:
+    stochastic = regex_hits(
+        [
+            r"\bseed(?:s|_[A-Za-z0-9_]+)?\b",
+            r"random_state",
+            r"\b(?:cv|cross_validation|validation)_folds?\b",
+            r"\bfold_(?:id|index|score|scores|metric|metrics|mean|median)\b",
+            r"\bn_folds?\b",
+            r"\bn_splits\b",
+            r"\b(?:train|test|validation|data|random)_split\b",
+        ],
+        source,
+    )
+    summaries = regex_hits([r"\bmedian\b", r"\bmean\b", r"\baverage\b"], source)
+    if not stochastic or not summaries:
+        return finding("UNCERTAINTY-ENCODING", "PASS", "No stochastic aggregate requiring a variability audit was inferred")
+    encodings = regex_hits(
+        [
+            r"\b(?:xerr|yerr)\s*=",
+            r"\.errorbar\s*\(",
+            r"\.fill_between\s*\(",
+            r"geom_(?:errorbar|ribbon|linerange|pointrange)\s*\(",
+        ],
+        source,
+    )
+    if encodings:
+        return finding(
+            "UNCERTAINTY-ENCODING",
+            "PASS",
+            "A stochastic aggregate and uncertainty encoding are both present; still verify every comparable panel",
+            encodings,
+        )
+    return finding(
+        "UNCERTAINTY-ENCODING",
+        "WARN",
+        "Seed/fold/split aggregates are present without an obvious error bar or uncertainty band",
+        [*stochastic, *summaries],
+    )
+
+
+def check_rotation_anchor(source: str, backend: str) -> Finding:
+    if backend != "python":
+        return finding("ROTATION-ANCHOR", "PASS", "Matplotlib rotation anchoring is not applicable")
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return finding("ROTATION-ANCHOR", "WARN", "Rotation anchoring could not be audited until Python syntax is valid")
+
+    anchored_receivers: set[str] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+            continue
+        if node.func.attr != "set_rotation_mode" or not node.args:
+            continue
+        argument = node.args[0]
+        if isinstance(argument, ast.Constant) and argument.value == "anchor":
+            anchored_receivers.add(ast.dump(node.func.value, include_attributes=False))
+
+    rotated: list[str] = []
+    unanchored: list[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        line = getattr(node, "lineno", "?")
+        rotation_keyword = next((keyword for keyword in node.keywords if keyword.arg == "rotation"), None)
+        if rotation_keyword is not None:
+            evidence = f"line {line}: rotation=..."
+            rotated.append(evidence)
+            mode_keyword = next((keyword for keyword in node.keywords if keyword.arg == "rotation_mode"), None)
+            anchored = (
+                mode_keyword is not None
+                and isinstance(mode_keyword.value, ast.Constant)
+                and mode_keyword.value.value == "anchor"
+            )
+            if not anchored:
+                unanchored.append(evidence)
+        if isinstance(node.func, ast.Attribute) and node.func.attr == "set_rotation":
+            evidence = f"line {line}: set_rotation(...)"
+            rotated.append(evidence)
+            receiver = ast.dump(node.func.value, include_attributes=False)
+            if receiver not in anchored_receivers:
+                unanchored.append(evidence)
+
+    if not rotated:
+        return finding("ROTATION-ANCHOR", "PASS", "No rotated Matplotlib text detected")
+    if not unanchored:
+        return finding("ROTATION-ANCHOR", "PASS", "Every detected rotated text call uses anchor-based placement", rotated)
+    return finding(
+        "ROTATION-ANCHOR",
+        "WARN",
+        "Some rotated text calls lack rotation_mode='anchor' and may cross their intended anchors after rotation",
+        unanchored,
+    )
+
+
+def check_annotation_workarounds(source: str, backend: str) -> Finding:
+    if backend != "python":
+        return finding("ANNOTATION-WORKAROUND", "PASS", "No Matplotlib annotation workaround audit required")
+    hits = regex_hits(
+        [
+            r"(?:LABEL|ANNOTATION)_Y\s*=\s*[-+]?\d+(?:\.\d+)?",
+            r"bbox\s*=\s*dict\s*\([^)]*(?:facecolor|fc)\s*=\s*['\"](?:white|#fff(?:fff)?)['\"]",
+        ],
+        source,
+    )
+    if hits:
+        return finding(
+            "ANNOTATION-WORKAROUND",
+            "WARN",
+            "Hard-coded annotation heights or opaque white text masks can collide with uncertainty or cut visible gaps in curves; position from rendered/data bounds instead",
+            hits,
+        )
+    return finding("ANNOTATION-WORKAROUND", "PASS", "No high-risk hard-coded label height or opaque white text mask detected")
+
+
 def check_colormaps(source: str, _backend: str) -> Finding:
     hits = regex_hits(
         [
@@ -331,6 +572,8 @@ CHECKS: tuple[Callable[[str, str], Finding], ...] = (
     check_syntax,
     check_font_family,
     check_font_sizes,
+    check_mathtext_glyph_floor,
+    check_legend_label_case,
     check_colormaps,
     check_editable_text,
     check_vector_exports,
@@ -341,6 +584,10 @@ CHECKS: tuple[Callable[[str, str], Finding], ...] = (
     check_exclusions,
     check_demo_data,
     check_log_guards,
+    check_interpolation_monotonicity,
+    check_uncertainty_encoding,
+    check_rotation_anchor,
+    check_annotation_workarounds,
     check_backend_exclusivity,
 )
 
@@ -423,6 +670,14 @@ ax.scatter(x, np.log(x), c=x, cmap="jet")
 ax.tick_params(labelsize=4)
 fig.savefig("figure.png", dpi=72)
 '''
+    risky_rendered_python = good_python + '''
+seed_values = np.median(seed_scores, axis=0)
+equivalent_n = np.interp(target_error, errors_decreasing, sample_counts)
+ax.plot(x, seed_values, label="+ semantic guidance")
+ax.text(0.5, 0.5, "$R^2$", fontsize=7, rotation=45,
+        bbox=dict(facecolor="white", edgecolor="none"))
+LABEL_Y = 96.4
+'''
 
     good_py_findings = validate_source(good_python, "python")
     good_py_failures = [row for row in good_py_findings if row.level == "FAIL"]
@@ -437,6 +692,17 @@ fig.savefig("figure.png", dpi=72)
         assert bad[check_id].level == "FAIL", (check_id, bad[check_id])
     for check_id in ("DATA-SAMPLING", "DEMO-DATA", "LOG-GUARD"):
         assert bad[check_id].level == "WARN", (check_id, bad[check_id])
+
+    risky = {row.check_id: row for row in validate_source(risky_rendered_python, "python")}
+    for check_id in (
+        "FONT-GLYPH-FLOOR",
+        "LEGEND-LABEL-CASE",
+        "INTERP-MONOTONIC",
+        "UNCERTAINTY-ENCODING",
+        "ROTATION-ANCHOR",
+        "ANNOTATION-WORKAROUND",
+    ):
+        assert risky[check_id].level == "WARN", (check_id, risky[check_id])
 
 
 def build_parser() -> argparse.ArgumentParser:

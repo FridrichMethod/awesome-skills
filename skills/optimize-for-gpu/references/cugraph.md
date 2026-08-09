@@ -1,6 +1,9 @@
 # cuGraph Reference
 
-cuGraph is NVIDIA's GPU-accelerated graph analytics library within the RAPIDS ecosystem. It provides NetworkX-compatible APIs for graph algorithms, delivering 10-500x+ speedup over CPU-based NetworkX on medium to large graphs. It supports both a direct Python API and a **zero-code-change NetworkX backend** (nx-cugraph) that accelerates existing NetworkX code with no modifications.
+cuGraph is NVIDIA's GPU-accelerated graph analytics library within the RAPIDS ecosystem. It
+supports both a direct Python API and an **nx-cugraph** NetworkX backend. Performance depends on
+algorithm, graph topology and size, graph-construction cost, fallback behavior, and GPU hardware,
+so benchmark the complete workload instead of promising a fixed speedup.
 
 > **Full documentation:** https://docs.rapids.ai/api/cugraph/stable/
 > **Version (stable):** 26.06.00
@@ -27,11 +30,12 @@ cuGraph is NVIDIA's GPU-accelerated graph analytics library within the RAPIDS ec
 
 ## Installation and Setup
 
-Always use `uv add` (never `pip install` or `conda install`) in all install instructions, docstrings, comments, and error messages.
+Use `uv add` in standalone examples; follow the user's existing project package manager when one
+is already configured.
 
 ```bash
-uv add --extra-index-url=https://pypi.nvidia.com cugraph-cu12    # Core cuGraph for CUDA 12.x
-uv add --extra-index-url=https://pypi.nvidia.com nx-cugraph-cu12 # NetworkX backend
+uv add --extra-index-url=https://pypi.nvidia.com "cugraph-cu12==26.6.*"    # Core cuGraph for CUDA 12.x
+uv add --extra-index-url=https://pypi.nvidia.com "nx-cugraph-cu12==26.6.*" # NetworkX backend
 # For CUDA 13.x, use the -cu13 packages: cugraph-cu13, nx-cugraph-cu13
 ```
 
@@ -485,7 +489,7 @@ cugraph-pyg provides native GPU-accelerated implementations of PyG's core interf
 - **Sampler/Loader**: GPU-accelerated neighborhood sampling with configurable fan-out
 
 ```bash
-uv add --extra-index-url=https://pypi.nvidia.com cugraph-pyg-cu12
+uv add --extra-index-url=https://pypi.nvidia.com "cugraph-pyg-cu12==26.6.*"
 ```
 
 **Key capabilities:**
@@ -501,7 +505,7 @@ uv add --extra-index-url=https://pypi.nvidia.com cugraph-pyg-cu12
 WholeGraph provides distributed GPU memory management for large-scale GNN training through its **WholeMemory** abstraction.
 
 ```bash
-uv add --extra-index-url=https://pypi.nvidia.com pylibwholegraph-cu12
+uv add --extra-index-url=https://pypi.nvidia.com "pylibwholegraph-cu12==26.6.*"
 ```
 
 **Core concepts:**
@@ -534,45 +538,23 @@ uv add --extra-index-url=https://pypi.nvidia.com pylibwholegraph-cu12
 
 ## Performance Characteristics and Benchmarks
 
-### nx-cugraph Benchmarks (NetworkX backend)
+Benchmark with the user's actual topology and algorithm:
 
-**Hardware:** Intel Xeon w9-3495X (56 cores), NVIDIA RTX 3090 (24GB), 251 GB RAM, CUDA 12.8
+1. Check that the requested NetworkX algorithm dispatches to nx-cugraph rather than falling back
+   to CPU.
+2. Measure graph construction and conversion separately from repeated algorithm calls, then report
+   both warm algorithm time and end-to-end time.
+3. Warm the CUDA context before collecting timed repetitions.
+4. Verify output semantics, convergence tolerance, sampled-algorithm parameters, and floating-point
+   tolerance against the CPU implementation.
+5. Record vertices, edges, directedness, weight dtype, GPU model, CPU baseline, software versions,
+   and whether the graph was already device-resident.
+6. Use multi-GPU only after estimating graph and temporary-memory requirements and measuring the
+   communication cost.
 
-**Datasets tested:**
-
-| Dataset | Nodes | Edges | Type |
-|---|---|---|---|
-| netscience | 1,461 | 5,484 | Small |
-| amazon0302 | 262,111 | 1,234,877 | Medium |
-| cit-Patents | 3,774,768 | 16,518,948 | Large |
-| soc-LiveJournal1 | 4,847,571 | 68,993,773 | Very large |
-
-**Speedups (GPU vs CPU NetworkX):**
-
-| Algorithm | Medium Graph | Large Graph | Very Large Graph |
-|---|---|---|---|
-| `betweenness_centrality` (k=100) | ~20x | ~520x | ~300x |
-| `katz_centrality` | ~100x | ~5,000x | ~24,768x |
-| `average_clustering` | ~50x | ~1,000x | ~2,828x |
-| `transitivity` | ~50x | ~1,000x | ~2,832x |
-| `louvain_communities` | ~30x | ~273x | ~200x |
-| `pagerank` | ~2x | ~50x | ~188x |
-| `eigenvector_centrality` | ~7x | ~100x | ~376x |
-| `k_truss` | ~8x | ~200x | ~540x |
-
-**Key finding:** Speedup increases dramatically with graph size. Small graphs (< 5K edges) may see overhead from GPU initialization that negates speedup. For graphs with > 100K edges, expect 10-500x+ improvement on most algorithms.
-
-**Concrete example:** Betweenness centrality on cit-Patents (3.7M nodes, 16.5M edges):
-- CPU NetworkX: 7 min 41 sec
-- nx-cugraph GPU: 5.32 sec (~86x speedup)
-
-### General Performance Guidelines
-
-- **Small graphs (< 10K edges):** GPU overhead may dominate; NetworkX CPU may be faster
-- **Medium graphs (100K-1M edges):** 10-100x speedup typical
-- **Large graphs (1M-100M edges):** 100-1000x+ speedup typical
-- **Very large graphs (> 100M edges):** Use multi-GPU; single GPU memory may be insufficient
-- **First call overhead:** Initial GPU kernel compilation and graph transfer adds ~1-3 seconds; subsequent calls on same graph are much faster
+Small or one-shot graphs can lose to NetworkX after setup and transfer. Large device-resident
+graphs with supported algorithms are better candidates, but graph size alone does not establish a
+speedup.
 
 ---
 
@@ -634,13 +616,12 @@ import cupy, scipy
 ### With NetworkX
 ```python
 import networkx as nx
-import cugraph
+import nx_cugraph as nxcg
 
-# NetworkX -> cuGraph
+# Convert once when repeated algorithms justify keeping the graph on GPU.
 G_nx = nx.karate_club_graph()
-G_cu = cugraph.from_networkx(G_nx)  # Not yet available in all versions
-
-# Or use nx-cugraph backend for transparent acceleration
+G_gpu = nxcg.from_networkx(G_nx)
+result = nx.pagerank(G_gpu)
 ```
 
 ### With PyTorch Geometric

@@ -1,5 +1,21 @@
 # Design and layout
 
+## Contents
+
+- [Plan the visual rhythm before authoring](#plan-the-visual-rhythm-before-authoring)
+- [On-slide text budget](#on-slide-text-budget)
+- [Evidence hierarchy on a slide](#evidence-hierarchy-on-a-slide)
+- [Layout adaptation rule](#layout-adaptation-rule)
+- [Anti-template design rule](#anti-template-design-rule)
+- [Slide archetype defaults](#slide-archetype-defaults)
+- [Title writing rule](#title-writing-rule)
+- [Visual density rule](#visual-density-rule)
+- [Text-fitting implementation rules](#text-fitting-implementation-rules)
+- [Alignment and spacing rules](#alignment-and-spacing-rules)
+- [Chinese academic expression and de-template rules](#chinese-academic-expression-and-de-template-rules)
+- [Style rules](#style-rules)
+
+
 Open this reference when planning visual rhythm (step 3), writing slide content (step 6), or building the PPTX (step 7). It holds the full composition, layout, typography, and anti-template rules.
 
 ## Plan the visual rhythm before authoring

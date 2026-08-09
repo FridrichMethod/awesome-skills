@@ -1,5 +1,15 @@
 # Self-review and verification
 
+## Contents
+
+- [The loop](#the-loop)
+- [Self-review checklist](#self-review-checklist)
+- [Severity rules](#severity-rules)
+- [Programmatic checks when using python-pptx](#programmatic-checks-when-using-python-pptx)
+- [Rendered preview policy](#rendered-preview-policy)
+- [Step 9 — final verification](#step-9-final-verification)
+
+
 Open this reference for step 8 (self-review/corrective revision loop) and step 9 (final verification).
 
 ## The loop

@@ -1,5 +1,14 @@
 # Backend Selection
 
+## Contents
+
+- [Quick decision table](#quick-decision-table)
+- [Backend exclusivity rule](#backend-exclusivity-rule)
+- [Default stacks](#default-stacks)
+- [Mixed workflow rule](#mixed-workflow-rule)
+- [Recommendation language](#recommendation-language)
+
+
 At the start of a plotting task, resolve the user's preferred backend in this order:
 
 1. explicit Python/R choice in the current request;

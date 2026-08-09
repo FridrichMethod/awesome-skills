@@ -12,7 +12,7 @@ Rationale:
 - The core rules are defined in `SKILL.md` and modular references.
 - The skill has synthetic fixtures covering mandatory decision-type intake, minor revision, major
   revision with missing evidence, impossible experiment, defensive draft audit, conflicting
-  reviewers, and per-task status tracking.
+  reviewers, mutually blind reviewer-response separation, and per-task status tracking.
 - Each fixture includes expected behavior, forbidden behavior, and pass/fail criteria.
 - The examples show expected output shape without using real confidential reviewer comments.
 - The skill has not yet been validated on real anonymized revision packages, so `Stable` would be premature.
@@ -25,8 +25,9 @@ Rationale:
 | `minor-revision.md` | stable IDs, minor comments, missing citation metadata | fabricated citation or line numbers |
 | `major-revision-missing-evidence.md` | validation request, statistical details, missing evidence | invented results or p-values |
 | `impossible-experiment.md` | out-of-scope longitudinal evidence | time/funding excuse or fabricated survival data |
-| `defensive-draft-audit.md` | hostile draft language, vague compliance | accusatory reviewer language |
-| `conflicting-reviewers.md` | editor priority and incompatible reviewer requests | contradictory manuscript promises |
+| `defensive-draft-audit.md` | hostile draft language, missed existing text, vague compliance | accusatory wording or an impolite "we already stated this" reply |
+| `conflicting-reviewers.md` | editor priority, incompatible reviewer requests, and reviewer isolation | contradictory promises or cross-reviewer disclosure |
+| `reviewer-visibility.md` | separate outward-facing responses for mutually blind reviewers | leaked comments, IDs, recommendations, or cross-review references |
 | `task-status-tracking.md` | action/status separation, verification evidence, expected output, blocking state | false completion and premature submission readiness |
 
 ## Manual evaluation checklist

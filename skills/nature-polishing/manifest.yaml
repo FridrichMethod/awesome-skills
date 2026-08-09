@@ -1,5 +1,5 @@
 name: nature-polishing
-version: 6.1.0
+version: 6.2.0
 description: >
   Declarative manifest for the static/dynamic split. SKILL.md uses this to
   decide which fragments to load for a given polishing request.
@@ -79,6 +79,8 @@ references:
       path: references/phrasebank-playbook.md
     - condition: needs academic style, register, article use, or mechanics checks
       path: references/style-guardrails.md
+    - condition: polishing or proofreading a full manuscript rather than a passage, or the text has been through more than one round of editing — sweep for accumulated terminology/unit/number drift, headline counts that do not reconcile, claims contradicted by the paper's own tables, tense parallelism, and prose that restates displays
+      path: ../nature-shared/core/consistency-sweep.md
     - condition: needs deeper writing-strategy principles
       path: references/writing-strategy.md
     - condition: needs LaTeX layout/typesetting help (排版) — loose or sparse pages, stranded section headings, figures that don't fill the page or split across pages, "Float too large", multi-panel figure arrangement, or Supplementary Information that looks empty

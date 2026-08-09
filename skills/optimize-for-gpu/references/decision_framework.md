@@ -4,9 +4,12 @@ Each RAPIDS/GPU library, the CPU library it replaces, what it is good at, and wh
 the wrong choice — CuPy, Numba CUDA, Warp, cuDF, cuML, cuGraph, KvikIO, cuxfilter, cuCIM,
 cuVS, cuSpatial, and RAFT — plus guidance on combining them.
 
-## Decision Framework: Which Library to Use
-
 Choose the right tool based on what the user's code actually does. Read the appropriate reference file(s) before writing any GPU code.
+
+First decide whether a port is justified: establish an end-to-end baseline, estimate peak device
+memory including temporaries, and identify transfer and fallback boundaries. Prefer an accelerator
+or backend mode before a native rewrite, and prefer a maintained library operation before a custom
+kernel. Validate output semantics and use synchronized GPU timing on representative data.
 
 ### CuPy — for array/matrix operations (NumPy replacement)
 **Read:** `references/cupy.md`
@@ -20,18 +23,20 @@ CuPy wraps NVIDIA's optimized libraries (cuBLAS, cuFFT, cuSOLVER, cuSPARSE, cuRA
 
 **Best for:** Linear algebra, FFTs, array math, image processing, signal processing, Monte Carlo with array ops, any NumPy-heavy workflow.
 
-### Numba CUDA — for custom GPU kernels
+### Numba-CUDA-MLIR / Numba-CUDA — for custom GPU kernels
 **Read:** `references/numba.md`
 
-Use Numba when the user needs:
+Use this path when the user needs:
 - Custom algorithms that don't map to standard array operations
 - Fine-grained control over GPU threads, blocks, and shared memory
-- Element-wise operations with complex logic (use `@vectorize(target='cuda')`)
 - Reduction operations with custom logic
 - Stencil computations or neighbor-dependent calculations
 - Anything requiring the CUDA programming model directly
 
-Numba compiles Python directly into CUDA kernels. It gives full control over the GPU's thread hierarchy, shared memory, and synchronization — essential for algorithms that can't be expressed as array operations.
+For new projects, evaluate **Numba-CUDA-MLIR**, where NVIDIA is doing new feature development.
+Use the established `numba-cuda` package for existing `numba.cuda` code, compatibility, or features
+not yet available in the MLIR implementation; it is in maintenance mode through the CUDA 13
+lifetime. Do not invest in custom kernels until profiling rules out CuPy or another tuned library.
 
 **Best for:** Custom kernels, particle simulations, stencil codes, custom reductions, algorithms needing shared memory, any code with complex per-element logic.
 
@@ -46,7 +51,11 @@ Use Warp when the user's code is primarily:
 - Any Python simulation loop that needs to be JIT-compiled to GPU
 - Spatial computing with meshes, volumes (NanoVDB), hash grids, or BVH queries
 
-Warp JIT-compiles `@wp.kernel` Python functions to CUDA, with built-in types for spatial computing (vec3, mat33, quat, transform) and primitives for geometry queries (Mesh, Volume, HashGrid, BVH). All kernels are automatically differentiable. Note: the higher-level `warp.sim` module was removed in Warp 1.10 — its functionality moved to the separate Newton physics engine. Warp itself remains the right tool for writing custom simulation kernels.
+Warp JIT-compiles `@wp.kernel` Python functions to CUDA, with built-in types for spatial computing
+(vec3, mat33, quat, transform) and primitives for geometry queries (Mesh, Volume, HashGrid, BVH).
+Warp can generate adjoint kernels for differentiable programs. The higher-level `warp.sim` module
+was removed in Warp 1.10; use the separate **Newton** engine for maintained high-level rigid-body,
+robotics, and simulation-environment APIs, and use Warp for custom kernels and domain primitives.
 
 **Best for:** Physics simulation, mesh ray casting, particle systems, differentiable rendering, robotics kinematics, SDF operations, any workload combining spatial data structures with GPU compute.
 
@@ -75,7 +84,10 @@ Use cuML when the user's code is primarily:
 - Tree model inference (XGBoost, LightGBM, sklearn Random Forest via FIL)
 - UMAP, t-SNE, HDBSCAN, or KNN on large datasets
 
-cuML's `cuml.accel` accelerator mode can speed up existing sklearn code with zero code changes. For maximum performance, use the native cuML API. Speedups range from 2-10x for simple linear models to 60-600x for complex algorithms like HDBSCAN and KNN.
+Start with cuML's `cuml.accel` accelerator mode when compatibility permits. Move to the native
+cuML API for unsupported estimators, explicit output control, or a measured performance reason.
+Benchmark the user's estimator, dimensions, and end-to-end pipeline rather than relying on headline
+speedup ranges.
 
 **Best for:** Classification, regression, clustering, dimensionality reduction, preprocessing pipelines, model inference, any scikit-learn-heavy workflow.
 
@@ -88,7 +100,9 @@ Use cuGraph when the user's code is primarily:
 - Social network analysis, knowledge graphs, or recommendation systems
 - Any graph algorithm on networks with 10K+ edges
 
-cuGraph's `nx-cugraph` backend can accelerate existing NetworkX code with zero code changes via an environment variable. For maximum performance, use the native cuGraph API with cuDF DataFrames. Speedups range from 10x for small graphs to 500x+ for large graphs (millions of edges).
+Start with the `nx-cugraph` backend and inspect fallback behavior. Move to the native cuGraph API
+with cuDF edge lists for unsupported operations or a measured performance reason. Include graph
+construction and host-device conversion in end-to-end benchmarks.
 
 **Best for:** PageRank, betweenness centrality, community detection (Louvain, Leiden), BFS/SSSP, connected components, link prediction, graph neural network sampling, any NetworkX-heavy workflow.
 
@@ -108,12 +122,15 @@ KvikIO provides Python bindings to NVIDIA cuFile, enabling GPUDirect Storage (GD
 
 **Note:** For tabular formats (CSV, Parquet, JSON), use cuDF's built-in readers instead — they're optimized for those formats. KvikIO is for raw binary data and remote file access.
 
-### cuxfilter — for GPU-accelerated interactive dashboards
+### cuxfilter — legacy dashboards only
 **Read:** `references/cuxfilter.md`
 
-**Project status: sunset.** RAPIDS 26.06 was cuxfilter's final release (RSN 60) — the packages still work but receive no further updates. For new dashboards, prefer cuDF for GPU data prep combined with HoloViews/hvPlot/Datashader linked selections, served with Panel, Plotly Dash, Streamlit, or Bokeh. Reach for cuxfilter only when the user already uses it or explicitly asks for it.
+**Project status: sunset.** RAPIDS 26.06 was cuxfilter's final release (RSN 60). Reach
+for cuxfilter only when the user already uses it or explicitly requests it. For new dashboards,
+prefer cuDF for GPU data prep combined with HoloViews/hvPlot/Datashader linked selections, served
+with Panel, Plotly Dash, Streamlit, or Bokeh.
 
-Use cuxfilter when the user needs:
+Maintain cuxfilter when an existing application needs:
 - Interactive cross-filtering dashboards on large datasets (millions of rows)
 - Exploratory data analysis with linked charts that filter each other
 - GPU-accelerated visualization with scatter plots, bar charts, heatmaps, choropleths, or graph visualizations
@@ -122,7 +139,8 @@ Use cuxfilter when the user needs:
 
 cuxfilter leverages cuDF for all data operations on the GPU — filtering, groupby, and aggregation happen entirely on the GPU, with only rendering results sent to the browser. It integrates Bokeh, Datashader (for millions of points), Deck.gl (for maps), and Panel widgets.
 
-**Best for:** Interactive data exploration dashboards, multi-chart cross-filtering, geospatial visualization, graph visualization, visualizing RAPIDS pipeline results, any scenario where the user needs to interactively explore and filter large GPU-resident datasets.
+**Best for:** Existing 26.06 applications that cannot yet migrate. Do not start a new dependency on
+an unmaintained dashboard framework.
 
 ### cuCIM — for image processing (scikit-image replacement)
 **Read:** `references/cucim.md`
@@ -151,12 +169,12 @@ cuVS provides GPU-accelerated ANN index types (CAGRA, IVF-Flat, IVF-PQ, brute fo
 
 **Best for:** Embedding search, RAG retrieval, recommender systems, image/text/audio similarity search, k-NN graph construction, any nearest-neighbor workload on 10K+ vectors.
 
-### cuSpatial — for geospatial analytics (GeoPandas replacement)
+### cuSpatial — archived geospatial pipelines only
 **Read:** `references/cuspatial.md`
 
 **Project status: archived.** The cuSpatial repository has been read-only since July 2025; the final release is 25.04, which pins `cudf-cu12==25.4.*` and therefore conflicts with current RAPIDS releases in the same environment. No official successor exists. Recommend it only in a dedicated legacy environment; otherwise keep geometry operations on GeoPandas/Shapely (CPU) and accelerate the tabular parts of the workflow with cuDF.
 
-Use cuSpatial when the user's code is primarily:
+Maintain cuSpatial when an isolated 25.04 environment already uses:
 - GeoPandas spatial operations (point-in-polygon, spatial joins, distance calculations)
 - Trajectory analysis (grouping GPS traces, computing speeds/distances)
 - Spatial indexing (quadtree) for large-scale spatial joins
@@ -165,7 +183,8 @@ Use cuSpatial when the user's code is primarily:
 
 cuSpatial provides GPU-accelerated `GeoSeries` and `GeoDataFrame` types compatible with GeoPandas, plus spatial join, distance, and trajectory functions. Convert from GeoPandas with `cuspatial.from_geopandas()`.
 
-**Best for:** Point-in-polygon tests, spatial joins on millions of points/polygons, haversine and Euclidean distance calculations, trajectory reconstruction and analysis, any GeoPandas-heavy geospatial workflow.
+**Best for:** Existing pipelines pinned to the 25.04 stack. Do not present it as a current
+GeoPandas replacement or combine it with current RAPIDS packages.
 
 ### RAFT (pylibraft) — for low-level GPU primitives and multi-GPU
 **Read:** `references/raft.md`
@@ -200,16 +219,16 @@ Common combinations:
 - **CuPy + Numba**: Use CuPy for standard ops, drop into Numba for custom kernels
 - **cuDF + Numba**: Process dataframes with cuDF, apply custom GPU functions via Numba UDFs
 - **cuML + CuPy**: Train with cuML, do custom post-processing with CuPy
-- **cuDF + cuxfilter**: Load data with cuDF, build interactive cross-filtering dashboards with cuxfilter
-- **cuML + cuxfilter**: Run ML (e.g., UMAP, clustering) with cuML, visualize results interactively with cuxfilter
-- **cuGraph + cuxfilter**: Run graph analytics with cuGraph, visualize graph structure with cuxfilter's datashader graph chart
+- **cuDF + cuxfilter (legacy 26.06 only)**: Maintain an existing cross-filtering dashboard
+- **cuML + cuxfilter (legacy 26.06 only)**: Maintain an existing ML visualization workflow
+- **cuGraph + cuxfilter (legacy 26.06 only)**: Maintain an existing graph visualization
 - **cuCIM + CuPy**: cuCIM operates on CuPy arrays natively — chain image processing with array math
 - **cuCIM + PyTorch**: Preprocess images with cuCIM, pass directly to PyTorch via DLPack — zero-copy
 - **cuCIM + cuML**: Extract image features with cuCIM (regionprops), train classifiers with cuML
 - **KvikIO + CuPy**: Load raw binary data directly into CuPy arrays via GDS, bypassing CPU memory
 - **KvikIO + Numba**: Read data directly to GPU with KvikIO, process with custom Numba CUDA kernels
 - **KvikIO + Zarr**: Use GDSStore backend to read/write chunked N-dimensional arrays directly on GPU
-- **cuSpatial + cuDF**: Load geospatial data with cuDF, do spatial joins/analysis with cuSpatial
-- **cuSpatial + cuML**: Extract spatial features with cuSpatial, train ML models with cuML
+- **cuSpatial + cuDF (legacy 25.04 only)**: Keep both packages on the compatible frozen stack
+- **cuSpatial + cuML (legacy 25.04 only)**: Keep the full environment pinned and isolated
 - **RAFT + CuPy**: Use RAFT's eigsh() on sparse matrices built with CuPy/cupyx.scipy.sparse
 - **RAFT + raft-dask**: Scale GPU workloads across multiple GPUs/nodes via Dask

@@ -5,6 +5,10 @@ description: "对学术文献逐条执行多源交叉验证，逐字段对比作
 
 # nature-ref-verifier — 学术参考文献多源验证技能
 
+需要处理批量差异、反复出现的字段错误、DOI/标题冲突、作者顺序异常、页码漂移或
+报告措辞时，读取 `references/common-patterns.md`。其他任务不要预加载该文件；
+`manifest.yaml` 记录了同一按需路由，新增资源时必须同时在本文件中写明加载条件。
+
 ## 触发词
 
 `verify references`、`校验文献`、`check references`、`核对参考文献`、`文献验证`、`ref check`

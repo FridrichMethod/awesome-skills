@@ -3,6 +3,16 @@
 Use this reference before writing plotting code. The goal is to make the figure
 serve the paper's scientific logic.
 
+## Contents
+
+- [Privacy rule](#privacy-rule)
+- [Required contract](#required-contract)
+- [Core conclusion rules](#core-conclusion-rules)
+- [Archetype selection](#archetype-selection)
+- [Panel logic](#panel-logic)
+- [Aesthetic integration](#aesthetic-integration)
+- [Reviewer-risk prompts](#reviewer-risk-prompts)
+
 ## Privacy rule
 
 Keep the figure contract user-facing, but keep the working trail private. Do not mention
@@ -36,6 +46,11 @@ Reviewer risk:
 Do not start from a favorite template. Start from the conclusion, then choose the
 minimum set of panels that make the conclusion clear and defensible.
 
+Do not start by mapping each input table to a figure. First group tables, metrics,
+and experiments by the scientific claims they can support. Several source tables
+may belong in one evidence chain, while one table may support multiple distinct
+panels. This claim-first pass prevents redundant figures that restate the same result.
+
 ## Core conclusion rules
 
 - The core conclusion should be one sentence with a verb: "Treatment X reduces
@@ -47,6 +62,9 @@ minimum set of panels that make the conclusion clear and defensible.
   visually quieter.
 - If the user provides data but no claim, infer a provisional claim from the data
   request and ask for confirmation before final styling.
+- If observations are matched by dataset, subject, seed, task, or specimen, decide
+  whether the claim concerns the paired change. Marginal distributions can overlap
+  because of between-unit heterogeneity even when paired differences are consistent.
 
 ## Archetype selection
 
@@ -87,7 +105,11 @@ Before finalizing, ask what a skeptical reviewer would challenge:
 
 - Is the sample size visible in the legend or source data?
 - Are error bars, intervals, and statistical tests defined?
+- Are the same uncertainty definitions present in every comparable aggregate panel?
 - Are axes comparable across panels that invite comparison?
+- Would a paired-difference view reveal an effect hidden by overlapping marginal distributions?
+- Does each legend label preserve canonical capitalization and match the terminology plan?
+- Do data labels clear the upper uncertainty extent at final rendered size?
 - Are representative images quantified and traceable to raw files?
 - Are image adjustments global and documented?
 - Could the same conclusion be made from fewer panels?

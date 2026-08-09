@@ -71,11 +71,11 @@ Calibration rules:
 - Never manufacture concerns to meet a numeric quota. Use `None identified from the supplied
   material` when a severity tier has no grounded item.
 
-## Reviewer allocation
+## Reviewer-local use
 
-- Keep the visible roles as `Reviewer 1`, `Reviewer 2`, and `Reviewer 3` with allowed emphasis labels.
-- Allocate applicable axes across the three reports to improve coverage, but ensure every emitted concern remains relevant to that report's emphasis.
+- Keep the visible labels as `Reviewer 1`, `Reviewer 2`, and `Reviewer 3` with preassigned emphasis briefs.
+- Apply the taxonomy independently inside each isolated reviewer context. Do not allocate concerns or axes based on another report.
 - Do not expose specialist personas such as `Statistics Reviewer` or infer reviewer-selection history.
-- Reuse the same `issue_key` when more than one reviewer independently raises the same underlying issue; this enables honest consensus and overlap checks.
-- Allocate Major and Minor concerns according to evidence and emphasis, not fixed counts. A reviewer
+- Use reviewer-local issue keys while drafting. Map equivalent concerns to synthesis keys only after all reports are frozen.
+- Classify Major and Minor concerns according to evidence and emphasis, not fixed counts. A reviewer
   may legitimately have no concern at one severity level.

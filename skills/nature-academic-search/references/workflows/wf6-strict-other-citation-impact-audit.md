@@ -1,5 +1,14 @@
 # Workflow 6: Strict Other-Citation Impact Audit
 
+## Contents
+
+- [Definitions](#definitions)
+- [Procedure](#procedure)
+- [Article Summary Table Mode](#article-summary-table-mode)
+- [Output Format](#output-format)
+- [Red Lines](#red-lines)
+
+
 **Purpose:** Audit who cites a target paper, distinguish strict independent
 other-citations from self/team citations, build article-level citation metric
 tables, identify high-profile independent citers, and extract how those citers

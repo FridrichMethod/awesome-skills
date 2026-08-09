@@ -1,5 +1,17 @@
 # Intake and routing
 
+## Contents
+
+- [Mandatory decision-type gate](#mandatory-decision-type-gate)
+- [Task modes](#task-modes)
+- [Readiness states](#readiness-states)
+- [Editor instruction handling](#editor-instruction-handling)
+- [Pasted editorial email handling](#pasted-editorial-email-handling)
+- [Minimum information by output type](#minimum-information-by-output-type)
+- [Clarifying question rules](#clarifying-question-rules)
+- [Routing shortcuts](#routing-shortcuts)
+
+
 Use this file before splitting comments or drafting prose. Its job is to decide what task the
 user is asking for, whether the supplied information is enough, and what output state is honest.
 
@@ -28,12 +40,12 @@ decision type in the response strategy summary.
 
 | Mode | Use when | Minimum useful input | Default output |
 |---|---|---|---|
-| `draft` | User wants a new point-by-point response package | Reviewer comments plus any author actions or manuscript-change notes | Full response package with placeholders where needed |
+| `draft` | User wants a new point-by-point response package | Reviewer comments plus any author actions or manuscript-change notes | Internal/editor master plus separate reviewer-specific responses with placeholders where needed |
 | `audit` | User provides an existing response draft and asks whether it is good enough | Response draft; reviewer comments when available | Findings first, then revised or annotated response sections |
 | `revise` | User wants a draft rewritten for tone, traceability, or Nature-style response | Existing draft plus target change request | Revised response text plus changed-risk notes |
 | `triage-only` | User wants strategy, action list, or missing inputs before writing prose | Reviewer comments or editor letter | Tracker, action map, missing-input list, no final letter |
 | `cover-letter` | User asks for a revision cover letter only | Manuscript metadata plus revision summary or change notes | Concise editor-facing cover letter |
-| `revision-package` | User asks for a complete revision package or pastes a decision email and wants the agent to begin | Decision email or reviewer/editor comments plus available author actions | Response letter, cover letter when useful, change checklist, and placeholders |
+| `revision-package` | User asks for a complete revision package or pastes a decision email and wants the agent to begin | Decision email or reviewer/editor comments plus available author actions | Internal/editor master, reviewer-separated response files, cover letter when useful, change checklist, and placeholders |
 | `latex-template` | User asks for LaTeX templates or filled `.tex` files | Desired output type; manuscript metadata if filling templates | Template paths or filled `.tex` content |
 | `appeal-like` | User wants to challenge rejection or process rather than revise | Decision letter and disputed points | Route out of default workflow and explain separate appeal handling |
 
@@ -85,12 +97,14 @@ separate the email manually. Start by extracting:
 - required files, such as clean manuscript, marked manuscript, response to reviewers, cover letter, graphical abstract, data availability update, or supplementary files;
 - editor instructions and portal-specific constraints;
 - reviewer-report boundaries and comment numbering.
+- reviewer-visibility rules and whether the portal accepts separate reviewer-response files.
 
 Ignore boilerplate only after checking it for required files, deadlines, formatting constraints,
 and resubmission instructions. If the email contains reviewer reports, enter `revision-package`
 or `draft` mode automatically depending on whether the user requested a full package or only a
-response letter. If reviewer boundaries are ambiguous, keep the original ordering visible and flag
-the ambiguity instead of inventing identities.
+response letter. If reviewer boundaries are ambiguous, keep the original ordering visible in the
+internal package and flag the ambiguity instead of inventing identities. Do not create outward-facing
+reviewer files until their boundaries can be separated safely.
 
 ## Minimum information by output type
 

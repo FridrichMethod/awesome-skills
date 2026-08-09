@@ -1,5 +1,5 @@
 name: nature-downloader
-version: 2.0.0
+version: 2.1.0
 description: >
   Download academic full text through publisher APIs, lawful open-access
   fallbacks, CNKI, or a user's institution-authorized browser session, with
@@ -24,3 +24,7 @@ references:
       path: scripts/browser_pdf_downloader.mjs
     - condition: canonical download statuses and manifest status semantics
       path: scripts/lib/status-codes.mjs
+    - condition: lawful OA and applicable publisher APIs are exhausted and the task needs Web of Science, an institution-authorized browser session, publisher verification, authentication handoff, or browser-context PDF transfer
+      path: references/institutional-browser-workflow.md
+    - condition: Supporting Information was requested, downloaded files need final verification and naming, or an access attempt reaches a typed failure or retry state
+      path: references/delivery-verification-and-failures.md

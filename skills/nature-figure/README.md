@@ -9,7 +9,8 @@
 - 根据数据、图注或论文结论生成 Python / R 绘图脚本和可编辑图件。
 - 将已有图件重画为更清楚的多面板论文 figure。
 - 规划 Figure 1、机制图、workflow、graphical abstract 或补充图。
-- 检查面板标签、配色、字体、统计标注、source data 和导出格式。
+- 检查面板标签、配色与视觉层级、逐面板误差线、最终 PDF 实际字号、统计标注、source data 和导出格式。
+- 区分旗舰 `Nature` 初投稿、主图终稿和 Extended Data 的文件契约，并执行 `<250` 词图注上限。
 - 在用户明确要求时，通过 OpenRouter Images API 调用 `openai/gpt-image-2` 生成 AI 概念示意图草稿。
 
 ## 工作方式
@@ -37,7 +38,7 @@
 |------|------|------------|
 | 多面板论文图 | <a href="assets/gallery/fig1-material-mechanism-rich.png"><img src="assets/gallery/fig1-material-mechanism-rich.png" width="220" alt="Material design and physical validation"></a> | 机制示意、图像面板、定量结果和相关性放在同一证据链中 |
 | 图表类型 atlas | <a href="assets/chart-atlas/atlas-03-heatmaps.png"><img src="assets/chart-atlas/atlas-03-heatmaps.png" width="220" alt="Heatmap atlas"></a> | 热图、注释矩阵、聚类块和发散色标的组合模式 |
-| figures4papers demo | <a href="assets/figures4papers/figure_VIGIL/figures/comparison_radar.png"><img src="assets/figures4papers/figure_VIGIL/figures/comparison_radar.png" width="220" alt="VIGIL comparison radar"></a> | 从真实论文脚本中抽取 layout、legend 和多指标比较语法 |
+| 第三方 figures4papers 参考 | <a href="assets/figures4papers/figure_VIGIL/figures/comparison_radar.png"><img src="assets/figures4papers/figure_VIGIL/figures/comparison_radar.png" width="220" alt="VIGIL comparison radar"></a> | 仅用于研究 layout、legend 和多指标比较语法；使用前阅读独立版权说明 |
 
 ## 你需要提供
 
@@ -49,7 +50,7 @@
 
 - 可运行的 Python 或 R 绘图脚本。
 - SVG/PDF/TIFF/PNG 等图件文件，优先保留可编辑矢量版本。
-- 面板说明、source data 映射、排除计数和投稿前 QA 记录。
+- 面板说明、source data 映射、排除计数、逐面板视觉审查表和投稿前 QA 记录。
 - AI 示意图任务中，输出概念草稿和需要人工重画/核实的元素列表。
 
 ## 内置参考
@@ -58,17 +59,21 @@
 - `references/asset-adaptation.md`：模板语义匹配、字段映射和数据完整性规则。
 - `references/template-catalog.md`：volcano、ROC、marker dot plot、marginal 和 paired 的已验证 Python CSV 模板。
 - `references/chart-types.md`：常见图型选择和视觉规则。
-- `references/demos.md`：`figures4papers` demo 与可借鉴模式。
+- `references/demos.md`：第三方 `figures4papers` 示例索引、使用边界和原创适配模式。
 - `references/qa-contract.md`：导出前检查项、source-data 约束和静态预检入口。
 - `scripts/validate_figure.py`：Python/R 绘图源码的可复现静态 QA。
-- `assets/figures4papers/`：打包的 demo 脚本与预览图。
+- `scripts/audit_pdf_text.py`：扫描导出 PDF 的 `Tf` 操作符，发现 mathtext 上下标等低于 5 pt 的实际字形。
+- `scripts/figure_safety.py`：严格单调插值和基于数据/误差范围的标签高度 helper。
+- `assets/figures4papers/`：保留的第三方参考脚本与预览图；不自动适用本仓库 MIT License，使用前阅读 `THIRD_PARTY_NOTICES.md`。
 
 ## 边界
 
 - 不会把 AI 生成图片当作真实实验结果或定量数据面板。
 - 不会凭空补统计检验、样本量、误差线含义或实验条件。
 - 不会为了渲染方便静默抽样、忽略变量或删除不完整观测。
+- 不会把自动校验通过当作视觉验收；最终交付仍需逐面板检查不确定性、标签碰撞、间距和显著性层级。
 - 私有模板可以在本机使用，但不应在面向用户输出中暴露私有路径、文件名或来源。
+- 第三方参考材料的版权和再使用条件以其来源及 `THIRD_PARTY_NOTICES.md` 为准；本仓库不额外授予这些文件的使用权。
 
 ## 相关技能
 

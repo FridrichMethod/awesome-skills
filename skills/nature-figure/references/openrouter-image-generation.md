@@ -1,5 +1,15 @@
 # OpenRouter Image Generation for Manuscript Schematics
 
+## Contents
+
+- [Source](#source)
+- [Safety and scientific integrity](#safety-and-scientific-integrity)
+- [Prompt contract](#prompt-contract)
+- [Script usage](#script-usage)
+- [Recommended defaults](#recommended-defaults)
+- [Follow-up QA](#follow-up-qa)
+
+
 Use this reference only when the user explicitly asks to generate a paper schematic, graphical abstract, mechanism diagram, or concept illustration through OpenRouter / GPT Image 2 / an image-generation API.
 
 Do not use this route for quantitative plots, data panels, heatmaps, microscopy plates, blots, or figure assembly unless the user explicitly wants an AI-generated draft illustration. Keep data-driven figures in the Python or R route.

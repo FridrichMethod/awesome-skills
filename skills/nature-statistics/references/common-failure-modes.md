@@ -1,5 +1,12 @@
 ﻿# Common statistical failure modes
 
+## Contents
+
+- [P0: likely to undermine the result](#p0-likely-to-undermine-the-result)
+- [P1: important reporting or interpretation risk](#p1-important-reporting-or-interpretation-risk)
+- [P2: clarity and presentation risk](#p2-clarity-and-presentation-risk)
+
+
 Use this file to identify reviewer-risk patterns. Do not accuse the authors; state the risk and the fix.
 
 ## P0: likely to undermine the result

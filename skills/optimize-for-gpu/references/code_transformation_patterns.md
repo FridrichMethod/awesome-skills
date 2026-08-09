@@ -2,10 +2,9 @@
 
 Before/after conversions: NumPy to CuPy, pandas to cuDF, a custom loop to a Numba CUDA
 kernel, NetworkX to cuGraph, scikit-learn to cuML, a simulation loop to a Warp kernel,
-file IO to KvikIO, dashboards to cuxfilter, scikit-image to cuCIM, GeoPandas to
-cuSpatial, Faiss/Annoy to cuVS, and `scipy.sparse.linalg` to RAFT.
-
-## Code Transformation Patterns
+file IO to KvikIO, maintained GPU-backed dashboards, scikit-image to cuCIM, legacy
+GeoPandas-to-cuSpatial point-in-polygon, exact Faiss to exact cuVS search, and
+`scipy.sparse.linalg` to RAFT.
 
 When converting existing CPU code, apply these patterns:
 
@@ -56,9 +55,12 @@ def process(data, out):
     if i < data.size:
         out[i] = math.sin(data[i]) * math.exp(-data[i])
 
+d_data = cuda.to_device(data)
+d_out = cuda.device_array(d_data.shape, dtype=d_data.dtype)
 threads = 256
 blocks = (len(data) + threads - 1) // threads
 process[blocks, threads](d_data, d_out)
+out = d_out.copy_to_host()
 ```
 
 ### NetworkX to cuGraph
@@ -157,7 +159,12 @@ with kvikio.RemoteFile.open_s3_url("s3://bucket/data.bin") as f:
     f.read(buf)
 ```
 
-### GPU-accelerated dashboard with cuxfilter
+### GPU-backed dashboard with maintained libraries
+
+cuxfilter ended with RAPIDS 26.06. Do not start a new application with it. Keep large
+transformations and aggregations in cuDF, then transfer only the compact display data at an
+explicit visualization boundary:
+
 ```python
 # Before — static matplotlib/seaborn plots, no interactivity
 import pandas as pd
@@ -169,26 +176,27 @@ df.plot.scatter(x="feature1", y="feature2", ax=axes[0])
 df["category"].value_counts().plot.bar(ax=axes[1])
 plt.show()
 
-# After (GPU) — interactive cross-filtering dashboard
+# After — GPU data preparation plus a maintained dashboard stack
 import cudf
-import cuxfilter
+import hvplot.pandas  # Registers .hvplot on pandas objects
+import panel as pn
 
-df = cudf.read_parquet("large_dataset.parquet")
-cux_df = cuxfilter.DataFrame.from_dataframe(df)
-
-scatter = cuxfilter.charts.scatter(x="feature1", y="feature2", pixel_shade_type="linear")
-bar = cuxfilter.charts.bar("category")
-slider = cuxfilter.charts.range_slider("value_col")
-
-d = cux_df.dashboard(
-    [scatter, bar],
-    sidebar=[slider],
-    layout=cuxfilter.layouts.feature_and_base,
-    theme=cuxfilter.themes.rapids_dark,
-    title="Interactive Explorer",
+gpu_df = cudf.read_parquet("large_dataset.parquet")
+gpu_summary = (
+    gpu_df.groupby("category", as_index=False)
+    .agg({"value_col": "mean"})
 )
-d.app()  # or d.show() for standalone web app
+display_summary = gpu_summary.to_pandas()  # Transfer only the reduced result
+dashboard = pn.Column(
+    "# Interactive Explorer",
+    display_summary.hvplot.bar(x="category", y="value_col"),
+)
+dashboard.servable()
 ```
+
+For linked selections over detailed points, use HoloViews/hvPlot with Datashader and Panel.
+Keep filter/aggregation callbacks on the GPU where practical, and document every conversion to
+pandas. Read the cuxfilter reference only when maintaining an existing 26.06 application.
 
 ### scikit-image to cuCIM
 ```python
@@ -218,46 +226,58 @@ labels = label(cleaned)
 props = regionprops_table(labels, image_gpu, properties=['area', 'centroid'])
 ```
 
-### GeoPandas to cuSpatial
+### GeoPandas point-in-polygon to cuSpatial (legacy 25.04 only)
+
+cuSpatial is archived and incompatible with current RAPIDS packages. Use this only in an isolated
+environment pinned to 25.04. `point_in_polygon` returns a boolean membership matrix; it is not a
+drop-in replacement for `geopandas.sjoin`.
+
 ```python
 # Before (CPU)
 import geopandas as gpd
+import numpy as np
 from shapely.geometry import Point
 
-points = gpd.GeoDataFrame(geometry=[Point(x, y) for x, y in coords], crs="EPSG:4326")
-polygons = gpd.read_file("regions.geojson")
-joined = gpd.sjoin(points, polygons, predicate="within")
-
-# After (GPU) — convert and use cuSpatial
-import cuspatial
-import cudf
-
-points_cu = cuspatial.from_geopandas(points)
-polygons_cu = cuspatial.from_geopandas(polygons)
-joined = cuspatial.point_in_polygon(
-    points_cu.geometry.x, points_cu.geometry.y,
-    polygons_cu.geometry
+points = gpd.GeoSeries([Point(x, y) for x, y in coords], crs="EPSG:4326")
+polygons = gpd.read_file("regions.geojson").geometry.iloc[:31]
+membership_cpu = np.column_stack(
+    [points.within(polygon).to_numpy() for polygon in polygons]
 )
+
+# After (GPU, legacy) — same point-by-polygon membership semantics
+import cuspatial
+
+points_gpu = cuspatial.from_geopandas(points)
+polygons_gpu = cuspatial.from_geopandas(polygons)
+membership_gpu = cuspatial.point_in_polygon(points_gpu, polygons_gpu)
 ```
 
-### Faiss/Annoy to cuVS
+### Exact Faiss search to exact cuVS search
+
+Match algorithmic semantics before benchmarking. Use cuVS brute force for an exact Faiss
+`IndexFlatL2` baseline; use CAGRA only when approximate results are acceptable and report recall@k
+against this exact ground truth.
+
 ```python
 # Before (CPU) — Faiss
 import faiss
 import numpy as np
 
-embeddings = np.random.rand(1_000_000, 128).astype(np.float32)
+rng = np.random.default_rng(42)
+embeddings = rng.random((1_000_000, 128), dtype=np.float32)
+queries = rng.random((1_000, 128), dtype=np.float32)
 index = faiss.IndexFlatL2(128)
 index.add(embeddings)
 distances, neighbors = index.search(queries, k=10)
 
-# After (GPU) — cuVS CAGRA (orders of magnitude faster)
+# After (GPU) — cuVS exact brute-force search
 import cupy as cp
-from cuvs.neighbors import cagra
+from cuvs.neighbors import brute_force
 
-embeddings = cp.random.rand(1_000_000, 128, dtype=cp.float32)
-index = cagra.build(cagra.IndexParams(), embeddings)
-distances, neighbors = cagra.search(cagra.SearchParams(), index, queries, k=10)
+embeddings_gpu = cp.asarray(embeddings)
+queries_gpu = cp.asarray(queries)
+index_gpu = brute_force.build(embeddings_gpu, metric="sqeuclidean")
+distances_gpu, neighbors_gpu = brute_force.search(index_gpu, queries_gpu, k=10)
 ```
 
 ### scipy.sparse.linalg to RAFT

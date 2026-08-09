@@ -1,5 +1,20 @@
 # Chart Types — Nature Figure Making
 
+## Contents
+
+- [Radar / Polar Chart](#radar-polar-chart)
+- [3D Sphere / Conceptual Illustration](#3d-sphere-conceptual-illustration)
+- [Scatter Plot with Color-Coded Clusters](#scatter-plot-with-color-coded-clusters)
+- [Probability + Manifold Concept Panel](#probability-manifold-concept-panel)
+- [Ablation Line Panel with Reference Baselines](#ablation-line-panel-with-reference-baselines)
+- [Fill-Between Area Chart (Stacked trend)](#fill-between-area-chart-stacked-trend)
+- [Log-Scale Bar Chart](#log-scale-bar-chart)
+- [GridSpec Multi-Panel Layout](#gridspec-multi-panel-layout)
+- [Scientific Notation on Y-Axis](#scientific-notation-on-y-axis)
+- [Custom Spine Positioning](#custom-spine-positioning)
+- [Related files](#related-files)
+
+
 Specialized chart patterns beyond basic bars and trends.
 Each section includes the key code pattern extracted from production scripts.
 
@@ -198,9 +213,9 @@ def make_scatter(ax, x, y, labels_or_colors,
 ## Probability + Manifold Concept Panel
 
 Use when a manuscript needs a conceptual mechanism panel that links a probability
-shift to a geometric or latent-space explanation. The bundled
-`figure_VIGIL/plot_concept.py` demo pairs a 1D probability-density panel with a
-contour/scatter manifold panel.
+shift to a geometric or latent-space explanation. Build the pair from the
+original pattern below: a 1D probability-density panel beside a contour/scatter
+manifold panel.
 
 **Pattern:**
 - Left panel: draw 2-3 probability curves with transparent fills; use one vertical
@@ -213,7 +228,6 @@ contour/scatter manifold panel.
   reuse demo labels such as `VIG` or `DPO` unless they are the user's actual terms.
 
 ```python
-# See ../assets/figures4papers/figure_VIGIL/plot_concept.py for the full pattern.
 fig, (ax_prob, ax_manifold) = plt.subplots(1, 2, figsize=(24, 6))
 plot_distribution(ax_prob)  # probability curves + conceptual gap arrow
 plot_manifold(ax_manifold)  # density contours + trajectory markers
@@ -225,9 +239,9 @@ fig.tight_layout(pad=0.5)
 ## Ablation Line Panel with Reference Baselines
 
 Use when an ablation compares data fraction, hyperparameters, or coupled metrics
-across a small set of methods. The bundled `figure_VIGIL/plot_ablation.py` demo
-uses three horizontal panels: data fraction, one hyperparameter sweep, and a
-dual-axis coupled metric sweep.
+across a small set of methods. A robust original layout uses three horizontal
+panels: data fraction, one hyperparameter sweep, and a dual-axis coupled metric
+sweep.
 
 **Pattern:**
 - Use a dashed horizontal baseline for the simple/reference model.
@@ -239,7 +253,6 @@ dual-axis coupled metric sweep.
   if panel-specific series differ.
 
 ```python
-# See ../assets/figures4papers/figure_VIGIL/plot_ablation.py for the full pattern.
 fig, axes = plt.subplots(1, 3, figsize=(27, 6),
                          gridspec_kw={"width_ratios": [1.1, 1, 1]})
 axes[0].plot(x, baseline, color="black", alpha=0.3, lw=4, ls="--")

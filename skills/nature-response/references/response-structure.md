@@ -1,20 +1,40 @@
 # Response structure
 
+## Contents
+
+- [Default package](#default-package)
+- [Response strategy summary](#response-strategy-summary)
+- [Internal/editor comment-response tracker](#internaleditor-comment-response-tracker)
+- [Reviewer-specific point-by-point letter anatomy](#reviewer-specific-point-by-point-letter-anatomy)
+- [Comment 1](#comment-1)
+- [Revision cover letter anatomy](#revision-cover-letter-anatomy)
+- [Marked manuscript changes](#marked-manuscript-changes)
+- [LaTeX deliverables](#latex-deliverables)
+- [Manuscript change checklist](#manuscript-change-checklist)
+- [Missing information / risk flags](#missing-information-risk-flags)
+
+
 Use this file when drafting or auditing the output shape of a reviewer response package, revision cover letter, marked manuscript changes, or combined revision correspondence package.
 
 ## Default package
 
 Return the response in this order unless the user asks for another format:
 
-1. Response strategy summary.
-2. Comment-response tracker.
-3. Draft point-by-point response letter.
-4. Draft revision cover letter when requested or when returning a combined revision package.
+1. Internal/editor response strategy summary, clearly marked as not reviewer-facing.
+2. Internal/editor comment-response tracker, clearly marked as not reviewer-facing.
+3. One standalone privacy-filtered point-by-point response file per reviewer.
+4. Draft revision cover letter when requested or when returning a complete revision package.
 5. Marked manuscript changes when the user asks to edit the manuscript.
 6. LaTeX deliverables when requested.
 7. Manuscript change checklist.
 8. Missing information / risk flags.
 9. Chinese confirmation notes when the user writes in Chinese.
+
+Reviewer reports are mutually blind by default. The master summary and tracker may contain all
+reviewers for author/editor coordination, but they must never be passed off as reviewer-facing
+documents. If explicit current journal or submission-portal instructions require one combined
+response file, follow that requirement and flag the resulting visibility constraint. Otherwise,
+produce separate outward-facing files.
 
 ## Response strategy summary
 
@@ -28,7 +48,7 @@ Response strategy summary
 - Package readiness: draft_with_placeholders
 - Overall posture: Cooperative, evidence-forward, non-defensive
 - Major risks: missing validation results; unclear replicate definition
-- Suggested ordering: address editor first, then Reviewer 1 and Reviewer 2 in full
+- Suggested package: editor master plus separate Reviewer 1 and Reviewer 2 responses
 ```
 
 Decision types:
@@ -58,7 +78,7 @@ Package readiness:
 - `needs_author_input`: final text depends on facts the author has not supplied.
 - `blocked`: credible revision response is blocked by ethics, compliance, data integrity, central evidence, or appeal-like routing.
 
-## Comment-response tracker
+## Internal/editor comment-response tracker
 
 Use a compact table:
 
@@ -69,25 +89,28 @@ Use a compact table:
 ```
 
 Keep reviewer concern text short in the tracker. Preserve the full wording in the letter when available.
+Label the tracker `Internal/editor master (not reviewer-facing)`. It may record cross-reviewer
+duplicates and conflicts because it is used for coordination and consistency checks.
 Use `E.1`, `E.2`, etc. for editor instructions and list them before reviewer comments.
 When the input is a pasted editorial email, use the tracker to preserve all extracted required
 revision items rather than only the reviewer comments.
 Do not use `Work status` as a synonym for `Proposed action`: the former reports progress and verification, while the latter states the response strategy.
 If the table becomes too wide for the requested medium, keep the same fields in a per-item block rather than dropping status, expected output, or blocking state.
 
-## Point-by-point letter anatomy
+## Reviewer-specific point-by-point letter anatomy
 
-Use this default structure:
+Create one file per reviewer. Use neutral local numbering so the outward-facing file does not
+leak the internal reviewer index or another reviewer's IDs:
 
 ```markdown
-Dear Editor and Reviewers,
+Dear Reviewer,
 
-We thank the editor and reviewers for their careful evaluation of our manuscript.
-We have revised the manuscript to address the concerns raised and provide a point-by-point response below.
+We thank you for your careful evaluation of our manuscript.
+We have revised the manuscript to address your comments and provide a point-by-point response below.
 
-## Response to Reviewer 1
+## Comment 1
 
-**Reviewer comment R1.1**
+**Reviewer comment**
 [Full reviewer comment preserved here.]
 
 **Response**
@@ -99,10 +122,10 @@ To address this concern, we have [specific action]. This change appears in [sect
 *[Paste revised manuscript text here.]*
 ```
 
-For LaTeX or print-oriented response letters, start each new reviewer section on a new page. In
-LaTeX, use `\ReviewerSection{1}`, `\ReviewerSection{2}`, etc. from
-`templates/response-to-reviewers.tex`. Markdown drafts can note `[page break before Reviewer 2]`
-when the final destination is a print/PDF response letter.
+Each reviewer-specific file must contain only that reviewer's comments and responses. It must not
+mention another reviewer, quote another report, disclose another recommendation, use another
+reviewer's IDs, or refer the reader to another response file. If multiple reviewers raise the same
+concern, repeat the complete answer in each relevant file.
 
 ## Revision cover letter anatomy
 
@@ -141,8 +164,8 @@ When the user asks for LaTeX, use the templates in `templates/`:
 - `templates/response-to-reviewers.tex` for point-by-point responses.
 - `templates/revised-manuscript-redline.tex` for a red-marked manuscript-copy skeleton.
 
-In `templates/response-to-reviewers.tex`, use `\ReviewerSection{...}` for each reviewer so
-reviewer changes begin on a new page.
+Fill one copy of `templates/response-to-reviewers.tex` per reviewer. Never place multiple mutually
+blind reviewer reports into the same outward-facing `.tex` file.
 
 Preserve visible placeholders for unknown manuscript ID, editor name, line numbers, figure panels, dates, or author information. Do not hide missing facts in comments.
 
@@ -156,6 +179,9 @@ Manuscript change checklist
 - R1.2: Clarify replicate definition in Methods.
 - R2.1: Soften causal claim in Abstract and Discussion.
 ```
+
+The checklist uses master IDs and therefore belongs in the internal/editor package, not in a
+reviewer-facing file.
 
 ## Missing information / risk flags
 

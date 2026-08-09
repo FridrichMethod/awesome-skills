@@ -1,5 +1,19 @@
 # QA checklist
 
+## Contents
+
+- [Completeness](#completeness)
+- [Status calibration](#status-calibration)
+- [Traceability](#traceability)
+- [Revision formatting](#revision-formatting)
+- [Reviewer isolation](#reviewer-isolation)
+- [Factuality](#factuality)
+- [Tone](#tone)
+- [Actionability](#actionability)
+- [Final output gate](#final-output-gate)
+- [Readiness gate](#readiness-gate)
+
+
 Use this checklist before finalizing a response package or when auditing an existing draft.
 
 ## Completeness
@@ -7,7 +21,7 @@ Use this checklist before finalizing a response package or when auditing an exis
 - Every reviewer comment has a stable ID.
 - Every ID has a response or an explicit unresolved flag.
 - No reviewer comment is paraphrased in a way that changes meaning.
-- Repeated concerns are cross-referenced rather than ignored.
+- Repeated concerns are answered fully in every relevant reviewer-specific response rather than cross-referenced across reviewers.
 - No major concern is answered only with thanks.
 - Editor-specific instructions are addressed before reviewer comments when supplied.
 - Every editor/reviewer item has an action, work status, required input, expected output, and finalization-blocking state.
@@ -36,8 +50,20 @@ Use this checklist before finalizing a response package or when auditing an exis
 - In LaTeX marked manuscripts, changed text uses `\revised{...}` or an equivalent visible red-text macro.
 - If revised manuscript text is pasted into the response letter after the answer, that pasted text is italic.
 - In LaTeX response letters, pasted revised manuscript excerpts use `\RevisedExcerpt{...}` or another visible italic excerpt style.
-- In LaTeX or print-oriented response letters, each new reviewer response starts on a new page.
+- One LaTeX or print-oriented response file is created per mutually blind reviewer unless explicit journal instructions require a combined file.
 - Cover letters summarize the revision for the editor and do not replace the point-by-point response.
+
+## Reviewer isolation
+
+- The internal/editor master is clearly labelled as not reviewer-facing.
+- Each reviewer-facing file contains only one reviewer's comments and the author responses to those comments.
+- Reviewer-facing files use neutral local numbering such as `Comment 1` and contain no IDs belonging to another reviewer.
+- No reviewer-facing text says "as another reviewer noted", "see our response to Reviewer 2", "the other reviewer requested", or equivalent wording.
+- Repeated concerns receive a complete standalone answer in each relevant reviewer-specific file.
+- Conflicting requests are reconciled in the internal/editor strategy, then explained independently to each reviewer without revealing the conflict or the other request.
+- Reviewer recommendations, identities, and confidential remarks are never copied into another reviewer's response.
+- All reviewer-specific responses describe manuscript changes consistently.
+- Explicit journal or portal visibility instructions are followed and any forced combined-file constraint is flagged.
 
 ## Factuality
 
@@ -50,12 +76,17 @@ Use this checklist before finalizing a response package or when auditing an exis
 
 ## Tone
 
+- No avoidable em dash, en dash, or colon is used as a routine sentence connector. Source-faithful
+  reviewer quotations and required identifiers or syntax are unchanged.
 - No accusations of reviewer incompetence, bias, or misunderstanding unless the user is explicitly preparing an appeal and supplies evidence.
 - No excessive apologies.
 - No repetitive empty thanks.
 - Disagreement is evidence-based and narrow.
 - Study limitations are acknowledged cleanly.
 - Time, money, convenience, or ability is not the primary stated reason for not doing requested work.
+- A missed existing passage is treated as a clarity or visibility problem, not as a reviewer failure.
+- No response says "we already stated this", "this was already explained", "as clearly described", or an equivalent rebuke.
+- When existing material answers the concern, the response gives a direct answer, a supported clarification, and the final manuscript location or a visible placeholder.
 
 ## Actionability
 
@@ -74,6 +105,7 @@ Before returning final text, ask:
 - Is the package readiness honestly labelled as `ready_to_submit`, `draft_with_placeholders`, `needs_author_input`, or `blocked`?
 - If any item is `draft_with_placeholders`, `needs_author_input`, or `blocked`, the package must not be labelled `ready_to_submit`.
 - Does every `VERIFIED_DONE` item cite its verification evidence?
+- Has each reviewer-facing deliverable passed the isolation checks without relying on another reviewer's response?
 - Does `ready_to_submit` have no blocking item, no unresolved placeholder, and no claimed change left at `REPORTED_DONE_UNVERIFIED` or `TODO_*`?
 
 ## Readiness gate

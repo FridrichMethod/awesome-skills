@@ -1,5 +1,17 @@
 # Output Spec
 
+## Contents
+
+- [Standard bundle](#standard-bundle)
+- [Full-text mode](#full-text-mode)
+- [source_map.json](#source_mapjson)
+- [paper.md](#papermd)
+- [reader.html](#readerhtml)
+- [Layout rules](#layout-rules)
+- [Figure/table card format](#figuretable-card-format)
+- [Citation format in the page](#citation-format-in-the-page)
+
+
 ## Standard bundle
 
 Produce these files when possible:

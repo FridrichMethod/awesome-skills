@@ -27,10 +27,11 @@ cuSpatial is a GPU-accelerated GIS library that provides spatial indexing, spati
 
 ## Installation and Setup
 
-Always use `uv add` (never `pip install` or `conda install`) in all install instructions, docstrings, comments, and error messages.
+Use `uv add` in standalone examples; follow the user's existing project package manager when one
+is already configured.
 
 ```bash
-uv add --extra-index-url=https://pypi.nvidia.com cuspatial-cu12   # For CUDA 12.x — installs the final 25.04 release
+uv add --extra-index-url=https://pypi.nvidia.com "cuspatial-cu12==25.4.*"   # Final 25.04 release
 ```
 
 The `--extra-index-url=https://pypi.nvidia.com` index is **required** here — the `cuspatial-cu12` entry on PyPI itself is only a stub sdist; the real wheels live on pypi.nvidia.com. There are no CUDA 13 (`-cu13`) packages — the project was archived before CUDA 13 wheels were introduced. Installing cuSpatial pulls in `cudf-cu12==25.4.*` and related 25.04 pins.

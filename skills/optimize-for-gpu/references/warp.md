@@ -26,8 +26,8 @@ Unlike Numba CUDA (which gives you raw thread/block control) or CuPy (which repl
 ## Installation
 
 ```bash
-uv add warp-lang              # PyPI wheels built with the CUDA 12.9 runtime
-# uv add warp-lang[examples]  # Includes USD and example dependencies
+uv add "warp-lang==1.15.*"              # PyPI wheels built with the CUDA 12.9 runtime
+# uv add "warp-lang[examples]==1.15.*"  # Includes USD and example dependencies
 ```
 
 Requires Python >= 3.10 and an NVIDIA driver >= 525 for the CUDA 12 wheels. CUDA 13.0 builds (driver >= 580) are published on the project's GitHub Releases page rather than PyPI.
@@ -46,12 +46,13 @@ wp.init()
 
 | Use Case | Best Choice | Why |
 |----------|------------|-----|
-| Physics simulation (particles, cloth, fluids) | **Warp** | Built-in spatial primitives, differentiable, simulation-oriented |
+| High-level rigid-body / robotics simulation | **Newton** | Maintained engine built on Warp; successor to removed `warp.sim` |
+| Custom physics kernels (particles, cloth, fluids) | **Warp** | Spatial primitives, autodiff, and explicit kernels |
 | Geometry processing (meshes, ray casting, SDFs) | **Warp** | Native mesh/volume/BVH types, spatial queries |
 | Differentiable simulation for ML training | **Warp** | Automatic forward/backward AD, PyTorch/JAX integration |
 | Robotics (kinematics, dynamics, control) | **Warp** | Transforms, quaternions, spatial vectors built-in |
 | NumPy array math (FFT, linear algebra, sorting) | **CuPy** | Drop-in NumPy replacement, wraps cuBLAS/cuFFT |
-| Custom CUDA kernels with raw thread control | **Numba** | Direct CUDA programming model, shared memory |
+| General custom CUDA kernels with explicit SIMT control | **Numba-CUDA-MLIR** or **Numba-CUDA** | Direct CUDA programming model and shared memory |
 | Data wrangling / ETL on tabular data | **cuDF** | pandas API on GPU |
 | ML training (sklearn-style) | **cuML** | scikit-learn API on GPU |
 
@@ -59,7 +60,9 @@ Warp and Numba both compile Python to CUDA, but serve different niches:
 - **Warp** excels at simulation/spatial workloads with its rich type system (vec3, quat, transform, mesh, volume) and automatic differentiation
 - **Numba** excels at raw CUDA programming where you need explicit thread/block control, shared memory management, and atomic operations on arbitrary data
 
-Note: Warp's former ready-made physics engine module `warp.sim` was removed in Warp 1.10 — it has been superseded by the separate Newton library, which is built on Warp. Warp itself remains the tool for writing custom simulation kernels.
+Warp's former ready-made physics engine module `warp.sim` was removed in Warp 1.10. Use the
+separate Newton library, built on Warp, for maintained high-level simulation APIs. Warp itself
+remains the tool for writing custom kernels and domain primitives.
 
 ---
 
@@ -486,15 +489,19 @@ Keep data on GPU. Use `wp.array` on device, avoid `.numpy()` in inner loops.
 
 ### 3. Use Tile Operations for Reductions and GEMM
 
-Tile-based reductions are 50x+ faster than per-thread atomics. Use `wp.tile()` + `wp.tile_sum()` + `wp.tile_atomic_add()` instead of `wp.atomic_add()`.
+Tile operations can reduce global traffic and atomic contention, but they also change resource use.
+Compare `wp.tile()` / `wp.tile_sum()` designs with the simpler atomic implementation on the target
+shape and GPU.
 
 ### 4. Prefer float32 Over float64
 
-GPU float32 throughput is 2x-32x higher than float64.
+Use float32 only when the numerical contract permits it. The float32/float64 throughput ratio is
+architecture-specific; validate accuracy and benchmark the target GPU.
 
 ### 5. Kernel Caching
 
-Warp caches compiled kernels between runs. First launch compiles (can take seconds); subsequent runs load from cache in milliseconds.
+Warp caches compiled kernels between runs. Exclude first-use compilation from steady-state kernel
+timing, but include it when one-shot application latency matters.
 
 ### 6. Object Lifetime
 

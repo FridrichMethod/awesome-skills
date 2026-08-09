@@ -10,7 +10,8 @@
 - Split long passages into stable claim units such as `S001` and `S002`.
 - Restrict evidence to Nature, Science, Cell, and their subjournals, or keep only flagship journals.
 - Explain each candidate paper's support position, evidence strength, and insertion point.
-- Export selected references for Zotero, EndNote, or other reference managers.
+- Export inspectable RIS by default and block records with missing, surname-only, or otherwise incomplete author metadata before export.
+- Retrieve structured authors by DOI or PMID while retaining order, given names or initials, suffixes, and collective authors.
 
 ## Typical Requests
 
@@ -20,7 +21,7 @@
 
 ## What You Need To Provide
 
-- Passage to cite, claim list, or DOI list.
+- Passage to cite, claim list, DOI list, or PMID list.
 - Journal scope, year range, whether reviews are allowed, and whether only flagship journals should be kept.
 - Target citation style and export format such as `RIS`, `ENW`, or Zotero `RDF`.
 
@@ -29,7 +30,7 @@
 - Claim-segmentation table and candidate-reference table.
 - Suggested insertion position, DOI, journal, year, and support note for each claim.
 - Optional JSON, TSV, Markdown, or HTML review materials.
-- Reference-management export file.
+- Reference-management export file. RIS is the default; choose `Reference Manager (RIS)` when importing it into EndNote.
 
 ## Boundaries
 

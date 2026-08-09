@@ -10,12 +10,12 @@ the acronym `DHI` before defining it. No page or line numbers are supplied.
 
 ## Expected behavior
 
-- Keep exactly three anonymous reviewer reports plus a cross-review synthesis.
+- Keep exactly three mutually blind anonymous reviewer reports plus a post-review synthesis generated only after the reports are frozen.
 - Show separate `Major Concerns` and `Minor Comments` sections in every reviewer report; use
   `None identified from the supplied material` when a reviewer has no grounded item in one tier.
 - Classify the unsupported cross-hospital generalization as a Major Concern under
   `clinical-validity`, `experimental-design`, or `claim-moderation`.
-- Mark that Major Concern `Blocking: Yes` because the supplied evidence does not establish the
+- Mark that Major Concern `Blocking Yes` because the supplied evidence does not establish the
   manuscript's central generalization claim. Allow either external/temporal validation or narrowing
   the claim as the resolution test.
 - Classify the omitted Figure 2 legend definition and undefined Abstract acronym as Minor Comments
@@ -32,6 +32,7 @@ the acronym `DHI` before defining it. No page or line numbers are supplied.
   reviewer specialties.
 - Do not use hostile or insulting phrasing to signal that a concern is serious.
 - Do not list an issue as consensus unless at least two reviewer reports raise the same issue key.
+- Do not pass one reviewer's report or concern ledger to another reviewer, and do not rewrite reports after comparison to control overlap.
 
 ## Pass/fail checklist
 

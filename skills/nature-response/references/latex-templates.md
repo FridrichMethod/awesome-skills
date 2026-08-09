@@ -9,7 +9,7 @@ package in LaTeX.
 | Template | Use for |
 |---|---|
 | `templates/cover-letter.tex` | Editor-facing revision cover letter |
-| `templates/response-to-reviewers.tex` | Point-by-point response to editor/reviewer comments |
+| `templates/response-to-reviewers.tex` | Standalone point-by-point response for one mutually blind reviewer; fill one copy per reviewer |
 | `templates/revised-manuscript-redline.tex` | Backed-up manuscript copy with changed text marked in red |
 
 ## Filling rules
@@ -27,8 +27,8 @@ package in LaTeX.
    template for each numbered item.
 6. After answering a reviewer comment, put any pasted revised manuscript text in
    `\RevisedExcerpt{...}` so it appears in italics.
-7. Start each new reviewer block on a new page. In the response template, use
-   `\ReviewerSection{1}`, `\ReviewerSection{2}`, etc. when switching reviewers.
+7. Fill one copy of the response template per reviewer. Do not combine mutually blind reviewer
+   reports in one outward-facing `.tex` file.
 8. When editing manuscript text, work on a backup/copy of the original manuscript
    and wrap changed text in `\revised{...}` so it appears in red.
 9. Do not move unresolved issues into LaTeX comments; they must remain visible in
@@ -46,11 +46,13 @@ package in LaTeX.
 
 - No invented manuscript ID, editor name, line numbers, figure panels, data
   values, or author facts.
-- Every reviewer comment ID in the tracker appears in the response text.
+- Every comment assigned to that reviewer appears in that reviewer's response text.
+- No response file contains another reviewer's IDs, comments, recommendation, or response wording.
+- Repeated concerns are answered fully in each relevant reviewer file rather than cross-referenced across files.
 - The cover letter summarizes the revision but does not replace the detailed
   point-by-point response.
 - Revised manuscript excerpts pasted in the response letter are italic.
-- Each new reviewer response starts on a new page in LaTeX/print-oriented outputs.
+- Each mutually blind reviewer receives a separate LaTeX/print-oriented response file unless explicit journal instructions require a combined submission file.
 - Manuscript changes in the backed-up manuscript copy are marked in red.
 - LaTeX-sensitive characters from user-provided text are escaped.
 - If LaTeX compilation is available, compile once and report any errors.

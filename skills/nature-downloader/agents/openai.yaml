@@ -1,4 +1,4 @@
 interface:
-  display_name: "通用文献下载与全文读取"
-  short_description: "使用用户自行配置的图书馆资源、合法 OA 来源和出版商 API 下载正文与补充材料。"
-  default_prompt: "请使用 nature-downloader 技能下载并读取文献；先确认是否下载 SI，再按中文 CNKI、英文 OA、出版商 API 或我配置的机构 Web Access 路由处理。"
+  display_name: "Nature Downloader"
+  short_description: "Retrieve lawful full text and supporting information"
+  default_prompt: "Use $nature-downloader to retrieve this paper and its requested supporting information through lawful access routes."

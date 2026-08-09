@@ -320,7 +320,9 @@ def plot_volcano(args: argparse.Namespace) -> tuple[dict[str, str], dict[str, An
                     arrowprops={"arrowstyle": "-", "color": "#777777", "linewidth": 0.3},
                 )
     ax.set_xlabel(args.effect_label)
-    ax.set_ylabel(r"$-\log_{10}$(adjusted p value)")
+    # Keep the subscript as Unicode so the rendered glyph does not shrink below
+    # the journal's 5 pt floor when the surrounding label is already compact.
+    ax.set_ylabel("−log₁₀(adjusted p value)")
     if args.title:
         ax.set_title(args.title)
     ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.19), ncol=3)
@@ -395,7 +397,13 @@ def plot_dotplot(args: argparse.Namespace) -> tuple[dict[str, str], dict[str, An
 
     fig, ax = plt.subplots(figsize=(args.width_mm / MM_PER_INCH, args.height_mm / MM_PER_INCH))
     scatter = ax.scatter(xs, ys, s=sizes, c=color_norm, cmap=cmap, vmin=0, vmax=1, edgecolors="#666666", linewidths=0.35)
-    ax.set_xticks(range(len(column_order)), column_order, rotation=90)
+    ax.set_xticks(
+        range(len(column_order)),
+        column_order,
+        rotation=90,
+        rotation_mode="anchor",
+        ha="right",
+    )
     ax.set_yticks(range(len(row_order)), row_order)
     ax.set_xlim(-0.7, len(column_order) - 0.3)
     ax.set_ylim(-0.7, len(row_order) - 0.3)
@@ -532,7 +540,7 @@ def build_parser() -> argparse.ArgumentParser:
     volcano.add_argument("--gene-col", default="gene")
     volcano.add_argument("--effect-col", default="log2fc")
     volcano.add_argument("--p-col", default="padj")
-    volcano.add_argument("--effect-label", default=r"$\log_2$(fold change)")
+    volcano.add_argument("--effect-label", default="log₂(fold change)")
     volcano.add_argument("--p-threshold", type=float, default=0.05)
     volcano.add_argument("--effect-threshold", type=float, default=1.0)
     volcano.add_argument("--top-labels", type=int, default=10)

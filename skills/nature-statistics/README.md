@@ -10,7 +10,9 @@
 - 改写 Results、figure legends 和 source data 中的统计说明。
 - 区分 biological replicates、technical replicates、重复测量、视野/细胞/子样本和独立实验单位。
 - 识别伪重复、嵌套数据、多重比较、交互解释、相关性过度解释和显著性滥用。
+- 交叉检查摘要、正文、表格和结论中同一统计量的数值精度、单位及统计术语是否一致。
 - 根据审稿人统计意见生成保守回应或修改建议。
+- 对旗舰 `Nature Article` 检查单尾/双尾、exact n、重复次数、显著与非显著 P 值、ANOVA F/df 和 t 检验 t/df。
 
 ## 典型请求
 
@@ -28,6 +30,7 @@
 
 - 统计报告审查：主要问题、风险等级和需要作者确认的信息。
 - 可粘贴的 Statistical analysis、Results 或 figure legend 改写。
+- 跨章节统计一致性风险清单。
 - 审稿统计问题的逐点回应草稿。
 - `AUTHOR_INPUT_NEEDED` 清单，用于标记缺失样本量、检验或设计事实。
 

@@ -76,12 +76,13 @@ Structural checks run before handoff to synthesizer. **No Phase 2 retry** (revie
 - `## Dimension Scores` has one `### <Dn>: <name>` subsection per contract dimension. Eligible roles use `block | warn | pass`, or `not_assessed` with `abstain_reason`; ineligible roles must use structural `not_assessed` without a reason. An ineligible real score is an out-of-role vote and fails.
 - An eligible `warn`/`block` carries a quoted `trigger:` substring of the matching Phase-1 commitment. A mandatory block also carries `block_class: fatal|repairable`; fatal binds only to `what_triggers_fatal`, is forbidden on dissent, and non-mandatory dimensions never carry `block_class`.
 - **Multi-dissent rule:** If `## Scoring Plan Dissent` names two or more `dimension_id` entries, orchestrator aborts this reviewer and retries from **Phase 1** once. If the retried Phase 1/2 also multi-dissents, mark the reviewer unusable (`[PROTOCOL-VIOLATION]`). One-dimension-per-reviewer-per-Phase-2-call is the cap.
+- **Raw-HTML output grammar (#613/#682):** reviewer cards never contain raw HTML — comment markup, `<script>`/`<template>`, or any other tag; markup a seat needs to mention goes in inline code (`` `<!--` ``). Checker enforcement is span-scoped and code-aware inside `## Scoring Plan Dissent`: a bare `<!--` is read as opening an HTML comment wherever it appears — mid-line and lazy-continuation indents included — and a hidden field aborts as `[DISSENT-HIDDEN]`; any non-comment raw-HTML tag or delimiter outside inline code aborts as `[DISSENT-RAW-HTML]`, including malformed/incomplete openers and tags that hide no field. Neither channel can grant a trigger-binding exemption. Fenced examples and content outside the dissent span preserve their existing semantics; this is not a repository-wide HTML blacklist.
 - **Anchor gate:** under `## Review Body`, each non-DA finding with a Severity occupies its own `### W<n>: <title>` subsection with exactly one Severity; every Critical/Major finding also carries its own valid typed Evidence Anchor, never shared with another finding. Strength subsections never carry a `Severity` field or a `Severity: Strength` sentinel. Every Evidence Anchor value begins with the literal `<type>: <locator>` grammar. An opening backtick or `[` immediately before `<type>` starts an outer wrapper and requires its matching closer; nothing may appear between the type and its colon, so `` `text`: §3 `` and `` `text` — §3 `` are both invalid. Wrapper-like characters inside a locator are content and must be locally balanced — a bracketed locator such as `equation: Eq. [3]` and a locator naming inline code such as ``text: §3 "quote" per `df``` are valid. A `text:` anchor contains one or more verbatim excerpts, each inside a balanced pair of straight or curly double quotes, and every quoted excerpt is at most 25 words. Before output, confirm at least one quoted excerpt exists, count each quoted excerpt in a `text:` anchor, and shorten any excerpt over 25 words; never place commentary inside the quotation. An `absence:` anchor uses the exact grammar `absence: <where> — expected <item>; checked <surfaces>`, including the literal single space after the semicolon and non-empty content for every placeholder. The reserved ` — expected ` and `; checked ` separator sequences each occur exactly once.
 - The finding field labels may be unindented or Markdown-list-indented and may be separate or pipe-delimited; the complete typed anchor value, including its type and locator, may be bare, backtick-wrapped, or square-bracketed. These are presentation variants only. A Severity outside `## Review Body`, under a non-`W<n>` H3, or nested under H4 fails.
 - **DA table gate:** the DA emits exactly one `#### CRITICAL` table and exactly one `#### MAJOR` table, both always present even when empty, with exact `#` and `Evidence Anchor` header columns. The CRITICAL table uses unique dense IDs `C1..Cn`; both tables use the shared parser and anchor checks. The two tables are the terminal suffix of `## Review Body`: every prose paragraph precedes `#### CRITICAL`; only blank lines may separate the end of CRITICAL from `#### MAJOR` or follow MAJOR to the end of Review Body. DA reports may not contain HTML comments.
 
 Terminal Phase 2 structural preflight (mandatory). Silently inspect the exact text you are about to send against your supplied Phase 1:
-1. Dissent: if your Phase 2 view differs on exactly one dimension, include `## Scoring Plan Dissent` with exactly one unbulleted `dimension_id: <Dn>` line and exactly one unbulleted `rationale: <nonempty explanation>` line. If it differs on two or more, abort with `[PROTOCOL-VIOLATION: multi_dissent=true]` instead of drafting a card. If none differs, delete the heading and every placeholder beneath it; `none`, `omitted`, and `not applicable` are never a dissent.
+1. Dissent: if your Phase 2 view differs on exactly one dimension, include `## Scoring Plan Dissent` with exactly one unbulleted `dimension_id: <Dn>` line and exactly one unbulleted `rationale: <nonempty explanation>` line. If it differs on two or more, abort with `[PROTOCOL-VIOLATION: multi_dissent=true]` instead of drafting a card. If none differs, delete the heading and every placeholder beneath it; `none`, `omitted`, and `not applicable` are never a dissent. No bare `<!--` or `-->` — nor any other raw HTML — anywhere in the card outside inline code.
 2. Sections and role: emit exactly one `## Dimension Scores` followed by exactly one `## Review Body`. Put exactly one report-level `contract_role: <your dispatch role>` immediately before `## Dimension Scores` and nowhere else. Delete `## Failure Condition Checks`, `## Editorial Decision`, and every bare `editorial_decision=` line.
 3. Dimensions and abstentions: emit every contract dimension exactly once with its exact ID/name. An eligible dimension uses `block`, `warn`, `pass`, or `not_assessed`; eligible `not_assessed` has exactly one non-empty `abstain_reason:`, while an ineligible dimension uses only `score: not_assessed` with no `abstain_reason:`. No other score carries `abstain_reason:`.
 4. Trigger binding: for every `warn` or `block`, the quoted `trigger:` text is a character-for-character substring of the matching Phase 1 trigger kind for the same dimension. Never paraphrase it. `pass` and `not_assessed` have no `trigger:`.
@@ -92,6 +93,84 @@ Terminal Phase 2 structural preflight (mandatory). Silently inspect the exact te
 Do not send until every check holds.
 
 On any Phase 2 lint failure other than multi-dissent: emit `[PROTOCOL-VIOLATION]` and mark reviewer unusable. Do not synthesise a substitute score for the synthesizer.
+
+### 5.1 Methodology arithmetic-receipt gate (#610)
+
+> **Epistemic status first**: this gate does not replace the human reviewer.
+> `check_phase_conformance.py` verifies receipt AUDITABILITY only — required
+> fields present, closed enums respected, mismatch↔weakness linkage intact.
+> It never attests the arithmetic is correct; correctness is judged by human
+> adjudication (`VERIFIED`/`CLAIM_ONLY`/`MISCOMPUTED`/`MISSED`, #610 spec
+> §7.1), and a conforming receipt with wrong arithmetic is still wrong.
+
+The methodology seat's Phase 2 card additionally carries exactly one
+`## Arithmetic Receipts` H2 section as the final section of the card, after
+`## Review Body` (no other seat may emit it; the heading is matched exactly
+and case-sensitively, consistent with every other section grammar). The
+section holds either dense `### AR1..ARn` receipt subsections —
+one per attempted recomputation, canonical `key: value` machine lines per the
+delivered Phase 2 grammar (canonical source: the `methodology-receipt`
+fragment of the reviewer sprint prompt source cited in this file's header,
+spliced by its sync checker) — or, when the
+manuscript reports no statistic covered by a bounded procedure, exactly one
+`no_recomputable_statistics: <basis>` attestation line. The attestation is a
+mandatory declaration with adjudicated honesty, never machine-checked
+triggering: the checker verifies only that the declaration exists and
+annotates the passing card with the advisory
+`[RECEIPT-ATTESTATION: declaration-only — applicability not machine-verified;
+adjudication judges the attestation]`; whether the declaration is TRUE is
+judged at adjudication, where a false attestation over recomputable
+statistics surfaces as `MISSED` verdicts. Checker-enforced
+highlights: closed `procedure_id` / `status` / `not_computable_reason` /
+`tail_convention` enums; an unstated-tail p receipt claiming a verdict must
+display BOTH labeled tail values, each label sharing its own `;`-segment
+with its derived number (either order); a
+GRIM/GRIMMER verdict requires
+`rounding_interval:` + `nearest_achievable:`; an `n_from_df` verdict must name
+its `df_identity:`; every `mismatch` links to a distinct `W<n>` weakness that
+carries the matching `**Arithmetic Receipt**: AR<n>` back-reference (the
+value exactly `AR<n>`, no trailing text). The receipt section is read
+fence-transparently in display form: a fenced receipt line is still read
+(an indented fence dedented as CommonMark renders it), the two tolerated
+decorations are a single leading list marker and balanced bold around the
+key, and any other decorated, table-cell, entity-encoded, or otherwise
+re-spelled machine line — and any machine line outside every `### AR<n>`
+subsection other than the attestation — aborts loudly instead of being
+silently dropped or read as canonical. The section is a comment-free zone:
+any unfenced HTML comment markup aborts, and in the Review Body a
+back-reference hidden by a block, paragraph-inline, or indented-code
+rendering context aborts rather than earning linkage credit. Failures
+surface as `[RECEIPT-MISSING]` / `[RECEIPT-GRAMMAR]` / `[RECEIPT-TAILS]` /
+`[RECEIPT-LINKAGE]` / `[RECEIPT-SECTION-FORBIDDEN]` at exit 3 — the seat is
+unusable per §5, with no Phase 2 retry; the abort-rate cost of this new
+mandatory grammar is a tracked #610 §7.1 reporting metric, not a silent
+tradeoff. Procedure boundaries and the red-flag classification live in
+`references/statistical_reporting_standards.md` §8.
+
+### 5.2 Script-adapter dispatch (#610 step 5, optional orchestration)
+
+An orchestrator that can execute repository scripts MAY dispatch the
+methodology seat as three calls: Phase 1; a paper-visible **numeric
+extraction** call (system prompt: the seat's `### Phase 2E` section, rendered
+from the `methodology-extraction` fragment) whose entire response is one
+`## Recompute Extraction` section of typed machine lines — one `### RR<n>`
+per arithmetic claim, or the `no_recomputable_statistics:` attestation —
+gated by `check_phase_conformance.py --extraction` with ONE structural retry
+of the Phase 1 evidence class; then `scripts/recompute_receipts.py`, which
+deterministically computes the full `## Arithmetic Receipts` section from
+the extraction alone (never the manuscript); then Phase 2 with the computed
+receipts injected as a `<computed_receipts>` block. Under injection the seat
+must reproduce the receipts verbatim, adding only the `finding_ref:` linkage
+lines on `mismatch` receipts; the `--injected-receipts` identity gate
+(`[RECEIPT-IDENTITY]`, exit 3) fails the card on any other edit. A
+calculator refusal of a gate-passed extraction is an orchestrator infra
+fault (exit-2 class), never a seat conformance failure. Without a
+`<computed_receipts>` block — every orchestrator that cannot run scripts,
+including runtime-Bash-denied sessions — §5.1's self-compute behavior
+applies unchanged; the two modes share one receipt grammar and one
+adjudication scale, and extraction fidelity (whether the transcribed numbers
+are the manuscript's) stays a human-adjudicated question exactly like the
+attestation's truth.
 
 ## 6. Multi-reviewer orchestration
 
@@ -192,6 +271,9 @@ Audit-log tags the orchestrator may emit:
 | `[REVIEWER-SELF-INCONSISTENT: reviewer=..., ...]` | checker Layer 1 (exit 3) | mark reviewer unusable |
 | `[PANEL-CARDINALITY: ...]` | checker cardinality/role guard (exit 2) | abort editorial round |
 | `[REPORT-PARSE: <path>: ...]` | checker report-grammar failure (exit 3) | mark reviewer unusable |
+| `[RECEIPT-MISSING/-GRAMMAR/-TAILS/-LINKAGE: <path>: ...]` | #610 methodology arithmetic-receipt gate failure (exit 3, §5.1) | mark reviewer unusable |
+| `[RECEIPT-SECTION-FORBIDDEN: <path>: ...]` | a non-methodology seat emitted `## Arithmetic Receipts` (exit 3, §5.1) | mark reviewer unusable |
+| `[RECEIPT-ATTESTATION: declaration-only — ...]` | #610 attestation-path advisory on a PASSING methodology card (§5.1) | none — advisory; adjudication judges the attestation |
 | `[SYNTHESIS-PARSE: <path>: ...]` | checker synthesis-grammar failure (exit 1) | void synthesis, retry once |
 | `[CONTRACT-INVALID/-INELIGIBLE: ...]` | checker contract validation failure (exit 2) | abort editorial round |
 | `[IO-ERROR: <path>: ...]` | checker file read/encoding failure (exit 2) | abort editorial round |

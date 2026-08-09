@@ -1,6 +1,9 @@
 # cuVS Reference
 
-cuVS is NVIDIA's GPU-accelerated library for vector search and clustering, part of the RAPIDS ecosystem. It provides state-of-the-art implementations of approximate nearest neighbor (ANN) search algorithms on the GPU, delivering orders-of-magnitude speedups over CPU-based libraries like Faiss (CPU mode), Annoy, and scikit-learn's NearestNeighbors for high-dimensional vector search.
+cuVS is NVIDIA's GPU-accelerated library for exact and approximate nearest-neighbor search, part
+of the RAPIDS ecosystem. It provides CAGRA, IVF-Flat, IVF-PQ, brute-force, and CPU-serving
+interoperability. Compare equal metrics and exactness requirements, validate ANN recall, and
+benchmark build, search, transfer, and serialization costs separately.
 
 > **Full documentation:** https://docs.rapids.ai/api/cuvs/stable/
 
@@ -25,11 +28,12 @@ cuVS is NVIDIA's GPU-accelerated library for vector search and clustering, part 
 
 ## Installation and Setup
 
-Always use `uv add` (never `pip install` or `conda install`) in all install instructions, docstrings, comments, and error messages.
+Use `uv add` in standalone examples; follow the user's existing project package manager when one
+is already configured.
 
 ```bash
-uv add --extra-index-url=https://pypi.nvidia.com cuvs-cu12   # For CUDA 12.x
-uv add --extra-index-url=https://pypi.nvidia.com cuvs-cu13   # For CUDA 13.x
+uv add --extra-index-url=https://pypi.nvidia.com "cuvs-cu12==26.6.*"   # For CUDA 12.x
+uv add --extra-index-url=https://pypi.nvidia.com "cuvs-cu13==26.6.*"   # For CUDA 13.x
 ```
 
 cuVS wheels (including the companion `libcuvs` wheel) are also published directly to PyPI, so the extra index is optional — but the official cuVS docs still show it and it does no harm.
@@ -60,7 +64,8 @@ cuVS is the right tool when the user needs:
 
 cuVS is NOT the right tool for:
 - General machine learning (use cuML instead)
-- Low-dimensional data (< ~16 dimensions) with small datasets (< 10K vectors)
+- Small or low-dimensional datasets where build, transfer, or launch overhead dominates in a
+  representative benchmark
 - CPU-only environments with no GPU available
 
 ---
@@ -69,13 +74,15 @@ cuVS is NOT the right tool for:
 
 | Index | Best For | Build Speed | Search Speed | Memory | Accuracy |
 |-------|----------|-------------|--------------|--------|----------|
-| **CAGRA** | Default choice — fast build and search | Fast | Fastest | Medium | High |
-| **IVF-Flat** | When exact distances matter | Medium | Fast | High (stores full vectors) | Very High |
+| **CAGRA** | Strong first ANN candidate | Fast | Fast | Medium | Tunable |
+| **IVF-Flat** | High-recall ANN without vector compression | Medium | Fast | High (stores full vectors) | Tunable |
 | **IVF-PQ** | Large datasets that don't fit in GPU memory | Medium | Fast | Low (compressed) | Good |
 | **Brute Force** | Small datasets or ground truth | N/A | Slow at scale | High | Exact |
 | **HNSW** | CPU-side serving from GPU-built index | Slow | Fast (CPU) | Medium | High |
 
-**Start with CAGRA** unless you have a specific reason not to. It's the fastest GPU-native algorithm and works well for most use cases. Use IVF-PQ when memory is tight, IVF-Flat when you need higher accuracy, and brute force for small datasets or validation.
+Benchmark CAGRA as the first ANN candidate, then compare IVF-PQ when memory is tight and IVF-Flat
+when avoiding vector compression matters. Use brute force for exact search and recall ground truth.
+Choose build and search parameters from measured latency, throughput, memory, and recall targets.
 
 ---
 
@@ -393,7 +400,8 @@ Using `float16` halves memory and can speed up both build and search when full f
    - IVF-Flat/IVF-PQ: increase `n_probes` (default 20)
    - HNSW: increase `ef` (default 200)
 
-3. **Use float16 for embeddings.** Most embedding models output float32 but the extra precision rarely matters for similarity search. Cast to float16 to double throughput.
+3. **Evaluate reduced precision, do not assume it is free.** If the chosen index supports float16,
+compare recall/ranking metrics and end-to-end performance with float32 before changing storage.
 
 4. **n_lists tuning for IVF indexes.** A good starting point is `sqrt(n_samples)`. Too few lists = slow search, too many = poor recall.
 

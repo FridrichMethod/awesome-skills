@@ -1,5 +1,5 @@
 name: nature-ref-verifier
-version: 1.0.0
+version: 1.0.1
 description: >
   Declarative manifest for the multi-source reference verification workflow.
   SKILL.md carries the core DOI/title/source-check procedure; pattern libraries

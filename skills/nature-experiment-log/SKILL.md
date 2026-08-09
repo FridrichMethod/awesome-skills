@@ -1,10 +1,9 @@
 ---
 name: nature-experiment-log
 description: "标准化实验日志记录——直接上传或读取本地图片、语音和文字，产出带 YAML frontmatter 的 Markdown；可选集成飞书 CLI 与 Obsidian。"
-version: 1.0.1
-author: Jiahao8595
 license: MIT
 metadata:
+  author: Jiahao8595
   hermes:
     tags: [research, experiment, logging, feishu, obsidian, automation]
     related_skills: [nature-literature-pipeline, feishu-cli-integration, obsidian]

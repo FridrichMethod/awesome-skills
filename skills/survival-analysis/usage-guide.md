@@ -1,69 +1,101 @@
-# Predictive Survival Modeling Usage Guide
+# Survival Analysis - Usage Guide
 
 ## Overview
 
-Build and validate individualized time-to-event risk models on clinical and omics data with penalized Cox, random survival forests, gradient-boosted and deep survival models. The discipline this skill enforces is that the C-index alone is the cardinal evaluation sin: it is censoring-dependent, blind to calibration, and insensitive, so a credible model is judged by Uno's C plus time-dependent AUC, integrated Brier versus a Kaplan-Meier baseline, and calibration. For Kaplan-Meier, log-rank, and classical Cox hazard-ratio inference, use clinical-biostatistics/survival-analysis.
+Performs time-to-event analysis for clinical trials with calibration to whether proportional hazards holds, whether competing events exist, whether censoring is informative, and which ICH E9(R1) estimand the trial targets. Covers Cox PH with Therneau-Grambsch diagnostics, restricted mean survival time (RMST) as a hazard-free alternative, Fine-Gray vs cause-specific Cox for competing risks, MaxCombo and weighted log-rank for non-proportional hazards, recurrent events (Andersen-Gill, PWP, WLW), and interval-censored data.
 
 ## Prerequisites
 
 ```bash
-pip install scikit-survival lifelines pandas
-# pip install pycox torch   # only for deep survival models (DeepSurv, DeepHit)
+pip install lifelines scikit-survival statsmodels pandas numpy matplotlib
 ```
 
-Conceptual prerequisites: a time and a boolean event column; awareness of competing events (which require the cumulative incidence function, not 1-KM) and of immortal time bias (no group defined by a post-baseline event); and feature selection placed inside the resampling loop.
+R is strongly recommended for production survival analysis:
+
+```r
+install.packages(c('survival', 'survRM2', 'cmprsk', 'riskRegression', 'mstate',
+                   'flexsurv', 'icenReg', 'rpsftm'))
+```
 
 ## Quick Start
 
 Tell your AI agent what you want to do:
-- "Fit a penalized Cox prognostic signature and validate it properly"
-- "Compare a random survival forest against an elastic-net Cox baseline"
-- "Evaluate my survival model with Uno's C, time-dependent AUC, and integrated Brier, not just the C-index"
-- "I have competing risks -- model the cumulative incidence correctly"
+- "Run a Cox proportional hazards regression for OS in my oncology trial; check the PH assumption"
+- "Estimate the restricted mean survival time difference at 36 months as the primary endpoint because hazards cross"
+- "I have a competing risk: cardiac death and non-cardiac death. Fit cause-specific Cox for both and report the cumulative incidence function"
+- "Apply MaxCombo for a delayed-effect immunotherapy trial with pre-specified directional constraint"
+- "Convert ADTTE CNSR=0/1/2 to the standard event indicator for lifelines"
 
 ## Example Prompts
 
-### Building predictors
+### Standard Cox PH
 
-> "Build an elastic-net Cox prognostic signature from my expression matrix and clinical covariates, with feature selection inside nested cross-validation."
+> "Fit a Cox model for OS in my trial with treatment, age, and ECOG performance status. Run cox.zph and report the global PH test. Stratify on randomisation strata (region)."
 
-> "Fit a random survival forest and a penalized Cox model and tell me whether the forest actually beats the linear baseline on held-out data."
+> "Compute the hazard ratio for treatment vs placebo with 95% CI. If PH is violated, switch to RMST."
 
-### Prediction-grade evaluation
+### RMST under non-PH
 
-> "Evaluate my survival model with Uno's IPCW C at a 5-year horizon, time-dependent AUC over the follow-up, integrated Brier versus a Kaplan-Meier baseline, and a calibration curve."
+> "PH is clearly violated in my immunotherapy trial. Compute the RMST difference at 36 months as the primary endpoint with delta-method CI. Pre-specified tau is 36 from the SAP."
 
-> "My model has a high C-index. Check whether its predicted absolute risks are actually calibrated."
+> "Compare the time-to-RMST tradeoff at tau=12, 24, 36, and 60 months for sensitivity."
 
-### Competing risks and bias
+### Competing risks
 
-> "Patients also die of other causes. Model the cumulative incidence with Fine-Gray and report cause-specific hazards too, and do not use 1 minus Kaplan-Meier."
+> "I have a cardiovascular outcome trial with cardiac death (event of interest) and non-cardiac death (competing). Fit cause-specific Cox for cardiac death AND for non-cardiac death. Report both cause-specific HRs and the cumulative incidence functions via Aalen-Johansen."
 
-> "My exposure is defined by something that happens after baseline. Check for immortal time bias and fix it with landmarking."
+> "My oncology trial has progression and death. Compute the CIF for both via Aalen-Johansen and report PFS event-free survival treating either as event."
+
+### Non-proportional hazards
+
+> "Run MaxCombo with G(0,0), G(0,1), G(1,0), G(1,1) family for the late-effect immunotherapy. Pre-specified directional constraint: require positive z-statistic at the late-emphasis G(0,1) weight before claiming superiority."
+
+> "Fit a Royston-Parmar flexible parametric model with 5-knot cubic spline for log cumulative hazard. Report HR(t) curves over follow-up."
+
+### Recurrent events
+
+> "Subjects have multiple hospitalisations during follow-up. Fit Andersen-Gill with robust SE clustered on USUBJID. Report rate ratio."
+
+> "Hospitalisations may differ by event order (first vs recurrent). Fit PWP gap-time with stratum-specific baseline hazards."
+
+### Interval censoring
+
+> "PFS scans were every 12 weeks but the actual progression date is unknown. Fit interval-censored Cox via icenReg::ic_par to avoid the midpoint imputation bias."
+
+### ADTTE handling
+
+> "Load my ADTTE.csv with CNSR per CDISC convention (0=event, 1+=censoring reasons). Convert to event/time for lifelines and fit Cox."
 
 ## What the Agent Will Do
 
-1. Build the structured target (boolean event, float time) and choose a model from the taxonomy
-2. Fit penalized Cox and RSF baselines before escalating to deep models
-3. Keep feature selection and tuning inside nested CV with survival metrics
-4. Evaluate with Uno's C(tau), time-dependent AUC, IBS versus KM, and calibration at clinical horizons
-5. Handle competing risks with the CIF and report both cause-specific and Fine-Gray models
-6. Check censoring assumptions, immortal time bias, and use landmarking for dynamic prediction
+1. Load the time-to-event dataset (ADTTE preferred; convert CNSR if needed)
+2. Validate KM curves are biologically plausible; tabulate censoring by arm
+3. Fit Cox PH and run Therneau-Grambsch diagnostics (cox.zph in R, proportional_hazard_test in lifelines)
+4. If PH holds: report HR with stratified log-rank; if PH violated: switch to RMST or time-varying Cox
+5. For competing risks: report both cause-specific Cox AND Fine-Gray CIF; never use KM
+6. For immuno-oncology with delayed effect: use MaxCombo with pre-specified directional constraint
+7. Report effect estimates with 95% CI, p-values, and the ICH E9(R1) estimand the analysis targets
 
 ## Tips
 
-- The C-index is invariant to any monotone transform of the risk score, so it cannot tell you whether the absolute risks are right -- always check calibration
-- Harrell's C is biased upward under heavy censoring; report Uno's IPCW C with an explicit truncation time
-- On typical clinical-omics n, penalized Cox and RSF are very hard to beat; benchmark deep models against them
-- Kaplan-Meier overestimates incidence under competing risks; report the cumulative incidence function
-- A Fine-Gray subdistribution hazard ratio is not the cause-specific hazard ratio and not an effect on the event rate
-- Internal time-varying covariates cannot be plugged into the future; use landmarking for dynamic prediction
-- scikit-survival needs a structured array (boolean event, float time) and the training y first for IPCW metrics
+- **cox.zph p > 0.05 does NOT prove PH.** Use it as a failure detector, not a validator. Always plot scaled Schoenfeld residuals graphically.
+- **Pre-specify tau for RMST in the SAP.** Post-hoc tau tuning is p-hacking. Constrain tau <= min(largest follow-up across arms) to avoid extrapolation.
+- **Never use KM in competing-risk settings.** It biases the survival estimate upward. Use Aalen-Johansen cumulative incidence.
+- **Fine-Gray is for CIF prediction, NOT for causal inference.** Andersen-Keiding 2012 showed it violates the three principles for valid hazard functionals. Use cause-specific Cox for etiology.
+- **MaxCombo can reject in opposite directions on the same data** (Magirr-Burman 2021 KEYNOTE-042 demonstration). Always pre-specify directional constraints.
+- **ADTTE CNSR convention is the opposite of statistical packages.** CDISC: CNSR=0 means event; R/Python: event=1 means event. Always convert explicitly.
+- **PFS is really interval-censored** but conventionally treated as right-censored at midpoint. This is acceptable when scan intervals are short and balanced; switch to interval-censored Cox when intervals > 4 weeks or differ between arms.
+- **Stratification factors from randomisation MUST appear in analysis** (Kahan-Morris 2012). Use stratified log-rank and `strata()` in Cox, or include as covariates.
+- **The Schoenfeld 1981 formula assumes PH.** Under non-PH (immuno-oncology), it under-estimates required events by 20-50%. Use Lakatos 1988 or simulation under the expected hazard pattern.
+- **The Cox HR under PH violation is a time-averaged log-HR** (Xu-O'Quigley 2000). For a clinically interpretable summary, use RMST.
 
 ## Related Skills
 
-- clinical-biostatistics/survival-analysis - Kaplan-Meier, log-rank, classical Cox inference, PH diagnostics for trials
-- machine-learning/model-validation - Nested CV, calibration, and optimism correction shared with prediction models
-- machine-learning/biomarker-discovery - Selecting prognostic genes inside the resampling loop
-- differential-expression/de-results - Pre-filter candidate prognostic genes
-- clinical-databases/variant-prioritization - Clinical interpretation of prognostic variants
+- clinical-biostatistics/effect-measures - HR vs RMST as effect measures
+- clinical-biostatistics/trial-reporting - ICH E9(R1) estimand framework for time-to-event
+- clinical-biostatistics/missing-data-sensitivity - Informative censoring sensitivity
+- clinical-biostatistics/cdisc-data-handling - ADTTE structure and CNSR convention
+- clinical-biostatistics/subgroup-analysis - Subgroup HTE for survival endpoints
+- clinical-biostatistics/power-and-sample-size - Schoenfeld and Lakatos for TTE
+- clinical-biostatistics/multiplicity-graphical - Co-primary survival endpoints
+- machine-learning/survival-analysis - Predictive survival models

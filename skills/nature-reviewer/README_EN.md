@@ -8,12 +8,14 @@
 
 - Stress-test a manuscript, abstract, figure set, or result storyline before submission.
 - Evaluate originality, scientific importance, interdisciplinary readership, technical soundness, and readability using Nature-style review dimensions.
-- Generate three differently focused reviewer reports and one cross-review synthesis.
+- Generate three reviewer reports in mutually blind isolated contexts, then create a separate cross-review synthesis only after every report is frozen.
 - Mark unsupported claims, technical defects, evidence-chain breaks, and barriers for non-specialist readers.
-- Separate comments into `Major Concerns` and `Minor Comments`, marking Major issues that block the central case as `Blocking: Yes`.
+- Separate comments into `Major Concerns` and `Minor Comments`, marking Major issues that block the central case as `Blocking Yes`.
 - Keep severe criticism direct, professional, and evidence-grounded; keep minor comments specific and actionable without inventing issues to fill a quota.
+- Avoid dash punctuation and colons throughout the prose when a sentence boundary, comma, semicolon, parentheses, or a short label on a new line is clearer; retain necessary source punctuation and hyphens in stable IDs and compound terms.
 - Use an internal 12-axis technical checklist and bind each substantive concern to a claim pointer and verifiable evidence location.
-- Check redundancy across the three reports; treat an issue as consensus only when at least two reviewers raise it.
+- Cross-check terminology, units, numeric precision, Methods counts, and table support within the manuscript, separating language issues from substantive contradictions that weaken credibility.
+- Do not coordinate or rewrite reviews to reduce duplication; treat an issue as consensus only when at least two reviewers raise it independently in the post-review synthesis.
 - Identify which readers would care about the work and why.
 
 ## Typical Requests
@@ -40,6 +42,7 @@
 ## Boundaries
 
 - The skill does not invent specific reviewer identities, expert personas, or editorial decisions.
+- Reviewers cannot read, cite, agree with, or respond to one another; synthesis begins only after all independent reports are locked.
 - It makes conservative simulations only from the provided material and the skill's official review rules.
 - For writing responses to real reviewer comments, use `nature-response`.
 

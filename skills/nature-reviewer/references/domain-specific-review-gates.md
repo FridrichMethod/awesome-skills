@@ -1,5 +1,17 @@
 # Domain-specific review gates
 
+## Contents
+
+- [Shared gate pattern](#shared-gate-pattern)
+- [Chemistry](#chemistry)
+- [Engineering](#engineering)
+- [Materials Science](#materials-science)
+- [Atmospheric Science](#atmospheric-science)
+- [Climate Ecology](#climate-ecology)
+- [Hydrology](#hydrology)
+- [Remote Sensing and Earth Observation](#remote-sensing-and-earth-observation)
+
+
 Use this file only after the shared manuscript fact base is clear. These gates are
 claim-dependent stress tests inside `nature-reviewer`; they do not create specialist
 reviewer identities and do not replace the source-grounded Nature axes.

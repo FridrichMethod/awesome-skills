@@ -1,5 +1,18 @@
 # tools / 可选脚本
 
+## Contents
+
+- [国知局公布公告检索（epub.cnipa.gov.cn，Step 5 查新优先）](#国知局公布公告检索epubcnipagovcnstep-5-查新优先)
+- [Office 文档（Word / PPT）转成可扫描文本](#office-文档word-ppt转成可扫描文本)
+- [mermaid_render.py — mermaid：图示 → PNG + 定稿 Markdown + 默认生成 Word](#mermaid_renderpy-mermaid图示-png-定稿-markdown-默认生成-word)
+- [math_render.py — LaTeX 公式 → PNG](#math_renderpy-latex-公式-png)
+- [md_to_docx.py — Markdown → Word](#md_to_docxpy-markdown-word)
+- [iteration_dialog_log.py — 修订对话记录（迭代用）](#iteration_dialog_logpy-修订对话记录迭代用)
+- [docx_to_md.py — Word → Markdown + 抽取图片](#docx_to_mdpy-word-markdown-抽取图片)
+- [pptx_to_md.py — PowerPoint → Markdown + 抽取图片](#pptx_to_mdpy-powerpoint-markdown-抽取图片)
+- [扩展其它脚本时](#扩展其它脚本时)
+
+
 本目录存放**可重复执行的辅助脚本**。技能主流程以 `SKILL.md` 与 `references/disclosure/` 为准；本目录侧重格式转换等可执行工具。
 
 ## 国知局公布公告检索（epub.cnipa.gov.cn，Step 5 查新优先）
