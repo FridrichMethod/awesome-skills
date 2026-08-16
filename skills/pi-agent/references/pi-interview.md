@@ -21,7 +21,9 @@ await interview({
 });
 ```
 
-Lifecycle: the tool starts a local server and opens a Glimpse window (macOS) or browser tab → the user answers at their own pace with auto-save and timeout reset on any activity → the session ends by Submit (`⌘+Enter`), timeout (warning overlay with an option to stay), or Escape twice → the window closes and the agent receives responses, or `null` if cancelled.
+Lifecycle: the tool starts a local server and opens a Glimpse window (macOS), an Orca tab, or a browser tab → the user answers at their own pace with auto-save and timeout reset on any activity → the session ends by Submit (`⌘+Enter`), timeout (warning overlay with an option to stay), or Escape twice → the window closes and the agent receives responses, or `null` if cancelled.
+
+Remote and Moshi sessions: when the session looks remote (ssh/mosh env, or an active remote login on the host), the tool skips or supplements the local window and prints the form URL with access hints — a Moshi tip when the moshi-hook gateway is running (tap the preview button in the terminal title bar and pick the interview server), and an exact `ssh -L` command for plain SSH (mosh cannot forward ports). The server binds low ports (8377+, scanning forward on collision) and answers tokenless loopback opens with a landing page that hops to the form, so Moshi's browser preview reaches it in one tap. Requests with a non-loopback `Host` header are rejected.
 
 With multiple concurrent interviews, only the first auto-opens; the rest are queued and surfaced as URLs in tool output, plus a top-right toast with a dropdown to open queued sessions. Submitting the active interview redirects the window to the next queued one. A status bar shows project path, git branch, and session ID.
 
@@ -82,6 +84,8 @@ interface Response {
     "snapshotDir": "~/.pi/interview-snapshots/",
     "autoSaveOnSubmit": true,
     "generateModel": "anthropic/claude-haiku-4-5",
+    "launcher": "browser",
+    "browser": "Firefox",
     "glimpseFloating": false,
     "theme": {
       "mode": "auto",
@@ -95,6 +99,14 @@ interface Response {
 ```
 
 Timeout precedence: function parameter > settings > default 600s. A fixed `port` keeps the URL stable across sessions. `generateModel` drives the generate/review option actions, defaulting to the agent's current model then a cheap available model; if an explicitly configured model fails and the session uses a different one, it retries once with the session model. `glimpseFloating` keeps the native macOS window above others (browser fallback unaffected).
+
+`launcher` chooses where the form opens; omit it for the default (Glimpse on a local macOS session with `glimpseui` installed, otherwise a browser tab):
+
+- `"glimpse"` — native macOS Glimpse window; requires a local macOS session with `glimpseui`, and reports why the window could not open instead of falling back to a browser.
+- `"browser"` — browser tab even when Glimpse is installed.
+- `"orca"` — a browser tab in the current [Orca](https://github.com/stablyai/orca)-managed worktree, or Orca's focused worktree when the cwd is outside one; the tab is focused when that worktree is visible, otherwise staged in its tab bar. Needs `orca` on `PATH`.
+
+`browser` names the application used for browser tabs (`"Firefox"`, `"Brave Browser"`, …). It applies to `launcher: "browser"` and to an omitted `launcher` when Glimpse is unavailable; it has no effect under `"glimpse"` or `"orca"`.
 
 Themes: built-ins are `default` (monospace) and `tufte` (serif); modes are `dark` (default), `light`, and `auto` (follows the OS, user override persists in localStorage). Custom themes are CSS files overriding variables such as `--bg-body`, `--bg-card`, `--bg-elevated`, `--bg-selected`, `--fg`, `--fg-muted`, `--accent`, `--border`, `--success`, `--warning`, `--error`, `--focus-ring`.
 

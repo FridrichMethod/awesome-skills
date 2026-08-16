@@ -126,6 +126,8 @@ protein_record = record.translate(id=f'{record.id}_protein', to_stop=True)
 fasta_str = record.format('fasta')      # quick in-memory file-format string
 ```
 
+Unlike `Seq.translate()`, `SeqRecord.translate()` defaults to `gap=None`, so any gap raises `TranslationError`; pass `gap='-'` to allow full gap codons such as `'---'`, while mixed gap/base codons still raise.
+
 Slicing a SeqRecord remaps features but silently DROPS `annotations`, `dbxrefs`, and any feature that straddles a slice boundary - `subset = record[10:50]` returns a record with empty `annotations`. Re-attach `molecule_type` (and anything else a writer needs) on the slice before writing.
 
 ```python

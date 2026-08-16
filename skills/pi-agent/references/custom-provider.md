@@ -67,7 +67,7 @@ Use an **async extension factory** for dynamic model discovery so models are reg
 
 `anthropic-messages`, `openai-completions`, `openai-responses`, `azure-openai-responses`, `openai-codex-responses`, `mistral-conversations`, `google-generative-ai`, `google-vertex`, `bedrock-converse-stream`.
 
-Most OpenAI-compatible providers work with `openai-completions`; use model-level `thinkingLevelMap` for thinking levels and `compat` for quirks (full flag list in `references/models.md`). `xhigh` and `max` are opt-in and require non-null map entries. Mistral moved from `openai-completions` to `mistral-conversations` — use the latter for native Mistral models.
+Most OpenAI-compatible providers work with `openai-completions`; use model-level `thinkingLevelMap` for thinking levels and `compat` for quirks (full flag list in `references/models.md`). `xhigh` and `max` are opt-in and require non-null map entries. Mistral moved from `openai-completions` to `mistral-conversations` (native Mistral Chat Completions streaming) — use the latter for native Mistral models.
 
 ## Auth Header and Secrets
 
@@ -79,24 +79,24 @@ Most OpenAI-compatible providers work with `openai-completions`; use model-level
 oauth: {
   name: "Corporate AI (SSO)",
   async login(callbacks: OAuthLoginCallbacks): Promise<OAuthCredentials>,
-  async refreshToken(credentials: OAuthCredentials): Promise<OAuthCredentials>,
+  async refreshToken(credentials: OAuthCredentials, signal: AbortSignal): Promise<OAuthCredentials>,
   getApiKey(credentials: OAuthCredentials): string,
 }
 ```
 
 `OAuthLoginCallbacks`: `onAuth({ url })` (open in browser), `onDeviceCode({ userCode, verificationUri, intervalSeconds?, expiresInSeconds? })`, `onProgress?(message)`, `onPrompt({ message }): Promise<string>`, `onSelect({ message, options: { id, label }[] }): Promise<string | undefined>`.
 
-`OAuthCredentials` is `{ refresh, access, expires }` (expiry in ms), persisted in `~/.pi/agent/auth.json`. Users authenticate with `/login <provider-name>`.
+`OAuthCredentials` is `{ refresh, access, expires }` (expiry in ms), persisted in `~/.pi/agent/auth.json`. Users authenticate with `/login <provider-name>`. `refreshToken` receives an `AbortSignal` — pass it to blocking I/O and call `signal.throwIfAborted()` early.
 
 ## Custom Streaming
 
-Implement `streamSimple(model, context, options?)` returning an `AssistantMessageEventStream` from `createAssistantMessageEventStream()`. Initialize an `AssistantMessage` (`role`, `content: []`, `api`, `provider`, `model`, zeroed `usage`, `stopReason: "stop"`, `timestamp`), then:
+Implement `streamSimple(model, context, options?)` returning an `AssistantMessageEventStream` from `createAssistantMessageEventStream()`. Initialize an `AssistantMessage` (`role`, `content: []`, `api`, `provider`, `model`, zeroed `usage`, `stopReason: "pending"`, `timestamp`), then:
 
 1. `stream.push({ type: "start", partial: output })`
 2. Content events, tracking `contentIndex` per block: `text_start`, `text_delta`, `text_end`, `thinking_start`, `thinking_delta`, `thinking_end`, `toolcall_start`, `toolcall_delta`, `toolcall_end`
 3. `stream.push({ type: "done", reason, message })` or `{ type: "error", reason, error }`, then `stream.end()`
 
-Every event carries `partial` with the current `AssistantMessage` state — mutate `output.content` as data arrives and pass `output`. Tool calls accumulate JSON deltas, parse into `{ id, name, arguments }`, and finish with `toolcall_end` carrying the full `toolCall`. Update usage from the API response and call `calculateCost(model, output.usage)`. Register with `streamSimple` on the provider config.
+`stopReason: "pending"` marks the partial message; set a terminal reason before pushing `done` (throw for `"error"`/`"aborted"`). Every event carries `partial` with the current `AssistantMessage` state — mutate `output.content` as data arrives and pass `output`. Tool calls accumulate JSON deltas, parse into `{ id, name, arguments }`, and finish with `toolcall_end` carrying the full `toolCall`. Update usage from the API response and call `calculateCost(model, output.usage)`. Register with `streamSimple` on the provider config.
 
 Reference implementations in `packages/ai/src/providers/`: `anthropic.ts`, `mistral.ts`, `openai-completions.ts`, `openai-responses.ts`, `google.ts`, `amazon-bedrock.ts`.
 

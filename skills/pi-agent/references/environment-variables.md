@@ -2,11 +2,16 @@
 
 Source: https://pi.dev/docs/latest/environment-variables
 
-Pi uses environment variables three ways: variables that configure the Pi process, a marker Pi sets so child processes know they run inside Pi, and session metadata injected into commands run by the LLM-callable bash tool. Provider API-key variables live in `references/providers.md`.
+Pi uses environment variables three ways: variables that configure the Pi process, markers Pi sets so child processes know they run inside Pi, and session metadata injected into commands run by the LLM-callable bash tool. Provider API-key variables live in `references/providers.md`.
 
-## Process Marker
+## Process Markers
 
-The CLI and RPC entry points set `PI_CODING_AGENT=true`. Child processes inherit it. It is not session-specific and is **not** set automatically when Pi is embedded through the SDK.
+The CLI and RPC entry points set two markers:
+
+- `AI_AGENT=pi` — generic marker letting tooling identify Pi as the launching agent.
+- `PI_CODING_AGENT=true` — Pi-specific marker for detecting that a process runs inside Pi.
+
+Child processes inherit both. Neither is session-specific, and neither is set automatically when Pi is embedded through the SDK.
 
 ## Bash Tool Session Environment
 
@@ -43,6 +48,7 @@ Custom bash tools built with `createBashTool()` expose the same variables by def
 | `PI_CACHE_RETENTION` | Set to `long` for extended provider prompt caching where supported |
 | `PI_SHARE_VIEWER_URL` | Override the base URL used by `/share` |
 | `PI_HARDWARE_CURSOR` | Set to `1` to show the hardware cursor (IME positioning) |
+| `PI_TUI_ESC_TIMEOUT` | Milliseconds to wait after a lone ESC before treating it as Escape; defaults to `100` over SSH and `10` otherwise. Increase when Alt-key input is misread as Escape |
 | `VISUAL`, `EDITOR` | External editor fallback when the `externalEditor` setting is unset |
 | `HTTP_PROXY`, `HTTPS_PROXY` | Proxy outbound HTTP requests |
 

@@ -12,7 +12,7 @@ Run `/login` and select: ChatGPT Plus/Pro (Codex), Claude Pro/Max, GitHub Copilo
 - **Claude Pro/Max**: third-party harness usage draws from Anthropic "extra usage" and is billed per token, not against plan limits.
 - **GitHub Copilot**: Enter for github.com, or enter a GitHub Enterprise Server domain. "Model not supported" is fixed by enabling the model in VS Code Copilot Chat.
 - **xAI**: `/login xai` → **Use a subscription**; `XAI_API_KEY` remains available under **Use an API key**.
-- **OpenRouter**: `/login openrouter` → **Sign in with OpenRouter** runs a PKCE flow that mints a user-controlled API key billed from OpenRouter credits (it does not expire automatically).
+- **OpenRouter**: `/login openrouter` → **Sign in with OpenRouter** runs a PKCE flow that mints a user-controlled API key billed from OpenRouter credits (it does not expire automatically). On remote/headless machines (e.g. over SSH) the browser cannot reach the loopback callback — paste the final redirect URL or the authorization code into the login prompt instead.
 - **Radius**: a dynamic `pi-messages` gateway. `/login radius` stores OAuth tokens; the catalog refreshes independently into `models-store.json`. Custom Radius gateways can be declared in `models.json` with `"oauth": "radius"` plus a gateway `baseUrl`.
 
 ## API Key Providers
@@ -43,13 +43,17 @@ Set an environment variable before startup, or store a key with `/login`.
 | Hugging Face | `HF_TOKEN` | `huggingface` |
 | Fireworks | `FIREWORKS_API_KEY` | `fireworks` |
 | Together AI | `TOGETHER_API_KEY` | `together` |
+| Baseten | `BASETEN_API_KEY` | `baseten` |
 | Kimi For Coding | `KIMI_API_KEY` | `kimi-coding` |
 | MiniMax (Global / China) | `MINIMAX_API_KEY` / `MINIMAX_CN_API_KEY` | `minimax` / `minimax-cn` |
-| Qwen Token Plan (Global / China) | `QWEN_TOKEN_PLAN_API_KEY` / `QWEN_TOKEN_PLAN_CN_API_KEY` | `qwen-token-plan` / `qwen-token-plan-cn` |
+| Qwen Token Plan (existing catalog / Individual) | `QWEN_TOKEN_PLAN_API_KEY` | `qwen-token-plan` / `qwen-token-plan-individual` |
+| Qwen Token Plan (China) | `QWEN_TOKEN_PLAN_CN_API_KEY` | `qwen-token-plan-cn` |
 | Xiaomi MiMo | `XIAOMI_API_KEY` | `xiaomi` |
 | Xiaomi MiMo Token Plan (CN / AMS / SGP) | `XIAOMI_TOKEN_PLAN_CN_API_KEY`, `XIAOMI_TOKEN_PLAN_AMS_API_KEY`, `XIAOMI_TOKEN_PLAN_SGP_API_KEY` | `xiaomi-token-plan-cn`, `-ams`, `-sgp` |
 
-Authoritative source: `packages/ai/src/env-api-keys.ts` in `earendil-works/pi-mono`.
+`qwen-token-plan-individual` uses the same international endpoint and `QWEN_TOKEN_PLAN_API_KEY` as `qwen-token-plan`, but limits the picker to models documented for Individual subscriptions; the older provider keeps its broader catalog for backward compatibility. With `auth.json`, store the credential under the provider you select — the environment variable is shared by both international providers.
+
+Authoritative source: `packages/ai/src/env-api-keys.ts` in `earendil-works/pi`.
 
 ## Auth File
 

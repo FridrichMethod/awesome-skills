@@ -2,9 +2,9 @@
 name: pi-agent
 description: Build with and use Pi, the minimal terminal coding harness. Use for installing Pi, configuring providers/models/settings/environment variables, creating Pi skills/extensions/packages/themes/prompt templates, embedding Pi through the SDK, integrating over RPC or JSON event streams, parsing sessions, running local models through the llama.cpp router, developing custom Pi providers and TUI components, or using ecosystem packages such as pi-subagents (delegation/orchestration), pi-mcp-adapter (MCP servers), pi-interview (interactive forms), and pi-web-access (web search, fetching, video understanding).
 license: MIT
-compatibility: Requires Node.js/npm for Pi CLI and SDK usage. Pi package name is @earendil-works/pi-coding-agent.
+compatibility: Requires Node.js >= 22.19 and npm for Pi CLI and SDK usage. Pi package name is @earendil-works/pi-coding-agent.
 metadata:
-  version: "1.2"
+  version: "1.3"
   skill-author: K-Dense Inc.
 ---
 
@@ -73,10 +73,11 @@ pi --mode rpc --no-session
 pi --provider anthropic --model claude-sonnet-4-5
 pi --model sonnet:high "Solve this complex problem"
 pi --tools read,grep,find,ls -p "Review this repository"
+pi --tui-mode fullscreen
 pi install npm:pi-subagents
 pi update --all
 ```
 
 ## Source Coverage
 
-These references summarize the Pi documentation at `https://pi.dev/docs/latest` and every docs page found under it as of this skill version, plus the package pages for `pi-subagents`, `pi-mcp-adapter`, `pi-interview`, and `pi-web-access` at `https://pi.dev/packages/`. Package details were cross-checked against the published npm READMEs (`pi-web-access` 0.14.0, `pi-mcp-adapter` 2.15.0, `pi-subagents` 0.37.0, `pi-interview` 0.9.0). When exact API behavior matters, prefer the cited reference page and inspect installed TypeScript definitions under `node_modules/@earendil-works/pi-coding-agent/dist/` and `node_modules/@earendil-works/pi-ai/dist/`.
+These references summarize the Pi documentation at `https://pi.dev/docs/latest` and every docs page found under it, as of Pi **0.84.2** (docs source: `packages/coding-agent/docs/` in `https://github.com/earendil-works/pi`, formerly `pi-mono`). They also cover the package pages for `pi-subagents`, `pi-mcp-adapter`, `pi-interview`, and `pi-web-access` at `https://pi.dev/packages/`, cross-checked against the published npm READMEs and package docs (`pi-web-access` 0.22.0, `pi-mcp-adapter` 2.25.0, `pi-subagents` 0.49.0, `pi-interview` 0.11.0). When exact API behavior matters, prefer the cited reference page and inspect installed TypeScript definitions under `node_modules/@earendil-works/pi-coding-agent/dist/` and `node_modules/@earendil-works/pi-ai/dist/`.

@@ -72,7 +72,7 @@ Session replacement (`/new`, `/resume`): `session_before_switch` (cancellable) �
 - `before_provider_headers` — mutate `event.headers` in place; a string adds/overrides, `null` deletes. Fires once per request; retries reuse the headers.
 - `before_provider_request` — inspect or replace `event.payload`; handlers run in load order and `undefined` keeps it unchanged. Payload-level system-instruction rewrites are not reflected by `ctx.getSystemPrompt()`.
 - `after_provider_response` — `event.status` and normalized `event.headers` before the stream body is consumed.
-- `tool_call` — `event.input` is mutable and mutations affect execution (no re-validation); return `{ block: true, reason? }` to block. Narrow with `isToolCallEventType("bash", event)`, or `isToolCallEventType<"my_tool", MyToolInput>(...)` for custom tools.
+- `tool_call` — `event.input` is mutable and mutations affect execution (no re-validation); return `{ block: true, reason?, terminate? }` to block. `terminate` applies only to a blocked call, and the agent stops early only when every finalized result in the batch is terminating. Narrow with `isToolCallEventType("bash", event)`, or `isToolCallEventType<"my_tool", MyToolInput>(...)` for custom tools.
 - `tool_result` — middleware-style chain; return partial patches (`content`, `details`, `isError`, `usage`). Use `isBashToolResult(event)` for typed bash details and `ctx.signal` for nested async work.
 - `message_end` — return `{ message }` to replace the finalized message; the replacement must keep the same `role`.
 - `user_bash` — intercept `!`/`!!`: return `{ operations }` (optionally wrapping `createLocalBashOperations()`) or `{ result }`.
@@ -82,7 +82,9 @@ In parallel tool mode, sibling tool calls are preflighted sequentially then exec
 
 ## ExtensionContext
 
-`ctx.ui` (see Custom UI), `ctx.mode` (`"tui" | "rpc" | "json" | "print"`), `ctx.hasUI` (true in TUI and RPC), `ctx.cwd`, `ctx.signal` (agent abort signal; usually `undefined` outside active turns), `ctx.isProjectTrusted()`, `ctx.sessionManager` (read-only: `getEntries`, `getBranch`, `buildContextEntries`, `getLeafId`, …), `ctx.modelRegistry` (`getProvider(id)`, `getProviderAuth(id)`, `find(...)`), `ctx.model`, `ctx.thinkingLevel`, `ctx.isIdle()`, `ctx.abort()`, `ctx.hasPendingMessages()`, `ctx.shutdown()`, `ctx.getContextUsage()`, `ctx.compact({ customInstructions, onComplete, onError })`, `ctx.getSystemPrompt()`.
+`ctx.ui` (see Custom UI), `ctx.mode` (`"tui" | "rpc" | "json" | "print"`), `ctx.hasUI` (true in TUI and RPC), `ctx.cwd`, `ctx.signal` (agent abort signal; usually `undefined` outside active turns), `ctx.isProjectTrusted()`, `ctx.sessionManager` (read-only: `getEntries`, `getBranch`, `buildContextEntries`, `getLeafId`, …), `ctx.modelRegistry` (`getProvider(id)`, `getProviderAuth(id)`, `find(...)`), `ctx.model`, `ctx.thinkingLevel`, `ctx.scopedModels`, `ctx.isIdle()`, `ctx.abort()`, `ctx.hasPendingMessages()`, `ctx.shutdown()`, `ctx.getContextUsage()`, `ctx.compact({ customInstructions, onComplete, onError })`, `ctx.getSystemPrompt()`.
+
+`ctx.scopedModels` is the read-only list of models scoped to the session — the same set `/scoped-models` shows, resolved at session start from `--models` and the `enabledModels` setting (minimatch against `provider/modelId` or a bare `modelId`). It is empty when no scoping is configured, meaning every available model is usable. Entries are `{ model, thinkingLevel? }`, with `thinkingLevel` set only when a pattern pinned it (e.g. `anthropic/*:high`). Use it for a model picker that mirrors the built-in one instead of enumerating `ctx.modelRegistry.getAvailable()`.
 
 Use the exported `CONFIG_DIR_NAME` instead of hardcoding `.pi` — rebranded distributions use a different name.
 
@@ -96,13 +98,26 @@ Command handlers additionally get session-control methods that would deadlock fr
 
 Tools: `registerTool(definition)` (works during load and at runtime — new tools are callable without `/reload`), `getActiveTools()`, `getAllTools()` (returns `name`, `description`, `parameters`, `promptGuidelines`, `sourceInfo`), `setActiveTools(names)`.
 
-Messages and session: `sendMessage(message, { deliverAs: "steer" | "followUp" | "nextTurn", triggerTurn })`, `sendUserMessage(content, { deliverAs })` (required while streaming), `appendEntry(customType, data)`, `setSessionName`, `getSessionName`, `setLabel(entryId, label)`.
+Messages and session: `sendMessage(message, { deliverAs: "steer" | "followUp" | "nextTurn", triggerTurn })`, `sendUserMessage(content, { deliverAs, expandPromptTemplates })` (`deliverAs` required while streaming; `expandPromptTemplates` defaults to `false` and opts into extension-command dispatch plus skill/prompt-template expansion), `appendEntry(customType, data)`, `setSessionName`, `getSessionName`, `setLabel(entryId, label)`.
 
 Commands and input: `registerCommand(name, { description, handler, getArgumentCompletions })` (duplicate names get `:1`/`:2` suffixes in load order), `getCommands()` (extension → prompt → skill order, each with `sourceInfo.scope`/`origin`), `registerShortcut(key, options)`, `registerFlag(name, options)` + `getFlag(name)`.
 
-Rendering: `registerMessageRenderer(customType, renderer)` (custom messages, in LLM context), `registerEntryRenderer(customType, renderer)` (custom entries, TUI only).
+Rendering: `registerMessageRenderer(customType, renderer)` (custom messages, in LLM context), `registerEntryRenderer(customType, renderer)` (custom entries, TUI only), `registerMarkdownTransformer(transformer)`.
+
+`registerMarkdownTransformer` transforms the Markdown of normal user text, assistant text, and thinking blocks before Pi's built-in renderer runs. Transformers run in extension load order, each receiving the previous transformer's output plus a context of `messageType` (`"user" | "assistant" | "assistant-thinking"`), `isStreaming` (true only for partial assistant updates), and `availableWidth` (exact terminal columns):
+
+```typescript
+pi.registerMarkdownTransformer((markdown, { messageType, isStreaming }) => {
+  if (isStreaming || messageType === "assistant-thinking") return markdown;
+  return markdown.replaceAll("-->", "→");
+});
+```
+
+A throwing transformer keeps the Markdown produced so far and continues with the next one. The hook is display-only — the session and model context keep the original message. It fires for new user messages, assistant streaming updates, restored session messages, and terminal width changes, so keep transformers synchronous and cheap.
 
 Model and provider: `setModel(model)` (returns `false` without an API key), `getThinkingLevel()`, `setThinkingLevel(level)`, `registerProvider(nameOrProvider, config?)`, `unregisterProvider(name)`. Calls after the load phase take effect immediately. Dynamic providers can implement `refreshModels`, and a complete pi-ai `Provider` from `createProvider(...)` can be registered as the composition base with `models.json` overrides layered above.
+
+`refreshModels` receives the canonical credential/stored-catalog/network/signal context: `context.stored` is the persisted provider snapshot, and persistence goes through generation-checked `context.publish({ persist: entry })` (`persist: null` deletes the snapshot). Live servers such as llama.cpp can return models without persisting. `context.signal` is always a concrete signal and provider callbacks must pass it to blocking I/O; public `ModelRuntime.refresh()` / `ModelRegistry.refresh()` accept an optional signal and are unbounded when it is omitted, so extensions choose their own deadlines. Cancellation stops the caller waiting even if a provider ignores the signal. OAuth `refreshToken(credentials, signal)` now takes the signal as a second argument.
 
 Other: `exec(command, args, { signal, timeout })` → `{ stdout, stderr, code, killed }`, `on(event, handler)`, `events` (inter-extension bus).
 

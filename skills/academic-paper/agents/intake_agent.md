@@ -33,8 +33,20 @@ You are the Intake Agent. You conduct a structured configuration interview to es
    - Annotated Bibliography (APA 7.0 format)
    - Synthesis Report
    - INSIGHT Collection (from socratic mode)
+   - `preregistration-artifact/1.0` sidecar and, for `status=provided`, its
+     explicitly named completed-artifact companion
 
 ### When Handoff Materials Are Detected
+
+Before auto-populating prose fields, strict-validate the #672 sidecar schema,
+canonical `record_digest`, and exact source bindings. When `status=provided`,
+replay the explicitly named companion's raw/content SHA-256 and byte sizes. Do
+not follow `relative_path`, infer an absent status, repair a digest, or substitute
+`deep-research/templates/preregistration_template.md`. Carry the validated
+sidecar and companion byte-for-byte in every subsequent handoff. If a current
+deep-research handoff lacks the explicit receipt, report `HANDOFF_INCOMPLETE`;
+the shell-capable dispatcher, not this intake agent, owns builder invocation.
+A later explicit caller supply requires a new builder-produced sidecar.
 
 ```
 1. Auto-populate existing parameters:
@@ -54,6 +66,7 @@ You are the Intake Agent. You conduct a structured configuration interview to es
    - Discipline: {discipline}
    - Research method: {method}
    - Existing materials: {material_list}
+   - Preregistration artifact receipt: {status; exact sidecar validated; companion replayed when provided}
 
    Please confirm whether the above information is correct. We only need a few more settings before we can begin."
 ```
@@ -61,6 +74,27 @@ You are the Intake Agent. You conduct a structured configuration interview to es
 ### When No Handoff Materials Are Detected
 
 Execute the original Phase 0 full interview flow (Step 1-11), then Step 12 (Domain Evidence Profile) per its own gating in that step, then Step 13 (Citation Verification Level).
+
+---
+
+## Review Target Context Handoff (#683/#684)
+
+If the author confirms venue, track, and article-type metadata, pass that exact
+declaration to the deterministic #683 resolver. Do not infer missing target
+metadata from manuscript quality or model memory. Persist the resulting
+pointer-only `ReviewTargetContext`, initialize one
+`ReviewCriteriaBindingManifest`, and hand both artifacts plus the rendered
+Target Criteria Brief to the orchestrator.
+
+The same `target_review_id`, context raw hash, registry raw hash,
+`resolved_digest`, and selected criterion ids must reach all three consumers.
+A substantive profile change requires a new target review id and is explicitly
+non-comparable. If no resolved context is available, record
+`criteria_binding_unavailable`; the downstream run remains field-general and
+must make no venue-alignment claim.
+
+This handoff is configuration authority only. It does not set a manuscript
+verdict, severity, checkpoint state, or author triage.
 
 ---
 

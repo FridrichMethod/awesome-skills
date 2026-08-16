@@ -30,9 +30,11 @@ Interactive startup asks before trusting a project folder that has project-local
 
 `theme` (`"dark"`), `externalEditor` (Ctrl+G command; takes precedence over `$VISUAL`/`$EDITOR` — use `"code --wait"` for VS Code), `quietStartup` (`false`), `defaultProjectTrust` (`"ask"`, global only), `collapseChangelog` (`false`), `enableInstallTelemetry` (`true`), `enableAnalytics` (`false`, only asked during experimental first-time setup with `PI_EXPERIMENTAL=1`), `trackingId`, `doubleEscapeAction` (`"tree"` | `"fork"` | `"none"`), `treeFilterMode` (`"default"` | `"no-tools"` | `"user-only"` | `"labeled-only"` | `"all"`), `editorPaddingX` (`0`, range 0–3), `outputPad` (`1`, 0 or 1), `autocompleteMaxVisible` (`5`, range 3–20), `showHardwareCursor` (`false`).
 
+Fullscreen TUI: `tuiMode` (`"regular"` default, or experimental `"fullscreen"`; `/settings` changes apply immediately and `--tui-mode` overrides at startup), `fullscreenExitOutput` (`"transcript"` prints the final transcript plus resume hint, `"resume-hint"` restores the previous screen and prints only the hint), `fullscreenScrollbar` (`"auto"` shows it while scrolling, `"always"` reserves the rightmost column, `"hidden"`). The last two have no effect in regular mode.
+
 ## Network, Warnings, Markdown
 
-`httpProxy` (applied as `HTTP_PROXY`/`HTTPS_PROXY`, global only). `warnings.anthropicExtraUsage` (`true`) warns when Anthropic subscription auth may use paid extra usage. `markdown.codeBlockIndent` (`"  "`).
+`httpProxy` (applied as `HTTP_PROXY`/`HTTPS_PROXY`, global only). `warnings.anthropicExtraUsage` (`true`) warns when Anthropic subscription auth may use paid extra usage. `markdown.codeBlockIndent` (`"  "`), `markdown.mermaid` (`"streaming"`, or `"final"` / `"off"`).
 
 ## Compaction and Branch Summary
 
@@ -50,11 +52,15 @@ Keep `retry.provider.maxRetries` at `0` unless provider-level retries are explic
 
 ## Terminal and Images
 
-`terminal.showImages` (`true`), `terminal.imageWidthCells` (`60`), `terminal.clearOnShrink` (`false`), `images.autoResize` (`true`, 2000×2000 max), `images.blockImages` (`false`).
+`terminal.showImages` (`true`), `terminal.imageWidthCells` (`60`), `terminal.clearOnShrink` (`false`), `images.autoResize` (`true`, 2000×2000 max; applies to `@file` attachments, `read`, and images returned by tools), `images.blockImages` (`false`).
+
+## Tools
+
+`defaultTools` is a string array of built-in tools enabled at startup; omitting it uses Pi's standard defaults. Extension and SDK custom tools stay enabled, and an empty array starts with no built-ins while preserving them. `--tools` replaces this with a strict allowlist for all tools, `--no-tools` disables everything, `--no-builtin-tools` disables the built-in defaults, and `--exclude-tools` filters the result. A project `defaultTools` array replaces the global array.
 
 ## Shell
 
-`shellPath` (supports leading `~`), `shellCommandPrefix` (prefix for every bash command), `npmCommand` (argv array, e.g. `["mise", "exec", "node@20", "--", "npm"]`). `npmCommand` covers all npm package-manager operations; user npm packages install under `~/.pi/agent/npm/`, project ones under `.pi/npm/`. When `npmCommand` is configured, git package dependency installs use plain `install` for wrapper compatibility.
+`shellPath` (supports leading `~`; Windows paths in JSON need forward slashes or escaped backslashes, e.g. `"C:/Program Files/Git/bin/bash.exe"`), `shellCommandPrefix` (prefix for every bash command), `npmCommand` (argv array, e.g. `["mise", "exec", "node@20", "--", "npm"]`). `npmCommand` covers all npm package-manager operations; user npm packages install under `~/.pi/agent/npm/`, project ones under `.pi/npm/`. When `npmCommand` is configured, git package dependency installs use plain `install` for wrapper compatibility.
 
 ## Sessions and Model Cycling
 

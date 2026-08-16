@@ -2,8 +2,8 @@
 name: academic-paper
 description: "12-agent academic paper writing pipeline. 11 modes (full/plan/outline/revision/revision-coach/abstract/lit-review/format-convert/citation-check/disclosure/rebuttal-audit). 6 paper types, 5 citation formats, bilingual abstracts, LaTeX/DOCX-via-Pandoc/PDF output. Style Calibration + Writing Quality Check + Anti-Patterns with IRON RULE markers. Triggers: write paper, academic paper, guide my paper, parse reviews, audit my rebuttal, check my response draft, AI disclosure, 寫論文, 學術論文, 引導我寫論文, 審查意見, 評估回覆, 논문 작성, 초록 작성, 논문 수정, 논문 계획을 도와줘, 심사 의견 반영, 답변서 점검, AI 사용 고지."
 metadata:
-  version: "3.2.0"
-  last_updated: "2026-07-11"
+  version: "3.3.1"
+  last_updated: "2026-08-15"
   status: active
   data_access_level: redacted
   task_type: open-ended
@@ -41,7 +41,7 @@ Write a paper on the impact of declining birth rates on private university manag
 4. Argumentation construction — claim-evidence chains, logical flow
 5. Full-text drafting — section-by-section draft, register adjustment
 6. Citation compliance + bilingual abstract (parallel)
-7. Peer review — five-dimension scoring, revision suggestions
+7. Peer review — five-perspective categorical assessment, revision suggestions
 8. Output formatting — LaTeX/DOCX (via Pandoc)/PDF/Markdown
 
 ---
@@ -95,7 +95,7 @@ Activate `plan` mode when the user wants guidance, step-by-step planning, or exp
 | 5 | `draft_writer_agent` | Section-by-section full draft writing, discipline register adjustment, word count tracking | Phase 4 |
 | 6 | `citation_compliance_agent` | Citation format verification, reference list completeness, DOI checking | Phase 5a |
 | 7 | `abstract_bilingual_agent` | Bilingual abstract (zh-TW + EN), 5-7 keywords each | Phase 5b |
-| 8 | `peer_reviewer_agent` | Simulated double-blind review, five-dimension scoring, revision suggestions (max 2 rounds) | Phase 6 |
+| 8 | `peer_reviewer_agent` | Simulated double-blind review, five-perspective categorical assessment, revision suggestions (max 2 rounds) | Phase 6 |
 | 9 | `formatter_agent` | Convert to LaTeX/DOCX (via Pandoc)/PDF/Markdown, journal formatting, cover letter, citation format conversion (APA 7 / Chicago / MLA / IEEE / Vancouver) | Phase 7 |
 | 10 | `socratic_mentor_agent` | Plan mode Socratic mentor: chapter-by-chapter guidance, convergence criteria (4 signals), question taxonomy (4 types), INSIGHT extraction | Plan Step 0-3 |
 | 11 | `visualization_agent` | Parse paper data and generate publication-quality figure code (Python matplotlib / R ggplot2) with APA 7.0 formatting, colorblind-safe palettes, and LaTeX integration | Phase 4 / Phase 7 |
@@ -131,6 +131,32 @@ Phase 7: FORMAT        -> [formatter]                  -> Final Output Package
 ```
 
 > See `references/workflow_phase_details.md` for detailed per-phase agent behavior and output descriptions.
+
+### Review-target criteria binding (#684)
+
+When Phase 0 has produced an author-confirmed `ReviewTargetContext` (#683), the
+orchestrator initializes one pointer-only `ReviewCriteriaBindingManifest` and
+uses it unchanged across the formative, internal-evaluator, and external-panel
+consumers. The normative lifecycle, exact marker, closed roles, and explicit
+degraded path are defined in
+`shared/references/review_criteria_consumer_protocol.md`.
+
+- Phase 2 owns the `FORMATIVE` receipt. The Structure Architect maps selected
+  criterion ids to planned sections and evidence needs; later writing phases
+  reuse that receipt and do not re-resolve the target.
+- Phase 6a receives the same pointer authority and Target Criteria Brief while
+  remaining paper-blind; its pre-commitment artifact owns the `INTERNAL`
+  receipt. Phase 6b receives that unchanged artifact, may assess applicability
+  after it sees the draft, and owns any Critical/Major constructive finding
+  sidecar.
+- Scientific validity, venue fit, and submission readiness remain distinct.
+  Criteria never authorize invented evidence, results, methods, or changes to
+  the author's contribution claim.
+
+Binding validation is a handoff-conformance check only. It never supplies an
+editorial verdict, severity, checkpoint state, or author triage. If the binding
+is unavailable, disclose `criteria_binding_unavailable`; do not claim venue
+alignment and do not silently reconstruct a target from model memory.
 
 ### Checkpoint Rules
 
@@ -188,13 +214,13 @@ For each `academic-paper full` invocation, Phase 4 + Phase 6 expand from two sin
    - Lint: 4 structural checks (see § "Phase 4b / 6b output lint" below).
 3. **Phase 6a — evaluator paper-blind pre-commitment.**
    - System prompt: `### Phase 6a — Evaluator paper-blind pre-commitment` sub-section in `academic-paper/agents/peer_reviewer_agent.md` § "v3.6.6 Generator-Evaluator Contract Protocol".
-   - User content: `evaluator_full` contract JSON + paper metadata + the writer's most recent `<phase4a_output>` (the writer artefact the evaluator must verify per `disagreement_handling.pre_commitment_check_protocol.check_writer_artifact`).
-   - Output: `## Contract Paraphrase` + `## Scoring Plan` (per-dimension `dimension_id` / `what_to_look_for` / `what_triggers_block` / `what_triggers_warn`) + terminal `[PRE-COMMITMENT-ACKNOWLEDGED]` tag.
+   - User content: `evaluator_full` contract JSON + paper metadata + the writer's most recent `<phase4a_output>` (the writer artefact the evaluator must verify per `disagreement_handling.pre_commitment_check_protocol.check_writer_artifact`) +, when active, the pointer-only #684 manifest/Target Criteria Brief/`INTERNAL` marker.
+   - Output: `## Contract Paraphrase` + `## Scoring Plan` (per-dimension `dimension_id` / `what_to_look_for` / `what_triggers_block` / `what_triggers_warn`) + pointer-only binding commitment (or `criteria_binding_unavailable`) + terminal `[PRE-COMMITMENT-ACKNOWLEDGED]` tag. No additional H2 is introduced.
    - Lint: 5 structural checks.
 4. **Phase 6b — evaluator paper-visible scoring + decision.**
    - System prompt: `### Phase 6b — Evaluator paper-visible scoring + decision` sub-section in the same agent file.
-   - User content: `evaluator_full` contract JSON (re-injected) + Phase 6a output wrapped in `<phase6a_output>...</phase6a_output>` + the writer's `<phase4a_output>` (unconditional per `pre_commitment_check_protocol.check_writer_artifact`) + the writer Phase 4b draft (the artefact under review).
-   - Output: `## Dimension Scores` → `## Failure Condition Checks` → `## Review Body` → `## Evaluator Decision`.
+   - User content: `evaluator_full` contract JSON (re-injected) + Phase 6a output wrapped in `<phase6a_output>...</phase6a_output>` + the writer's `<phase4a_output>` (unconditional per `pre_commitment_check_protocol.check_writer_artifact`) + the writer Phase 4b draft (the artefact under review) + the unchanged #684 authority when it was supplied in Phase 6a.
+   - Output: `## Dimension Scores` → `## Failure Condition Checks` → `## Review Body` → `## Evaluator Decision`, plus the role marker/unavailable disclosure and a separately validated constructive sidecar when applicable.
    - Lint: 5 structural checks.
 
 ### System prompt vs user content discipline
@@ -215,7 +241,7 @@ All dynamic LLM output (Phase Na runtime emissions, paper content) lives in user
 Mode-specific structural check counts, per `sprint_contract_protocol.md` §4 enumeration convention:
 
 - **Writer Phase 4a (3 checks)**: required sections in order (`## Acceptance Criteria Paraphrase`, terminal `[PRE-COMMITMENT-ACKNOWLEDGED]`); paraphrase paragraph count ≥ `pre_commitment_artifacts.acceptance_criteria_paraphrase.minimum_dimensions`; Phase 4a content references contract JSON + paper metadata only. **No `## Scoring Plan` section** — `writer_full` carries no scoring_plan.
-- **Evaluator Phase 6a (5 checks)**: required sections in order (`## Contract Paraphrase`, `## Scoring Plan`, terminal `[PRE-COMMITMENT-ACKNOWLEDGED]`); paraphrase paragraph count ≥ `disagreement_handling.paraphrase_minimum_dimensions`; one `### <Dn>: <name>` subsection per acceptance dimension; each scoring_plan subsection contains `disagreement_handling.scoring_plan.per_dimension_criteria` four-field shape (`dimension_id`, `what_to_look_for`, `what_triggers_block`, `what_triggers_warn`); Phase 6a content references contract JSON + paper metadata + the writer's `<phase4a_output>` only (no full draft / paper content).
+- **Evaluator Phase 6a (5 checks)**: required sections in order (`## Contract Paraphrase`, `## Scoring Plan`, terminal `[PRE-COMMITMENT-ACKNOWLEDGED]`); paraphrase paragraph count ≥ `disagreement_handling.paraphrase_minimum_dimensions`; one `### <Dn>: <name>` subsection per acceptance dimension; each scoring_plan subsection contains `disagreement_handling.scoring_plan.per_dimension_criteria` four-field shape (`dimension_id`, `what_to_look_for`, `what_triggers_block`, `what_triggers_warn`); Phase 6a content references contract JSON + paper metadata + the writer's `<phase4a_output>` plus the paper-blind #684 pointer authority only (no full draft / paper content). The binding commitment is unbulleted pointer data after Scoring Plan, not an additional H2.
 
 Retry semantics: lint failure on the first attempt → retry once with the specific lint gap hinted in the system prompt; second failure → mark this role unusable per § "Single-agent generator unusable handling" below.
 
@@ -275,7 +301,7 @@ See `references/mode_selection_guide.md` for details.
 | `format-convert` | "Convert to LaTeX" / "Convert citations to [format]" | 9 only | Formatted document; includes citation format conversion (APA 7 / Chicago / MLA / IEEE / Vancouver) |
 | `citation-check` | "Check citations" | 6 only | Citation error report |
 | `plan` | "guide my paper" / "help me plan my paper" | 1->10->3->4 | Chapter Plan + INSIGHT Collection |
-| `revision-coach` | "parse reviews" / "revision roadmap" / "I got reviewer comments" / "should we push back" / "conference rebuttal" / "grant panel response" / explicitly identified real committee correspondence | 12 only | Peer-review path: Revision Roadmap + optional Tracking Template + Response Letter Skeleton. Committee path: separate #668 concern tracker + placeholder response skeleton; no Schema 11, priority, severity, or determination. |
+| `revision-coach` | "parse reviews" / "revision roadmap" / "I got reviewer comments" / "should we push back" / "conference rebuttal" / "grant panel response" / explicitly identified real committee correspondence | 12 only | Peer-review path: immutable Roadmap core + explicit author sidecar + optional Tracking Template/Response Skeleton. Committee path: separate #668 concern tracker + placeholder response skeleton; no Schema 11, reviewer obligation/severity, or determination. |
 | **`disclosure`** (v3.2) | **"AI disclosure for Nature" / "generate AI usage statement"** | **9 only** | **Default venue path: `REQUIRED` / `ACTION_ONLY` / `NOT_REQUIRED` / `UNKNOWN` applicability plus typed halt status; policy-anchor path: anchor-specific render** |
 | **`rebuttal-audit`** | **"audit my response" / "check my rebuttal" / "did I miss any reviewer comment"** (requires BOTH reviewer comments AND an existing rebuttal draft) | **12 only (parse-only)** | **Rebuttal QA report: per-comment coverage + gaps + risk flags. No new response generated; advisory only. Does NOT emit Schema 11 / Material Passport / verified status.** |
 
@@ -336,12 +362,13 @@ peer-review Schema 11.
 
 In revision mode, `draft_writer_agent` does NOT re-emit the complete paper. The round runs **anchorize → patch → deterministic apply → finalizer**, confining the regeneration surface to the blocks the revision explicitly touches (DELEGATE-52 blast-radius containment; spec `docs/design/2026-06-10-390-diff-patch-revision-mode-spec.md`):
 
-1. **Anchorize** the draft (`scripts/ars_anchorize_draft.py` — idempotent, content-neutral): every block gets a stable `<!--block:BNNNN-->` marker; a block manifest (`base_draft_hash` + per-block `old_hash`) is regenerated. Nothing may rewrite the draft between this step and apply.
-2. **The writer emits a patch document** (`shared/contracts/patch/revision_patch.schema.json`) as a sidecar file in its `phase6_*/` fence — block ops with hash preconditions copied from the manifest, each op tracing to `roadmap_item_ids`. See `agents/draft_writer_agent.md` § Patch-Document Revision Emission.
-3. **Deterministic apply** (`scripts/ars_apply_revision_patch.py`): two-phase fail-closed — one stale hash rejects the whole patch with the base byte-untouched; untouched blocks are preserved byte-identical by construction. Structural shapes (heading rewrites/deletes, section-count change, touched-ratio > 0.6) refuse without an explicit acknowledge that only the §3.6 escalation checkpoint may grant. The apply report (`preserved_ratio`, ops, fresh block IDs, structural flags) is a **required input to re-review** alongside the revised draft.
-4. **Escalation, never silent fallback:** restructure-demanding rounds go to a MANDATORY user checkpoint; a confirmed full re-emission round is provenance-stamped `mode: full_reemission_escalated` and the draft is re-anchorized afterwards (new ID generation).
+1. **Anchorize** the draft (`scripts/ars_anchorize_draft.py` — idempotent, content-neutral): every block gets a stable `<!--block:BNNNN-->` marker and an exact manifest. Nothing rewrites the draft before apply.
+2. **Bind explicit authority (#670):** validate the immutable `revision-roadmap/1.0`, exact registered claim surfaces, and complete `author-adjudication/1.0`. The roadmap keeps severity, obligation, cost scope, and bounded consequence independent; author triage and exact targets live only in the separate explicit sidecar.
+3. **The writer emits current patch 1.1** (`shared/contracts/patch/revision_patch.schema.json`) as a sidecar — every op cites only `will_address` items, stays inside exact target/operation scopes, and explicitly declares claim/collateral arrays. Registered claim movement needs an exact author-approved replacement; declined overlap needs exact collateral authority.
+4. **Deterministic apply** (`scripts/ars_apply_revision_patch.py`) replays every binding before structural analysis or write. Current report format 1.3 carries the mechanically derived authorization witness and the honest `unregistered_claim_drift_review_required` E6 boundary. If E6 later detects a drift on an unregistered surface, the checkpoint has no default-open route: the author must explicitly choose `restore`, `authorize_with_reason`, or `pause`. Build and replay validation bind each choice to one explicitly named run-local raw session-event artifact; the sidecar retains its recomputed digest but neither path nor message. Untouched blocks remain byte-identical.
+5. **Continuous evidence:** every review write, all-declined no-op, and integrity-correction round enters `revision-evidence-bundle/1.0`, from an exact integrity-PASS draft to the exact final draft. A scope escalation requires a new explicit sidecar or a narrower patch; legacy full re-emission cannot claim current authorization PASS.
 
-Orchestrated runs follow `pipeline_orchestrator_agent.md` § Revision-Round Patch Sequencing; Mode B (phase-by-phase manual) users run the same scripts by hand — exact commands in `references/revision_patch_protocol.md`. Honest boundary, stated once: patch mode removes the silent-distortion channel for text the revision does not touch; it does not make the revision itself better. The `academic-paper full` in-pair Phase 6→4 loop is NOT patch-adopted (its Phase 4b lint requires a full `## Draft Body`; Item 9 boundary, spec §5.2/§7).
+Orchestrated runs follow `pipeline_orchestrator_agent.md` § Revision-Round Patch Sequencing; Mode B users run the same scripts by hand — exact commands in `references/revision_patch_protocol.md`. Honest boundary: registered surfaces and exact edit authority are machine-replayed, but unregistered semantic drift still requires E6 review. `scripts/claim_strength_drift_disposition.py` closes explicit handling of reported rows only; it does not make model-mediated detection deterministic or complete. The `academic-paper full` in-pair Phase 6→4 loop is outside this standalone/pipeline revision contract.
 
 ---
 
@@ -355,7 +382,15 @@ Socratic mode that guides users through paper planning one chapter at a time. Bu
 
 ## Handoff Protocol: deep-research -> academic-paper
 
-`intake_agent` automatically detects deep-research materials (RQ Brief / Bibliography / Synthesis / INSIGHT Collection) and skips redundant steps. See `deep-research/SKILL.md` Handoff Protocol for the complete handoff material format.
+`intake_agent` automatically detects deep-research materials (RQ Brief /
+Bibliography / Synthesis / INSIGHT Collection) and skips redundant steps. It
+also requires the exact builder-produced `preregistration-artifact/1.0` handoff
+receipt and, when provided, its explicitly named companion. Intake validates and
+carries those bytes unchanged; it does not infer status, repair/rebuild the
+sidecar, follow its display path, or substitute a planning template. A later
+explicit user supply must be represented by a new sidecar from the named
+deterministic builder. See `deep-research/SKILL.md` Handoff Protocol and
+`shared/references/cross_document_consistency_advisory_protocol.md`.
 
 ---
 
@@ -384,7 +419,7 @@ See `academic-pipeline/SKILL.md` for the complete workflow.
 
 ## Phase 0: Configuration Interview
 
-See `agents/intake_agent.md` for the complete field definitions of the Phase 0 configuration interview. The interview covers 9 core items: paper type, discipline, target journal, citation format, output format, language, abstract, word count, and existing materials — plus co-authors, funding, optional style calibration, the domain evidence profile (Step 12), the citation-verification level (Step 13, #392), and the independent retraction policy (Step 14, #651). Both citation policies are mark-only by default with explicit strict opt-in, seeding `terminal_policies.citation_existence` and `terminal_policies.retraction` respectively. Outputs a Paper Configuration Record, awaiting user confirmation.
+See `agents/intake_agent.md` for the complete field definitions of the Phase 0 configuration interview. The interview covers 9 core items: paper type, discipline, target journal, citation format, output format, language, abstract, word count, and existing materials — plus co-authors, funding, optional style calibration, the domain evidence profile (Step 12), the citation-verification level (Step 13, #392), and the independent retraction policy (Step 14, #651). Both citation policies are mark-only by default with explicit strict opt-in, seeding `terminal_policies.citation_existence` and `terminal_policies.retraction` respectively. When an author confirms a venue/track/type target, Phase 0 also resolves the #683 `ReviewTargetContext` and initializes the #684 pointer-only binding manifest before any criteria-aware consumer runs; absence uses the explicit field-general `criteria_binding_unavailable` path. Outputs a Paper Configuration Record, awaiting user confirmation.
 
 ---
 
@@ -450,7 +485,7 @@ Explicit prohibitions to prevent common failure modes:
 13. **Self-citation ratio** — flag if >15%
 
 ### Peer Review
-14. **Five dimensions** — Originality (20%), Methodological Rigor (25%), Evidence Sufficiency (25%), Argument Coherence (15%), Writing Quality (15%)
+14. **Five criterion-bound dimensions** — Originality, Methodological Rigor, Evidence Sufficiency, Argument Coherence, and Writing Quality; report categorical judgements with evidence and no numerical aggregation
 15. **Actionable feedback** — every criticism must include a specific suggestion
 16. **Max 2 revision rounds** — unresolved items become Acknowledged Limitations
 
@@ -495,8 +530,8 @@ When `ARS_MODEL_TIERING` is set, the dispatching session routes this skill's age
 
 | Item | Content |
 |------|---------|
-| Skill Version | 3.2.0 |
-| Last Updated | 2026-07-11 |
+| Skill Version | 3.3.1 |
+| Last Updated | 2026-08-15 |
 | Maintainer | Cheng-I Wu |
 | Dependent Skills | deep-research v1.0+ (upstream), academic-paper-reviewer v1.0+ (downstream) |
 

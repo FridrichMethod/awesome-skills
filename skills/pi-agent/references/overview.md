@@ -32,4 +32,6 @@ Authenticate with `/login` for subscription providers or set API keys such as `A
 
 ## Ecosystem
 
-Package gallery at `https://pi.dev/packages` lists community extensions tagged `pi-package`. Source: `https://github.com/earendil-works/pi-mono` (docs live under `packages/coding-agent/docs/`).
+Package gallery at `https://pi.dev/packages` lists community extensions tagged `pi-package`. Source: `https://github.com/earendil-works/pi` (formerly `pi-mono`; docs live under `packages/coding-agent/docs/`, and doc pages still link the old repo name, which redirects).
+
+Pi requires Node.js >= 22.19.0. The published version this skill was written against is `0.84.2` (`https://pi.dev/api/latest-version` reports the current one).

@@ -15,7 +15,7 @@ Both use fresh routing session IDs and, where the provider supports it, disable 
 
 Triggers when `contextTokens > contextWindow - reserveTokens`. Defaults: `reserveTokens` 16384, `keepRecentTokens` 20000, configured under `compaction` in global or project settings. `/compact [instructions]` works even with auto-compaction disabled.
 
-Steps: walk backwards from the newest message accumulating token estimates until `keepRecentTokens` is reached (the cut point) → collect messages from the previous kept boundary (or session start) to the cut point → summarize with the structured format, passing any previous summary as iterative context → append a `CompactionEntry` → reload context as summary plus messages from `firstKeptEntryId`.
+Steps: walk backwards from the newest message accumulating token estimates until `keepRecentTokens` is reached (the cut point) → collect messages from the previous kept boundary (or session start) to the cut point → summarize with the structured format, passing any previous summary as iterative context → append a `CompactionEntry` → rebuild the context for the next request as summary plus messages from `firstKeptEntryId`.
 
 On repeated compactions the summarized span starts at the previous compaction's kept boundary (`firstKeptEntryId`), not at the compaction entry, falling back to the entry after the previous compaction when that kept entry is not on the path. This re-includes messages that survived the earlier pass. `tokensBefore` is recalculated from the rebuilt context before writing the new entry.
 
@@ -27,7 +27,7 @@ A turn starts with a user message and includes all assistant responses and tool 
 
 ## Branch Summarization
 
-On `/tree` navigation to a different branch: find the deepest common ancestor, walk from the old leaf back to it, include messages up to the token budget newest-first, summarize, and append a `BranchSummaryEntry` at the navigation point.
+On `/tree` navigation to a different branch: find the deepest common ancestor, walk from the old leaf back to it, include messages up to the token budget newest-first, summarize, and append a `BranchSummaryEntry` at the navigation point — the summary lands on the destination branch's new leaf, not on the branch being left.
 
 Both mechanisms extract file operations from the tool calls being summarized **and** from previous compaction/branch-summary `details`, so read/modified file tracking accumulates across passes.
 

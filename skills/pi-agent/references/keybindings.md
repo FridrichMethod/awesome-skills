@@ -6,7 +6,7 @@ All shortcuts are customizable in `~/.pi/agent/keybindings.json`, which uses the
 
 ## Key Format
 
-`modifier+key` where modifiers are `ctrl`, `shift`, `alt` (combinable, e.g. `ctrl+shift+x`, `alt+ctrl+1`). Keys:
+`modifier+key` where modifiers are `ctrl`, `shift`, `alt`, `super` (combinable, e.g. `ctrl+shift+x`, `alt+ctrl+1`, `super+k`, `ctrl+super+k`). `super` bindings need a terminal that reports the modifier separately, typically via the Kitty keyboard protocol. Keys:
 
 - Letters `a-z`, digits `0-9`
 - Special: `escape`/`esc`, `enter`/`return`, `tab`, `space`, `backspace`, `delete`, `insert`, `clear`, `home`, `end`, `pageUp`, `pageDown`, `up`, `down`, `left`, `right`
@@ -15,7 +15,9 @@ All shortcuts are customizable in `~/.pi/agent/keybindings.json`, which uses the
 
 ## Actions
 
-**`tui.editor.*` cursor** — `cursorUp` (up), `cursorDown` (down), `cursorLeft` (left, ctrl+b), `cursorRight` (right, ctrl+f), `cursorWordLeft` (alt+left, ctrl+left, alt+b), `cursorWordRight` (alt+right, ctrl+right, alt+f), `cursorLineStart` (home, ctrl+a), `cursorLineEnd` (end, ctrl+e), `jumpForward` (ctrl+]), `jumpBackward` (ctrl+alt+]), `pageUp`, `pageDown`.
+**`tui.editor.*` cursor** — `cursorUp` (up; browses older history at the top), `cursorDown` (down; browses newer history at the bottom), `historyPrevious` / `historyNext` (no defaults), `cursorLeft` (left, ctrl+b), `cursorRight` (right, ctrl+f), `cursorWordLeft` (alt+left, ctrl+left, alt+b), `cursorWordRight` (alt+right, ctrl+right, alt+f), `cursorLineStart` (home, ctrl+home, ctrl+a), `cursorLineEnd` (end, ctrl+end, ctrl+e), `jumpForward` (ctrl+]), `jumpBackward` (ctrl+alt+]), `pageUp` (pageUp, ctrl+pageUp), `pageDown` (pageDown, ctrl+pageDown).
+
+The dedicated `historyPrevious`/`historyNext` actions always change history entries regardless of cursor position in a multiline prompt, and explicit history bindings take precedence over application actions while the main editor is focused — binding `tui.editor.historyPrevious` to `ctrl+p` overrides model cycling in that context without changing `Ctrl+P` in selectors.
 
 **`tui.editor.*` deletion** — `deleteCharBackward` (backspace), `deleteCharForward` (delete, ctrl+d), `deleteWordBackward` (ctrl+w, alt+backspace), `deleteWordForward` (alt+d, alt+delete), `deleteToLineStart` (ctrl+u), `deleteToLineEnd` (ctrl+k).
 
@@ -25,7 +27,11 @@ All shortcuts are customizable in `~/.pi/agent/keybindings.json`, which uses the
 
 **`tui.select.*`** — `up`, `down`, `pageUp`, `pageDown`, `confirm` (enter), `cancel` (escape, ctrl+c).
 
-**`app.*` application** — `interrupt` (escape), `clear` (ctrl+c), `exit` (ctrl+d when editor empty), `suspend` (ctrl+z; none on Windows), `editor.external` (ctrl+g), `clipboard.pasteImage` (ctrl+v; alt+v on Windows).
+**`tui.altScreen.*` fullscreen viewport** (only in `--tui-mode fullscreen`) — `pageUp` (pageUp), `pageDown` (pageDown), `halfPageUp` / `halfPageDown` / `lineUp` / `lineDown` (no defaults), `previousPrompt` (ctrl+shift+up), `nextPrompt` (ctrl+shift+down), `search` (ctrl+shift+f), `searchNext` (enter, ctrl+g), `searchPrevious` (shift+enter, ctrl+shift+g), `searchClose` (escape), `top` (home), `bottom` (end).
+
+These target the primary transcript scroll region and take precedence over editor bindings, so in fullscreen mode unmodified `home`/`end`/`pageUp`/`pageDown` drive the transcript while their `ctrl` variants still drive the editor; outside fullscreen both variants drive the editor. Rebind normally to change the routing (`"tui.altScreen.pageUp": "ctrl+pageUp"`), or set `[]` to disable a transcript shortcut. Mouse-wheel and two-finger input scroll the region under the pointer, OSC 8 hyperlinks open on click, and primary-button drag selects text and copies it (holding at an edge auto-scrolls).
+
+**`app.*` application** — `interrupt` (escape), `clear` (ctrl+c; clears the editor first, exits on a second press), `exit` (ctrl+d when editor empty), `suspend` (ctrl+z; none on Windows), `editor.external` (ctrl+g), `clipboard.pasteImage` (ctrl+v; alt+v on Windows — pastes images or text).
 
 **`app.session.*`** — `new`, `tree`, `fork`, `resume` (no defaults), `togglePath` (ctrl+p), `toggleSort` (ctrl+s), `toggleNamedFilter` (ctrl+n), `rename` (ctrl+r), `delete` (ctrl+d), `deleteNoninvasive` (ctrl+backspace).
 
@@ -41,8 +47,8 @@ All shortcuts are customizable in `~/.pi/agent/keybindings.json`, which uses the
 
 ```json
 {
-  "tui.editor.cursorUp": ["up", "ctrl+p"],
-  "tui.editor.cursorDown": ["down", "ctrl+n"],
+  "tui.editor.historyPrevious": "ctrl+p",
+  "tui.editor.historyNext": "ctrl+n",
   "tui.editor.deleteWordBackward": ["ctrl+w", "alt+backspace"]
 }
 ```

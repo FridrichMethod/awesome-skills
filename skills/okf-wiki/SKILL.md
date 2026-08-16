@@ -4,7 +4,7 @@ description: "Scaffold a new Open Knowledge Format (OKF) knowledge base and popu
 license: MIT
 metadata:
   author: jamditis
-  version: "0.8.0"
+  version: "0.8.1"
   okf_spec: v1
 ---
 

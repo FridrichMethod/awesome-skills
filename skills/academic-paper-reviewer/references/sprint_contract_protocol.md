@@ -19,7 +19,7 @@ This protocol exists to destroy the "read the paper, then rationalise the scorin
 
 ## 2. Two-phase reviewer call
 
-For each reviewer in `range(panel_size)`:
+For each role-separated review seat in `range(panel_size)`, using a fresh invocation context and withholding peer outputs until the seat commits. These are execution requirements whose actual status must be recorded in `review-panel-provenance/1.0`; they do not establish independent error processes:
 
 1. **Prepare contract.** Load template from `shared/contracts/<domain>/<mode>.json`. Populate `generated_at` (ISO-8601 UTC). Optionally populate `agent_amendments` (field-specific notes from `field_analyst_agent`). Run `check_sprint_contract.py` on the in-memory object; abort on error.
 2. **Phase 1 call (paper-content-blind).**
@@ -34,6 +34,13 @@ For each reviewer in `range(panel_size)`:
 5. **Phase 2 output lint.** Run `scripts/check_phase_conformance.py --contract <C> --role <dispatch-role> --phase1 <P1> --phase2 <P2> --manuscript <paper> --metadata <metadata.json>` before synthesis. Exit 3 emits `[PROTOCOL-VIOLATION: phase_conformance=<check>]` and makes the seat unusable; exit 2 is an infra abort. See §5.
 6. **Panel cardinality invariant.** After all reviewers complete, verify `len(usable_phase2_outputs) == panel_size`. If any reviewer was dropped, emit `[PANEL-SHRUNK]` and abort the round (see §6).
 7. Feed usable Phase 2 outputs into synthesizer (see §7).
+
+The Schema 6 adapter preserves the sprint vocabulary exactly: each contract
+dimension becomes one `criterion_judgements` row with
+`judgement_scale: sprint_contract` and the unchanged
+`block|warn|pass|not_assessed` value. It never maps sprint labels to the
+narrative rubric. Package calibration remains `NOT_CALIBRATED`; a seat card
+does not need a second calibration field inside the pinned sprint grammar.
 
 ## 3. Contract injection
 
@@ -52,6 +59,12 @@ Run these as `scripts/check_phase_conformance.py --contract <C> --role <dispatch
 - Paraphrase paragraph count ≥ `measurement_procedure.paraphrase_minimum_dimensions` (for `"all"`, one paragraph per dimension; for integer `k`, at least `k` paragraphs each matching a distinct dimension).
 - `## Scoring Plan` has one `### <Dn>: <name>` subsection per dimension whose `eligible_roles` includes this dispatch role, and none for ineligible dimensions.
 - Every subsection uses the pinned, unbulleted line grammar exactly once: `dimension_id:`, `what_to_look_for:`, `what_triggers_block:`, `what_triggers_warn:`; a mandatory dimension also requires `what_triggers_fatal:`, which is forbidden on non-mandatory dimensions. Copy each dimension ID and name exactly from the contract. For a non-mandatory dimension, omit the entire `what_triggers_fatal:` line; never emit that key with `NOT_APPLICABLE`, `none`, or another sentinel. The block/warn/fatal trigger strings are pairwise distinct.
+- In a #684 criteria-aware call, Phase 1 also receives the pointer-only manifest,
+  Target Criteria Brief, and exact role marker. After Scoring Plan it emits one
+  `criteria_parallel_conflicts:` line and reproduces the marker byte-for-byte;
+  this is a pointer commitment, not manuscript applicability. An unbound call
+  instead emits exactly `criteria_binding_unavailable` and makes no venue-fit
+  claim. Neither form adds an H2 or copies criterion prose.
 - `check_phase_conformance.py` searches every 12-word full-manuscript shingle against Phase 1 after whitespace normalization and case-folding. A hit fails unless it also occurs in the actual metadata-envelope values or the contract JSON. `--manuscript` and `--metadata` are mandatory, so this family cannot be skipped.
 
 Terminal Phase 1 structural preflight (mandatory). Silently inspect the exact text you are about to send:
@@ -60,7 +73,11 @@ Terminal Phase 1 structural preflight (mandatory). Silently inspect the exact te
 3. Each scoring-plan subsection contains exactly one unbulleted `dimension_id:`, `what_to_look_for:`, `what_triggers_block:`, and `what_triggers_warn:` line; its block and warn texts are distinct.
 4. In every non-mandatory subsection, the literal key `what_triggers_fatal:` occurs zero times; delete the entire line and any sentinel if it appears. In every mandatory subsection, that key occurs exactly once and its text is distinct from block and warn.
 5. No `## Dimension Scores`, `## Review Body`, `## Failure Condition Checks`, `## Editorial Decision`, `dimension_scores`, `review_body`, or bare `editorial_decision=` appears, and no manuscript-specific claim appears.
-6. The final nonblank output line is exactly `[CONTRACT-ACKNOWLEDGED]`.
+6. Binding: a criteria-aware call contains exactly the supplied marker and one
+   `criteria_parallel_conflicts:` line matching the brief; an unbound call
+   contains exactly `criteria_binding_unavailable`. Neither form states
+   manuscript applicability.
+7. The final nonblank output line is exactly `[CONTRACT-ACKNOWLEDGED]`.
 Do not send until every check holds.
 
 **Lint is structural, not semantic.** A reviewer can in principle pass this lint by emitting generic boilerplate triggers — semantic judgement (whether triggers are concrete and discriminating) is deferred to a post-v3.6.2 judge-agent layer.

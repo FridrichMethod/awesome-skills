@@ -11,9 +11,11 @@ Themes are JSON files defining TUI colors.
 - Project: `.pi/themes/*.json` (only after project trust)
 - Packages: `themes/` directories or `pi.themes` entries in `package.json`
 - Settings: `themes` array
-- CLI: `--theme <path>` (repeatable)
+- CLI: `--theme <path>` (repeatable) loads a theme file; `--use-theme <name[/name]>` selects the initial theme for one run
 
 Disable discovery with `--no-themes`. Select via `/settings` or `{"theme": "my-theme"}`. On first run Pi detects the terminal background and defaults to `dark` or `light`. Editing the active custom theme file hot-reloads it for immediate feedback.
+
+`--use-theme light` starts a run with that theme without changing the saved setting; `--use-theme light/dark` uses `lightTheme/darkTheme` syntax to follow terminal appearance. Picking another theme later in `/settings` applies immediately and saves normally.
 
 ## Format
 
@@ -28,13 +30,13 @@ Disable discovery with `--no-themes`. Select via `/settings` or `{"theme": "my-t
 
 - `name` is required, must be unique, and must not contain `/`.
 - `vars` is optional — reusable colors referenced by name from `colors`.
-- `colors` must define all 51 tokens. `thinkingMax` is the only optional one and falls back to `thinkingXhigh`.
+- `colors` must define all 51 required tokens. Optional tokens fall back: `thinkingMax` → `thinkingXhigh`, `scrollbarThumb` and `searchMatchBg` → `selectedBg`, `searchMatchText` → `text`.
 - `$schema` enables editor auto-completion and validation.
 
-## Color Tokens (51)
+## Color Tokens (51 required + 4 optional)
 
 - **Core UI (11)**: `accent`, `border`, `borderAccent`, `borderMuted`, `success`, `error`, `warning`, `muted`, `dim`, `text`, `thinkingText`
-- **Backgrounds & content (11)**: `selectedBg`, `userMessageBg`, `userMessageText`, `customMessageBg`, `customMessageText`, `customMessageLabel`, `toolPendingBg`, `toolSuccessBg`, `toolErrorBg`, `toolTitle`, `toolOutput`
+- **Backgrounds & content (11 required + 3 optional)**: `selectedBg`, `userMessageBg`, `userMessageText`, `customMessageBg`, `customMessageText`, `customMessageLabel`, `toolPendingBg`, `toolSuccessBg`, `toolErrorBg`, `toolTitle`, `toolOutput`, plus optional `scrollbarThumb` (fullscreen scrollbar thumb), `searchMatchBg`, and `searchMatchText` (transcript search). Non-current search matches render `searchMatchText` on `searchMatchBg` with an underline; the current match reverses that pair and uses bold.
 - **Markdown (10)**: `mdHeading`, `mdLink`, `mdLinkUrl`, `mdCode`, `mdCodeBlock`, `mdCodeBlockBorder`, `mdQuote`, `mdQuoteBorder`, `mdHr`, `mdListBullet`
 - **Tool diffs (3)**: `toolDiffAdded`, `toolDiffRemoved`, `toolDiffContext`
 - **Syntax (9)**: `syntaxComment`, `syntaxKeyword`, `syntaxFunction`, `syntaxVariable`, `syntaxString`, `syntaxNumber`, `syntaxType`, `syntaxOperator`, `syntaxPunctuation`

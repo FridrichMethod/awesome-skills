@@ -69,7 +69,16 @@ Responses have the shape `{"type":"response","command":"...","success":true|fals
 
 `agent_start`; `agent_end` (`messages`, `willRetry`); `agent_settled` (nothing will continue automatically — no retry, compaction retry, or queued continuation); `turn_start` / `turn_end`; `message_start` / `message_update` / `message_end`; `bash_execution_update`; `tool_execution_start` / `_update` / `_end`; `queue_update`; `compaction_start` / `compaction_end`; `auto_retry_start` / `auto_retry_end`; `summarization_retry_scheduled` / `summarization_retry_attempt_start` / `summarization_retry_finished`; `extension_error`.
 
-`message_update.assistantMessageEvent` types: `start`, `text_start`, `text_delta`, `text_end`, `thinking_start`, `thinking_delta`, `thinking_end`, `toolcall_start`, `toolcall_delta`, `toolcall_end`, `done` (`stop`/`length`/`toolUse`), `error` (`aborted`/`error`).
+`message_update.assistantMessageEvent` types: `text_start`, `text_delta`, `text_end`, `thinking_start`, `thinking_delta`, `thinking_end`, `toolcall_start`, `toolcall_delta`, `toolcall_end`.
+
+`message_update` is delta-only — it carries a top-level `usage` object plus the delta event, and omits both the former cumulative `message` field and `assistantMessageEvent.partial`:
+
+```json
+{"type":"message_update","usage":{"input":100,"output":1,"cacheRead":0,"cacheWrite":0,"totalTokens":101,"cost":{}},
+ "assistantMessageEvent":{"type":"text_delta","contentIndex":0,"delta":"Hello "}}
+```
+
+`usage` is the latest cumulative provider-reported usage and may stay zero until completion. Clients needing a live partial message must assemble it from `message_start` and subsequent events using `contentIndex`; treat `message_end.message` as authoritative. For tool calls, buffer `toolcall_delta.delta` — `toolcall_end.toolCall` holds the completed call.
 
 `compaction_start`/`compaction_end` carry `reason` (`"manual"`, `"threshold"`, `"overflow"`). On overflow success, `willRetry` is `true` and the prompt is retried. Aborted compaction returns `result: null, aborted: true`; failed compaction returns `result: null, aborted: false` plus `errorMessage`. `tool_execution_update.partialResult` is cumulative, so clients can replace their display each update.
 

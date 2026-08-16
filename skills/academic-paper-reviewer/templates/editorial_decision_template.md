@@ -16,12 +16,32 @@ This template is used by `editorial_synthesizer_agent` to produce the final Edit
 - **Decision Date**: [Decision date]
 - **Review Round**: [Round N]
 
-## Review Panel Provenance (#540)
+## Review Panel Provenance (#540/#740)
 
-[`reviewer_full` letters only — other modes describe their own panel composition and omit this block. Exactly one of:
-- "Reviewer 2 ran on [cross-model family] via the cross-model reviewer track; the remaining reviewers ran on [primary family]. Cross-family splits are visible in the panel matrix (no aggregate is computed)." /
-- "All five reviewer personas ran on a single model family ([family]). Persona diversity is not model diversity — blind spots may be correlated across reviewers (Ren et al. 2026, arXiv:2607.13104 §5.2)." /
-- "Cross-model dispatch for Reviewer 2 failed ([reason]); the slot fell back to [primary family]. Single-family caveat applies."]
+[`reviewer_full` letters only — other modes describe their own panel composition and omit this block. Build the artifact only from the exact EIC/R1/R2/R3/DA roster bound to the canonical `reviewer_full` contract, then validate the closed Schema 6 carrier against the artifact's exact raw bytes and deterministic replay according to `references/review_panel_provenance_protocol.md`; render its values without inference.]
+
+- **Typed artifact**: [path or passport reference]
+- **Artifact SHA-256**: [raw bytes `artifact_sha256`]
+- **Panel ID**: [artifact `panel_id`]
+- **Normalized manifest SHA-256**: [artifact `normalized_manifest_sha256`]
+- **Execution topology SHA-256**: [artifact `execution_topology_sha256`]
+- **Fresh-context scope**: `within_panel_attempt_only` [does not compare retries or prior rounds]
+
+| Seat | Role ID | Actor type | Context ID | Peer outputs visible | Model family | Provider | Human reviewer ID |
+|---|---|---|---|---|---|---|---|
+| [artifact seat] | [value or `unknown`] | [value] | [value or `unknown`] | [value or `unknown`] | [value or `unknown`] | [value or `unknown`] | [value or `unknown`] |
+
+| Provenance axis | Status (`true` / `false` / `unknown`) |
+|---|---|
+| Role-separated | [artifact `axes.role_separated`] |
+| Within-panel invocation-context separation | [artifact `axes.fresh_context`] |
+| Blind to peer outputs | [artifact `axes.blind_to_peer_outputs`] |
+| Model-family distinct | [artifact `axes.model_family_distinct`] |
+| Provider distinct | [artifact `axes.provider_distinct`] |
+| Human-reviewer distinct | [artifact `axes.human_distinct`] |
+
+- **Binary independence claim**: Not computed. Persona or role diversity proves only `role_separated`; do not relabel the panel as independent.
+- **Correlated-error disclosure**: [Render artifact `correlated_error_disclosure.text` verbatim when `required: true`; otherwise write "Not required by the model-family axis; no conclusion is implied for the other axes."]
 
 ---
 
@@ -33,17 +53,18 @@ This template is used by `editorial_synthesizer_agent` to produce the final Edit
 
 ---
 
-## Top Blocking Issues * (0–3, ranked)
+## Blocking Issues * (0–3, immutable source order)
 
-<!-- #574 E7: the 0-3 issues that currently BLOCK acceptance, most severe first,
+<!-- #574 E7: the 0-3 issues that currently BLOCK acceptance, in immutable
+     roadmap source order,
      each with its evidence anchor and the roadmap item that resolves it, so the
      author does not have to synthesize the blockers across five long reports.
      ZERO rows is valid for a genuine Accept — never manufacture blockers to
      fill the section. -->
 
-| Rank | Blocking issue | Source reviewer(s) | Evidence anchor | Resolving roadmap item |
-|------|----------------|--------------------|-----------------|------------------------|
-| 1 | [Issue] | [EIC/R1/R2/R3/DA] | [typed — `<type>: <locator>`, transported from the finding (#574 A2)] | [Rn — the Roadmap's own ID syntax, e.g. R1] |
+| Transport ref | Blocking issue | Source reviewer(s) | Evidence anchor | Resolving roadmap item |
+|---------------|----------------|--------------------|-----------------|------------------------|
+| R1 | [Issue] | [EIC/R1/R2/R3/DA] | [typed — `<type>: <locator>`, transported from the finding (#574 A2)] | [REV-n] |
 
 ---
 
@@ -55,6 +76,7 @@ This template is used by `editorial_synthesizer_agent` to produce the final Edit
 | Reviewer 1 | [Methodology expert identity] | [Accept/Minor/Major/Reject] | [1-5] |
 | Reviewer 2 | [Domain expert identity] | [Accept/Minor/Major/Reject] | [1-5] |
 | Reviewer 3 | [Cross-disciplinary expert identity] | [Accept/Minor/Major/Reject] | [1-5] |
+| Devil's Advocate | Fixed adversarial seat | N/A — findings only | N/A — per-finding only |
 
 ---
 
@@ -62,11 +84,11 @@ This template is used by `editorial_synthesizer_agent` to produce the final Edit
 
 ### Points of Agreement (Consensus)
 
-**[CONSENSUS-4]** (All reviewers agree):
+**[CONSENSUS-4]** (All 4 non-DA scoring reviewers agree):
 1. [Consensus content — cite relevant passages from each reviewer's report]
 2. [...]
 
-**[CONSENSUS-3]** (3/4 reviewers agree, the 4th **silent**):
+**[CONSENSUS-3]** (3/4 non-DA scoring reviewers agree, the 4th **silent**):
 1. [Consensus content — indicate which 3 agree and name the silent 4th. If the 4th *disputes* the sub-claim rather than being silent, it is a SPLIT (see Points of Disagreement), not a CONSENSUS-3.]
 2. [...]
 
@@ -100,18 +122,18 @@ Requirements:
 
 [Only needed for Minor Revision and Major Revision]
 
-| # | Revision Item | Sub-Claim(s) | Severity | Evidence Anchor | Confidence | Source Reviewer | Section | Estimated Effort |
-|---|--------------|--------------|----------|-----------------|------------|----------------|---------|-----------------|
-| R1 | [Description] | [SC-n] | [transported: critical/major (+ fallback tag if any)] | [`<type>: <locator>`] | [n — basis] | [EIC/R1/R2/R3] | [Section name] | [X days] |
-| R2 | [Description] | [SC-n] | [transported] | [transported] | [transported] | [Source] | [Section name] | [X days] |
-| R3 | [Description] | [SC-n] | [transported] | [transported] | [transported] | [Source] | [Section name] | [X days] |
+| Transport ref | Revision Item | Sub-Claim(s) | Severity | Evidence Anchor | Confidence | Source Reviewer | Obligation class | Cost scope | Bounded consequence |
+|---|--------------|--------------|----------|-----------------|------------|----------------|------------------|------------|---------------------|
+| R1 | [Description] | [SC-n] | [transported: critical/major (+ fallback tag if any)] | [`<type>: <locator>`] | [n — basis] | [EIC/R1/R2/R3] | must_fix | [sentence/section/re-analysis/new-data/other + locator] | [closed code + target] |
+| R2 | [Description] | [SC-n] | [transported] | [transported] | [transported] | [Source] | must_fix | [typed scope] | [closed consequence] |
+| R3 | [Description] | [SC-n] | [transported] | [transported] | [transported] | [Source] | must_fix | [typed scope] | [closed consequence] |
 ...
 
 The `Sub-Claim(s)` column carries the Step 1b `sub_claim_id`(s) the item traces to (e.g. `SC-1`); a DA-CRITICAL or non-decomposed item uses `—`.
 
 ### Required Item Details
 
-> **Ordinal contract (#576 §5.1):** `R<n>` numbering here FOLLOWS the Revision Roadmap's `must_fix` order — the letter and the Roadmap are the same synthesizer emission, so the nth Required block corresponds to the Roadmap's nth `must_fix` item, and the blocks appear as exactly the contiguous sequence `R1..Rn` (no gaps, duplicates, or extras). This is the derivation basis for the Stage 3' criterion inheritance join (`letter_item_ref`) and is checker-recomputed; a violated sequence degrades the whole letter criterion layer (`[CRITERIA-LAYER-ABSENT: letter/roadmap ordinal mismatch]`). The pin covers the R side ONLY — the Suggested table legitimately mixes P2/P3 items, so `S<n>` carries no ordinal contract. The **Acceptance criteria** field stays a SINGLE-LINE bullet (`- **Acceptance criteria**: <text>`) — the machine grammar `scripts/check_re_review_synthesis.py` parses.
+> **Ordinal contract (#576/#670):** `R<n>` is a transport reference, never a work rank. Numbering follows the immutable Revision Roadmap's deterministic source-traceability order filtered to `obligation_class == must_fix`; it never reads author-selected display order or author triage. Required blocks are exactly `R1..Rn` with no gaps, duplicates, or extras. The **Acceptance criteria** field stays a SINGLE-LINE bullet (`- **Acceptance criteria**: <text>`) for `scripts/check_re_review_synthesis.py`.
 
 **R1: [Title]**
 - **Problem**: [Specific description]
@@ -126,41 +148,33 @@ The `Sub-Claim(s)` column carries the Step 1b `sub_claim_id`(s) the item traces 
 
 ## Suggested Revisions (Should Fix)
 
-| # | Revision Item | Sub-Claim(s) | Severity | Evidence Anchor | Confidence | Source Reviewer | Priority | Section | Expected Improvement |
-|---|--------------|--------------|----------|-----------------|------------|----------------|----------|---------|---------------------|
-| S1 | [Description] | [SC-n] | [transported] | [transported] | [transported] | [Source] | P2 | [Section name] | [What it improves] |
-| S2 | [Description] | [SC-n] | [transported] | [transported] | [transported] | [Source] | P2/P3 | [Section name] | [What it improves] |
+| Transport ref | Revision Item | Sub-Claim(s) | Severity | Evidence Anchor | Confidence | Source Reviewer | Obligation class | Cost scope | Bounded consequence |
+|---|--------------|--------------|----------|-----------------|------------|----------------|------------------|------------|---------------------|
+| S1 | [Description] | [SC-n] | [transported] | [transported] | [transported] | [Source] | should_fix | [typed scope] | [closed consequence + target] |
+| S2 | [Description] | [SC-n] | [transported] | [transported] | [transported] | [Source] | consider | [typed scope] | [closed consequence + target] |
 ...
 
 ---
 
 ## Revision Roadmap *
 
-### Priority 1 — Structural Revisions (Estimated total effort: X days)
-- [ ] R1: [Task description — linked to Required Revisions above]
-- [ ] R2: [Task description]
-- [ ] R3: [Task description]
+### Source-traceability checklist
 
-### Priority 2 — Content Supplementation (Estimated total effort: X days)
-- [ ] S1: [Task description]
-- [ ] S2: [Task description]
+> Keep this in immutable source order. Do not suggest a work order. The author
+> chooses `will_address`, `wont_address`, or `not_on_point` later in the
+> separate author-adjudication checkpoint.
 
-### Priority 3 — Text and Formatting (Estimated total effort: X days)
-- [ ] [Merged Minor Issues from all reviewers]
-- [ ] [Language polishing items]
-- [ ] [Citation format corrections]
-
-### Total Estimated Effort
-- **Minor Revision**: [X-Y days]
-- **Major Revision**: [X-Y weeks]
+- [ ] R1 — obligation `must_fix`: [Task description]
+- [ ] R2 — obligation `must_fix`: [Task description]
+- [ ] S1 — obligation `should_fix`: [Task description]
+- [ ] S2 — obligation `consider`: [Task description]
 
 ---
 
-## Revision Deadline
+## Journal-Supplied Deadline (Optional Transport)
 
-- **Recommended deadline**: [Date]
-- **Basis**: [Minor: 2-4 weeks / Major: 6-8 weeks]
-- **Extension policy**: [If extension is needed, notify 1 week before the deadline]
+- **Exact deadline from source letter**: [verbatim date, or `NOT PROVIDED`]
+- Do not infer a deadline, duration, or work estimate.
 
 ---
 
@@ -198,7 +212,7 @@ After careful consideration, we are unable to accept your manuscript for publica
 
 ## Appendix: Full Reviewer Reports
 
-[Attach all 4 complete reviewer reports for the author's reference]
+[Attach all 5 complete reviewer reports — four card-backed scoring reports plus the fixed Devil's Advocate — for the author's reference]
 ```
 
 ---
@@ -209,17 +223,13 @@ After careful consideration, we are unable to accept your manuscript for publica
 
 1. **Actionability**: Every item is a concrete task, not an abstract suggestion
 2. **Traceability**: Every item can be traced back to specific reviewer comments
-3. **Prioritization**: Priority 1 > 2 > 3; authors can process in order
-4. **Time estimation**: Helps authors plan their revision timeline
-5. **Compatibility**: Format can be directly used as `academic-paper` revision mode input
+3. **Independent fields**: Transport reviewer severity unchanged; record the
+   editorial obligation, typed cost surface, and bounded consequence separately
+4. **No work ranking**: Immutable rows use source-traceability order; only the
+   author may select a presentation view or decide what to address
+5. **Exact scope**: Every item proposes exact block/operation targets; proposal
+   is not write authority
+6. **Compatibility**: Emit the closed `revision-roadmap/1.0` machine artifact
+   for `academic-paper` revision mode
 
-### Severity-to-Priority Mapping
-
-| Severity | Priority | Revision Type |
-|----------|----------|--------------|
-| Critical | P1 | Required Revision |
-| Major | P1/P2 | Required / Strongly Suggested |
-| Minor | P2/P3 | Suggested |
-| Editorial (not a finding severity — formatting/language items, Schema 7 `type`) | P3 | Optional |
-
-Finding severity is the Schema 6 enum (`critical` / `major` / `minor`) transported from the reviewer cards (#574 A3) — the roadmap never re-derives it.
+Finding severity is the Schema 6 enum (`critical` / `major` / `minor`), transported from the reviewer cards (#574 A3). `obligation_class` is a separate editorial gate and is never derived as a work rank from severity.

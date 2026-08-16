@@ -33,6 +33,8 @@ Base (from `pi-ai`):
 - `ToolResultMessage` — `toolCallId`, `toolName`, `content: (Text|Image)[]`, optional `details`, optional `usage` (nested LLM work performed by the tool), `isError`, `timestamp`
 - `Usage` — `input`, `output`, `cacheRead`, `cacheWrite`, `totalTokens`, and `cost` with the same four fields plus `total`
 
+The exported pi-ai `StopReason` type also includes `"pending"`, but that value is reserved for partial messages in streaming events. Terminal `done`/`error` messages replace it with a completion reason before Pi persists the assistant message, so `"pending"` should never appear in session JSONL.
+
 Extended (from `pi-coding-agent`):
 
 - `BashExecutionMessage` — `command`, `output`, `exitCode`, `cancelled`, `truncated`, optional `fullOutputPath`, optional `excludeFromContext` (true for `!!`)

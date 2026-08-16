@@ -6,7 +6,11 @@ Pi uses the [Kitty keyboard protocol](https://sw.kovidgoyal.net/kitty/keyboard-p
 
 ## Works Out of the Box
 
-Kitty and iTerm2. Apple Terminal enables enhanced key reporting when available; if it still sends plain Return for `Shift+Enter`, Pi uses a local macOS modifier fallback — which only works when Pi runs on the same Mac, not over SSH. VS Code 1.109.5+ also works by default.
+Kitty and iTerm2 (regular TUI mode). Apple Terminal enables enhanced key reporting when available; if it still sends plain Return for `Shift+Enter`, Pi uses a local macOS modifier fallback — which only works when Pi runs on the same Mac, not over SSH. VS Code 1.109.5+ also works by default.
+
+### iTerm2 in fullscreen TUI mode
+
+Pi owns the viewport, so iTerm2 sends mouse-wheel reports instead of scrolling its native scrollback. With iTerm2's default fast-trackpad behavior those reports can lose most of an accelerated wheel delta. If fast gestures move only ~one line at a time, open **iTerm2 → Settings → Advanced**, find **Trackpad scrolls fast?** and set it to **No**. This is an iTerm2-wide workaround (tracked in iTerm2 issue 9619). Inline images also render as text placeholders in fullscreen mode because iTerm2's inline-image protocol cannot delete or crop placements during application-owned scrolling.
 
 ## Ghostty
 
@@ -17,6 +21,8 @@ keybind = alt+backspace=text:\x1b\x7f
 ```
 
 Older Claude Code versions may have added `keybind = shift+enter=text:\n`. That sends a raw linefeed, which inside Pi is indistinguishable from `Ctrl+J`, so tmux and Pi no longer see a real `shift+enter` event. Remove it unless you still need it for Claude Code in tmux. Pi binds `Ctrl+J` as a default newline alias, so `Shift+Enter` keeps working through that remap without extra Pi configuration.
+
+In fullscreen TUI mode links stay clickable, but Ghostty hides its hover underline and lower-left URL preview while Pi captures mouse input. Hold `Shift+Command` (macOS) or `Shift+Ctrl` (Linux) for Ghostty's native link handling.
 
 ## WezTerm
 

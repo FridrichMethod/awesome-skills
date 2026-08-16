@@ -304,7 +304,7 @@ description_last_audit:           <round_id> | "none" | null  # null only when s
 
 2. **Not acquired ⇒ literal `"none"` audit sentinel.** `source_acquired: false` REQUIRES `description_last_audit` to be the literal string `"none"`. Spec § 3.1 line 120 reads "REQUIRES description_last_audit: none" (sentinel); the yaml vocabulary at line 111 lists `<round_id> | none` with no null alternative. `null` is rejected by both the JSON Schema rule-#2 then-branch and the trust-chain lint when `source_acquired: false` (round-6 codex P2 closure). When `source_acquired: true` and the entry is unaudited, `null` is fine — the strict-`"none"` rule applies only to the rule-#2 case.
 
-3. **NEVER emit `human_read_source` or `human_read_at` on the entry.** Those keys are USER-OWNED and live in the §3.6 peer file `<session>_human_read_log.yaml`, set only by the user-issued `/ars-mark-read <citation_key>` command. The entry schema is `additionalProperties: false` and adapter-owned (per `academic-pipeline/references/literature_corpus_consumers.md`); emitting these keys from `bibliography_agent` would mutate `literature_corpus[]` and break the v3.6.5 corpus-consumer protocol. The orchestrator joins the peer file at frontmatter-read time to derive the human-read signal.
+3. **NEVER emit `human_read_source` or `human_read_at` on the entry.** Those keys are USER-OWNED and live in the §3.6 peer file `<session>_human_read_log.yaml`, set only by the user-issued `/ars-mark-read <citation_key> --scope <level>` command. The entry schema is `additionalProperties: false` and adapter-owned (per `academic-pipeline/references/literature_corpus_consumers.md`); emitting these keys from `bibliography_agent` would mutate `literature_corpus[]` and break the v3.6.5 corpus-consumer protocol. The orchestrator joins the peer file at frontmatter-read time to derive the human-read signal.
 
 ### Refusal-on-uncertain rule
 
@@ -405,6 +405,16 @@ This path differs intentionally from contamination matching:
 Use `RetractionStatusCache`'s separate `retraction_status_cache_v1` namespace.
 A row over 30 days old requires live revalidation before it can be strict
 eligible. Browser fallback must not be used to evade API limits.
+
+## Tortured-Phrase Advisory Production (#660)
+
+This #660 path is a deterministic local metadata enricher, not a search or source-retrieval path. Given an exact local `literature_corpus[]` passport plus an explicit snapshot/manifest pair, invoke `scripts/tortured_phrase_screening.py enrich-passport` with distinct input and output paths. The command writes a separate passport, preserves every other signal and legacy row, and leaves consumers read-only; never update a passport in place. Consumers validate and render the resulting rows but do not re-run the matcher.
+
+Scan only each entry's literal local `title` and optional `abstract` strings. Do not dereference `source_pointer`. Emit exactly one current v1.2 `tortured_phrase_match` row for `cited_title` and one for `cited_abstract`; an absent abstract is an explicit `not_checked` / `unresolved` row with `ABSTRACT_MISSING`, while a present whitespace-only abstract uses `ABSTRACT_EMPTY`. A manual corpus entry receives no exemption. Missing, invalid, or unavailable snapshot state stays explicit and cannot become a checked zero.
+
+The only supported supplies are a user-supplied or clearly synthetic fixture snapshot plus its detached manifest. Verify the manifest-declared `snapshot_sha256` against the exact raw snapshot bytes, retain the detached-manifest hash, and retain its rights declaration. This repository supplies no native PPS content, PPS importer, network fetcher, or redistributed phrase list. This #660 path uses no live model, external API, human or model judge, ambient clock, source file timestamp, or Git/network time; the caller must provide the required RFC 3339 timestamps.
+
+Every row is `HEURISTIC-ADVISORY` and `UNMEASURED`. Describe a positive only as a **phrase-list match requiring review**; a checked zero means only that no match was observed on the named metadata surface. Never infer AI, author, papermill, misconduct, or other origin; contextual validity; false-positive/false-negative rate, accuracy, precision, recall, or coverage; cleanliness; or publisher acceptance. Do not propose replacement text, change citation selection or ranking, mint a marker, evaluate terminal policy, alter an integrity gate, or rewrite metadata. The formatter composes all rows into the one existing `Bibliographic Integrity Advisories` section.
 
 ## APA 7.0 Quick Reference
 

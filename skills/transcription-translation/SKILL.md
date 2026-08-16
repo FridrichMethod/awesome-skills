@@ -118,10 +118,10 @@ Start-codon lists differ by table: table 1 = TTG/CTG/ATG; table 2 = ATT/ATC/ATA/
 
 ## translate() Parameters and Edge Cases
 
-Signature (the `Seq.translate` METHOD): `translate(table='Standard', stop_symbol='*', to_stop=False, cds=False, gap='-')`. Note the method defaults to `gap='-'`; only the module-level `Bio.Seq.translate(sequence, ...)` function defaults to `gap=None`.
+Signature (the `Seq.translate` METHOD): `translate(table='Standard', stop_symbol='*', to_stop=False, cds=False, gap='-')`. The `Seq` method defaults to `gap='-'`, while both the module-level `Bio.Seq.translate(sequence, ...)` function and `SeqRecord.translate()` default to `gap=None`.
 
 - **Partial codon** (length not a multiple of 3): emits a `BiopythonWarning` and SILENTLY drops the trailing 1-2 bases. Easy to miss in a pipeline. Under `cds=True` the same condition becomes a loud `TranslationError`.
-- **Gaps:** because the method default is `gap='-'`, a full gap codon `'---'` already translates to `'-'` (e.g. `Seq('GTG---GCCATT').translate()` -> `'V-AI'`, no error). A codon mixing gap and bases (`'TT-'`) raises `TranslationError`. Pass `gap=None` (or use the module-level function) to make any `-` invalidate its codon instead.
+- **Gaps:** because the `Seq` method defaults to `gap='-'`, a full gap codon `'---'` already translates to `'-'` (e.g. `Seq('GTG---GCCATT').translate()` -> `'V-AI'`, no error). A codon mixing gaps and bases (`'TT-'`) raises `TranslationError`. `SeqRecord.translate()` instead defaults to `gap=None`, so even a full `'---'` codon raises unless `gap='-'` is passed; mixed gap/base codons still raise. For alignment-derived CDS, preserve codon and alignment semantics with `alignment/multiple-alignment` or the project's established translation wrapper rather than assuming one gap-normalization policy.
 - **Dual-coding stop tables (27 Karyorelict, 28 Condylostoma, 31 Blastocrithidia Nuclear):** these reassign a stop codon so it codes both an amino acid and stop, so `to_stop=True` raises a `ValueError` (no single truncation point).
 
 ```python
@@ -220,6 +220,7 @@ Need to convert a sequence?
 │   ├── RNA back to DNA      -> seq.back_transcribe()
 │   └── template strand to mRNA -> seq.reverse_complement().transcribe()
 ├── DNA/RNA to protein?
+│   ├── alignment-derived CDS    -> alignment/multiple-alignment (codon-aware), or project wrapper
 │   ├── complete CDS to validate -> translate(cds=True) [loud on defects]
 │   ├── stop at first stop only  -> translate(to_stop=True)
 │   ├── non-standard organism    -> translate(table=N)  [pick from the table above]

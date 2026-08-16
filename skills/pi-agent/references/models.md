@@ -46,7 +46,7 @@ For `google-generative-ai` custom models, `baseUrl` is required (for example `ht
 
 ## Model Fields
 
-Required: `id`. Optional: `name` (defaults to `id`), `api`, `reasoning` (`false`), `thinkingLevelMap`, `input` (`["text"]` or `["text","image"]`), `contextWindow` (`128000`), `maxTokens` (`16384`), `cost` (zeros), `compat` (merged with provider `compat`).
+Required: `id`. Optional: `name` (defaults to `id`), `api`, `reasoning` (`false`), `thinkingLevelMap`, `input` (`["text"]` or `["text","image"]`), `contextWindow` (`128000`), `maxTokens` (`16384`), `samplingParams`, `cost` (zeros), `compat` (merged with provider `compat`).
 
 `/model`, `--list-models`, and the footer display entries by model `id`; `name` is used for `--model` pattern matching and secondary detail text.
 
@@ -60,6 +60,17 @@ Required: `id`. Optional: `name` (defaults to `id`), `api`, `reasoning` (`false`
   }
 }
 ```
+
+## Sampling Parameters
+
+`samplingParams` is a free-form object merged verbatim into every request body for that model, after the fields Pi sets itself — so its keys win, including over Pi's own `temperature`. Use it for sampling controls Pi does not model, such as llama.cpp `min_p` or vLLM `top_k`:
+
+```json
+{ "id": "deepseek-v4-flash",
+  "samplingParams": { "temperature": 1.0, "top_p": 0.95, "top_k": 0, "min_p": 0.0 } }
+```
+
+Only OpenAI-compatible APIs apply it (`openai-completions`, `openai-responses`, `azure-openai-responses`); other APIs ignore it. Treat it as the single source of sampling truth for a model. In `modelOverrides`, `samplingParams` merges per key with the base model's value.
 
 ## Thinking Level Map
 
@@ -82,7 +93,7 @@ Base-URL-only overrides keep all built-in models and existing auth:
 
 If `models` is included, built-in models are kept and custom models are upserted by `id` — a matching `id` replaces the built-in, a new `id` is added.
 
-`modelOverrides` customizes built-in and matching extension-registered models without replacing the provider list. Supported per-model fields: `name`, `reasoning`, `thinkingLevelMap`, `input`, `cost` (partial), `contextWindow`, `maxTokens`, `headers`, `compat`. Unknown model IDs are ignored; provider-level `baseUrl`/`headers` can be combined with it. If `models` is also defined, custom models merge after built-in overrides.
+`modelOverrides` customizes built-in and matching extension-registered models without replacing the provider list. Supported per-model fields: `name`, `reasoning`, `thinkingLevelMap`, `input`, `cost` (partial), `contextWindow`, `maxTokens`, `samplingParams` (merged per key), `headers`, `compat`. Unknown model IDs are ignored; provider-level `baseUrl`/`headers` can be combined with it. If `models` is also defined, custom models merge after built-in overrides.
 
 Example — opt a direct OpenAI GPT-5.6 model into the 1.05M context window (they default to `272000` to stay in the short-context pricing tier):
 
@@ -96,8 +107,8 @@ Example — opt a direct OpenAI GPT-5.6 model into the 1.05M context window (the
 
 ## OpenAI Compatibility Flags
 
-`supportsStore`, `supportsDeveloperRole`, `supportsReasoningEffort`, `supportsUsageInStreaming` (default `true`), `maxTokensField` (`max_completion_tokens` | `max_tokens`), `requiresToolResultName`, `requiresAssistantAfterToolResult`, `requiresThinkingAsText`, `requiresReasoningContentOnAssistantMessages`, `thinkingFormat` (`reasoning_effort`, `openrouter`, `deepseek`, `together`, `zai`, `qwen`, `chat-template`, `qwen-chat-template`), `chatTemplateKwargs`, `cacheControlFormat` (`anthropic`), `sendSessionAffinityHeaders` (default `false`), `sessionAffinityFormat` (`openai`, `openai-nosession`, `openrouter`), `supportsStrictMode`, `supportsOpenAIGrammarTools` (default `false`; the built-in catalog enables it for GPT-5+ on OpenAI, OpenAI Codex, Azure OpenAI, GitHub Copilot, opencode, Cloudflare AI Gateway), `deferredToolsMode` (`"kimi"`), `supportsLongCacheRetention` (default `true`; `prompt_cache_retention: "24h"`), `openRouterRouting`, `vercelGatewayRouting`.
+`supportsStore`, `supportsDeveloperRole`, `supportsReasoningEffort`, `supportsUsageInStreaming` (default `true`), `supportsFinishReason` (default `true`; `false` makes Pi infer `stop`/`toolUse` when the stream ends without one), `maxTokensField` (`max_completion_tokens` | `max_tokens`), `requiresToolResultName`, `requiresAssistantAfterToolResult`, `requiresThinkingAsText`, `requiresReasoningContentOnAssistantMessages`, `thinkingFormat` (`reasoning_effort`, `openrouter`, `deepseek`, `together`, `baseten`, `zai`, `qwen`, `chat-template`, `qwen-chat-template`), `chatTemplateKwargs`, `chatTemplateArgs` (`chat_template_args` values for `thinkingFormat: "baseten"`), `cacheControlFormat` (`anthropic`), `sendSessionAffinityHeaders` (default `false`), `sessionAffinityFormat` (`openai`, `openai-nosession`, `openrouter`), `supportsStrictMode`, `supportsOpenAIGrammarTools` (default `false`; the built-in catalog enables it for GPT-5+ on OpenAI, OpenAI Codex, Azure OpenAI, GitHub Copilot, opencode, Cloudflare AI Gateway), `deferredToolsMode` (`"kimi"`), `supportsLongCacheRetention` (default `true`; `prompt_cache_retention: "24h"`), `openRouterRouting`, `vercelGatewayRouting`.
 
-Thinking-format notes: `openrouter` uses `reasoning: { effort }`; `together` uses `reasoning: { enabled }` plus `reasoning_effort` when `supportsReasoningEffort`; `qwen` uses top-level `enable_thinking`; `qwen-chat-template` targets local Qwen servers needing `chat_template_kwargs.enable_thinking` and `preserve_thinking`; `chat-template` plus `chatTemplateKwargs` targets vLLM/Hugging Face templates, e.g. `chatTemplateKwargs: { "thinking": { "$var": "thinking.enabled" } }` for DeepSeek V3.x. `$var` accepts `thinking.enabled` or `thinking.effort`.
+Thinking-format notes: `openrouter` uses `reasoning: { effort }`; `together` uses `reasoning: { enabled }` plus `reasoning_effort` when `supportsReasoningEffort`; `qwen` uses top-level `enable_thinking`; `qwen-chat-template` targets local Qwen servers needing `chat_template_kwargs.enable_thinking` and `preserve_thinking`; `chat-template` plus `chatTemplateKwargs` targets vLLM/Hugging Face templates, e.g. `chatTemplateKwargs: { "thinking": { "$var": "thinking.enabled" } }` for DeepSeek V3.x. `baseten` plus `chatTemplateArgs` targets providers exposing toggle controls through `chat_template_args`, optionally with top-level `reasoning_effort`. `$var` accepts `thinking.enabled` or `thinking.effort`.
 
 `openRouterRouting` is sent as-is in the OpenRouter `provider` field (`only`, `order`, `ignore`, `sort`, `max_price`, `quantizations`, `zdr`, …). `vercelGatewayRouting` takes `only`/`order`.

@@ -21,7 +21,7 @@ When an interactive session starts in such a project with no saved decision for 
 
 Trusting a project allows Pi to load `.pi/settings.json`, `.pi` resources (extensions, skills, prompt templates, themes, system prompt files), install missing project packages configured through project settings, and execute project-local and project package-managed extensions.
 
-Declining skips protected resources. `AGENTS.md` and `CLAUDE.md` context files load regardless of trust unless context loading is disabled. Before trust resolves, Pi loads only context files, user/global extensions, and CLI `-e` extensions — those can handle the `project_trust` event, and the first extension returning a yes/no decision owns it.
+Declining skips protected resources. Context files — `AGENTS.override.md`, `AGENTS.md`, and `CLAUDE.md` — load regardless of trust unless context loading is disabled. Before trust resolves, Pi loads only context files, user/global extensions, and CLI `-e` extensions — those can handle the `project_trust` event, and the first extension returning a yes/no decision owns it.
 
 Non-interactive modes (`-p`, `--mode json`, `--mode rpc`) never prompt. Without an applicable saved decision, `"ask"` and `"never"` ignore trust-gated resources while `"always"` trusts them. `--approve`/`-a` and `--no-approve`/`-na` override for one run.
 
@@ -49,4 +49,4 @@ Bind-mounting a host workspace read/write means writes from inside the container
 
 ## Reporting Security Issues
 
-Follow the repository [Security Policy](https://github.com/earendil-works/pi-mono/blob/main/SECURITY.md); do not open a public issue. Expected local-agent behavior, the absence of a built-in sandbox, prompt injection from untrusted content, and behavior of user-installed extensions or skills are generally outside the security boundary unless the report shows a real privilege-boundary bypass or access the local user did not already have.
+Follow the repository [Security Policy](https://github.com/earendil-works/pi/blob/main/SECURITY.md); do not open a public issue. Expected local-agent behavior, the absence of a built-in sandbox, prompt injection from untrusted content, and behavior of user-installed extensions or skills are generally outside the security boundary unless the report shows a real privilege-boundary bypass or access the local user did not already have.

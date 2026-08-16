@@ -93,10 +93,26 @@ modelRuntime.getModel(provider, id);        // built-ins + models.json, no auth 
 await modelRuntime.getAvailable();          // only models with valid auth
 await modelRuntime.checkAuth(providerId);
 modelRuntime.getProviders();                // provider.auth methods and status
-modelRuntime.setRuntimeApiKey(provider, key); // not persisted
+await modelRuntime.setRuntimeApiKey(provider, key); // not persisted
 ```
 
 Credential priority: runtime overrides → `auth.json` → environment variables → custom fallback from `models.json`. `getModel(provider, id)` from `@earendil-works/pi-ai` looks up built-ins only. Inject any pi-ai `CredentialStore` (for example `InMemoryCredentialStore`) via `credentials`.
+
+### Catalog Refresh and Deadlines
+
+`create()` restores cached catalogs but does not refresh them from `pi.dev` by default. Opt in with `ModelRuntime.create({ allowModelNetwork: true, modelRefreshTimeoutMs: 15_000 })`. Remote catalogs persist to `~/.pi/agent/models-store.json` (override with `modelsStorePath`, or inject `modelsStore`); refreshes are throttled to once per provider every four hours unless forced, and `PI_OFFLINE` disables model network access entirely.
+
+Public model/auth operations and `ModelRuntime.create({ signal })` accept optional abort signals and are unbounded when omitted — SDK applications own deadline policy:
+
+```ts
+const result = await modelRuntime.refresh({ providers: ["anthropic"], signal: AbortSignal.timeout(15_000) });
+if (result.aborted) console.warn("Catalog refresh timed out; using cached models");
+for (const [providerId, error] of result.errors) console.warn(providerId, error);
+```
+
+Force an immediate refresh with `await modelRuntime.refresh({ allowNetwork: true, force: true, signal })`. Each `refresh()` starts a new provider generation, so it does not queue behind a stalled refresh and stale generations cannot publish afterward. A failed or timed-out refresh never undoes a successful credential operation.
+
+`login()`, `logout()`, `setRuntimeApiKey()`, and `removeRuntimeApiKey()` are async and resolve once the affected provider's cached/built-in catalog, composition, and availability snapshot are locally consistent; they do not wait for remote freshness. If credentials committed but local synchronization failed, they reject with the exported `CredentialSynchronizationError` — inspect `providerId`, `operation`, `credential`, and `cause` rather than blindly retrying the credential mutation.
 
 To match CLI parsing, use `resolveCliModel({ cliModel, modelRuntime })` (uses all registered models so `--api-key` first-run flows resolve before stored auth exists) and `resolveModelScopeWithDiagnostics(patterns, modelRuntime)` (matches `--models`/`enabledModels` semantics and returns warnings instead of printing).
 
@@ -132,4 +148,4 @@ Prefer the SDK for type safety, same-process integration, direct state access, o
 
 ## Important Exports
 
-`createAgentSession`, `createAgentSessionRuntime`, `AgentSessionRuntime`, `createAgentSessionServices`, `createAgentSessionFromServices`, `ModelRuntime`, `ModelRegistry`, `resolveCliModel`, `resolveModelScopeWithDiagnostics`, `DefaultResourceLoader`, `ResourceLoader` type, `createEventBus`, `CONFIG_DIR_NAME`, `defineTool`, `getAgentDir`, `getPackageDir`, `getReadmePath`, `getDocsPath`, `getExamplesPath`, `SessionManager`, `SettingsManager`, the tool factories above, `InteractiveMode`, `runPrintMode`, `runRpcMode`, and types for options, results, extensions (`ExtensionAPI`, `ExtensionFactory`, `InlineExtension`), tools, skills, and prompt templates.
+`createAgentSession`, `createAgentSessionRuntime`, `AgentSessionRuntime`, `createAgentSessionServices`, `createAgentSessionFromServices`, `ModelRuntime`, `ModelRegistry`, `CredentialSynchronizationError`, `resolveCliModel`, `resolveModelScopeWithDiagnostics`, `DefaultResourceLoader`, `ResourceLoader` type, `createEventBus`, `CONFIG_DIR_NAME`, `defineTool`, `getAgentDir`, `getPackageDir`, `getReadmePath`, `getDocsPath`, `getExamplesPath`, `SessionManager`, `SettingsManager`, the tool factories above, `InteractiveMode`, `runPrintMode`, `runRpcMode`, and types for options, results, extensions (`ExtensionAPI`, `ExtensionFactory`, `InlineExtension`), tools, skills, and prompt templates.

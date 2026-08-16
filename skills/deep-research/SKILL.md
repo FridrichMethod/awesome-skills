@@ -2,8 +2,8 @@
 name: deep-research
 description: "Universal deep research agent team. 13-agent pipeline for rigorous academic research on any topic. 8 modes: full research, quick brief, paper review, lit-review, fact-check, three-way literature scan, Socratic guided research dialogue, and systematic review with optional meta-analysis. Covers research question formulation, Socratic mentoring, methodology design, systematic literature search, source verification, cross-source synthesis, risk of bias assessment, meta-analysis, APA 7.0 report compilation, editorial review, devil's advocate challenges, ethics review, and post-research literature monitoring. Triggers on: research, deep research, literature review, systematic review, meta-analysis, PRISMA, evidence synthesis, fact-check, WHY HOW WHAT papers, 3W literature scan, guide my research, help me think through, 研究, 深度研究, 文獻回顧, 文獻探討, 系統性回顧, 後設分析, 事實查核, 三段式文獻掃描, 引導我的研究, 幫我釐清, 幫我想想, 我不確定要研究什麼, 研究方向, 研究主題, 심층 연구, 문헌 조사, 체계적 문헌고찰, 메타분석, 사실 확인, 연구 방향을 잡아줘, 연구 주제 정하는 것을 도와줘."
 metadata:
-  version: "2.11.0"
-  last_updated: "2026-07-11"
+  version: "2.12.1"
+  last_updated: "2026-08-15"
   status: active
   data_access_level: raw
   task_type: open-ended
@@ -237,6 +237,9 @@ User: "Research [topic]"
      |   - Integrity verdict only: CLEARED / CONDITIONAL / BLOCKED
      |   - Human subjects: readiness and authorization reported separately; institutional determination required
      |   - Authority-bound planning: exact requirement IDs + actor/consumer scope only after the #666 replay-validated resolved-context gate
+     |   - Candidate rule trace: display only a replay-validated and surface-linted #669 artifact; never use it as a pathway result or workflow input
+     |   - Packet structure: consume only a replay-validated #667 manifest; deterministic status never becomes authorization or content adequacy
+     |   - Content coverage: consume only a replay-validated #681 `LLM-ADVISORY`; preserve deterministic status and report efficacy as `UNMEASURED`
      |
      +-> [devils_advocate_agent] -- CHECKPOINT 3
          - Final vulnerability scan
@@ -281,9 +284,17 @@ Routing into Mode B requires explicit user signal — `/ars-<mode>` slash comman
 
 ## Socratic Mode: Guided Research Dialogue
 
-5-layer dialogue guiding users from vague ideas to concrete research questions. Core principle: ⚠️ **IRON RULE**: Never give direct answers.
+5-layer dialogue guiding users from vague ideas to concrete research questions. Core principle while non-generation Socratic mode is active: ⚠️ **IRON RULE**: Never give direct answers. The explicit candidate-generation exit below leaves that mode before any candidate is shown.
 
 **Layers**: Clarification -> Assumption Probing -> Evidence/Reasoning -> Viewpoint/Perspective -> Implication/Consequence
+
+**Research-question authorship boundary:** Socratic mode is non-generation by
+default. Non-convergence may produce only a summary of directions the user has
+already expressed plus focused questions or a `lit-review` suggestion; it never
+produces candidate RQs automatically. If the user explicitly asks the system to
+propose candidates, announce the exit from non-generation Socratic mode and
+emit `[SOCRATIC-NON-GENERATION-EXIT: explicit_user_request]` on a standalone
+line before any clearly labeled AI-generated candidate. Never switch silently.
 
 > See `references/socratic_mode_protocol.md` for the full 5-layer dialogue flow, management rules, and auto-end conditions.
 
@@ -363,7 +374,7 @@ Key failure path summary:
 
 | Failure Scenario | Trigger Condition | Recovery Strategy |
 |---------|---------|---------|
-| RQ cannot converge | Phase 1 / Layer 1 exceeds multiple rounds while still vague | Provide 3 candidate RQs or suggest lit-review |
+| RQ cannot converge | Phase 1 / Layer 1 exceeds multiple rounds while still vague | Full mode may use its candidate workflow; Socratic mode summarizes user-expressed directions or suggests `lit-review`, with no candidate generation unless the user explicitly exits non-generation mode |
 | Insufficient literature | bibliography_agent finds < 5 sources | Expand search strategy, alternative keywords |
 | Methodology mismatch | RQ type misaligned with method capability | Return to Phase 1, suggest 3 alternative methods |
 | Devil's Advocate CRITICAL | Fatal logical flaw discovered | STOP, explain the issue, require correction |
@@ -391,6 +402,9 @@ After research is complete, the following materials can be handed off to `academ
 3. **Annotated Bibliography** (from bibliography_agent)
 4. **Synthesis Report** (from synthesis_agent)
 5. **[If socratic mode] INSIGHT Collection and Research Plan Summary**
+6. **Preregistration handoff** — exactly one builder-produced
+   `preregistration-artifact/1.0` sidecar (including an unavailable receipt) and,
+   when `status=provided`, its explicitly named companion bytes
 
 **Trigger**: User says "now help me write a paper" or "write a paper based on this"
 
@@ -398,6 +412,16 @@ After research is complete, the following materials can be handed off to `academ
 - Has RQ Brief -> skip topic scoping
 - Has Bibliography -> skip literature search
 - Has Synthesis -> accelerate findings / discussion writing
+- Has preregistration sidecar -> strict-validate it and its named companion,
+  then carry both byte-for-byte; never rebuild it from prose or a template
+
+The non-shell `research_architect_agent` supplies only the explicit caller
+declaration and companion handle. Before handoff, a shell-capable dispatcher
+must run the named deterministic `build-preregistration-artifact` subcommand in
+`scripts/build_cross_document_consistency_advisory.py`, with caller-held RFC3339
+`declared_at`. Only that builder may create or update the sidecar. A later
+explicit user supply creates a new builder-produced sidecar; omission or silent
+substitution is invalid.
 
 See `examples/handoff_to_paper.md` for a detailed handoff example.
 
@@ -446,8 +470,18 @@ See `academic-pipeline/SKILL.md` for the complete workflow.
 | `shared/references/human_subjects_authority_protocol.md` | Exact authority selection, replay validation, actor/consumer filtering, and fail-closed resolved-context gate | ethics_review, research_architect |
 | `shared/human_subjects_authority_registry.json` | Bounded jurisdiction profiles with exact requirement IDs, authority anchors, obligated actors, and consumer scopes | ethics_review, research_architect |
 | `shared/contracts/human_subjects/resolved_authority_context.schema.json` | Pointer-only resolved-context shape; consumers still require deterministic replay validation | ethics_review, research_architect |
+| `shared/references/review_pathway_rule_trace_protocol.md` | Candidate-name ownership, exact selected-profile predicate partition, replay, render, surface lint, and non-consumer boundary (#669) | ethics_review, research_architect |
+| `shared/contracts/human_subjects/review_pathway_trace_request.schema.json` | Closed caller-owned candidate mapping; every selected-profile `pathway_trace` requirement is accounted for exactly once | dispatching layer |
+| `shared/contracts/human_subjects/review_pathway_rule_trace.schema.json` | Closed candidate-only predicate trace; replay and surface lint remain mandatory | ethics_review, research_architect |
+| `shared/references/submission_packet_manifest_protocol.md` | Deterministic packet inventory, authority replay, status, and non-authorization boundary (#667) | ethics_review, research_architect |
+| `shared/contracts/human_subjects/submission_packet_manifest.schema.json` | Pointer-only deterministic packet-manifest shape; consumers still require exact replay validation | ethics_review, research_architect |
+| `shared/references/authority_content_coverage_advisory_protocol.md` | Replay-bound authority-profile content observations, evidence-row/1.1 provenance, and noninterference boundary (#681) | ethics_review, research_architect |
+| `shared/contracts/human_subjects/content_coverage_advisory.schema.json` | Closed `LLM-ADVISORY` carrier; consumers still require finalizer replay validation | ethics_review, research_architect |
+| `shared/contracts/evidence/evidence_row_v1_1.schema.json` | Requirement/expectation/artifact-bound bounded excerpt rows for the #681 advisory surface | ethics_review |
 | `references/equator_reporting_guidelines.md` | EQUATOR reporting guideline mapping | research_architect, report_compiler |
 | `references/preregistration_guide.md` | Preregistration decision tree + platforms + checklist | research_architect |
+| `shared/references/cross_document_consistency_advisory_protocol.md` | Exact preregistration sidecar ownership/replay plus #672 advisory and #660 coexistence boundaries | research_architect, academic-paper intake, pipeline orchestrator |
+| `shared/contracts/passport/preregistration_artifact.schema.json` | Closed persistent preregistration handoff receipt; companion bytes remain separately named | dispatching layer, intake, pipeline orchestrator |
 | `references/systematic_review_toolkit.md` | Cochrane v6.4, PRISMA 2020, RoB 2, ROBINS-I, I² guide, GRADE, protocol registration | risk_of_bias, meta_analysis, bibliography, report_compiler |
 | `references/literature_monitoring_strategies.md` | Google Scholar alerts, PubMed alerts, RSS feeds, Retraction Watch, citation tracking, monitoring cadence | monitoring_agent |
 | `references/argumentation_reasoning_framework.md` | Cognitive framework for evaluating argument strength: Toulmin model, causal reasoning (Bradford Hill), inference to best explanation, epistemic status classification | synthesis, devils_advocate, source_verification, socratic_mentor, research_architect |
@@ -514,7 +548,7 @@ Explicit prohibitions to prevent common failure modes:
 4. **Limitation transparency** — every report must have an explicit limitations section
 5. **AI disclosure** — all reports include a statement that AI-assisted research tools were used
 6. **Reproducibility** — search strategies, inclusion criteria, and analytical methods must be documented for replication
-7. **Socratic integrity** — in socratic mode, never give direct answers; always guide through questions
+7. **Socratic integrity** — while non-generation Socratic mode is active, never give direct answers; always guide through questions. A candidate response is lawful only after the explicit exit marker and is outside that mode.
 
 ## Cross-Agent Quality Alignment
 
@@ -554,8 +588,8 @@ When `ARS_MODEL_TIERING` is set, the dispatching session routes this skill's age
 
 | Item | Content |
 |------|---------|
-| Skill Version | 2.11.0 |
-| Last Updated | 2026-07-11 |
+| Skill Version | 2.12.1 |
+| Last Updated | 2026-08-15 |
 | Maintainer | Cheng-I Wu |
 | Dependent Skills | academic-paper v1.0+ (downstream) |
 

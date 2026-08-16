@@ -53,7 +53,7 @@ On Windows Terminal, Alt+Enter is fullscreen by default — remap it (`reference
 
 ## Context and System Prompt Files
 
-Pi loads `AGENTS.md` or `CLAUDE.md` from `~/.pi/agent/AGENTS.md`, parent directories walking up from cwd, and the current directory. Disable with `--no-context-files` / `-nc`.
+Pi loads `AGENTS.md` or `CLAUDE.md` from `~/.pi/agent/AGENTS.md`, parent directories walking up from cwd, and the current directory. A directory containing `AGENTS.override.md` contributes that file instead of its `AGENTS.md`/`CLAUDE.md`; other directories still layer normally. Disable with `--no-context-files` / `-nc`.
 
 Replace the default system prompt with `.pi/SYSTEM.md` (project) or `~/.pi/agent/SYSTEM.md` (global). Append instead of replacing with `APPEND_SYSTEM.md` in either location.
 
@@ -102,7 +102,11 @@ Tools: `-t/--tools`, `-xt/--exclude-tools`, `-nbt/--no-builtin-tools` (keeps ext
 
 Resources: `-e/--extension <source>` (path, npm, or git; repeatable), `--no-extensions`, `--skill`, `--no-skills`, `--prompt-template`, `--no-prompt-templates`, `--theme`, `--no-themes`, `-nc/--no-context-files`. Combine `--no-*` with explicit flags to load exactly what you need: `pi --no-extensions -e ./my-extension.ts`.
 
-Other: `--system-prompt <text>` (context files and skills are still appended), `--append-system-prompt`, `--verbose`, `-a/--approve`, `-na/--no-approve`, `-h/--help`, `-v/--version`.
+Other: `--system-prompt <text>` (context files and skills are still appended), `--append-system-prompt`, `--tui-mode <regular|fullscreen>`, `--use-theme <name[/name]>` (initial theme for this run only), `--verbose`, `-a/--approve`, `-na/--no-approve`, `-h/--help`, `-v/--version`.
+
+## Fullscreen TUI Mode
+
+`--tui-mode fullscreen` (experimental) scrolls the transcript inside the terminal viewport while queued messages, working status, extension widgets, editor, and footer stay pinned at the bottom. Mouse/trackpad input scrolls the region under the pointer, and keyboard viewport actions (`tui.altScreen.*` in `references/keybindings.md`) stay available. Inline images work in terminals supporting the Kitty graphics protocol (Kitty, Ghostty); iTerm2 renders text placeholders instead. `regular` mode uses the main screen and terminal-owned scrollback. Switch at runtime and set the default in `/settings`; `fullscreenExitOutput` controls whether exiting prints the final transcript or only the resume hint.
 
 File arguments: prefix with `@` to include in the message (`pi @code.ts @test.ts "Review these"`).
 
