@@ -10,9 +10,13 @@
 - 精简冗长句子，增强论证顺序和段落推进。
 - 按 Nature / Nature Communications / Nature Machine Intelligence 论文范式调整摘要、引言、结果、讨论或标题。
 - 对 NMI 识别独立路由，检查 3,500 词正文、150 词摘要、6 个 display、代码审查与会议论文实质扩展，不再误用旗舰 Nature 数字。
+- 对旗舰 Nature、Nature Communications、NMI 及其他 Nature Portfolio 期刊的 Results–Discussion，保留 claim 递进、证据绑定的局部解释和跨结果综合，区分必要回顾与重复论证。
+- 对所有 Nature / Nature Portfolio 目标的 Introduction，执行快速问题漏斗、精确 gap、文献张力、问题先行的 novelty 与 Introduction–Results 对齐检查。
+- 对所有 Nature / Nature Portfolio 目标的 Abstract，保留一个主发现、1–2 个决定性支撑或边界，只在数字定义或实质支撑核心 claim 时保留，并用有边界的意义句收尾。这三组默认最初来自 NMI 语料归纳，其中 Results–Discussion 又经旗舰 Nature 论文对照加强；它们均非官方规则。
 - 区分 research paper 与 methods paper 的写作重点。
 - 检查 AI 味、夸张声称、过度因果表达和不自然搭配。
 - 对全文或多轮修改稿执行一致性扫描，定位术语、单位、数值精度和内部声称漂移。
+- 对 Results 执行主文必要性审计：区分核心发现、必要支撑与稳健性/异质性/替代推断，分配到主文、图注或 SI；每次新增文字都触发删除或替换检查。
 
 ## 方法来源
 
@@ -37,6 +41,7 @@
 - 可粘贴的英文改写或中英对照版本。
 - 关键修改说明：逻辑重排、语气收敛、术语统一和声称边界。
 - 全文一致性风险清单；机械扫描结果逐条回到上下文确认后再修改。
+- 主文压缩任务可附结果分配表、删除记录、统计位置记录和 claim repetition map。
 - 需要作者确认的事实或引用意图。
 
 ## 边界
