@@ -1,268 +1,258 @@
 ---
-name: bio-proteomics-differential-abundance
-description: Tests for differentially abundant proteins between conditions with limma/DEqMS empirical-Bayes moderation, proDA/msqrob2/MSstats missingness modeling, and Python Welch+BH alternatives. Frames missing values as left-censored MNAR (model, do not impute), makes variance moderation the load-bearing step at n=3-5, and prefers feature/peptide-level testing. Use when identifying proteins with significant abundance changes between experimental groups. Summarization and normalization mechanics are proteomics/quantification; volcano and MA plots are data-visualization/volcano-and-ma-plots; pathway enrichment of the hit list is pathway-analysis/go-enrichment.
-tool_type: mixed
-primary_tool: limma
+name: bio-microbiome-differential-abundance
+description: Tests which individual taxa differ between groups on an amplicon ASV/feature table (phyloseq) using compositionally-aware methods - ALDEx2 (Dirichlet-MC CLR, conservative), ANCOM-BC2/ANCOMBC (sampling-fraction bias correction, structural zeros, passed_ss, default p_adj_method=holm), MaAsLin2/MaAsLin3 (multivariable GLM, random effects, prevalence/abundance split), LinDA (CLR mixed-model regression), ZicoSeq (permutation FDR), LEfSe, and q2-composition ancombc. Covers why the hit list depends more on the DA tool than the biology (Nearing benchmark) so the deliverable is a CONSENSUS of >=2 tools, why a relative change is not absolute without a load anchor, the prevalence-filter knob, BH/FDR plus an effect-size floor, and why DESeq2/edgeR misfire here. Use when finding differentially abundant taxa, handling covariates or longitudinal designs, or choosing a method. Whole-community diversity -> diversity-analysis; shotgun DA -> metagenomics/metagenome-visualization; CoDA theory -> metagenomics/abundance-estimation
+tool_type: r
+primary_tool: ALDEx2
 ---
 
 ## Version Compatibility
 
-Reference examples tested with: limma 3.58+, DEqMS 1.20+, proDA 1.20+, ashr 2.2+, pandas 2.2+, scipy 1.12+, statsmodels 0.14+
+Reference examples tested with: ALDEx2 1.34+, ANCOMBC 2.4+, Maaslin2 1.16+, MicrobiomeStat 1.2+ (LinDA), GUniFrac 1.8+ (ZicoSeq), phyloseq 1.46+.
 
 Before using code patterns, verify installed versions match. If versions differ:
-- Python: `pip show <package>` then `help(module.function)` to check signatures
 - R: `packageVersion('<pkg>')` then `?function_name` to verify parameters
 
 If code throws ImportError, AttributeError, or TypeError, introspect the installed
 package and adapt the example to match the actual API rather than retrying.
 
-# Differential Protein Abundance -- Moderated Testing on a Log-Intensity Matrix with Honest Missingness
+ANCOM-BC2 changed argument names between `ancombc()` and `ancombc2()`, and its default `p_adj_method` is `holm`, not `BH` - confirm both against the installed version. The MaAsLin3 `maaslin3()` API differs from MaAsLin2's `Maaslin2()`.
 
-**"Find differentially abundant proteins between my conditions"** -> Moderated statistical testing on a normalized log-intensity matrix, carrying missingness in the likelihood instead of filling it in -- because the missing values are low BECAUSE the protein is low, and imputing them manufactures false positives.
-- R: `limma::eBayes(fit, trend=TRUE, robust=TRUE)` for empirical-Bayes moderated t-tests (the protein-level workhorse)
-- R: `DEqMS::spectraCounteBayes()` when PSM/peptide counts are available (preferred over limma-trend when quant depth varies)
-- R: `proDA::test_diff()` / `msqrob2` / `MSstats` when missing values are extensive (model the dropout, no imputation)
-- Python: `scipy.stats.ttest_ind(equal_var=False)` + `statsmodels` BH (large n only; no moderation)
+# Differential Abundance Testing
 
-Scope: this skill owns the statistical TEST -- design/contrast construction, variance moderation, missingness handling, multiple-testing correction, minimum-fold-change testing, and fold-change shrinkage. Peptide-to-protein summarization and normalization mechanics -> proteomics/quantification. Volcano/MA plots -> data-visualization/volcano-and-ma-plots. Enrichment of the hit list -> pathway-analysis/go-enrichment. OUT OF SCOPE: how MaxLFQ/TMP/IRS produce the matrix (quantification); how to draw a volcano (data-visualization).
+**"Find which taxa differ between my groups"** -> Run two or more compositionally-aware DA tools and report their consensus - because the significant-taxa list is a property of the tool as much as of the sample, and a relative-abundance change is not an absolute change.
+- R: `ALDEx2::aldex(counts, conds, test='t', effect=TRUE, denom='all')` then a second tool (`ANCOMBC::ancombc2()` or `MicrobiomeStat::linda()`)
 
-## The Single Most Important Modern Insight -- Model the Missingness, Moderate the Variance, Test at the Feature Level
+Scope: per-taxon DA on an amplicon feature table. Whole-community alpha/beta/PERMANOVA -> diversity-analysis. Shotgun profiler-table DA -> metagenomics/metagenome-visualization. Shared compositional/closure/CLR/zero theory -> metagenomics/abundance-estimation. Collapse ASVs to genus/species first -> taxonomy-assignment. QIIME2 CLI route -> qiime2-workflow.
 
-1. **Missing values in label-free MS are left-censored MNAR -- missing BECAUSE the intensity is low -- and imputing them (especially Perseus/MaxQuant downshift) manufactures SYSTEMATIC false positives.** Downshift draws each missing value from a narrow Gaussian (mean = mu - 1.8*sigma, SD = 0.3*sigma). For an on/off protein (seen in all of group A, missing in all of B) the t-statistic numerator is inflated by construction (mean_B fixed ~1.8 sigma below observed, deterministic) and the denominator is artificially deflated (all imputed B values from one 0.3-sigma Gaussian -> collapsed within-group SD) -> enormous t -> tiny p. Because every on/off protein is treated identically, the false positives are systematic: the volcano-plot "anchor/wing" artifact (rigid near-vertical streaks of pinned points far out on both x-axis sides). The honest statement is "undetected in group B", not "20x lower, p=1e-6". The correct approach is to MODEL the dropout in the likelihood -- proDA (probabilistic dropout), msqrob2, MSstats-AFT -- NOT fill it (Lazar 2016; Ahlmann-Eltze & Anders 2019).
-2. **At the n=3-5 replicates proteomics actually uses, per-protein variance has only 2-4 residual df and is unusable raw -- variance moderation is the load-bearing element, not optional.** limma borrows a prior d0 across all proteins so a 4-replicate design tests on ~10 df instead of 6; `trend=TRUE` makes the prior a function of mean intensity (effectively mandatory for label-free, where a single global prior mis-calibrates FDR across the abundance range); `robust=TRUE` Winsorizes outlier variances (Phipson 2016). DEqMS makes the prior a function of PSM/peptide count and generally outperforms limma-trend when quantification depth varies across proteins (Zhu 2020).
-3. **Feature/peptide-level modeling beats summarize-then-test.** Summarizing first (one number per protein per run) discards the within-protein between-peptide variance and the correct degrees of freedom: 12 consistent peptides deserve a smaller SE than 12 disagreeing ones, but after summarization both look equally certain, and a protein with 30 observations looks as informative as one with 3. msqrob2/MSstats keep every peptide as a degree of freedom; this is why the same data gives different answers (Goeminne 2016; Sticker 2020; Choi 2014).
+## The Single Most Important Modern Insight -- Which Taxa Are "Significant" Depends More on the Tool Than on the Biology
+
+Run ALDEx2, ANCOM-BC2, MaAsLin2, and LinDA on the same ASV table and the four significant-taxa lists overlap but disagree (Nearing 2022 *Nat Commun* 13:342, across 38 datasets). So the deliverable is NOT "the differential taxa" - it is the CONSENSUS of >=2 compositionally-aware tools, every tool NAMED: the intersection is high-confidence, the union is exploratory, and a single-tool hit is tentative. Picking the tool with the prettiest volcano is p-hacking by software (uncorrected multiplicity hidden in the method menu). Three corollaries:
+
+1. **A relative-abundance increase is not an absolute increase.** Microbiome counts are compositional - the sequencer fixes the total, so one taxon blooming forces every other taxon's proportion down (the blooming-taxon illusion). "Taxon X increased" is a statement about its SHARE unless an external load anchor (spike-in / flow cytometry / qPCR, see metagenomics/abundance-estimation) or MaAsLin3's absolute-abundance mode licenses an absolute claim.
+2. **Uncorrected Wilcoxon/t-test on raw relative abundances is wrong twice in one line** - closure (reference-frame) AND multiple testing. But a BH-corrected simple test, honestly labelled as relative, can replicate BETTER than a sophisticated model (Pelto 2025): the forbidden thing is the uncorrected, closure-blind form, not simple tests per se.
+3. **There is no settled best tool.** The benchmarks optimize different criteria, so they rank tools differently. Consensus-of-tools is the only stance that survives all of them.
+
+## The Benchmark Landscape (no settled winner)
+
+| Benchmark | Optimized for | Verdict |
+|-----------|---------------|---------|
+| Nearing 2022 *Nat Commun* 13:342 | cross-method consistency | ALDEx2 + ANCOM-II most consistent and most conservative; LEfSe/edgeR flag far more, agree less |
+| Yang & Chen 2022 *Microbiome* 10:130 | FDR-power balance | ZicoSeq / LinDA / ANCOM-BC-family best |
+| Yang & Chen 2023 *Brief Bioinform* 24:bbac607 | correlated (repeated-measures) designs | use a mixed-model-capable tool (LinDA, MaAsLin2, ANCOM-BC2) |
+| Pelto 2025 *Brief Bioinform* 26(2):bbaf130 | cross-study replicability | elementary BH-corrected methods most replicable; ANCOM-BC2 worst |
+
+Report the disagreement AS the result; verify current best practice against the latest tool docs rather than hard-coding one method.
 
 ## Tool Taxonomy
 
-| Tool / method | Citation | Mechanism / role | When |
-|---------------|----------|------------------|------|
-| limma | Ritchie 2015; Phipson 2016 | EB moderated t; posterior variance blends a prior d0 with the per-protein estimate; `trend` ties the prior to mean intensity, `robust` Winsorizes outliers | protein-level summaries, small n, the default workhorse |
-| DEqMS | Zhu 2020 | prior variance = loess of log-variance vs log2(count); precision follows quantification DEPTH not just intensity | TMT (count=PSM) and label-free DDA (count=peptide); quant depth varies; preferred over limma-trend |
-| proDA | Ahlmann-Eltze & Anders 2019 (preprint) | probabilistic dropout: missing = left-censored, integrated under a per-sample sigmoid dropout curve; EB on location and variance; no imputation | label-free DDA with many MNAR missing values, small n, proteins absent in one group |
-| msqrob2 | Sticker 2020; Goeminne 2016 | peptide-level robust ridge: Huber M-estimation downweights outlier peptides, ridge shrinks effects from few observations, EB variance moderation | label-free DDA, outlier-peptide / unbalanced-coverage risk; best FDR in hard spike-in regimes |
-| MSstats | Choi 2014 | feature-level linear mixed model (group fixed + feature + run/subject random); AFT censored handling for missing | SRM/PRM/DIA, technical replicates, nested/repeated-measures, labeled designs |
-| Welch t-test + BH | -- | per-protein two-sample t with `equal_var=False` + Benjamini-Hochberg | large n (>10/group), Python-only; no moderation, unusable at n=3-5 |
-| ashr | Stephens 2017 | mixture prior with a point mass at zero; posterior means shrink uncertain effects toward zero | recovering "which proteins truly changed and by how much" (not for GSEA ranking) |
-| volcano / MA plot | -- | (route OUT) | visualization -> data-visualization/volcano-and-ma-plots |
-| enrichment of hits | -- | (route OUT) | functional interpretation -> pathway-analysis/go-enrichment |
+| Tool | Citation | Mechanism / role | When |
+|------|----------|------------------|------|
+| ALDEx2 | Fernandes 2014 *Microbiome* 2:15 | Dirichlet Monte-Carlo posterior + CLR; tests each draw; reports expected effect + BH-adjusted p | conservative two-group anchor; small-to-moderate n |
+| ANCOM-BC2 | Lin & Peddada 2024 *Nat Methods* 21:83 | estimates per-sample sampling fraction and bias-corrects; structural zeros; pseudo-count sensitivity (`passed_ss`) | interpretable LFC + CI; covariates; multi-group |
+| MaAsLin2 | Mallick 2021 *PLoS Comput Biol* 17:e1009442 | general (mixed) linear model on transformed abundance | multivariable / longitudinal / metadata-rich |
+| MaAsLin3 | Nickols 2026 *Nat Methods* 23:554 | splits abundance (level when present) from prevalence (present/absent); absolute-abundance mode | prevalence-vs-abundance separation; load data available |
+| LinDA | Zhou 2022 *Genome Biol* 23:95 | CLR regression with mode-based bias correction; asymptotic FDR | large cohorts; fast; native mixed model |
+| ZicoSeq | Yang & Chen 2022 *Microbiome* 10:130 | reference-taxa normalization + permutation FDR; winsorization | covariates; non-parametric permutation p; strong FP control |
+| LEfSe | Segata 2011 *Genome Biol* 12:R60 | Kruskal-Wallis + LDA effect size | exploratory biomarker discovery; NOT a formal FDR-controlled test |
+| DESeq2 | Love 2014 *Genome Biol* 15:550 | RNA-seq median-of-ratios size factor | caveat only; geometric-mean reference dies on sparse zero-heavy tables |
 
 ## Decision Tree by Scenario
 
 | Scenario | Recommended | Why |
 |----------|-------------|-----|
-| Small n (3-5/group), protein-level summary matrix | limma `eBayes(trend=TRUE, robust=TRUE)` | EB borrows variance across proteins; the trend calibrates FDR across abundance |
-| PSM/peptide counts available (TMT or label-free DDA) | DEqMS `spectraCounteBayes` | prior keyed on quant depth removes single-PSM false positives limma admits |
-| Label-free with many MNAR missing values, on/off proteins | proDA `test_diff` | models the censored dropout; never imputes; correct verdict for "undetected in one group" |
-| Outlier-peptide risk, unbalanced peptide coverage | msqrob2 (peptide-level robust ridge) | keeps feature df; Huber downweights bad peptides; best FDR in spike-in benchmarks |
-| Technical replicates, nested/repeated-measures, labeled (SRM/PRM/DIA) | MSstats (feature-level mixed model) | random effects capture run/subject structure summarize-then-test discards |
-| Batch present | batch as a covariate in the design (`~ batch + condition`) | `removeBatchEffect` is visualization-only; never feed its output to `lmFit` |
-| Minimum biologically meaningful fold change | `treat()` + `topTreat()` (or SAM s0) | tests |log2FC|>c against the moderated null; a post-hoc FC+significance double filter inflates FDR |
-| Large n (>10/group), Python-only | Welch t-test + BH | variance estimates reliable; no moderation needed at large n |
+| Two groups, want a trustworthy conservative anchor | ALDEx2 | Dirichlet-MC + CLR; most reproducible/conservative (Nearing); gate on effect size |
+| Need interpretable LFC + CI, structural zeros, multi-group | ANCOM-BC2 | models and corrects per-sample sampling fraction; global/pairwise/Dunnett/trend; `passed_ss` |
+| Large cohort, covariates, speed, mixed model | LinDA | CLR regression + bias mode; asymptotic FDR; fast; random effects in the formula |
+| Covariates + permutation-grounded non-parametric p | ZicoSeq | reference-taxa frame + permutation FDR |
+| Longitudinal / many covariates / flexible GLM | MaAsLin2 | `fixed_effects` + `random_effects`; normalization/transform menu |
+| Prevalence-vs-abundance separation or absolute abundance | MaAsLin3 | logistic prevalence model + abundance model; load-data hook |
+| Inside a QIIME2 CLI pipeline | qiime composition ancombc + tabulate/da-barplot | native artifact flow (v1 ANCOM-BC; go to R for v2 `passed_ss`/multi-group) -> qiime2-workflow |
+| Repeated / paired samples | any tool above WITH a random effect | ignoring subject structure is pseudo-replication |
+| ALWAYS | run >=2 of the above, report the consensus | tool choice drives the hit list more than biology (Nearing 2022) |
+| Shotgun species table, not amplicon | -> metagenomics/metagenome-visualization | same CoDA theory; different upstream pipeline |
+| Uncorrected t-test/Wilcoxon on TSS proportions | DO NOT | closure biases the test and there is no FDR control |
 
-Default when uncertain: protein-level summary matrix at n=3-5 -> limma `eBayes(trend=TRUE, robust=TRUE)`; if PSM/peptide counts exist, escalate to DEqMS; if missingness is extensive and intensity-dependent, escalate to proDA.
+## Filter Before Testing (a modeling knob, not housekeeping)
 
-## limma Workflow (R)
+**Goal:** Drop rare features before testing so the BH denominator is not crushed and log/CLR transforms are well-behaved.
 
-**Goal:** Identify differentially abundant proteins using moderated statistics that borrow information across all proteins.
-
-**Approach:** Build the design (batch as a covariate when present), fit the linear model and contrast, apply EB moderation with the intensity trend and robust fitting, then extract BH-corrected results. Never feed `removeBatchEffect` output to `lmFit`.
-
-```r
-library(limma)
-
-design <- model.matrix(~0 + condition + batch, data = sample_info)  # batch in the model, not removed first
-colnames(design)[1:2] <- levels(factor(sample_info$condition))
-
-fit <- lmFit(protein_matrix, design)
-contrast_matrix <- makeContrasts(Treatment - Control, levels = design)
-fit2 <- contrasts.fit(fit, contrast_matrix)
-fit2 <- eBayes(fit2, trend = TRUE, robust = TRUE)  # trend mandatory for label-free; robust Winsorizes outliers
-
-results <- topTable(fit2, coef = 1, number = Inf, adjust.method = 'BH')
-# columns: logFC, AveExpr, t, P.Value, adj.P.Val, B  (adj.P.Val is the BH p; there is no $FDR)
-```
-
-### Minimum-fold-change testing
-
-**Goal:** Call proteins whose effect exceeds a biologically meaningful threshold, not merely differ from zero.
-
-**Approach:** Use `treat()` against the moderated null and read `topTreat()`. NEVER `topTable(lfc=...)` nor a post-hoc volcano double filter (`abs(logFC) > 1 & adj.P.Val < 0.05`); conditioning on both the FC and the p-value selects for high-variance nulls (a collider effect) and inflates realized FDR above 50% (Ebrahimpoor & Goeman 2021).
+**Approach:** Keep features present in at least 10-25% of samples (and optionally a mean-abundance floor); declare the threshold and confirm the headline result is not knife-edge-sensitive to it. Every tool exposes this (`prv_cut`, `min_prevalence`, `prev.filter`).
 
 ```r
-LFC_THRESHOLD <- log2(1.2)  # 1.2-fold floor; treat tests against this null, no double-filter FDR inflation
-fit2 <- treat(fit2, lfc = LFC_THRESHOLD)
-results <- topTreat(fit2, coef = 1, number = Inf)  # topTreat omits the B column
+library(phyloseq)
+ps <- readRDS('phyloseq_object.rds')
+# prv_cut 0.10: a feature must appear in >= 10% of samples; raising to 0.25 removes more tests
+# (smaller BH correction, more power on survivors) but discards rare-but-real taxa - a declared choice
+keep <- filter_taxa(ps, function(x) sum(x > 0) >= 0.10 * nsamples(ps), TRUE)
 ```
 
-## DEqMS Workflow (R)
+## ALDEx2: The Conservative Floor of the Consensus
 
-**Goal:** Improve on limma by tying each protein's prior variance to its quantification depth -- proteins measured by more PSMs/peptides are more precise.
+**Goal:** Identify taxa that differ between two groups while propagating the sampling uncertainty of low-count features.
 
-**Approach:** Run limma through `eBayes`, attach the count vector, then apply DEqMS's count-aware EB. Use PSM count for TMT (quant at MS2) and peptide count for label-free DDA; for multi-batch TMT use the MINIMUM count across batches (the bottleneck batch sets precision).
+**Approach:** Draw `mc.samples` Monte-Carlo instances from a Dirichlet posterior of the counts (this IS the zero handling - no explicit pseudocount), CLR-transform each instance against the geometric mean of all features (`denom='all'`), run the test on every draw, and report the EXPECTED effect size and BH-adjusted p over the draws.
 
 ```r
-library(DEqMS)
+library(ALDEx2)
+counts <- as.matrix(otu_table(ps))            # integer counts, taxa in ROWS
+if (!taxa_are_rows(ps)) counts <- t(counts)
+groups <- as.character(sample_data(ps)$Group)
 
-# fit2 is the limma fit through eBayes (above)
-fit2$count <- psm_count_per_protein[rownames(fit2$coefficients)]  # PSM for TMT, peptide for LFQ; min across batches
-fit3 <- spectraCounteBayes(fit2)
-
-results <- outputResult(fit3, coef_col = 1)
-# adds sca.t, sca.P.Value, sca.adj.pval (the count-adjusted statistics; use these, not the limma columns)
+# mc.samples 128: standard Monte-Carlo draws; 256+ for publication (more stable expected p)
+res <- aldex(counts, groups, mc.samples = 128, test = 't', effect = TRUE, denom = 'all')
+# we.eBH = Welch expected BH-adjusted p (report this, NOT we.ep); wi.eBH = Wilcoxon equivalent
+# effect = median standardized effect = median(diff.btw / max(diff.win)); the primary decision variable
+hits <- res[res$we.eBH < 0.05 & abs(res$effect) > 1, ]   # q AND effect floor (Gloor: gate on effect, not p alone)
 ```
 
-## proDA Workflow (R)
+Gate on effect size AND q, not p alone: with large n trivially small CLR differences become "significant," and Gloor's own guidance is that `|effect| > 1` is a strong ~2-SD signal. For >2 groups use `aldex.kw()`; for covariates the `aldex.glm()` + model.matrix route works but ALDEx2 is weakest here - prefer ANCOM-BC2/LinDA/MaAsLin2 for serious covariate or random-effect modeling.
 
-**Goal:** Test proteins with extensive MNAR missingness, including on/off proteins, without imputing a single value.
+## ANCOM-BC2: Bias-Corrected LFC With a Sensitivity Safeguard
 
-**Approach:** Fit the probabilistic-dropout model directly on the log-intensity matrix; missing values contribute as left-censored observations under a per-sample dropout curve. Then test the contrast against zero.
+**Goal:** Estimate an interpretable bias-corrected log-fold-change per taxon, with covariate adjustment, structural-zero handling, and a flag for hits that are hostage to the pseudo-count.
+
+**Approach:** Model log(observed count) as a function of covariates, estimate each sample's log sampling fraction as an offset and subtract it, then refit across a range of pseudo-counts and record how often each q-value flips (`passed_ss`).
 
 ```r
-library(proDA)
-
-fit <- proDA(protein_matrix, design = ~condition, col_data = sample_info,
-             reference_level = 'Control')
-result_names(fit)  # list testable coefficients first
-results <- test_diff(fit, conditionTreatment - conditionControl)
-# columns: name, pval, adj_pval, diff (log2FC), t_statistic, se
+library(ANCOMBC)
+out <- ancombc2(data = ps, fix_formula = 'Group + Age + Sex',
+                rand_formula = NULL,        # '(1 | SubjectID)' for repeated measures - see Failure Modes
+                p_adj_method = 'BH',        # DEFAULT is 'holm'; set 'BH' deliberately for FDR
+                prv_cut = 0.10, lib_cut = 1000,
+                group = 'Group', struc_zero = TRUE, pseudo_sens = TRUE,
+                global = FALSE, pairwise = FALSE, n_cl = 2)
+res <- out$res
+# a confident hit is BOTH significant AND robust to the pseudo-count. ANCOM-BC2 suffixes the
+# diff_/passed_ss_ columns with the literal model-matrix coefficient (variable + factor level,
+# verbatim case, e.g. 'Grouptreated') - match it by pattern rather than hard-coding the case.
+dcol <- grep('^diff_Group', names(res), value = TRUE)[1]
+robust <- res[res[[dcol]] & res[[sub('^diff_', 'passed_ss_', dcol)]], ]
 ```
 
-## Python Workflow
+`passed_ss` is the most valuable ANCOM-BC2-specific feature: a CLR/log model on sparse data is hostage to the zero-replacement constant, and `passed_ss` quantifies that per taxon. A hit with `passed_ss == FALSE` depends on the arbitrary pseudo-count - do not report it as confident. For >2 groups set `global=TRUE` (omnibus), `pairwise=TRUE` (mdFDR-controlled pairs), `dunnet=TRUE`, or `trend=TRUE`; results land in `out$res_global`/`res_pair`/`res_dunn`/`res_trend`.
 
-**Goal:** Run the full pipeline in Python when no R is available and n is large enough that moderation is unnecessary.
+## LinDA: Fast CLR Regression With Native Mixed Models
 
-**Approach:** Log2-transform, median-normalize, run per-protein Welch t-tests, apply Benjamini-Hochberg. This has NO variance moderation and should not be used at n=3-5 -- escalate to limma/DEqMS for small n.
+**Goal:** Get FDR-controlled log2-fold-changes on a large cohort, including repeated-measures designs, without Monte-Carlo or EM cost.
 
-```python
-import numpy as np
-import pandas as pd
-from scipy import stats
-from statsmodels.stats.multitest import multipletests
-
-def preprocess(intensities):
-    log2_data = np.log2(intensities.replace(0, np.nan))  # zeros -> NaN to avoid -inf
-    sample_medians = log2_data.median(axis=0)
-    return log2_data - sample_medians + sample_medians.median()
-
-def differential_abundance(normalized, case_cols, ctrl_cols):
-    rows = []
-    for protein in normalized.index:
-        case, ctrl = normalized.loc[protein, case_cols].dropna(), normalized.loc[protein, ctrl_cols].dropna()
-        if len(case) >= 2 and len(ctrl) >= 2:
-            _, pval = stats.ttest_ind(case, ctrl, equal_var=False)  # Welch; scipy defaults to Student's True
-            rows.append({'protein': protein, 'log2fc': case.mean() - ctrl.mean(), 'pvalue': pval})
-    df = pd.DataFrame(rows)
-    df['padj'] = multipletests(df['pvalue'], method='fdr_bh')[1]  # default is Holm-Sidak; pass fdr_bh explicitly
-    return df
-```
-
-## Fold-Change Reporting
-
-**Goal:** Hand the right effect estimate to the right consumer.
-
-**Approach:** Report the RAW fold change (the best unbiased point estimate) for GSEA/pathway ranking and meta-analysis -- those need the full continuous distribution or FC+SE pairs. Apply shrinkage (ashr) only when recovering "which proteins truly changed and by how much"; it fits a mixture prior with a point mass at zero and shrinks uncertain effects smoothly toward zero. This is preferred over hard-thresholding (zeroing FCs at padj 0.05), which creates an arbitrary step function. No mature Python ashr equivalent exists.
+**Approach:** Fit ordinary linear regression on the CLR-transformed table covariate by covariate, estimate the compositional bias as the mode of the per-feature coefficients and subtract it; a random effect in the formula makes it a linear mixed model.
 
 ```r
-library(ashr)
+library(MicrobiomeStat)
+otu <- as.data.frame(otu_table(ps)); if (!taxa_are_rows(ps)) otu <- t(otu)
+meta <- as.data.frame(sample_data(ps))
+fit <- linda(feature.dat = otu, meta.dat = meta,
+             formula = '~ Group + Age + (1 | SubjectID)',   # random effect -> mixed model
+             feature.dat.type = 'count', prev.filter = 0.10, alpha = 0.05)
+fit$output[[1]]   # names(fit$output) are the model-matrix coefficient columns (e.g. 'Grouptreated' - the factor level keeps its case); per-feature: log2FoldChange, lfcSE, stat, pvalue, padj, reject
+```
 
-se <- sqrt(fit2$s2.post) * fit2$stdev.unscaled[, 1]
-shrunk <- ash(fit2$coefficients[, 1], se, mixcompdist = 'normal')
-shrunken_fc <- shrunk$result$PosteriorMean  # report alongside raw logFC, not as a replacement for GSEA
-lfsr <- shrunk$result$lfsr
+LinDA is the natural fast modern entry in a consensus panel and the cleanest route to mixed models. Yang & Chen rate it among the best FDR-power trade-offs.
+
+## MaAsLin2 / MaAsLin3 and ZicoSeq (the rest of the panel)
+
+**Goal:** Fit covariate-rich or longitudinal differential-abundance models, or add a permutation-based panel member, when ALDEx2/ANCOM-BC2/LinDA do not cover the design.
+
+**Approach:** Use MaAsLin2/3 for multivariable GLMs with random effects, or ZicoSeq for a non-parametric permutation-FDR test against empirically selected reference taxa.
+
+MaAsLin2 fits a flexible per-feature GLM; its package DEFAULT is TSS + LOG + LM (not CLR), and `random_effects` is the canonical route for longitudinal designs. NOTE the orientation gotcha: it expects features in COLUMNS, samples in rows.
+
+```r
+library(Maaslin2)
+fit <- Maaslin2(input_data = as.data.frame(t(otu)), input_metadata = meta,
+                output = 'maaslin2_out', fixed_effects = c('Group', 'Age'),
+                random_effects = c('SubjectID'),
+                normalization = 'TSS', transform = 'LOG', analysis_method = 'LM',
+                min_prevalence = 0.10, max_significance = 0.05)
+# writes all_results.tsv / significant_results.tsv with columns feature, metadata, coef, pval, qval
+```
+
+MaAsLin3 (`maaslin3()`) splits each feature into an abundance model (level when present) and a logistic prevalence model (present/absent) tested jointly, and can ingest total-load measurements for absolute-abundance inference. ZicoSeq (`GUniFrac::ZicoSeq()`) winsorizes, posterior-samples, normalizes against empirically selected reference taxa, and returns permutation FDR (`zc$p.adj.fdr`) - a non-parametric panel member that accepts covariates via `adj.name`.
+
+## Consensus: Intersect the Tools
+
+**Goal:** Convert two or more per-tool hit sets into a confidence-graded result instead of one tool's answer.
+
+**Approach:** Collect the significant feature SETS (BH within each tool), then report the intersection as high-confidence, the union as exploratory, and tabulate, per taxon, how many of N tools agree and which ones. Never pool p-values across tools.
+
+```r
+sig_aldex <- rownames(res)[res$we.eBH < 0.05 & abs(res$effect) > 1]
+sig_linda <- rownames(fit$output[[1]])[fit$output[[1]]$reject]   # [[1]] = the group coefficient (named 'Grouptreated')
+confident  <- intersect(sig_aldex, sig_linda)   # high-confidence
+exploratory <- union(sig_aldex, sig_linda)       # report with the tool that found each
 ```
 
 ## Per-Method Failure Modes
 
-### Downshift / any imputation feeding a variance-based test
-**Trigger:** Perseus/MaxQuant downshift (or MinDet/MinProb/QRILC) fills NAs, then limma/t-test runs on the filled matrix.
-**Mechanism:** Imputed values come from one narrow Gaussian -> fabricated low within-group variance + deterministic mean offset -> inflated t.
-**Symptom:** Volcano "anchor/wing" -- rigid near-vertical streaks of pinned on/off proteins at high significance; realized FDR far above nominal.
-**Fix:** Model the missingness instead (proDA / msqrob2 / MSstats-AFT); report on/off proteins as "undetected in group X".
+### Cherry-picking the tool with the prettiest result
+**Trigger:** running several tools and reporting only the one(s) that flag the favored taxon. **Mechanism:** that is uncorrected multiplicity hidden in the method menu (p-hacking by software). **Symptom:** "the recommended method found X" with no mention of the tools that disagreed. **Fix:** decide the panel a priori, report ALL tools, intersect for confident hits, disclose disagreement.
 
-### kNN imputation on left-censored data
-**Trigger:** kNN/mean imputation applied to label-free data with MNAR dropout.
-**Mechanism:** Mean-reverting -- pulls a truly-low (missing because low) value UP toward the mean.
-**Symptom:** Real down-regulation is compressed; down hits weakened or lost.
-**Fix:** Only valid under MCAR/MAR; for MNAR model the dropout. Under uncertainty Lazar 2016 shows the milder MCAR error beats MNAR-imputers slamming random highs to the floor.
+### Uncorrected Wilcoxon/t-test on relative abundances
+**Trigger:** a per-taxon Wilcoxon/t-test on TSS proportions with no FDR correction. **Mechanism:** closure makes a naive test call every taxon "decreased" when one blooms, and hundreds of uncorrected tests inflate false positives. **Symptom:** dozens of "significant" taxa, all in the same direction, no q-values. **Fix:** use a CoDA/reference-frame tool; if a simple test is used, BH-correct it and label the comparison as relative (Pelto 2025).
 
-### removeBatchEffect before testing
-**Trigger:** `removeBatchEffect()` output fed to `lmFit`.
-**Mechanism:** Subtracts the fitted batch component with no uncertainty propagation -> understated residual variance, inflated EB df; if batch is confounded with biology it deletes real signal.
-**Symptom:** Anticonservative p-values; lost true effects when cases/controls split by batch.
-**Fix:** Include batch as a covariate in the SAME model (`~ batch + condition`); use `removeBatchEffect` only for PCA/visualization.
+### Pseudo-replication of repeated measures
+**Trigger:** longitudinal/paired samples treated as independent rows. **Mechanism:** fewer independent units than rows inflates significance. **Symptom:** implausibly small p-values on a small subject count. **Fix:** a random effect - ANCOM-BC2 `rand_formula='(1|SubjectID)'`, MaAsLin2 `random_effects='SubjectID'`, LinDA `(1|SubjectID)` in the formula. Cross-check ANCOM-BC2 mixed-model output against LinDA/MaAsLin2 (GitHub issue #111 reported `rand_formula` correctness problems in some versions).
 
-### eBayes(trend=FALSE) on intensity data
-**Trigger:** Plain `eBayes` (trend off) on a log-intensity matrix.
-**Mechanism:** A single global prior over-shrinks high-abundance and under-shrinks low-abundance proteins.
-**Symptom:** Mis-calibrated FDR across the abundance range.
-**Fix:** `eBayes(trend = TRUE, robust = TRUE)`; escalate to DEqMS when quant depth varies.
+### Prevalence filter set blindly
+**Trigger:** an undeclared prevalence cut, or none at all. **Mechanism:** the cut decides which taxa are even tested and thus the BH landscape - it is a modeling choice. **Symptom:** the hit list changes materially between `prv_cut=0.1` and `0.25`. **Fix:** declare and justify the threshold; confirm the headline result survives moving it.
 
-### Wrong DEqMS count column
-**Trigger:** Razor+unique counts vs MS2-level PSMs, or total-across-batches vs minimum-across-batches.
-**Mechanism:** The variance-vs-count prior is fit on the wrong precision proxy.
-**Symptom:** Mis-ranked proteins; the count moderation helps the wrong ones.
-**Fix:** PSM count for TMT, peptide count for label-free; minimum count across batches for multi-batch TMT.
+### Relative change reported as absolute
+**Trigger:** "taxon X doubled" from a closed table with no load data. **Mechanism:** one taxon blooming compresses every other proportion. **Symptom:** whole-community "depletion" that is really one taxon rising. **Fix:** anchor to load (spike-in/flow/qPCR) or MaAsLin3 absolute mode; otherwise state the claim is relative.
 
-### proDA on MCAR missingness
-**Trigger:** proDA applied where dropout is random (e.g. a TMT channel lost at random), not detection-limited.
-**Mechanism:** The left-censored dropout model is mis-specified.
-**Symptom:** Biased estimates; the model fits a dropout curve that does not exist.
-**Fix:** proDA needs intensity-dependent missingness; for MCAR use limma/DEqMS on the observed values.
+### DESeq2/edgeR on a sparse 16S table
+**Trigger:** RNA-seq median-of-ratios / TMM on a zero-heavy ASV table. **Mechanism:** the geometric-mean size-factor reference collapses on zeros and the "most features unchanged" assumption is violated. **Symptom:** degenerate size factors, errors, or inflated hit counts that disagree with CoDA tools (Nearing). **Fix:** use a compositional tool; if DESeq2 is unavoidable, the `poscounts` estimator is the minimum mitigation - present as a caveat, not a recipe.
 
-### FC + significance double filter
-**Trigger:** `abs(logFC) > 1 & adj.P.Val < 0.05` applied after the test.
-**Mechanism:** |logFC| is large for a true effect OR a large SE; filtering on both the FC and the p (both depend on SE) selects high-variance nulls (collider effect).
-**Symptom:** Realized FDR above 50% at nominal 5% (Ebrahimpoor & Goeman 2021).
-**Fix:** `treat()`+`topTreat()` or SAM s0, which sit inside the statistic before selection.
+### ANCOM-BC2 hit held hostage by the pseudo-count
+**Trigger:** reporting `diff_* == TRUE` without checking `passed_ss_*`. **Mechanism:** significance depends on the arbitrary zero-replacement constant. **Symptom:** a hit that vanishes when the pseudo-count changes. **Fix:** require `diff_* & passed_ss_*` for a confident call.
 
 ## Quantitative Thresholds
 
 | Threshold | Source | Rationale |
 |-----------|--------|-----------|
-| n=3-5 replicates -> 2-4 residual df | -- | raw per-protein variance unusable; moderation is mandatory, not optional |
-| limma adds prior d0 (~4) df | Ritchie 2015 | a 4-replicate design tests on ~10 df vs 6; the borrowed df is the benefit |
-| downshift mean = mu - 1.8*sigma, SD = 0.3*sigma | Perseus default | 1.8 places imputed mass ~3.6th percentile; 0.3 gives only 30% of real spread -> manufactured false positives |
-| `trend=TRUE` effectively mandatory for label-free | Ritchie 2015 | a single global prior mis-calibrates FDR across abundance |
-| min-FC floor log2(1.2) (1.2-fold) via treat() | -- | example floor; common alternatives 1.5-fold (~0.58) or 2-fold (1.0); set by biology, tested against the moderated null |
-| BH adjusted p < 0.05 | Benjamini-Hochberg | controls FDR over the WHOLE rejection set, not subsets carved out afterward |
-| DEqMS multi-batch TMT: minimum count across batches | Zhu 2020 | the bottleneck batch sets the realized precision |
-| realized FDR > 50% from FC+significance double filter | Ebrahimpoor & Goeman 2021 | top-100 at n=12 exceeded 50% FDR at nominal 5% |
+| Prevalence cut 10-25% (`prv_cut`/`min_prevalence`/`prev.filter`) | Nearing 2022; tool defaults (0.10) | rare features carry little information and crush the BH denominator; declare the value and test sensitivity |
+| BH q <= 0.05 across taxa, within each tool | Benjamini-Hochberg 1995 *JRSS B* 57:289 | hundreds-thousands of features make uncorrected p meaningless; do not pool p across tools |
+| ALDEx2 `|effect| > 1` (with q <= 0.05) | Gloor 2016 *J Comput Graph Stat* 25:971 | effect is a standardized median-ratio; ~2 SD is a strong signal; large n makes trivial diffs "significant" |
+| ALDEx2 `mc.samples` = 128 (256+ for publication) | Fernandes 2014 *Microbiome* 2:15 | Monte-Carlo draws; more draws stabilize the expected p |
+| ANCOM-BC2 `passed_ss == TRUE` required | Lin & Peddada 2024 *Nat Methods* 21:83 | flags hits whose significance is hostage to the pseudo-count |
+| Consensus of >=2 compositionally-aware tools | Nearing 2022 *Nat Commun* 13:342 | tool choice drives the hit list more than biology; intersection = confident |
+| ZicoSeq permutations `perm.no` >= 99 | Yang & Chen 2022 *Microbiome* 10:130 | permutation FDR resolution; raise for finer tail p |
 
 ## Common Errors
 
 | Error / symptom | Cause | Solution |
 |-----------------|-------|----------|
-| `results$FDR` is NULL | limma `topTable`/`topTreat` have no `$FDR` column | use `adj.P.Val` (BH-adjusted p) |
-| `topTreat` row has no `B` | `topTreat` omits `B` (a `topTable` column) | read `logFC, AveExpr, t, P.Value, adj.P.Val` |
-| FDR mis-calibrated across abundance | `eBayes` with `trend=FALSE` on intensity data | `eBayes(fit, trend = TRUE, robust = TRUE)` |
-| min-FC test inflates FDR | `topTable(lfc=...)` or post-hoc volcano double filter | `treat(fit, lfc=log2(1.2))` then `topTreat()` |
-| anticonservative p after batch correction | `removeBatchEffect` output fed to `lmFit` | put batch in the design: `~ batch + condition` |
-| DEqMS columns missing | forgot `fit$count` or read limma columns | set `fit$count`, run `spectraCounteBayes`, read `sca.adj.pval` from `outputResult` |
-| Student's t instead of Welch | `scipy.stats.ttest_ind` defaults `equal_var=True` | pass `equal_var=False` |
-| p-values look like Holm-Sidak | `statsmodels` `multipletests` defaults to `'hs'` | pass `method='fdr_bh'` |
-| volcano "anchor/wing" streaks | downshift/imputation feeding the test | model dropout (proDA/msqrob2/MSstats-AFT); report on/off proteins as undetected |
+| ALDEx2 returns NA effects / errors | proportions or non-integer matrix passed | feed integer COUNTS with taxa in rows |
+| `passed_ss` column missing | `pseudo_sens = FALSE` | set `pseudo_sens = TRUE` (the default) |
+| Far fewer hits than expected | ANCOM-BC2 `p_adj_method` left at `holm` | set `p_adj_method = 'BH'` deliberately if FDR is wanted |
+| MaAsLin2 finds nothing / orientation error | features in rows, not columns | transpose so samples are rows, features columns |
+| Mixed-model hits disagree across tools | `rand_formula` correctness varies by version | cross-check ANCOM-BC2 against LinDA/MaAsLin2 |
+| Tools disagree on the hit list | normal - tool choice drives results | report the consensus and the disagreement, do not cherry-pick |
+| Many "depleted" taxa in a host/plant sample | host mitochondria/chloroplast 16S inflates the table | filter Mitochondria/Chloroplast features (see taxonomy-assignment) before DA |
+| Contaminant ASVs among the hits (low-biomass) | reagent kitome not removed before DA | run decontam upstream with negative controls (amplicon-processing; metagenomics/contamination-controls) |
 
 ## References
 
-- Ritchie ME, Phipson B, Wu D, Hu Y, Law CW, Shi W, Smyth GK. 2015. limma powers differential expression analyses for RNA-sequencing and microarray studies. *Nucleic Acids Res* 43(7):e47.
-- Phipson B, Lee S, Majewski IJ, Alexander WS, Smyth GK. 2016. Robust hyperparameter estimation protects against hypervariable genes and improves power to detect differential expression. *Ann Appl Stat* 10(2):946-963.
-- Zhu Y, Orre LM, Zhou Tran Y, et al. 2020. DEqMS: a method for accurate variance estimation in differential protein expression analysis. *Mol Cell Proteomics* 19(6):1047-1057.
-- Ahlmann-Eltze C, Anders S. 2019. proDA: probabilistic dropout analysis for identifying differentially abundant proteins in label-free mass spectrometry. *bioRxiv* 661496 (preprint; cite `citation("proDA")`, never a journal).
-- Choi M, Chang CY, Clough T, Broudy D, Killeen T, MacLean B, Vitek O. 2014. MSstats: an R package for statistical analysis of quantitative mass spectrometry-based proteomic experiments. *Bioinformatics* 30(17):2524-2526.
-- Goeminne LJE, Gevaert K, Clement L. 2016. Peptide-level robust ridge regression improves estimation, sensitivity, and specificity in data-dependent quantitative label-free shotgun proteomics. *Mol Cell Proteomics* 15(2):657-668.
-- Sticker A, Goeminne L, Martens L, Clement L. 2020. Robust summarization and inference in proteome-wide label-free quantification. *Mol Cell Proteomics* 19(7):1209-1219.
-- Lazar C, Gatto L, Ferro M, Bruley C, Burger T. 2016. Accounting for the multiple natures of missing values in label-free quantitative proteomics data sets to compare imputation strategies. *J Proteome Res* 15(4):1116-1125.
-- Stephens M. 2017. False discovery rates: a new deal. *Biostatistics* 18(2):275-294.
-- Ebrahimpoor M, Goeman JJ. 2021. Inflated false discovery rate due to volcano plots: problem and solutions. *Brief Bioinform* 22(5):bbab053.
+- Fernandes AD, Reid JNS, Macklaim JM, McMurrough TA, Edgell DR, Gloor GB. 2014. Unifying the analysis of high-throughput sequencing datasets: characterizing RNA-seq, 16S rRNA gene sequencing and selective growth experiments by compositional data analysis. *Microbiome* 2:15.
+- Gloor GB, Macklaim JM, Fernandes AD. 2016. Displaying variation in large datasets: plotting a visual summary of effect sizes. *J Comput Graph Stat* 25:971-979.
+- Lin H, Peddada SD. 2020. Analysis of compositions of microbiomes with bias correction (ANCOM-BC). *Nat Commun* 11:3514.
+- Lin H, Peddada SD. 2024. Multigroup analysis of compositions of microbiomes with covariate adjustments and repeated measures (ANCOM-BC2). *Nat Methods* 21:83-91.
+- Mallick H, Rahnavard A, McIver LJ, et al. 2021. Multivariable association discovery in population-scale meta-omics studies. *PLoS Comput Biol* 17:e1009442.
+- Nickols WA, Kuntz T, Shen J, et al. 2026. MaAsLin 3: refining and extending generalized multivariable linear models for meta-omic association discovery. *Nat Methods* 23:554-564.
+- Zhou H, He K, Chen J, Zhang X. 2022. LinDA: linear models for differential abundance analysis of microbiome compositional data. *Genome Biol* 23:95.
+- Yang L, Chen J. 2022. A comprehensive evaluation of microbial differential abundance analysis methods: current status and potential solutions. *Microbiome* 10:130.
+- Yang L, Chen J. 2023. Benchmarking differential abundance analysis methods for correlated microbiome sequencing data. *Brief Bioinform* 24:bbac607.
+- Pelto J, Auranen K, Kujala JV, Lahti L. 2025. Elementary methods provide more replicable results in microbial differential abundance analysis. *Brief Bioinform* 26(2):bbaf130.
+- Nearing JT, Douglas GM, Hayes MG, et al. 2022. Microbiome differential abundance methods produce different results across 38 datasets. *Nat Commun* 13:342.
+- Segata N, Izard J, Waldron L, et al. 2011. Metagenomic biomarker discovery and explanation. *Genome Biol* 12:R60.
+- Love MI, Huber W, Anders S. 2014. Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2. *Genome Biol* 15:550.
+- Benjamini Y, Hochberg Y. 1995. Controlling the false discovery rate: a practical and powerful approach to multiple testing. *J R Stat Soc Series B* 57:289-300.
 
 ## Related Skills
 
-- quantification - peptide-to-protein summarization, normalization, and IRS that produce the matrix this skill tests
-- proteomics-qc - quality control and batch-effect assessment before testing
-- protein-inference - razor/shared-peptide ambiguity that drives which protein group gets the quantity
-- ptm-analysis - site-level differential testing for modified peptides
-- differential-expression/de-results - analogous empirical-Bayes interpretation for RNA-seq DE
-- data-visualization/volcano-and-ma-plots - volcano and MA plots of the result table
-- pathway-analysis/go-enrichment - functional enrichment of the significant protein hit list
-- machine-learning/biomarker-discovery - building predictive panels from differential proteins
-- workflows/proteomics-pipeline - end-to-end pipeline that calls this skill as the testing stage
+- diversity-analysis - Whole-community alpha/beta/PERMANOVA; answer "do the communities differ" before "which taxa differ"
+- taxonomy-assignment - Collapse ASVs to genus/species before per-taxon testing
+- amplicon-processing - Produces the ASV feature table tested here
+- qiime2-workflow - The qiime composition ancombc CLI route
+- metagenomics/abundance-estimation - Shared compositional/closure/CLR/zero/load-anchor theory
+- metagenomics/metagenome-visualization - The same DA mechanics on shotgun profiler tables
+- experimental-design/multiple-testing - FDR control and multiplicity across taxa
