@@ -8,7 +8,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![sync-skills](https://github.com/FridrichMethod/awesome-skills/actions/workflows/sync-skills.yml/badge.svg)](https://github.com/FridrichMethod/awesome-skills/actions/workflows/sync-skills.yml)
 [![Skills](https://img.shields.io/badge/skills-2000%2B-brightgreen)](#sources)
-[![Sources](https://img.shields.io/badge/upstream%20sources-17-blue)](#sources)
+[![Sources](https://img.shields.io/badge/upstream%20sources-18-blue)](#sources)
 [![Last Commit](https://img.shields.io/github/last-commit/FridrichMethod/awesome-skills)](https://github.com/FridrichMethod/awesome-skills/commits/main)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
@@ -26,7 +26,7 @@ Agent skills are how you give Claude Code or Codex CLI deep, reusable expertise 
 
 **awesome-skills** does three things:
 
-1. **Aggregates** the best Claude Code / Codex skills from 17 upstream curated collections — bio/scientific, academic writing, official Anthropic, Google DeepMind, Superpowers, Karpathy, and major community libraries.
+1. **Aggregates** the best Claude Code / Codex skills from 18 upstream curated collections — bio/scientific, academic writing, official Anthropic, Google DeepMind, Superpowers, Karpathy, and major community libraries.
 2. **Filters** out things that break installs (Git LFS pointers, files >40 MB, bundled vector DBs, stale `.gitattributes`).
 3. **Auto-syncs** every Sunday so your skill library stays current without manual work.
 
@@ -133,7 +133,7 @@ If you already have the repo cloned, `./install.sh` detects the adjacent `skills
 
 ## Sources
 
-Skills are aggregated from these upstream repositories — credit and gratitude to the original authors. Sources are grouped by scope; within `scripts/sync_skills.py` they are listed in install order (later = wins on name collision). Currently **17 sources**.
+Skills are aggregated from these upstream repositories — credit and gratitude to the original authors. Sources are grouped by scope; within `scripts/sync_skills.py` they are listed in install order (later = wins on name collision). Currently **18 sources**.
 
 ### Bio / scientific / medical
 
@@ -163,6 +163,7 @@ Skills are aggregated from these upstream repositories — credit and gratitude 
 |---|---:|---:|---|
 | [wshobson/agents](https://github.com/wshobson/agents) | 35.5k | 155 | Production dev workflows — accessibility, code review, deployment, testing across many plugin domains |
 | [anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official) | 19.5k | 28 | **Official Anthropic** plugin skills — Discord, iMessage, Slack, Telegram, GitHub messaging & access |
+| [yylo-dev/yylo-skills](https://github.com/yylo-dev/yylo-skills) | 1 | 7 | YYLO coding-agent task orchestration — kanban/ledger task lifecycle, planning, ralph-loop execution, wiki/workflow/artifact ops for the YYLO CLI orchestrator (npm `@yylo/cli`) |
 | [forrestchang/andrej-karpathy-skills](https://github.com/forrestchang/andrej-karpathy-skills) | 133.3k | 1 | Andrej Karpathy's CLAUDE.md packaged — guidance for fixing common LLM coding pitfalls |
 | [anthropics/skills](https://github.com/anthropics/skills) | 136.1k | 18 | **Official Anthropic** skills — algorithmic-art, brand-guidelines, canvas-design, claude-api, doc-coauthoring, mcp-builder, pdf, pptx, xlsx, etc. |
 | [obra/superpowers](https://github.com/obra/superpowers) | 194.6k | 14 | Anthropic-blessed methodology framework — brainstorming, TDD, debugging, planning, code review, subagent-driven dev |
@@ -240,7 +241,7 @@ Each successful run posts a per-source change summary table in the job summary.
 
 ```
 awesome-skills/
-├── skills/                          ← 2,091 skill dirs (managed by sync; do not edit directly)
+├── skills/                          ← 2,098 skill dirs (managed by sync; do not edit directly)
 ├── install.sh                       ← one-line installer (curl|bash compatible)
 ├── scripts/
 │   └── sync_skills.py               ← aggregation logic
