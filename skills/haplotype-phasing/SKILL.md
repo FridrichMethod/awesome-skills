@@ -1,156 +1,143 @@
 ---
-name: bio-long-read-sequencing-haplotype-phasing
-description: Phases small variants, SVs, and methylation from Oxford Nanopore and PacBio long reads (read-backed/physical phasing) with WhatsHap, LongPhase, or HiPhase, and haplotags the BAM (HP/PS tags) for allele-resolved downstream analysis. Covers why phase blocks break at het-sparse gaps (read length x heterozygosity), why phasing the VCF is useless until the BAM is haplotagged, the GT-pipe/PS and read HP/PS tag spec, reporting block N50 with switch error, the diploid-assumption/CNV/haploid-region traps, trio phasing as the gold standard, and the boundary to statistical panel phasing. Use when phasing long-read variants, haplotagging reads for allele-specific methylation/expression or phased SVs, choosing WhatsHap vs LongPhase vs HiPhase, trio phasing, or assessing phasing quality.
+name: bio-phasing-imputation-haplotype-phasing
+description: Estimates haplotype phase from population linkage disequilibrium with SHAPEIT5, SHAPEIT4, Eagle2, or Beagle - turning unphased genotypes (0/1) into phased haplotypes (0|1) for imputation input, compound-heterozygote calls, HLA typing, or population genetics. Covers why statistical phase is an INFERENCE (not a measurement) whose error concentrates at rare variants, why a genome-wide switch-error rate hides catastrophic rare-variant error and must be reported MAC-stratified, the SHAPEIT5 common-scaffold-then-rare design (phase_common, ligate, phase_rare, switch), reference-based vs within-cohort phasing, the build-matched genetic map, chrX male-haploid handling, and the switch-vs-flip-vs-Hamming distinction. Use when phasing genotypes before imputation, for compound-het/ASE/HLA, or benchmarking against trios. Read-backed / molecular phasing (long reads, Hi-C) is long-read-sequencing/haplotype-phasing; panel choice is reference-panels; imputation is genotype-imputation.
 tool_type: cli
-primary_tool: whatshap
+primary_tool: SHAPEIT5
 ---
 
 ## Version Compatibility
 
-Reference examples tested with: whatshap 2.3+, longphase 1.7+, samtools 1.19+, tabix/htslib 1.19+.
+Reference examples tested with: SHAPEIT5 5.1.1, Eagle 2.4.1, Beagle 5.4 (22Jul22), bcftools 1.19+.
 
 Before using code patterns, verify installed versions match. If versions differ:
 - CLI: `<tool> --version` then `<tool> --help` to confirm flags
 
-Behavior to record:
-- `whatshap phase --reference` enables realignment mode (rescues indel phasing on error-prone long reads); omitting it falls back to lower-quality genotype-only phasing.
-- Phasing the VCF and haplotagging the BAM are SEPARATE steps; downstream read-level tools need the BAM HP tag.
-- `--max-coverage 15` (WhatsHap) is a runtime downsampling cap, not a minimum-depth requirement.
+If code throws ImportError, AttributeError, or TypeError, introspect the installed
+package and adapt the example to match the actual API rather than retrying.
 
-If code throws an error, introspect the installed tool (`whatshap phase --help`, `longphase --help`) and adapt the example to the actual API rather than retrying.
+SHAPEIT4 to SHAPEIT5 changed the CLI substantially: SHAPEIT5 is a SUITE of binaries (`phase_common`, `phase_rare`, `ligate`, `switch`), not a single `shapeit` command, and `phase_common` is the engine formerly known as SHAPEIT4. The genetic map and the reference panel must match the data's genome build (GRCh37 vs GRCh38); a build-mismatched map silently degrades phasing. PBWT and Ne defaults have drifted between betas; confirm against the installed `--help`.
 
-# Read-Backed Haplotype Phasing
+# Statistical Haplotype Phasing -- Inferring Phase From Population LD
 
-**"Phase my long-read variants"** -> Reconstruct haplotypes directly from reads that span heterozygous sites, then haplotag the BAM so downstream tools can see the phase.
-- CLI: `whatshap phase -o phased.vcf.gz --reference ref.fa --indels variants.vcf.gz aln.bam` then `whatshap haplotag -o haplotagged.bam --reference ref.fa phased.vcf.gz aln.bam`
+**"Resolve which alleles sit together on each chromosome"** -> Estimate haplotype phase from population linkage disequilibrium via the Li-Stephens HMM - because phase is INFERRED statistically from how haplotypes are shared across a population, not read off the genotype, so a switch error is a model uncertainty (the rate, not zero, is the deliverable), not a typo.
+- CLI: `phase_common --input target.bcf --filter-maf 0.001 --map chr20.b38.gmap.gz --region chr20 --output scaffold.bcf` then `ligate` then `phase_rare` (SHAPEIT5), or Eagle2/Beagle for common-variant phasing
 
-This is read-backed (physical, panel-free) phasing of a single sample. Statistical/reference-panel phasing for imputation lives in phasing-imputation/haplotype-phasing; building phased haplotype contigs lives in genome-assembly/hifi-assembly.
+Scope: population/statistical phasing of array or sequence genotypes for imputation input, compound-het/ASE/HLA, and population genetics. Read-backed / molecular single-sample phasing (long reads, Hi-C, 10x linked reads) is a PHYSICALLY DIFFERENT signal -> long-read-sequencing/haplotype-phasing (the two are easily conflated; do not run SHAPEIT on long-read evidence or trust statistical phase for a private clinical variant). Panel choice -> reference-panels. Imputation against a panel -> genotype-imputation. The input VCF and biallelic normalization -> variant-calling/variant-normalization. End-to-end orchestration -> workflows/gwas-pipeline.
 
-## The Single Most Important Modern Insight -- Phasing the VCF Is Useless Until the BAM Is Haplotagged, and Blocks Break Where No Read Spans Two Hets
+## The Single Most Important Modern Insight -- A Phased Haplotype Is a Statistical Estimate, and Its Error Concentrates Exactly Where the Biology of Interest Lives
 
-Read-backed phasing is sample-intrinsic and panel-free (the haplotypes are exactly what this individual's reads physically witness), with two load-bearing consequences:
+Statistical phasing reconstructs which alleles are on the same chromosome by borrowing LD across many individuals or a reference panel (Delaneau 2019 *Nat Commun* 10:5436). That works beautifully for common variants in LD with their neighbors and fails, by construction, for rare variants - which are young, carried by few people, and in LD with almost nothing. Three facts drive every decision:
 
-1. **`phase` writes the VCF; `haplotag` writes the BAM - they are different products.** `whatshap phase` / `longphase phase` set GT pipe (`0|1`) and a PS phase-set in the VCF; they do NOT touch the BAM. Every read-level downstream tool (modkit `--partition-tag HP` for allele-specific methylation, pb-CpG-tools `--hap-tag HP`, Severus for phased SVs, IGV color-by-HP, `whatshap split`) keys on the per-read `HP` tag that ONLY `haplotag` writes. A user who runs `phase` and stops has a phased VCF and an un-haplotagged BAM, and the downstream step silently produces only an ungrouped partition. Triage: `samtools view haplotagged.bam | grep -m1 'HP:i:'`.
-2. **Phase blocks break wherever no single read spans two adjacent hets.** Block length is capped by read length x heterozygosity: a long homozygous run (or a coverage/mapping dropout) ends a block no matter how long the reads are. A genome is phased into MANY blocks, not one haplotype per chromosome, and between-block phase is arbitrary until a long-range method (trio, Hi-C) stitches them. So "the genome is phased" is meaningless without block N50 AND switch error together.
+1. **The genome-wide switch-error rate lies, because it is dominated by easy common sites.** A headline "switch error rate 0.3%" is averaged over millions of common heterozygous sites and says nothing about the singleton or doubleton that is most likely to be the compound-het, the de-novo, or the pathogenic allele of interest - those are phased at MAC-dependent accuracy an order of magnitude worse, and a true singleton is essentially a coin flip without special machinery (Hofmeister 2023 *Nat Genet* 55:1243). Report accuracy stratified by minor allele count, never as one number.
+2. **The deliverable is a switch-error rate against an independent truth set, not the tool name.** "We used SHAPEIT" is not a switch-error rate. A switch error changes which haplotype an allele sits on without changing any genotype, so it is invisible to every per-site genotype QC; for any phase-dependent claim, measure the rate against a trio (Mendelian truth via `switch --pedigree`) or read-backed truth.
+3. **The modern arc is the scaffold design, and rare-variant phasing needs biobank scale to work at all.** SHAPEIT5 phases common variants into a fixed, near-perfect scaffold, then places each rare allele onto it by PBWT/IBD haplotype matching - which depends on finding a long shared haplotype, itself a function of cohort size. This is why rare-variant phasing in a small cohort cannot be trusted for a cis/trans call without orthogonal (trio or read-backed) evidence.
 
-## Tool Decision Tree
+## Tool Taxonomy
 
-Switch-error accuracy is comparable across read-based tools (~0.1-0.4% on long reads); choose on speed, SV/mod co-phasing, platform, and pedigree.
+| Tool | Citation | Mechanism / role | When |
+|------|----------|------------------|------|
+| SHAPEIT5 | Hofmeister 2023 *Nat Genet* 55:1243 | suite (phase_common/phase_rare/ligate/switch); scaffold design for rare/singleton phasing; PBWT | biobank-scale WGS/WES; rare-variant phasing |
+| SHAPEIT4 (= phase_common engine) | Delaneau 2019 *Nat Commun* 10:5436 | sub-linear common-variant phasing; integrates panels, scaffolds, read-backed phase | common-variant phasing / pre-phasing; legacy |
+| Eagle2 | Loh 2016 *Nat Genet* 48:1443 | HMM + PBWT-derived HapHedge; reference-based (`--vcfRef`) and within-cohort | array data; the classic imputation-server phaser |
+| Beagle 5.x | Browning 2021 *Am J Hum Genet* 108:1880 | Java; does BOTH phasing (gt=, no ref=) and imputation; two-stage for sequence | one tool for phase and impute; no compile |
+| Trio / pedigree phasing | (Mendelian transmission) | deterministic phase where the trio is informative | gold standard; validating other phasers via `switch` |
+| WhatsHap (boundary) | Patterson 2015 *J Comput Biol* 22:498 | read-backed phasing (weighted MEC) from aligned reads | -> long-read-sequencing/haplotype-phasing; can seed SHAPEIT as a scaffold |
 
-| Scenario | Tool | Why |
-|----------|------|-----|
-| Careful default; indel phasing | WhatsHap (`--reference --indels`) | realignment mode rescues indels; widest downstream familiarity |
-| Parents/pedigree sequenced | WhatsHap `--ped` (PedMEC) | the gold standard - chromosome-scale, lowest switch error |
-| Whole-genome ONT speed | LongPhase (`--ont`) | ~10x faster; 30x human in ~1 min |
-| Co-phase SVs / methylation into long blocks | LongPhase (`--sv-file`/`--mod-file`) | a phased SV bridges het-sparse gaps; block N50 ~25 Mbp |
-| PacBio HiFi, joint small+SV+STR | HiPhase | PacBio-native one-pass phasing |
-| Multi-tech (Hi-C / 10x) | HapCUT2 | models Hi-C/linked-read error |
-| Inside PEPPER-Margin-DeepVariant | margin | legacy embedded haplotagger |
+## Decision Tree by Scenario
 
-Clair3 uses WhatsHap (or LongPhase) internally to phase its het SNPs and haplotag the BAM feeding its full-alignment model - this skill owns that phase->haplotag mechanism (see clair3-variants).
+| Scenario | Recommended | Why |
+|----------|-------------|-----|
+| Array data, small-to-modest cohort, have a panel | Eagle2 `--vcfRef` or phase_common `--reference` | a panel models LD better than a few thousand samples |
+| Array data, large cohort, no panel | Eagle2 or phase_common within-cohort | LD is modeled from the cohort; accuracy rises with N |
+| WGS/WES, biobank scale, need rare variants phased | SHAPEIT5: phase_common -> ligate -> phase_rare | the scaffold design is the only route to accurate rare-variant phase |
+| Pre-phasing as imputation input | Eagle2 or Beagle 5 | small switch errors largely wash out in imputation -> genotype-imputation |
+| One tool for phase and impute, no compile | Beagle 5.x (gt= to phase, add ref= to impute) | pragmatic single tool |
+| Trio/pedigree available | trio/pedigree phasing; use `switch` to benchmark | deterministic where informative; the truth ruler |
+| Long reads on the same sample | -> long-read-sequencing/haplotype-phasing (then seed SHAPEIT as a scaffold) | read-backed phase is local and deterministic; combine, do not replace |
+| Common-variant phasing only, modest data | SHAPEIT4 or Beagle | rare-variant machinery is unnecessary overhead |
 
-## The Tags (the central distinction)
+## The Common-Scaffold-Then-Rare Design (SHAPEIT5)
 
-| Layer | Tag | Meaning |
-|-------|-----|---------|
-| VCF (per variant) | `GT` with `|` vs `/` | `0|1` phased (order = which haplotype carries ALT); `0/1` unphased |
-| VCF (per variant) | `FORMAT/PS` (Integer) | phase-set / block id; variants sharing a PS are phased relative to each other (conventionally the first variant's position) |
-| BAM (per read) | `HP:i:1` / `HP:i:2` | the haplotype this read was assigned to (written by `haplotag`) |
-| BAM (per read) | `PS:i:<int>` | the phase set the read's assignment belongs to (matches the VCF PS) |
+Rare variants carry too little LD to phase in a joint model, and a joint HMM over millions of rare sites does not scale, so SHAPEIT5 splits the problem. Use the full pipeline when N > ~2,000; below that, `phase_common` alone suffices (too few rare-allele carriers for the rare step to add value).
 
-Unassigned reads carry NO HP tag (not `HP:i:0`). Do not confuse the VCF `HP` FORMAT tag (GATK style) with the BAM `HP` read tag.
+1. **phase_common** phases the common variants (e.g. `--filter-maf 0.001`) into accurate haplotypes - the scaffold. Run per chunk for large chromosomes, with OVERLAPPING regions.
+2. **ligate** stitches the per-chunk common scaffolds into one chromosome; chunks must overlap so ligate can resolve phase across the seam (a non-overlapping seam is a guaranteed switch).
+3. **phase_rare** takes the FULL genotypes plus the fixed scaffold and places each rare allele onto the already-phased common haplotypes by IBD matching. Do not filter rare variants out of the phase_rare input - placing them is the whole point.
 
-## Phasing Quality - Report Block N50 AND Switch Error
+## Switch Error vs Flip vs Hamming -- the Metrics
 
-| Metric | Tool | Trap |
-|--------|------|------|
-| phase-block N50/NG50 | `whatshap stats` | contiguity, not correctness; gameable by over-joining blocks (which raises switch errors) |
-| phased fraction | `whatshap stats` | a tool can phase fewer easy sites to look better |
-| switch error rate | `whatshap compare` | the primary accuracy number |
-| switch vs flip decomposition | `whatshap compare` | a long switch propagates (damaging); a flip/short switch self-corrects (one wrong variant) - quote the decomposition |
-| Hamming distance | `whatshap compare` | hypersensitive to switch position (a switch near a block start flips half the block) |
+A single rate hides the failure mode. Report more than one, and look at the distribution of switch positions.
 
-Long blocks with a high switch rate are worse, not better, than honest short blocks. Benchmark against a trio-/strand-seq-phased GIAB truth.
+| Metric | What it counts | Inflates on |
+|--------|----------------|-------------|
+| Switch error rate (SER) | fraction of consecutive het-site pairs whose phase relationship is wrong | many small local errors; the standard headline |
+| Flip error | an isolated het phased wrong then immediately corrected (two switches one site apart) | noisy single sites; double-counts in raw SER |
+| Hamming error | fraction of het sites on the wrong haplotype under the best global alignment | a few LARGE block swaps - high Hamming, low switch count |
+| Long switch / block flip | a sustained segment on the wrong haplotype | poor long-range LD; ruinous for cis/trans yet only 2 switches |
 
-## Core Commands
+SER and Hamming measure different sins: many tiny flips give high SER but modest Hamming; one half-chromosome block swap gives catastrophic Hamming but only two switches. Het density matters too - SER is per-het-pair, so sparse het sites mean the same SER spans more bp. Typical magnitudes (order-of-magnitude, dataset-specific): Eagle2 + HRC reference, European array ~1.36%; Eagle2 within-cohort N~5,000 ~1.5%; within-cohort N~150,000 (UK Biobank) ~0.27-0.35%; SHAPEIT5 for a variant in ~1 of 100,000 < ~5%. The pattern: common-variant phasing in a big cohort is sub-1%; rare-variant phasing is single-digit-percent at best and worsens steeply as MAC approaches 1.
 
-```bash
-# WhatsHap: phase (VCF), then haplotag (BAM). --reference enables realignment for indels.
-whatshap phase -o phased.vcf.gz --reference ref.fa --indels variants.vcf.gz aln.bam
-tabix -p vcf phased.vcf.gz
-whatshap haplotag -o haplotagged.bam --reference ref.fa \
-    --output-haplotag-list htlist.tsv.gz phased.vcf.gz aln.bam
-samtools index haplotagged.bam
+## Reference-Based vs Within-Cohort
 
-# Quality
-whatshap stats --gtf blocks.gtf phased.vcf.gz                       # block N50, count, fraction
-whatshap compare --names truth,mine truth.vcf.gz phased.vcf.gz      # switch error, flip decomposition
-
-# Trio (gold standard) - --ped takes a PED file, not mother/father/child args
-whatshap phase -o trio.vcf.gz --reference ref.fa --ped family.ped joint.vcf.gz mother.bam father.bam child.bam
-
-# LongPhase: faster whole-genome, co-phase SNP+indel+SV(+5mC) into long blocks
-longphase phase -s snps.vcf --indels --sv-file svs.vcf -b aln.bam -r ref.fa -o phased -t 16 --ont
-longphase haplotag -s phased.vcf --sv-file phased_SV.vcf -b aln.bam -r ref.fa -o haplotagged -t 16
-
-# Downstream consumer example: allele-specific methylation
-modkit pileup haplotagged.bam asm/ --ref ref.fa --cpg --combine-strands --partition-tag HP
-```
+Reference-based phasing wins when the cohort is small (a few thousand samples cannot model LD as well as a 32k-100k+ haplotype panel); phase against the biggest ancestry-matched panel available (Eagle2 `--vcfRef`). Within-cohort phasing wins when the cohort is large and ancestry-matched to itself, because accuracy rises monotonically with N; by UK-Biobank scale within-cohort is more accurate than any external panel. The crossover is in the tens of thousands. Ancestry match dominates either way - a mismatched panel phases worse than a smaller matched one or within-cohort -> reference-panels.
 
 ## Per-Method Failure Modes
 
-### Phased VCF but no HP tags downstream
-**Trigger:** running `phase` and pointing a read-level tool at the original BAM. **Mechanism:** `phase` writes the VCF only; the BAM HP tag comes from `haplotag`. **Symptom:** modkit returns only an ungrouped partition; IGV shows one color; Severus reports no phased SVs - all with no error. **Fix:** run `haplotag`; verify `samtools view ... | grep HP:i:`.
+### Genome-wide SER trusted for a rare-variant call
+**Trigger:** quoting one switch-error rate and treating all haplotypes as equally trustworthy. **Mechanism:** SER is dominated by easy common sites; rare-variant phase is far worse and MAC-dependent. **Symptom:** a confident compound-het (cis/trans) call from a small-cohort statistical phase that is actually near chance. **Fix:** stratify accuracy by MAC; confirm rare-variant cis/trans with a trio or read-backed phase.
 
-### Short blocks blamed on the tool
-**Trigger:** a homozygosity-rich or inbred sample phasing into many short blocks. **Mechanism:** no intervening hets to link across a long homozygous run - intrinsic, not tool failure. **Symptom:** low block N50 despite good reads. **Fix:** expect it; use ultra-long reads or co-phase SVs (LongPhase) to bridge sparse-het gaps; only trio/Hi-C makes it chromosome-scale.
+### Wrong-build or flat genetic map
+**Trigger:** a GRCh37 map on GRCh38 data, or a uniform map "for simplicity". **Mechanism:** the map sets the HMM's recombination (transition) rates; wrong coordinates or a flat rate mis-place where haplotype breaks are expected. **Symptom:** degraded phasing, more long switches, no error message. **Fix:** use the build-matched per-chromosome map shipped with the tool; the default population map is right.
 
-### Indels phased poorly
-**Trigger:** `whatshap phase` without `--reference`. **Mechanism:** without realignment, allele support for indels in error-prone reads is noisy. **Symptom:** low indel phasing / errors. **Fix:** always pass `--reference ref.fa` (and `--indels`) on long reads.
+### Non-overlapping ligate seam
+**Trigger:** chunking a chromosome with abutting (non-overlapping) regions. **Mechanism:** ligate needs overlap to resolve the phase relationship across the seam. **Symptom:** a guaranteed switch at every chunk boundary. **Fix:** make `--region` / `--input-region` / `--scaffold-region` overlap between adjacent chunks.
 
-### Confident phasing of a haploid/CNV region
-**Trigger:** phasing chrX/Y/MT in an XY sample, or inside a CNV/segdup. **Mechanism:** the two-haplotype model is false there (hemizygous, >2 or 1 haplotype, or collapsed paralogs). **Symptom:** spurious micro-blocks, HP counts far from 50/50. **Fix:** treat phasing there as unreliable; do not interpret it as biology.
+### chrX male coded diploid
+**Trigger:** phasing male chrX non-PAR as diploid heterozygous. **Mechanism:** males are haploid outside the PARs; a het call there is biologically impossible. **Symptom:** corrupted male chrX phase. **Fix:** pass the male sample list (SHAPEIT5 `--haploids`; Eagle handles mixed ploidy); keep PAR1/PAR2 as separate diploid regions with build-correct coordinates.
 
-### Quoting N50 alone
-**Trigger:** comparing phasers on block N50. **Mechanism:** N50 is inflated by over-joining, which raises switch errors. **Symptom:** "longer blocks" that are actually worse. **Fix:** report block N50 AND switch error together; use the flip decomposition.
+### Multiallelic records fed to a phaser
+**Trigger:** phasing raw multiallelic sites. **Mechanism:** phasers expect biallelic records; a multiallelic record is undefined behavior. **Symptom:** tool errors or mis-phased sites. **Fix:** `bcftools norm -m -any` to split and left-align first -> variant-calling/variant-normalization.
 
 ## Quantitative Thresholds
 
 | Threshold | Source | Rationale |
 |-----------|--------|-----------|
-| Total depth ~15-20x for confident phasing | phasing practice | per-haplotype depth is ~half; below ~10x blocks fragment |
-| `--max-coverage 15` is a runtime cap | WhatsHap | wMEC is exponential in per-site coverage; >15x is redundant, not required |
-| long-read switch error ~0.1-0.4% | benchmarks vs trio truth | the achievable accuracy band |
-| LongPhase SNP+SV block N50 ~25 Mbp | Lin 2022 | co-phasing SVs bridges het-sparse gaps (vs ~10-15 Mbp SNP-only) |
-| ASM wants ~20x total | methylation practice | each haplotype must clear the ~10x per-site floor |
+| `--filter-maf 0.001` defines the common/rare scaffold split | SHAPEIT5 docs | common variants build the accurate scaffold; rarer variants are phased onto it |
+| Use phase_common -> ligate -> phase_rare when N > ~2,000 | SHAPEIT5 docs | below that, too few rare-allele carriers for the rare step to help |
+| Report SER stratified by MAC, not genome-wide | Hofmeister 2023 *Nat Genet* 55:1243 | phasing quality is a steep function of MAC; a single number hides rare-variant failure |
+| Eagle2 `--Kpbwt` default 10000 (raise at large N) | Loh 2016 *Nat Genet* 48:1443 | more conditioning haplotypes raise accuracy at biobank scale |
+| phase_rare `--effective-size` ~15000 (verify) | SHAPEIT5 docs | Ne sets expected recombination; often tuned per dataset, confirm with --help |
+| Genetic map must match the data build | Delaneau 2019 *Nat Commun* 10:5436 | a build-mismatched map mis-assigns recombination rates silently |
 
 ## Common Errors
 
 | Error / symptom | Cause | Solution |
 |-----------------|-------|----------|
-| `modkit --partition-tag HP` has only an ungrouped partition | BAM never haplotagged | run `whatshap haplotag` / `longphase haplotag` |
-| `--trio` flag not recognized | the flag is `--ped` | pass a PED file: `--ped family.ped` |
-| Poor indel phasing | `--reference` omitted | add `--reference ref.fa --indels` |
-| 0 reads usable in phase | BAM @RG sample != VCF sample | `--ignore-read-groups` (or fix sample names) |
-| `longphase --platform ont` errors | platform is a bare flag | use `--ont` or `--pb` |
-| Spurious phasing on chrX/CNV | diploid assumption violated | treat as unreliable; exclude haploid/CNV regions |
+| Switch at every chunk boundary | non-overlapping ligate seams | overlap adjacent chunk regions |
+| Corrupted male chrX phase | male non-PAR coded diploid | pass `--haploids`; split PAR/nonPAR |
+| Phaser errors on some sites | multiallelic records | `bcftools norm -m -any` first |
+| Rare-variant cis/trans call does not replicate | small-cohort statistical phase of rare variants | use SHAPEIT5 at scale; confirm with trio/read-backed |
+| Phasing mysteriously bad in one region | wrong-build or flat genetic map | build-match the map |
+| SHAPEIT4 syntax fails under SHAPEIT5 | SHAPEIT5 split into phase_common/phase_rare/ligate | use the suite binaries, not a single `shapeit` |
+| Beagle OutOfMemoryError | JVM heap too small / whole genome in one job | raise `-Xmx`; phase per chromosome |
 
 ## References
 
-- Patterson M, Marschall T, Pisanti N, et al. 2015. WhatsHap: weighted haplotype assembly for future-generation sequencing reads. *J Comput Biol* 22(6):498-509.
-- Martin M, Patterson M, Garg S, et al. 2016. WhatsHap: fast and accurate read-based phasing. *bioRxiv* 085050.
-- Garg S, Martin M, Marschall T. 2016. Read-based phasing of related individuals (PedMEC). *Bioinformatics* 32(12):i234-i242.
-- Lin JH, Chen LC, Yu SC, Huang YT. 2022. LongPhase: an ultra-fast chromosome-scale phasing algorithm for small and large variants. *Bioinformatics* 38(7):1816-1822.
-- Holt JM, Saunders CT, Rowell WJ, et al. 2024. HiPhase: jointly phasing small, structural, and tandem repeat variants from HiFi sequencing. *Bioinformatics* 40(2):btae042.
-- Edge P, Bafna V, Bansal V. 2017. HapCUT2: robust and accurate haplotype assembly for diverse sequencing technologies. *Genome Res* 27(5):801-812.
+- Hofmeister RJ, Ribeiro DM, Rubinacci S, Delaneau O. 2023. Accurate rare variant phasing of whole-genome and whole-exome sequencing data in the UK Biobank. *Nat Genet* 55:1243-1249.
+- Delaneau O, Zagury JF, Robinson MR, Marchini JL, Dermitzakis ET. 2019. Accurate, scalable and integrative haplotype estimation. *Nat Commun* 10:5436.
+- Loh PR, Danecek P, Palamara PF, et al. 2016. Reference-based phasing using the Haplotype Reference Consortium panel. *Nat Genet* 48:1443-1448.
+- Browning BL, Tian X, Zhou Y, Browning SR. 2021. Fast two-stage phasing of large-scale sequence data. *Am J Hum Genet* 108:1880-1890.
+- Durbin R. 2014. Efficient haplotype matching and storage using the positional Burrows-Wheeler transform (PBWT). *Bioinformatics* 30:1266-1272.
+- Patterson M, Marschall T, Pisanti N, et al. 2015. WhatsHap: weighted haplotype assembly for future-generation sequencing reads. *J Comput Biol* 22:498-509.
+- Li N, Stephens M. 2003. Modeling linkage disequilibrium and identifying recombination hotspots using single-nucleotide polymorphism data. *Genetics* 165:2213-2233.
 
 ## Related Skills
 
-- clair3-variants - Produces the het VCF; Clair3 phases+haplotags internally via this mechanism
-- long-read-alignment - Produces the BAM (keep `-Y` so supplementaries are taggable)
-- nanopore-methylation - Allele-specific methylation via `modkit --partition-tag HP`
-- structural-variants - Severus consumes a haplotagged BAM for phased/somatic SVs
-- basecalling - LongPhase can co-phase 5mC from a modBAM
-- phasing-imputation/haplotype-phasing - Statistical/reference-panel phasing for imputation
-- genome-assembly/hifi-assembly - Phased de novo haplotype contigs (trio/Hi-C)
-- hi-c-analysis/contact-pairs - Hi-C long-range phasing (orthogonal)
+- reference-panels - Select the ancestry-matched panel that reference-based phasing copies from
+- genotype-imputation - Imputation consumes the phased haplotypes (pre-phasing)
+- imputation-qc - Switch-error benchmarking sits alongside imputation quality QC
+- long-read-sequencing/haplotype-phasing - Read-backed / molecular single-sample phasing (a different signal)
+- variant-calling/variant-normalization - Split multiallelics and left-align before phasing
+- causal-genomics/fine-mapping - Phased haplotypes feed haplotype-level fine-mapping
+- clinical-databases/hla-typing - HLA typing is a high-stakes consumer of long-range phase
+- workflows/gwas-pipeline - End-to-end QC -> phase -> impute -> associate
