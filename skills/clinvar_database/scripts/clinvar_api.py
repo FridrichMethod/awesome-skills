@@ -35,6 +35,8 @@ import xml.etree.ElementTree as ET
 import dotenv
 from polite_http import http_client
 
+DEFAULT_TIMEOUT_SECONDS: float = 30.0
+
 
 class _Response:
 
@@ -57,8 +59,10 @@ class ClinVarClient:
   BASE_URL = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/'
 
   def __init__(self):
-    # Look for the NCBI API Key in the environment
+    # Look for NCBI configuration in the environment
     self.api_key = os.environ.get('NCBI_API_KEY')
+    self.tool = os.environ.get('NCBI_TOOL')
+    self.email = os.environ.get('NCBI_EMAIL') or os.environ.get('USER_EMAIL')
 
     # NCBI limits: 10 req/sec with key, 3 req/sec without key
     self.rate_limit = 10 if self.api_key else 3
@@ -78,6 +82,10 @@ class ClinVarClient:
       RateLimitError: If a 429 status is received.
       RuntimeError: On any other HTTP or network error.
     """
+    if self.tool:
+      params.setdefault('tool', self.tool)
+    if self.email:
+      params.setdefault('email', self.email)
     if self.api_key:
       params['api_key'] = self.api_key
 
@@ -86,7 +94,7 @@ class ClinVarClient:
     full_url = f'{url}?{query_string}'
 
     try:
-      resp = self.client.fetch(full_url)
+      resp = self.client.fetch(full_url, timeout=DEFAULT_TIMEOUT_SECONDS)
       return _Response(resp.status_code, resp.data)
     except http_client.HttpError as exc:
       if exc.status_code == 429:
@@ -106,6 +114,29 @@ class ClinVarClient:
           f'Failed to fetch data from NCBI E-utilities: {exc}'
       ) from exc
 
+  def _parse_json(self, content: bytes) -> dict[str, Any]:
+    """Decodes and parses a JSON response from NCBI E-utilities."""
+    return json.loads(content.decode('utf-8', errors='replace'), strict=False)
+
+  def _esearch(self, params: dict[str, Any]) -> dict[str, Any]:
+    """Performs an esearch request and returns the validated esearchresult dict.
+
+    Args:
+      params: Query parameters for esearch.fcgi.
+
+    Returns:
+      The `esearchresult` dictionary.
+
+    Raises:
+      RuntimeError: If NCBI Entrez search returns an error.
+    """
+    response = self._request('esearch.fcgi', params)
+    data = self._parse_json(response.content)
+    esearchresult = data.get('esearchresult', {})
+    if 'ERROR' in esearchresult:
+      raise RuntimeError(f"NCBI Entrez search error: {esearchresult['ERROR']}")
+    return esearchresult
+
   def count_variants(self, query: str) -> int:
     """Returns the total number of variants matching a query.
 
@@ -117,6 +148,9 @@ class ClinVarClient:
 
     Returns:
         Total number of matching variant IDs.
+
+    Raises:
+        RuntimeError: If NCBI Entrez search returns an error.
     """
     params = {
         'db': 'clinvar',
@@ -124,9 +158,8 @@ class ClinVarClient:
         'rettype': 'count',
         'retmode': 'json',
     }
-    response = self._request('esearch.fcgi', params)
-    data = json.loads(response.content)
-    return int(data.get('esearchresult', {}).get('count', 0))
+    esearchresult = self._esearch(params)
+    return int(esearchresult.get('count', 0))
 
   def search_variants(
       self,
@@ -152,6 +185,9 @@ class ClinVarClient:
         - ``total_count``: Total number of matching variants in ClinVar.
         - ``fetched_count``: Number of IDs actually retrieved.
         - ``variant_ids``: List of ClinVar Variation ID strings.
+
+    Raises:
+        RuntimeError: If NCBI Entrez search returns an error.
     """
     page_size = min(page_size, 10000)
 
@@ -183,9 +219,8 @@ class ClinVarClient:
           'retmax': current_page_size,
           'retstart': retstart,
       }
-      response = self._request('esearch.fcgi', params)
-      data = json.loads(response.content)
-      ids = data.get('esearchresult', {}).get('idlist', [])
+      esearchresult = self._esearch(params)
+      ids = esearchresult.get('idlist', [])
 
       if not ids:
         break
@@ -221,7 +256,7 @@ class ClinVarClient:
     params = {'db': 'clinvar', 'id': ids_str, 'retmode': 'json'}
 
     response = self._request('esummary.fcgi', params)
-    data = json.loads(response.content)
+    data = self._parse_json(response.content)
 
     result_data = data.get('result', {})
     uids = result_data.get('uids', [])

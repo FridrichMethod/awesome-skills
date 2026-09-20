@@ -49,6 +49,7 @@ import math
 import os
 import re
 import sys
+from typing import Any
 
 from alphagenome.atlas import atlas
 from alphagenome.data import genome
@@ -57,7 +58,6 @@ import dotenv
 import numpy as np
 import pandas as pd
 import polars as pl
-import pysam
 import tabulate
 
 _ATLAS_TRACK_PREDICTIONS_URL = (
@@ -122,7 +122,7 @@ class VariantRecord(genome.Variant):
   track_attributions: dict[str, TrackAttribution] = dataclasses.field(
       default_factory=dict, compare=False, hash=False
   )
-  raw_record: pysam.VariantRecord | None = dataclasses.field(
+  raw_record: Any = dataclasses.field(
       default=None, repr=False, compare=False, hash=False
   )
 
@@ -623,25 +623,50 @@ def score_variant_batch(
   ]
 
 
-def _read_variants_vcf(
-    path: str,
-) -> tuple[Sequence[VariantRecord], pysam.VariantHeader]:
-  """Parses variants from a VCF / VCF.GZ file."""
-  records: MutableSequence[VariantRecord] = []
-  with pysam.VariantFile(path) as vcf_in:
-    for record in vcf_in.fetch():
-      for alt in record.alts or ():
-        records.append(
-            VariantRecord(
-                chromosome=record.chrom,
-                position=int(record.pos),
-                reference_bases=record.ref,
-                alternate_bases=alt,
-                raw_record=record,
-            )
-        )
-    header = vcf_in.header.copy()
-  return records, header
+def _read_variants_vcf(path: str) -> Sequence[VariantRecord]:
+  """Parses variants from a VCF / VCF.GZ file using Polars."""
+  try:
+    df = pl.read_csv(
+        path,
+        separator='\t',
+        comment_prefix='#',
+        has_header=False,
+        columns=[0, 1, 3, 4],
+        new_columns=['chrom', 'pos', 'ref', 'alt'],
+        schema_overrides={
+            'chrom': pl.String,
+            'pos': pl.Int64,
+            'ref': pl.String,
+            'alt': pl.String,
+        },
+    )
+  except pl.exceptions.NoDataError:
+    return []
+  except Exception as e:
+    sys.stderr.write(f"Error reading VCF file '{path}': {e}\n")
+    sys.exit(1)
+
+  df = (
+      df.with_columns(pl.col('alt').str.split(','))
+      .explode('alt')
+      .filter(
+          (pl.col('alt') != '.')
+          & (pl.col('alt') != '')
+          & (pl.col('alt') != '*')
+          & (~pl.col('alt').str.starts_with('<'))
+      )
+  )
+
+  records = [
+      VariantRecord(
+          chromosome=row['chrom'],
+          position=int(row['pos']),
+          reference_bases=row['ref'],
+          alternate_bases=row['alt'],
+      )
+      for row in df.iter_rows(named=True)
+  ]
+  return records
 
 
 def _read_variants_tabular(path: str) -> Sequence[VariantRecord]:
@@ -734,7 +759,7 @@ def _export_scored_variants(
 
 
 def _update_vcf_header(
-    header: pysam.VariantHeader,
+    header: Any,
     scored_variants: Sequence[VariantRecord],
     *,
     vep_csq_only: bool,
@@ -810,6 +835,19 @@ def _update_vcf_header(
   return has_existing_csq
 
 
+def _import_pysam() -> Any:
+  """Imports and returns pysam, or raises RuntimeError if not installed."""
+  try:
+    import pysam
+
+    return pysam
+  except ImportError as e:
+    raise RuntimeError(
+        'pysam is not installed so VCF output is not supported. '
+        'Use an alternative output format: TSV, Parquet, or CSV.'
+    ) from e
+
+
 def _write_annotated_vcf(
     input_path: str,
     output_path: str,
@@ -818,6 +856,8 @@ def _write_annotated_vcf(
     vep_csq_only: bool = False,
 ) -> None:
   """Writes annotated variants to an output VCF."""
+  pysam = _import_pysam()
+
   with pysam.VariantFile(input_path) as vcf_in:
     has_existing_csq = _update_vcf_header(
         vcf_in.header, scored_variants, vep_csq_only=vep_csq_only
@@ -1115,6 +1155,13 @@ def _extract_region_variants(
 
 def handle_annotate(args: argparse.Namespace) -> None:
   """Handler for `annotate` subcommand."""
+  is_vcf_output = args.output.endswith('.vcf') or args.output.endswith(
+      '.vcf.gz'
+  )
+  if is_vcf_output:
+    # Fail early if pysam is not installed.
+    _import_pysam()
+
   client = get_atlas_client()
 
   is_vcf = (
@@ -1123,7 +1170,7 @@ def handle_annotate(args: argparse.Namespace) -> None:
       or args.input.endswith('.bcf')
   )
   if is_vcf:
-    variants, _ = _read_variants_vcf(args.input)
+    variants = _read_variants_vcf(args.input)
   else:
     variants = _read_variants_tabular(args.input)
 
@@ -1141,9 +1188,7 @@ def handle_annotate(args: argparse.Namespace) -> None:
       scored, min_phred=args.min_phred, top_k=args.top_k
   )
 
-  if is_vcf and (
-      args.output.endswith('.vcf') or args.output.endswith('.vcf.gz')
-  ):
+  if is_vcf and is_vcf_output:
     _write_annotated_vcf(
         args.input,
         args.output,

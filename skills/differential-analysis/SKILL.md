@@ -1,140 +1,183 @@
 ---
-name: bio-flow-cytometry-differential-analysis
-description: Differential abundance (DA) and differential state (DS) analysis for flow and mass cytometry - tests which cell populations change in frequency or marker expression between conditions using diffcyt (edgeR/voom/GLMM for DA, limma/LMM for DS), with cydar, CITRUS, and compositional methods (sccomp, scCODA, DCATS) as alternatives. Covers the sample-is-the-experimental-unit principle, design/contrast and mixed-model formulas, compositionality of cluster proportions, and FDR across clusters. Use when comparing populations between groups, choosing a DA method, handling paired/batch designs, or deciding whether compositional correction is needed.
-tool_type: r
+name: bio-imaging-mass-cytometry-differential-analysis
+description: Compare cell-type composition and spatial features across conditions in IMC/MIBI cohorts with the patient as the experimental unit, covering pseudoreplication, per-patient aggregation, mixed models, compositional (Dirichlet/scCODA) differential abundance, diffcyt, per-image-to-patient spatial differential testing (SpaceANOVA), batch covariates, and FDR. Use when testing whether a cell type or spatial niche differs between groups, avoiding cell-level pseudoreplication, choosing a differential-abundance method, or correctly powering an IMC cohort comparison.
+tool_type: mixed
 primary_tool: diffcyt
 ---
 
 ## Version Compatibility
 
-Reference examples tested with: diffcyt 1.22+, CATALYST 1.26+, edgeR 4.0+, limma 3.58+.
+Reference examples tested with: diffcyt 1.22+ (R), lme4 1.1+ (R), statsmodels 0.14+, scanpy 1.10+, sccoda 0.1.9+, numpy 1.26+, pandas 2.2+
 
 Before using code patterns, verify installed versions match. If versions differ:
+- Python: `pip show <package>` then `help(module.function)` to check signatures
 - R: `packageVersion('<pkg>')` then `?function_name` to verify parameters
 
-`testDA_edgeR`/`testDS_limma` are diffcyt functions operating on count/median objects from `calcCounts`/`calcMedians`; the CATALYST-integrated path is the `diffcyt()` wrapper on the SCE. Confirm the signature with `?diffcyt` before relying on it.
+If code throws ImportError, AttributeError, or TypeError, introspect the installed
+package and adapt the example to match the actual API rather than retrying.
 
-# Differential Analysis
+Notes specific to this skill: cell-type proportions are compositional (they sum to 1), so a real increase in one type forces apparent decreases in others -- a Dirichlet/CLR-aware method (scCODA) or a reference cell type is needed, not independent per-type tests. statsmodels `mixedlm` fits patient as a random effect. diffcyt operates on per-sample cluster counts (DA) and per-sample median marker expression (DS).
 
-**"Compare cell populations between my conditions"** -> Test cluster frequencies (DA) and within-cluster marker expression (DS) between groups, with the sample (not the cell) as the unit.
-- R: `diffcyt::diffcyt(sce, analysis_type='DA', method_DA='diffcyt-DA-edgeR', design, contrast)`
-- R: `diffcyt(sce, analysis_type='DS', method_DS='diffcyt-DS-limma', ...)`
+# IMC Differential Analysis
 
-## The Single Most Important Modern Insight -- The Sample Is the Experimental Unit, Not the Cell
+**"Compare cell types and spatial structure between my conditions"** -> Aggregate to the patient, then test across patients -- never across cells.
+- Python: `statsmodels.formula.api.mixedlm`, `sccoda`, `scanpy`
+- R: `diffcyt`, `lme4::lmer`, SpaceANOVA for spatial differential testing
 
-Tens of thousands of cells from one donor are technical PSEUDOREPLICATES, not independent observations. A per-cell test (Wilcoxon across all cells) treats them as n = cells and produces astronomically significant p-values from two mice - it is the single most common statistical sin in modern cytometry (Hurlbert 1984 *Ecol Monogr* 54:187; the cytometry mirror of the scRNA-seq pseudobulk lesson). The correct unit is the SAMPLE/subject: diffcyt aggregates cells to PER-SAMPLE-PER-CLUSTER counts (DA) and PER-SAMPLE-PER-CLUSTER arcsinh-MEDIANS (DS), then tests across samples with edgeR/limma/GLMM (Weber 2019 *Commun Biol* 2:183). Biological replication is mandatory (>= 2-3 per group); DA from a single sample per condition has no valid test. Paired with this: cluster proportions are COMPOSITIONAL (they sum to 1), so a real increase in one population mechanically forces apparent depletion in others - a source of false DA in "unchanged" clusters.
+## The Single Most Important Modern Insight -- the replicate is the patient, not the cell, and the million-cell count is a red herring
 
-## DA vs DS, and the type/state marker link
+After phenotyping and spatial analysis, every interesting claim ("disease has more Tregs", "responders have more CD8-tumor contact") is a comparison BETWEEN groups, and the single most common fatal error is testing it at the cell level. Hundreds of thousands of cells from one patient are not independent replicates -- they are correlated reads of one biological sample, and cells within an image are massively spatially autocorrelated. Testing at the cell level inflates n by orders of magnitude and manufactures significance: a per-cell test over 50,000 cells reports p~0 for trivial effects because the effective sample size is the number of PATIENTS (often 10-40), not cells (Squair 2021 *Nat Commun* 12:5692). In imaging this is worse than in scRNA because slide and ROI add nesting levels and ROIs are not random samples of the tissue. The correct spine is invariant across every differential question: compute a per-image (or per-ROI) summary, aggregate to ONE value per patient, then test across patients with the patient as the unit -- a mixed model with patient as a random effect (image nested within patient), a pseudobulk-style per-patient summary, or a cell-count-weighted average of per-image statistics (Samorodnitsky and Wu 2024 *Brief Bioinform* 25:bbae522). Two riders complete the picture: cell-type proportions are COMPOSITIONAL (they are constrained to sum to 1, so a real rise in one type mechanically depresses the others, and independent per-type tests double-count this), and acquisition BATCH drifts by day/run and can align with clinical group, so batch must be a covariate and acquisition order randomized against condition. Phenotyping-method choice and statistical-unit choice are orthogonal: getting the cell types right does not excuse testing them wrong.
 
-- **DA** (differential abundance): does a cluster's FREQUENCY differ? Clusters are defined by TYPE markers.
-- **DS** (differential state): within a fixed-identity cluster, does a STATE marker's expression differ? State markers were withheld from clustering for exactly this test.
+## Differential Question Taxonomy
 
-## Method Taxonomy
+| Question | Per-image summary | Patient-level test |
+|----------|-------------------|--------------------|
+| Cell-type abundance differs between groups | per-image cell-type proportions | mixed model on proportions; scCODA (compositional); diffcyt-DA |
+| A functional/state marker differs within a type | per-image median marker per type | pseudobulk per patient + limma/edgeR; diffcyt-DS |
+| A spatial interaction/niche differs between groups | per-image enrichment z / Ripley's K / CN abundance | mixed model / cell-count-weighted; SpaceANOVA (FANOVA on cross-K) |
 
-| Method | Citation | Mechanism | When to use |
-|--------|----------|-----------|-------------|
-| diffcyt-DA-edgeR / voom | Weber 2019 *Commun Biol* 2:183 | edgeR/voom empirical-Bayes on per-sample counts; optional TMM | standard 2+ group with replicates (DEFAULT) |
-| diffcyt-DA-GLMM / DS-LMM | Weber 2019 | random effects in the formula | paired/repeated-measures/nested (subject random effect) |
-| cydar | Lun 2017 *Nat Methods* 14:707 | overlapping hyperspheres + edgeR + spatial FDR | continuum, avoid hard clusters |
-| CITRUS | Bruggner 2014 *PNAS* 111:E2770 | hierarchical clustering + LASSO | predictive signature, LARGE n; correlated-not-causal; largely superseded |
-| sccomp / scCODA / DCATS | Mangiola 2023 *PNAS* 120:e2203828120 / Buttner 2021 *Nat Commun* 12:6876 / Lin 2023 *Genome Biol* 24:151 | simplex-aware compositional models | strong compositional shift (one pop dominates); DCATS for assignment uncertainty |
+## Decision Tree by Scenario
 
-## Run diffcyt DA and DS
+| Scenario | Recommended | Why |
+|----------|-------------|-----|
+| Compare cell-type proportions, several types shift | scCODA (or CLR + mixed model) | handles the compositional constraint and the reference-type problem |
+| Standard cytometry-style DA on clusters | diffcyt-DA (edgeR on per-sample counts) | designed for per-sample cluster counts; established |
+| Multiple ROIs per patient | mixed model, patient random effect (image nested) | respects nesting; or cell-count-weighted aggregate |
+| Few patients (n < ~10) | simple per-patient test; report low power honestly | do NOT rescue power with cell count |
+| Differential functional-marker expression within a type | pseudobulk per patient + limma/edgeR (diffcyt-DS) | aggregates out cell-level pseudoreplication |
+| Spatial interaction/niche across groups | per-image spatial stat -> patient aggregate; SpaceANOVA | the spatial statistic is the summary; the unit is still the patient |
+| Acquisition batch aligns with group | include batch covariate; if confounded, the contrast is unrescuable | randomize acquisition order against condition |
 
-**Goal:** Test abundance and state on a CATALYST-clustered SCE.
+## Aggregate to the Patient (the spine)
 
-**Approach:** Build design + contrast from `ei(sce)`; the `diffcyt()` wrapper uses the stored clustering. State markers are tested in DS, type markers define DA clusters.
+**Goal:** Collapse millions of cells to one summary per patient before any test.
 
-```r
-library(CATALYST); library(diffcyt)
+**Approach:** Compute per-image cell-type proportions, then aggregate images to their patient. Every downstream test consumes this patient-level table, not the cell table.
 
-sce <- readRDS('sce_clustered.rds')
-design   <- createDesignMatrix(ei(sce), cols_design = 'condition')
-contrast <- createContrast(c(0, 1))                    # Treatment vs Control
+```python
+import pandas as pd
 
-res_DA <- diffcyt(sce, clustering_to_use = 'meta20',
-                  analysis_type = 'DA', method_DA = 'diffcyt-DA-edgeR',
-                  design = design, contrast = contrast)
-res_DS <- diffcyt(sce, clustering_to_use = 'meta20',
-                  analysis_type = 'DS', method_DS = 'diffcyt-DS-limma',
-                  design = design, contrast = contrast)
-
-library(SummarizedExperiment)
-rowData(res_DA$res)        # cluster_id, logFC, p_val, p_adj (BH across clusters)
+# obs has one row per cell with image_id, patient, condition, cell_type
+counts = obs.groupby(['patient', 'condition', 'image_id', 'cell_type']).size().unstack(fill_value=0)
+image_prop = counts.div(counts.sum(axis=1), axis=0)            # per-image proportions
+patient_prop = image_prop.groupby(['patient', 'condition']).mean()   # one row per patient
 ```
 
-## Paired / Repeated-Measures (mixed models)
+## Differential Abundance with a Mixed Model
 
-**Goal:** Account for within-subject correlation (e.g. pre/post on the same donor).
+**Goal:** Test a cell type's proportion across groups while respecting patient/ROI nesting.
 
-**Approach:** Use a GLMM/LMM method with a random effect for subject via a formula.
+**Approach:** Fit a mixed model with patient as a random effect when multiple ROIs per patient exist; this absorbs within-patient correlation that a fixed-effect test would treat as independent replication.
 
-```r
-formula <- createFormula(ei(sce), cols_fixed = 'condition', cols_random = 'patient_id')
-res_DA  <- diffcyt(sce, clustering_to_use = 'meta20',
-                   analysis_type = 'DA', method_DA = 'diffcyt-DA-GLMM',
-                   formula = formula, contrast = createContrast(c(0, 1)))
+```python
+import statsmodels.formula.api as smf
+
+# one row per image; proportion of the target type; patient random intercept
+df = image_prop.reset_index().rename(columns={'Treg': 'prop'})   # 'Treg' = an actual cell_type column
+model = smf.mixedlm('prop ~ condition + batch', df, groups=df['patient'])   # batch as covariate
+res = model.fit()
+print(res.summary())   # the condition coefficient is tested with patient as the unit
 ```
 
-## Compositional Re-Check
+## Compositional Differential Abundance (scCODA)
 
-**Goal:** Confirm a headline single-population shift is not inducing artifactual reciprocal depletion.
+**Goal:** Avoid the false "everything changed" artifact when proportions are constrained to sum to 1.
 
-**Approach:** Re-test with a simplex-aware model when one cluster changes a lot or total yield differs by group.
+**Approach:** Model the counts as compositional against a reference cell type; a change is interpreted relative to that reference rather than as an independent per-type shift.
 
-```r
-# If a dominant population expands, the apparent depletion of others may be a simplex artifact.
-# Re-test with sccomp / scCODA (reference cell type) / DCATS (assignment uncertainty)
-# before reporting reciprocal depletion as independent biology.
+```python
+import sccoda.util.cell_composition_data as dat
+from sccoda.util import comp_ana as mod
+
+# patient-level cell-type COUNTS (not proportions); pick a biologically stable reference type
+data = dat.from_pandas(patient_counts, covariate_columns=['condition'])
+analysis = mod.CompositionalAnalysis(data, formula='condition', reference_cell_type='Epithelial')
+result = analysis.sample_hmc()
+result.summary()
+```
+
+## Differential Spatial Feature
+
+**Goal:** Test whether a spatial interaction or niche differs between groups, at the patient unit.
+
+**Approach:** Treat the per-image spatial statistic (a neighborhood-enrichment z, a Ripley's cross-K curve, a CN abundance) as the summary, aggregate to patient, and test across patients with FDR over cell-type pairs. SpaceANOVA does this as a functional ANOVA on per-image cross-K with subject structure.
+
+```python
+import statsmodels.formula.api as smf
+from statsmodels.stats.multitest import multipletests
+
+# per_image_pair: rows = (image_id, patient, condition, batch, enrichment_z) for ONE type pair
+pvals = {}
+for pair, sub in per_image_pair.groupby('pair'):
+    res = smf.mixedlm('enrichment_z ~ condition + batch', sub, groups=sub['patient']).fit()
+    pvals[pair] = res.pvalues['condition[T.responder]']
+padj = dict(zip(pvals, multipletests(list(pvals.values()), method='fdr_bh')[1]))   # FDR across pairs
+```
+
+## Differential State Within a Type
+
+**Goal:** Test whether a functional/state marker (Ki67, PD-1) differs within a cell type between groups.
+
+**Approach:** Pseudobulk to one value per patient per cell type (median marker expression among that type's cells), then test across patients. diffcyt-DS (R) formalizes this on per-sample medians; the Python pseudobulk path is below.
+
+```python
+import numpy as np
+
+t = adata[adata.obs['cell_type'] == 'T cell']
+ki67 = t[:, 'Ki67'].X
+ki67 = ki67.toarray().ravel() if hasattr(ki67, 'toarray') else np.asarray(ki67).ravel()
+pb = t.obs.assign(ki67=ki67).groupby(['patient', 'condition'])['ki67'].median().reset_index()
+print(smf.ols('ki67 ~ condition', pb).fit().pvalues['condition[T.responder]'])   # one value per patient
 ```
 
 ## Per-Method Failure Modes
 
-### Per-cell pseudoreplication
-**Trigger:** Wilcoxon/t-test across all cells. **Mechanism:** cells aren't independent. **Symptom:** p ~ 1e-40 from few subjects. **Fix:** aggregate to per-sample summaries (diffcyt).
+### Cell-level testing
+**Trigger:** a t-test/Wilcoxon/regression over individual cells. **Mechanism:** correlated cells from one sample are pseudoreplicates; effective n is the patient count. **Symptom:** p~0 for trivial effects; "significant" findings that do not replicate. **Fix:** aggregate to per-patient summaries; test across patients.
 
-### Compositional false DA
-**Trigger:** one population expands strongly. **Mechanism:** proportions sum to 1. **Symptom:** significant "depletion" of unrelated clusters. **Fix:** TMM only when total cell abundance is NOT itself the biological signal (else it removes real signal), or a compositional method (sccomp/scCODA/DCATS); report total-yield differences.
+### Independent per-type proportion tests
+**Trigger:** a separate test per cell type on proportions. **Mechanism:** proportions sum to 1, so a real rise in one type depresses others mechanically. **Symptom:** many types appear to change in opposite directions. **Fix:** compositional model (scCODA) or CLR transform with a reference type.
 
-### Batch cleaned instead of modeled
-**Trigger:** normalizing batch out then testing naively. **Mechanism:** over-correction removes real signal. **Symptom:** attenuated effects. **Fix:** include batch in the design; if batch == condition, no rescue - design it out.
+### Over-correcting batch
+**Trigger:** aggressive integration to make clusters patient-agnostic, then testing on corrected data. **Mechanism:** correction can treat real between-patient biology as batch. **Symptom:** the disease signal disappears. **Fix:** correct minimally, validate that invariant types align while variable types stay separate, and keep integration out of the across-patient inference path.
 
-### No replicates
-**Trigger:** 1 sample per condition. **Mechanism:** no error term. **Symptom:** uninterpretable p. **Fix:** require >= 2-3 biological replicates per group.
+### Rescuing power with cell count
+**Trigger:** claiming significance from n=4 patients because millions of cells were imaged. **Mechanism:** cell count is not replication. **Symptom:** confident claims from few patients. **Fix:** report the patient n and the true power honestly; collect more patients.
 
 ## Quantitative Thresholds
 
 | Threshold | Source | Rationale |
 |-----------|--------|-----------|
-| >= 2-3 biological replicates per group | Weber 2019 | minimum for a valid DA/DS error term |
-| BH FDR across clusters (and clusters x markers for DS) | diffcyt | high-resolution grids have many tests |
-| arcsinh median as DS statistic | Nowicka 2017 | robust per-cluster per-sample summary |
+| Unit of replication = patient count (often 10-40) | Squair 2021 *Nat Commun* 12:5692 | cells/ROIs are pseudoreplicates |
+| Cell-count-weighted per-image aggregation | Samorodnitsky and Wu 2024 *Brief Bioinform* 25:bbae522 | controls type-I error with high power (vs unweighted ROI averaging) |
+| Reference cell type for compositional DA | Buttner 2021 *Nat Commun* 12:6876 | proportions are not independent |
+| BH-FDR across cell-type pairs and radii | multiplicity | ~200 pairs x radii guarantees false positives |
+| Batch covariate; randomize acquisition order | spatial dossier | run drift can align with clinical group |
 
 ## Common Errors
 
 | Error / symptom | Cause | Solution |
 |-----------------|-------|----------|
-| `testDA_edgeR(sce, ...)` fails | wrong signature | use the `diffcyt()` wrapper on the SCE, or `calcCounts` first |
-| results empty | wrong `clustering_to_use` name | match the stored clustering id (e.g. `meta20`) |
-| no DS results | state markers not flagged | set `marker_class='state'` in the panel |
-| paired design ignored | used fixed-effect method | use `diffcyt-DA-GLMM` with a random effect |
+| p~0 with a trivial effect | cell-level test | per-patient aggregation; mixed model |
+| All cell types "changed" | compositional constraint ignored | scCODA / CLR with reference type |
+| Disease signal vanished after integration | batch over-correction | minimal correction; keep it out of the test |
+| Significant with n=4 patients | power rescued by cell count | report patient n; do not over-claim |
+| Many significant pairs | no FDR across pairs/radii | BH-FDR over the full grid |
 
 ## References
 
-- Weber 2019 *Commun Biol* 2:183 — diffcyt (DA + DS).
-- Bruggner 2014 *PNAS* 111(26):E2770-E2777 — CITRUS.
-- Lun 2017 *Nat Methods* 14(7):707-709 — cydar hypersphere DA.
-- Mangiola 2023 *PNAS* 120(33):e2203828120 — sccomp compositional analysis.
-- Buttner 2021 *Nat Commun* 12:6876 — scCODA.
-- Lin 2023 *Genome Biol* 24:151 — DCATS (assignment-uncertainty-aware).
-- Nowicka 2017 *F1000Research* 6:748 — CyTOF workflow; arcsinh-median DS statistic.
-- Hurlbert 1984 *Ecol Monogr* 54(2):187-211 — pseudoreplication.
+- Squair JW, Gautier M, Kathe C, et al. 2021. Confronting false discoveries in single-cell differential expression. *Nat Commun* 12:5692. — pseudoreplication; aggregate to sample.
+- Samorodnitsky S, Wu MC. 2024. Statistical analysis of multiple regions-of-interest in multiplexed spatial proteomics data. *Brief Bioinform* 25(6):bbae522. — ROI aggregation, cell-count-weighted averaging, SPOT omnibus.
+- Seal S, Neelon B, Angel PM, et al. 2024. SpaceANOVA: Spatial Co-occurrence Analysis of Cell Types in Multiplex Imaging Data Using Point Process and Functional ANOVA. *J Proteome Res* 23(4):1131-1143. — FANOVA on per-image cross-K with subject structure.
+- Weber LM, Nowicka M, Soneson C, Robinson MD. 2019. diffcyt: Differential discovery in high-dimensional cytometry via high-resolution clustering. *Commun Biol* 2:183. — diffcyt-DA/DS.
+- Buttner M, Ostner J, Muller CL, Theis FJ, Schubert B. 2021. scCODA is a Bayesian model for compositional single-cell data analysis. *Nat Commun* 12:6876. — compositional differential abundance.
+- Schurch CM, Bhate SS, Barlow GL, et al. 2020. Coordinated Cellular Neighborhoods Orchestrate Antitumoral Immunity at the Colorectal Cancer Invasive Front. *Cell* 182(5):1341-1359.e19. — cellular neighborhoods compared across patients.
 
 ## Related Skills
 
-- clustering-phenotyping - Cluster (type markers) before testing
-- gating-analysis - Compare manually gated population frequencies
-- differential-expression/de-results - Shared edgeR/limma output semantics (padj)
-- differential-expression/edger-basics - The count-model engine diffcyt reuses
-- experimental-design/multiple-testing - FDR across clusters and clusters x markers
-- experimental-design/batch-design - Model batch in the design, don't clean it out
+- phenotyping - supplies the cell-type labels whose proportions are compared
+- spatial-analysis - supplies the per-image spatial statistics that become patient-level summaries
+- quality-metrics - batch must be diagnosed and entered as a covariate
+- experimental-design/randomization-blocking - the experimental-unit and pseudoreplication foundation
+- clinical-biostatistics/subgroup-analysis - multiplicity and effect estimation in clinical cohorts
+- flow-cytometry/differential-analysis - diffcyt-DA/DS for suspension cytometry

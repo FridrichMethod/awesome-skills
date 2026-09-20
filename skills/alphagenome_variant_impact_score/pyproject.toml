@@ -10,7 +10,7 @@ dependencies = [
     "pandas<3.0",
     "polars",
     "pyarrow",
-    "pysam",
+    "pysam; sys_platform != 'win32'",
     "python-dotenv",
     "tabulate",
 ]

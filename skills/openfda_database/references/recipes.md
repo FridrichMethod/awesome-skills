@@ -64,6 +64,26 @@ uv run scripts/openfda_query.py search \
   --limit 3 --output /tmp/cooccurrence.json
 ```
 
+## NDC Lookup (Active & Discontinued)
+
+Always quote hyphenated NDCs so `-` is not parsed as boolean `NOT`. If
+`drug/ndc` returns 0 results (discontinued product), query `drug/label` with
+exact phrase quotes:
+
+```bash
+# Active NDC lookup
+uv run scripts/openfda_query.py search \
+  --category drug --endpoint ndc \
+  --search 'product_ndc:"51285-092"' \
+  --limit 5 --output /tmp/ndc_lookup.json
+
+# Discontinued NDC fallback (SPL label text)
+uv run scripts/openfda_query.py search \
+  --category drug --endpoint label \
+  --search '"51285-092"' \
+  --limit 5 --output /tmp/label_lookup.json
+```
+
 ## NDC by Manufacturer
 
 ```bash
