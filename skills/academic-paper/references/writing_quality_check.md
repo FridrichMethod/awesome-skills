@@ -148,6 +148,41 @@ Abstracts must respect venue length and structure requirements. Methods may bene
 
 ---
 
+## F. Acronyms (Script Check, #849)
+
+`scripts/check_acronyms.py` checks the acronyms in a Markdown or plain-text manuscript. It calls no model and never changes the file. Its rules follow common journal copyediting practice, and author and venue requirements come first (*Priority and scope* above).
+
+1. **Define at first use.** Give the full form, then the acronym in parentheses: randomized controlled trial (RCT). Later uses take the acronym alone.
+2. **Each scope defines its own.** The body, the English abstract, and the Chinese abstract are separate scopes. The Chinese form `全稱（English full form, ABBR）` counts as a definition.
+3. **Define once per scope.** A second definition in the same scope is reported.
+4. **Allowlist.** Acronyms on the script's default list (DNA, PhD, DOI, and similar) or on the author's list (`--allow`, `--allow-file`) need no definition. The allowlist exempts rules 1 and 3 only.
+
+### When the Caller Runs It
+
+The caller, meaning the session that dispatches the writing or review agents, runs the script; those agents cannot run scripts. The writer saves its draft as `draft.md` in its `phase4_*/` folder, and `abstract_bilingual_agent` saves its abstracts as `abstract.md` in its `phase5_*/` folder, so the check reads a file an agent already wrote. Set `--lang` to the user's language (`en` or `zh-TW`) and show the report as printed.
+
+| Point | Input | `--scopes` | Report goes to |
+|---|---|---|---|
+| Phase 4b in `full` mode | `phase4_*/draft.md` (the Draft Body) | `body` | the next Phase 4b call; never Phase 6a or 6b |
+| Any other drafting call (`draft_writer_agent` Step 3) | `phase4_*/draft.md` | `body` | the writer, in a fix call |
+| Abstracts written (Phase 5b, or `abstract-only` mode) | `phase5_*/abstract.md` | the abstract scopes the run produced | `abstract_bilingual_agent`, in a fix call |
+| Revision round (`revision` mode) | the anchored draft, after `anchorize` | all (the default) | the round's writer call, with the roadmap |
+| Review decision (`academic-paper-reviewer`), once the decision is final | the reviewed manuscript file | all (the default) | the Editorial Decision Letter's last section (`academic-paper-reviewer/SKILL.md` § Acronym check attachment) |
+
+For example: `python3 scripts/check_acronyms.py --input phase4_composition/draft.md --scopes body --lang en`.
+
+- Pass a report to an agent only when it has findings. In `full` mode the writer fixes them in its next Phase 4b draft, and in a revision round with patch operations; otherwise the agent makes targeted edits to the file the check read, not a new full draft. `draft_writer_agent.md` and `abstract_bilingual_agent.md` say which findings each may fix.
+- Run the check again only after an agent has edited the prose (in a revision round, on the applied draft), and show the user the last report.
+- An integrity-correction round makes no acronym fix.
+
+### Reading the Report
+
+- Findings are advisory. They ask for no reply, and they never block a handoff, change a decision, or stop a run.
+- `(complete)` on the coverage line means every requested scope was read. A `partial` report lists what it did not read, and a `Not checked` report (exit status 2) gives the reason nothing was read. Neither is a clean result.
+- If the script cannot run at all, say that the acronym check did not run; never report it as clean.
+
+---
+
 ## How to Use This Checklist
 
 ### During Drafting (Preferred)

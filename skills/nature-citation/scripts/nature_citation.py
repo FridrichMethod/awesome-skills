@@ -21,9 +21,9 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
-import xml.etree.ElementTree as ET
-from xml.sax.saxutils import escape as xml_escape
-from xml.sax.saxutils import quoteattr
+import defusedxml.ElementTree as ET
+xml_escape = lambda data: data.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+quoteattr = lambda data: '"%s"' % xml_escape(data).replace('"', "&quot;")
 
 
 CROSSREF_API = "https://api.crossref.org/works"
@@ -282,7 +282,7 @@ def normalize_title(title: str) -> str:
 
 
 def stable_hash(value: str) -> str:
-    return hashlib.sha1(value.encode("utf-8")).hexdigest()[:12]
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()[:12]
 
 
 def slugify(value: str) -> str:
