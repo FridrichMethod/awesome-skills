@@ -34,6 +34,83 @@ bamCoverage --version
 
 **Input requirements**: BAM files must be sorted and indexed (`.bai` file present). Generate index with `samtools index input.bam`. BED files for genomic regions (genes, peaks) in standard 3+ column format.
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: normalizationMethod
+    kind: required
+    source: user
+    ask: "How should coverage be scaled so tracks from different samples can be compared - by read depth, by genome coverage, or not at all?"
+    default: "none - raw coverage, comparable only within one sample"
+
+  - id: D2
+    param: effectiveGenomeSize
+    kind: derived
+    source: upstream
+    depends_on: [D1]
+    ask: "Which assembly's mappable size should the coverage normalization use?"
+    default: "looked up for the alignment reference"
+    skip_if: "normalization does not require a genome size"
+
+  - id: D3
+    param: readExtension
+    kind: required
+    source: user
+    ask: "Should reads be extended to the sequenced fragment length? Correct for ChIP and ATAC, wrong for spliced RNA."
+    default: "not extended"
+
+  - id: D4
+    param: duplicateHandling
+    kind: required
+    source: user
+    ask: "Should reads flagged as duplicates be ignored when building coverage?"
+    default: "included"
+
+  - id: D5
+    param: mappingQualityFloor
+    kind: required
+    source: user
+    ask: "Below what mapping confidence should reads be excluded from the signal?"
+    default: "no filter"
+
+  - id: D6
+    param: binSize
+    kind: optional
+    source: user
+    ask: "At what resolution should signal be summarized?"
+    default: "50 bp"
+
+  - id: D7
+    param: comparisonOperation
+    kind: optional
+    source: user
+    ask: "When comparing two samples, should the track hold a log ratio, a plain ratio, or a difference?"
+    default: "log2 ratio"
+
+  - id: D8
+    param: profileAnchor
+    kind: optional
+    source: user
+    ask: "Should profiles be anchored on feature starts, ends, centres, or scaled across whole features?"
+    default: "feature start, 500 bp either side"
+
+  - id: D9
+    param: processors
+    kind: never_ask
+    source: data
+    reason: "Affects runtime only, not the signal"
+    default: "min(8, available_cores)"
+```
+
+D1 and D3 are the pair that makes tracks comparable or quietly misleading.
+Unnormalized tracks put the deeper-sequenced sample higher everywhere, which
+reads as biology on a genome browser; extending RNA-seq reads to a fragment
+length fills introns with signal that was never sequenced.
+
 ## Quick Start
 
 ```bash

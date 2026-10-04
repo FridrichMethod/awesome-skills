@@ -31,6 +31,61 @@ Arboreto infers gene regulatory networks (GRNs) from gene expression data using 
 pip install arboreto distributed networkx matplotlib
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: algorithm
+    kind: required
+    source: user
+    ask: "Infer the network with gradient boosting (faster) or random forests (the original GENIE3 formulation)?"
+    default: "GRNBoost2"
+
+  - id: D2
+    param: expressionMatrix
+    kind: required
+    source: upstream
+    ask: "Which processed expression matrix, and which cells or samples within it, should the network be inferred from?"
+    default: null
+
+  - id: D3
+    param: regulatorList
+    kind: required
+    source: literature
+    ask: "Restrict candidate regulators to a curated transcription-factor list, or let every gene be a candidate regulator?"
+    default: "a species-matched TF list"
+
+  - id: D4
+    param: edgeThreshold
+    kind: required
+    source: user
+    ask: "The output ranks every regulator-target pair - how many of the top edges should be kept as the network?"
+    default: null
+
+  - id: D5
+    param: seed
+    kind: never_ask
+    source: data
+    reason: "Fixes the draw for reproducibility; does not change what the data supports"
+    default: 0
+
+  - id: D6
+    param: daskClient
+    kind: never_ask
+    source: data
+    reason: "Execution backend; affects runtime only"
+    default: "local"
+```
+
+D3 is the decision that separates a usable network from a hairball. Leaving
+regulators unrestricted lets any correlated gene appear as a regulator, and the
+result still returns a fully populated ranked table. D4 has no safe default:
+the algorithm scores all pairs, so where the list is cut is the user's call
+about the network they intend to interpret.
+
 ## Quick Start
 
 Complete GRN inference in a single block. The `if __name__ == '__main__':` guard is required because Dask spawns worker processes via multiprocessing.

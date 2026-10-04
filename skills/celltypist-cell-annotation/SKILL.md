@@ -32,6 +32,105 @@ CellTypist is an automated cell type classifier for single-cell RNA-seq data bui
 pip install celltypist "scanpy[leiden]" anndata
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: annotationStrategy
+    kind: required
+    source: user
+    ask: "Name cell types from canonical markers by hand over the clusters, transfer them from a pre-trained model, or do both and compare the two?"
+    default: "transfer from a model, then confirm against markers"
+
+  - id: D2
+    param: tissueContext
+    kind: required
+    source: user
+    ask: "Which tissue is this, and in what state - healthy adult, fetal or developmental, diseased, or perturbed?"
+    default: null
+
+  - id: D3
+    param: model
+    kind: required
+    source: literature
+    depends_on: [D2]
+    ask: "Which pre-trained model matches that tissue AND that state?"
+    default: null
+
+  - id: D4
+    param: markerValidation
+    kind: required
+    source: user
+    depends_on: [D1]
+    ask: "Should the assigned labels be checked against canonical marker expression before they are accepted?"
+    default: "checked - a mismatched model still labels every cell confidently"
+
+  - id: D5
+    param: validationMarkerPanel
+    kind: required
+    source: literature
+    depends_on: [D2, D4]
+    ask: "Which canonical markers should the assigned types be confirmed against?"
+    default: null
+    skip_if: "marker validation declined"
+
+  - id: D6
+    param: labelGranularity
+    kind: required
+    source: user
+    depends_on: [D2]
+    ask: "Name broad lineages, or subtypes and activation states within them?"
+    default: null
+
+  - id: D7
+    param: majorityVoting
+    kind: required
+    source: user
+    ask: "Assign labels cell by cell, or smooth them to a consensus within each cluster?"
+    default: "per-cell, with voting recommended once clusters are trusted"
+
+  - id: D8
+    param: clusteringKey
+    kind: derived
+    source: upstream
+    depends_on: [D7]
+    ask: "Which clustering should the consensus be taken over?"
+    default: "the clustering computed upstream"
+    skip_if: "majority voting disabled"
+
+  - id: D9
+    param: assignmentThreshold
+    kind: required
+    source: user
+    ask: "Should every cell receive its best-matching label, or should uncertain cells be left unassigned?"
+    default: "best match regardless of confidence"
+
+  - id: D10
+    param: minClusterProportion
+    kind: optional
+    source: user
+    depends_on: [D7]
+    ask: "How much of a cluster must agree before the consensus label is applied?"
+    default: "no minimum"
+    skip_if: "majority voting disabled"
+```
+
+D1 is asked even though the user has arrived at an automated annotator,
+because the alternative is not visible from here: manual marker naming and
+model transfer fail in opposite directions, and "both, compared" is the right
+answer more often than either alone. If the answer is manual only, this skill
+is not the tool — see `single-cell-annotation-guide`.
+
+D2 precedes D3 because a model is specific to a tissue *and* a state. An adult
+immune model applied to fetal or tumour tissue returns a confident label for
+every cell; the classifier has no way to say "these cells are not in my
+reference". D4 is what makes that failure visible, and it is separate from D9 —
+a confident assignment and a correct one are not the same thing, and only
+markers tell them apart.
+
 ## Quick Start
 
 Minimal pipeline — annotate a preprocessed AnnData with the pan-immune model:

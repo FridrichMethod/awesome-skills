@@ -39,6 +39,77 @@ macs3 --version
 # macs3 3.0.2
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: assayType
+    kind: required
+    source: user
+    ask: "What produced these reads - a transcription-factor ChIP, a histone mark, or open-chromatin (ATAC)?"
+    default: null
+
+  - id: D2
+    param: controlSample
+    kind: required
+    source: data
+    ask: "Is there a matched input or IgG control for this sample?"
+    default: "none - background is estimated locally instead"
+
+  - id: D3
+    param: effectiveGenomeSize
+    kind: derived
+    source: upstream
+    ask: "Which genome were the reads aligned to?"
+    default: "carried from the alignment reference"
+
+  - id: D4
+    param: peakShape
+    kind: optional
+    source: user
+    depends_on: [D1]
+    ask: "Are the enriched regions sharp summits or broad domains?"
+    default: "narrow for TF and ATAC; broad for spreading histone marks"
+
+  - id: D5
+    param: significanceThreshold
+    kind: required
+    source: user
+    ask: "How strong must enrichment be before a region is called a peak?"
+    default: "q-value 0.05"
+
+  - id: D6
+    param: fragmentModel
+    kind: optional
+    source: user
+    depends_on: [D1]
+    ask: "Should fragment length be modelled from the data, or fixed because the assay's signal is not paired summits?"
+    default: "model for ChIP; fixed shift/extension for ATAC"
+
+  - id: D7
+    param: duplicateHandling
+    kind: optional
+    source: user
+    depends_on: [D1]
+    ask: "Are identical read positions PCR duplicates, or real independent insertions?"
+    default: "one per position for ChIP; keep all for ATAC"
+
+  - id: D8
+    param: signalTracks
+    kind: optional
+    source: user
+    ask: "Emit normalized coverage tracks alongside the peak calls?"
+    default: "peaks only"
+```
+
+D1 is asked first because four later settings follow from it. ATAC in
+particular inverts three ChIP defaults at once - no fragment model, a negative
+shift, and duplicates kept - so running ATAC through ChIP defaults produces
+peaks that look plausible and are wrong.
+
 ## Quick Start
 
 ```bash

@@ -32,6 +32,75 @@ MOFA+ (Multi-Omics Factor Analysis v2) is an unsupervised statistical framework 
 pip install mofapy2 anndata muon matplotlib seaborn
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: views
+    kind: required
+    source: data
+    ask: "Which omics layers go into the model, and do they share the same samples?"
+    default: null
+
+  - id: D2
+    param: likelihoods
+    kind: required
+    source: data
+    depends_on: [D1]
+    ask: "For each layer, is the data continuous and normalized, binary, or raw counts?"
+    default: null
+
+  - id: D3
+    param: scaleViews
+    kind: required
+    source: user
+    depends_on: [D1]
+    ask: "Should layers be rescaled so the one with the largest variance does not dominate every factor?"
+    default: "rescaled"
+
+  - id: D4
+    param: numFactors
+    kind: required
+    source: user
+    ask: "How many latent factors should the model start from? Unused ones are pruned automatically."
+    default: 15
+
+  - id: D5
+    param: groups
+    kind: optional
+    source: data
+    ask: "Should samples be split into groups so the model can compare variance across them?"
+    default: "one group"
+
+  - id: D6
+    param: convergence
+    kind: optional
+    source: user
+    ask: "Stop early for a quick look, or run to a tight tolerance for the final model?"
+    default: "medium tolerance, up to 1000 iterations"
+
+  - id: D7
+    param: factorDropThreshold
+    kind: optional
+    source: user
+    ask: "Drop factors that explain almost no variance in any layer?"
+    default: "drop below 1% variance explained"
+
+  - id: D8
+    param: sparsityPriors
+    kind: optional
+    source: user
+    ask: "Should MOFA retain spike-and-slab weights and per-view relevance priors for sparse, interpretable factors?"
+    default: "both enabled"
+```
+
+D2 hangs on D1 and is the decision that breaks models quietly: handing raw
+counts to a layer declared gaussian fits the model to sequencing depth, and the
+factors that come back are depth, not biology.
+
 ## Quick Start
 
 ```python

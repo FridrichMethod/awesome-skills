@@ -47,6 +47,61 @@ samtools faidx reference.fa
 cut -f1,2 reference.fa.fai > genome.txt  # chr → size table
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: overlapRequirement
+    kind: required
+    source: user
+    ask: "How much of a feature must overlap before the two count as intersecting - a single base, or a stated fraction?"
+    default: "one base"
+
+  - id: D2
+    param: reciprocalOverlap
+    kind: required
+    source: user
+    depends_on: [D1]
+    ask: "Must the fraction hold for both features, or only for the query?"
+    default: "query only"
+    skip_if: "overlap requirement left at a single base"
+
+  - id: D3
+    param: strandedness
+    kind: required
+    source: data
+    ask: "Do the features carry strand, and must two features share it to be considered overlapping?"
+    default: "strand ignored"
+
+  - id: D4
+    param: mergeDistance
+    kind: optional
+    source: user
+    ask: "How close may two intervals be before they are merged into one?"
+    default: "touching or overlapping only"
+
+  - id: D5
+    param: coverageScaling
+    kind: optional_conditional
+    source: upstream
+    ask: "Should coverage be scaled to a per-million factor so samples are comparable?"
+    default: "raw coverage"
+
+  - id: D6
+    param: sortedInput
+    kind: never_ask
+    source: data
+    reason: "The sweep algorithm needs sorted input and changes memory and speed, not the intervals returned"
+    default: "used when inputs are sorted"
+```
+
+D3 is the quiet one. For stranded features - genes, stranded RNA coverage,
+motif hits - ignoring strand reports antisense overlaps as real, and the output
+is a perfectly ordinary BED file with too many rows.
+
 ## Quick Start
 
 ```bash

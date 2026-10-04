@@ -49,6 +49,74 @@ bakta_db download --output db/ --type light
 pip install biopython pandas matplotlib
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: database
+    kind: required
+    source: user
+    ask: "Annotate against the light database or the full one? The light database leaves more genes described only generically."
+    default: null
+
+  - id: D2
+    param: organismMetadata
+    kind: required
+    source: user
+    ask: "Which genus, species, and strain should be recorded in the output?"
+    default: null
+
+  - id: D3
+    param: repliconTopology
+    kind: required
+    source: data
+    ask: "Are these contigs complete circular replicons, plasmids, or draft fragments?"
+    default: "draft fragments - no circularity assumed"
+
+  - id: D4
+    param: assemblyOrigin
+    kind: required
+    source: data
+    ask: "Is this an isolate genome, or a bin recovered from a metagenome?"
+    default: "isolate - gene prediction trains on the assembly itself"
+
+  - id: D5
+    param: translationTable
+    kind: required
+    source: user
+    ask: "Which genetic code does this organism use?"
+    default: "11, the bacterial and archaeal code"
+
+  - id: D6
+    param: locusTagPrefix
+    kind: optional
+    source: user
+    ask: "Which prefix should locus tags carry, if they will be submitted or cross-referenced?"
+    default: "generated automatically"
+
+  - id: D7
+    param: minContigLength
+    kind: optional_conditional
+    source: data
+    ask: "Should short contigs be skipped?"
+    default: "no minimum"
+
+  - id: D8
+    param: threadsAndPlotting
+    kind: never_ask
+    source: data
+    reason: "Thread count and the circular plot affect runtime and output files, not the annotation"
+    default: "available cores, plot enabled"
+```
+
+D5 is asked rather than defaulted because the exceptions are real and silent:
+Mycoplasma and relatives reassign a stop codon, so annotating them with the
+standard bacterial code truncates a large fraction of their genes into
+fragments that still look like ordinary short CDS calls.
+
 ## Quick Start
 
 ```bash

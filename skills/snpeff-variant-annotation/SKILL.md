@@ -47,6 +47,60 @@ java -jar snpEff/snpEff.jar -version
 pip install cyvcf2 pandas matplotlib seaborn
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: annotationDatabase
+    kind: required
+    source: upstream
+    ask: "Which genome database should annotate these variants, and does its assembly match the VCF coordinates?"
+    default: "the assembly the variants were called on"
+
+  - id: D2
+    param: transcriptScope
+    kind: required
+    source: user
+    ask: "Report the consequence on every transcript of a gene, or only on the canonical one?"
+    default: "all transcripts - the worst consequence across them is what most filters use"
+
+  - id: D3
+    param: filterExpression
+    kind: required
+    source: user
+    ask: "Which annotated variants should survive into the final table - by predicted impact, population frequency, or clinical significance?"
+    default: null
+
+  - id: D4
+    param: frequencySkip
+    kind: optional_conditional
+    source: user
+    ask: "Skip annotating variants already common in the population?"
+    default: "annotate everything"
+
+  - id: D5
+    param: summaryReport
+    kind: optional
+    source: user
+    ask: "Generate the HTML summary alongside the annotated VCF?"
+    default: "generated"
+
+  - id: D6
+    param: javaHeap
+    kind: never_ask
+    source: data
+    reason: "Prevents out-of-memory on large VCFs; does not change annotations"
+    default: "4-8 GB"
+```
+
+D3 has no safe default because the filter is the deliverable - a rare-disease
+question keeps high-impact rare variants, a pharmacogenomic one keeps known
+clinical annotations regardless of impact. Applying somebody else's filter
+silently answers their question instead.
+
 ## Quick Start
 
 ```bash

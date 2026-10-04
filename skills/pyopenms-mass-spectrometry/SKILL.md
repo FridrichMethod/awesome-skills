@@ -31,6 +31,70 @@ uv pip install pyopenms numpy pandas matplotlib
 - Input data: mzML files (standard MS format), FASTA databases (for identification)
 - All algorithms follow a consistent pattern: `algo = Algorithm(); params = algo.getParameters(); params.setValue(...); algo.setParameters(params)`
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: instrumentResolution
+    kind: required
+    source: data
+    ask: "Is this high-resolution data, and are the spectra already centroided or still in profile mode?"
+    default: null
+
+  - id: D2
+    param: signalToNoiseThreshold
+    kind: required
+    source: user
+    depends_on: [D1]
+    ask: "How far above noise must a peak rise to be kept during centroiding?"
+    default: 1.0
+    skip_if: "spectra already centroided by the acquisition software"
+
+  - id: D3
+    param: massTolerance
+    kind: required
+    source: data
+    depends_on: [D1]
+    ask: "What mass accuracy should feature detection and linking assume?"
+    default: "10 ppm"
+
+  - id: D4
+    param: retentionTimeTolerance
+    kind: required
+    source: data
+    ask: "How far apart in retention time may the same feature appear across runs?"
+    default: "100 s"
+
+  - id: D5
+    param: chargeStateRange
+    kind: required
+    source: user
+    ask: "Which charge states should features be searched for?"
+    default: "1 to 3 - widen for intact protein or metabolite work"
+
+  - id: D6
+    param: intensityNormalization
+    kind: optional
+    source: user
+    ask: "Should spectra be normalized before comparison, and to total ion current or to the base peak?"
+    default: "not normalized"
+
+  - id: D7
+    param: smoothingFilter
+    kind: optional_conditional
+    source: data
+    ask: "Does the signal need smoothing before peak picking, and with which filter width?"
+    default: "no smoothing"
+```
+
+D1 governs almost everything after it: profile data that skips centroiding
+produces one feature per scan point, and high-resolution tolerances applied to
+low-resolution data link features that are not the same compound. Both yield a
+full feature table.
+
 ## Quick Start
 
 ```python

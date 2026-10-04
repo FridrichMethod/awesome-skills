@@ -39,6 +39,8 @@ Otherwise, classify the user's input:
 3. **Ambiguous intent, no materials** — user provides no artifacts and no clear request:
    → Clarify per `shared/references/intent_clarification_protocol.md`.
 
+**Screening boundary (sr-screener):** a request to screen records the user already has (database exports, pasted abstracts, full-text PDFs) against a review's eligibility criteria, or to build a screening protocol, pilot the screening, adjudicate screening conflicts, audit exclusions, or report the selection counts, routes to `sr-screener`. A request to write a literature review, or to run a systematic review, meta-analysis, or PRISMA report, does not route to `sr-screener`. Screening starts only when the user asks for it: `deep-research` `systematic-review` mode may mention `sr-screener`, but never hands over to it automatically.
+
 **Anti-pattern (caused #133):** Receiving ambiguous cross-phase materials and silently auto-routing to a single-phase agent based on which phase the materials "look closest to." This bypasses orchestrator-level reconciliation and lets the subagent inherit the full ambiguity without independent oversight.
 <!-- routing-core:end -->
 
@@ -510,7 +512,7 @@ Follows the paper's language. Academic terms remain in English. User can overrid
 
 ## Model Tiering (#517, optional)
 
-When `ARS_MODEL_TIERING` is set, the dispatching session routes this skill's agents per `shared/model_tiering.md` (canonical: the full 39-agent judgment/execution table + rules). Compact rule:
+When `ARS_MODEL_TIERING` is set, the dispatching session routes this skill's agents per `shared/model_tiering.md` (canonical: the full 43-agent judgment/execution table + rules). Compact rule:
 
 - **Unset (default):** every agent inherits the session model — byte-equivalent pre-#517 behavior.
 - **`economy`** (frontier-tier session): execution-type agents dispatch ONE tier below the session model — floor Opus-class, never lower; judgment-type agents stay on the session model. No-op at or below the floor (announce once).

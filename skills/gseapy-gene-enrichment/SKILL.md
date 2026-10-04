@@ -34,6 +34,84 @@ python -c "import gseapy; print(gseapy.__version__)"
 # 1.1.3
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: analysis_mode
+    kind: required
+    source: upstream
+    ask: "Test only the genes that passed a significance cut (ORA), or the whole ranked list without a cut (GSEA prerank)?"
+    default: "prerank when the upstream stage yields a full ranking; ORA when it yields a gene list"
+
+  - id: D2
+    param: organism
+    kind: derived
+    source: upstream
+    ask: "Which species are these genes from?"
+    default: "carried from the upstream dataset"
+
+  - id: D3
+    param: gene_sets
+    kind: required
+    source: user
+    depends_on: [D2]
+    ask: "Which collections should the genes be tested against - GO terms, pathways, disease or perturbation signatures?"
+    default: null
+
+  - id: D4
+    param: rnk
+    kind: optional
+    source: user
+    depends_on: [D1]
+    ask: "What should order the genes - effect size, signed significance, or the test statistic?"
+    default: "log2FoldChange"
+    skip_if: "ORA mode - ranking is not used"
+
+  - id: D5
+    param: cutoff
+    kind: optional
+    source: user
+    ask: "How strong must a term's evidence be before it is reported?"
+    default: 0.05
+
+  - id: D6
+    param: min_size, max_size
+    kind: optional_conditional
+    source: user
+    ask: "Should very small or very broad gene sets be excluded as uninformative?"
+    default: "15-500 genes"
+
+  - id: D7
+    param: permutation_num
+    kind: optional_conditional
+    source: user
+    ask: "More permutations give finer p-values at proportionally more runtime - is the default enough?"
+    default: 1000
+
+  - id: D8
+    param: weighted_score_type
+    kind: optional
+    source: user
+    ask: "Should GSEA use the standard weighted enrichment score, or a different weighting for this ranking?"
+    default: 1
+
+  - id: D9
+    param: seed, threads
+    kind: never_ask
+    source: data
+    reason: "A fixed seed and available CPU cores affect reproducibility and runtime, not the enrichment model."
+    default: "seed fixed, threads min(4, available_cores)"
+```
+
+Two orderings matter here. D3 hangs on D2 because Enrichr's libraries are
+species-specific — the catalog itself changes with the organism. D4 hangs on D1
+because a ranking metric only exists in prerank mode; under ORA the question has
+no answer, which is what `skip_if` records.
+
 ## Quick Start
 
 ```python

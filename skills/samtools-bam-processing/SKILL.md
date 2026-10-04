@@ -43,6 +43,68 @@ brew install samtools
 samtools --version | head -1
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: mappingQualityFloor
+    kind: required
+    source: user
+    ask: "Below what mapping confidence should reads be dropped? Everything counted downstream inherits this cut."
+    default: "0 - keep every alignment, including ambiguously placed ones"
+
+  - id: D2
+    param: flagFilter
+    kind: required
+    source: user
+    ask: "Which read classes should be excluded - unmapped, secondary, supplementary, failed-QC, duplicates?"
+    default: "keep all classes"
+
+  - id: D3
+    param: duplicateHandling
+    kind: required
+    source: user
+    ask: "Should duplicates be marked and left in place, or physically removed from the file?"
+    default: "marked, not removed - downstream tools can then choose"
+
+  - id: D4
+    param: sortOrder
+    kind: derived
+    source: upstream
+    ask: "Does the next step need coordinate order, or name order for mate pairing?"
+    default: "coordinate"
+
+  - id: D5
+    param: outputFormat
+    kind: optional
+    source: user
+    ask: "Write BAM, or CRAM against a reference to save space?"
+    default: "BAM"
+
+  - id: D6
+    param: opticalDuplicateDistance
+    kind: optional_conditional
+    source: data
+    ask: "Should optical duplicates be distinguished from PCR duplicates, using this platform's pixel distance?"
+    default: "not distinguished"
+
+  - id: D7
+    param: threadsAndMemory
+    kind: never_ask
+    source: data
+    reason: "Compression threads and per-thread sort memory affect runtime and peak RAM, not the records"
+    default: "available cores, 768M per thread"
+```
+
+D1 and D2 look like plumbing and are not. A MAPQ floor silently removes
+multi-mapping regions - paralogs, recent duplications, repeat-adjacent genes -
+from everything computed afterwards, and a run that keeps secondary alignments
+counts the same fragment several times. Neither is visible in the output
+file.
+
 ## Quick Start
 
 ```bash

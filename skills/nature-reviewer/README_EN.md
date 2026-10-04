@@ -15,6 +15,7 @@
 - Avoid dash punctuation and colons throughout the prose when a sentence boundary, comma, semicolon, parentheses, or a short label on a new line is clearer; retain necessary source punctuation and hyphens in stable IDs and compound terms.
 - Use an internal 12-axis technical checklist and bind each substantive concern to a claim pointer and verifiable evidence location.
 - Cross-check terminology, units, numeric precision, Methods counts, and table support within the manuscript, separating language issues from substantive contradictions that weaken credibility.
+- After all reviewer reports are frozen, run a separate forensic consistency audit of arithmetic identities, metric bounds, aggregation levels, prose-table contradictions, duplicate rows, dispersion anomalies, provenance, and reproduction gates. Audit findings are not fed back to reviewers and frozen reports are not edited.
 - Do not coordinate or rewrite reviews to reduce duplication; treat an issue as consensus only when at least two reviewers raise it independently in the post-review synthesis.
 - Identify which readers would care about the work and why.
 

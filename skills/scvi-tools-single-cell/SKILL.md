@@ -35,6 +35,75 @@ pip install scvi-tools scanpy
 pip install "scvi-tools[cuda12]"   # or scvi-tools[cuda11]
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: modelChoice
+    kind: required
+    source: user
+    ask: "What should the model do - integrate and denoise unlabelled cells, transfer labels from a reference, or jointly model protein and RNA?"
+    default: null
+
+  - id: D2
+    param: batchKey
+    kind: required
+    source: data
+    ask: "Which variable separates samples that were processed apart, so the model can hold it out of the latent space?"
+    default: null
+
+  - id: D3
+    param: rawCountsLayer
+    kind: required
+    source: data
+    ask: "Which layer holds raw integer counts? These models require counts, not normalized values."
+    default: null
+
+  - id: D4
+    param: latentDimensions
+    kind: required
+    source: user
+    ask: "How many latent dimensions should the cell state be compressed into?"
+    default: 10
+
+  - id: D5
+    param: geneLikelihood
+    kind: optional
+    source: data
+    ask: "Which count distribution fits this assay - zero-inflated, plain negative binomial, or Poisson?"
+    default: "zero-inflated negative binomial"
+
+  - id: D6
+    param: trainingSchedule
+    kind: optional_conditional
+    source: data
+    ask: "How long should training run, and should it stop early when validation loss plateaus?"
+    default: "400 epochs, no early stopping"
+
+  - id: D7
+    param: deEffectSizeThreshold
+    kind: optional
+    source: user
+    ask: "What fold change should the differential expression test treat as the null it must beat?"
+    default: 0.25
+
+  - id: D8
+    param: networkArchitecture
+    kind: never_ask
+    source: user
+    reason: "Layer count and hidden width are capacity settings whose defaults are validated across datasets; changing them is a methods decision the user has not raised"
+    default: "1 layer, 128 hidden units"
+```
+
+D3 is the failure that looks like success: handing log-normalized values to a
+count model trains it on the wrong noise structure, and it still returns a
+latent space, a UMAP and a cluster set. D2 decides what the latent space is
+allowed to forget, so a batch variable confounded with the condition removes
+the effect being studied.
+
 ## Quick Start
 
 Minimal scVI batch integration on a built-in example dataset:

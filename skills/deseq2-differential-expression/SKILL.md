@@ -40,6 +40,85 @@ BiocManager::install(c("DESeq2", "tximeta", "tximport", "apeglm",
 install.packages(c("pheatmap", "ggplot2", "dplyr"))
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: design
+    kind: required
+    source: data
+    ask: "Which column of the sample sheet separates the groups you want to compare?"
+    default: null
+
+  - id: D2
+    param: contrast
+    kind: required
+    source: user
+    depends_on: [D1]
+    ask: "Which two groups should be compared, and which group should have positive log2 fold changes?"
+    default: null
+
+  - id: D3
+    param: design
+    kind: required
+    source: data
+    depends_on: [D1]
+    ask: "Which available variables should be included to adjust for nuisance variation (batch, donor, sex, sequencing run)?"
+    default: "none"
+    skip_if: "sample sheet carries no column besides the grouping variable"
+
+  - id: D4
+    param: test
+    kind: required
+    source: user
+    depends_on: [D1, D2]
+    ask: "Is the primary hypothesis a named comparison, or an overall effect of this factor across its levels?"
+    default: "named comparison (Wald test)"
+
+  - id: D5
+    param: alpha
+    kind: optional
+    source: user
+    ask: "How strong must the evidence be before a gene counts as changed (false-discovery rate)?"
+    default: 0.05
+
+  - id: D6
+    param: lfcThreshold
+    kind: optional
+    source: user
+    ask: "Test against a zero change, or against a minimum fold change worth caring about?"
+    default: 0
+
+  - id: D7
+    param: lfcShrink.type
+    kind: derived
+    source: upstream
+    ask: "Shrink fold-change estimates so low-count genes stop dominating the rankings and plots?"
+    default: "apeglm, applied for ranking and visualization"
+
+  - id: D8
+    param: blind (vst/rlog)
+    kind: derived
+    source: upstream
+    ask: "Should the variance-stabilizing transform ignore the design?"
+    default: "TRUE for QC/clustering, FALSE for design-aware downstream uses"
+
+  - id: D9
+    param: independentFilter
+    kind: optional
+    source: user
+    ask: "Should DESeq2 use its adaptive mean-count filter to maximize discoveries at the chosen FDR threshold?"
+    default: true
+```
+
+`design` appears twice because the formula is assembled from both D1 and D3;
+D2 defines the direction of the reported effect. The pipeline explicitly passes
+`alpha: 0.05` to `results()` so independent filtering is optimized for the
+reported FDR threshold rather than DESeq2's default of `0.1`.
+
 ## Quick Start
 
 Complete two-group comparison from a count matrix in under 20 lines.

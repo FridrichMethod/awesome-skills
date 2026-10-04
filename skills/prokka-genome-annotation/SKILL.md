@@ -49,6 +49,74 @@ prokka --depends
 pip install biopython pandas matplotlib
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: kingdom
+    kind: required
+    source: user
+    ask: "Is this a bacterial, archaeal, viral, or mitochondrial assembly?"
+    default: "Bacteria"
+
+  - id: D2
+    param: organismMetadata
+    kind: required
+    source: user
+    ask: "Which genus, species, and strain should be recorded, and used to prioritise a genus-specific protein database?"
+    default: null
+
+  - id: D3
+    param: assemblyOrigin
+    kind: required
+    source: data
+    ask: "Is this an isolate genome, or a bin recovered from a metagenome?"
+    default: "isolate - gene prediction trains on the assembly itself"
+
+  - id: D4
+    param: rnaPrediction
+    kind: optional
+    source: user
+    ask: "Should rRNA, tRNA, and other non-coding RNA be predicted alongside coding genes?"
+    default: "tRNA and rRNA predicted; Rfam search off as it is slow"
+
+  - id: D5
+    param: customProteins
+    kind: optional
+    source: user
+    ask: "Is there a curated protein set that should be searched before the general reference database?"
+    default: "none"
+
+  - id: D6
+    param: hitEvalue
+    kind: optional
+    source: user
+    ask: "How confident must a database hit be before it names a gene?"
+    default: "1e-6"
+
+  - id: D7
+    param: minContigLength
+    kind: optional_conditional
+    source: data
+    ask: "Should short contigs be skipped - and does the assembly have enough of them to matter?"
+    default: "no minimum"
+
+  - id: D8
+    param: cpus
+    kind: never_ask
+    source: data
+    reason: "Affects runtime only, not the annotation"
+    default: "min(8, available_cores)"
+```
+
+D3 changes how genes are predicted rather than how they are named. Prodigal
+trains its model on the input; a metagenomic bin holding more than one organism
+trains a blended model, and the resulting gene boundaries are wrong in a way
+that no downstream step flags.
+
 ## Quick Start
 
 ```bash

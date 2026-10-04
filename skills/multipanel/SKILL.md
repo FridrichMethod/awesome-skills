@@ -86,6 +86,54 @@ shared column x-position. Placing each letter at `(0, 1)` in its subfigure's
 coordinate frame (`transform=sf.transSubfigure`) guarantees it hugs its panel
 regardless of neighbors' label widths.
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: panelSelection
+    kind: required
+    source: user
+    ask: "Which results earn a panel, and what claim should the assembled figure make?"
+    default: null
+
+  - id: D2
+    param: panelOrder
+    kind: required
+    source: user
+    depends_on: [D1]
+    ask: "In what order should the panels be read, and which belong on the same row as a group?"
+    default: "analysis order"
+
+  - id: D3
+    param: sharedScales
+    kind: required
+    source: user
+    depends_on: [D1]
+    ask: "Should panels that show the same quantity share one axis range, or each get its own?"
+    default: "shared within a row of comparable panels"
+
+  - id: D4
+    param: figureDimensions
+    kind: required
+    source: user
+    ask: "What column width and page format is this figure for?"
+    default: "single column, portrait"
+
+  - id: D5
+    param: exportFormat
+    kind: optional
+    source: user
+    ask: "Vector for submission, raster for a slide, or both?"
+    default: "vector PDF plus a raster preview"
+```
+
+D3 is the only one here that changes what a reader concludes rather than how it
+looks. Independent y-axes make a small effect and a large one occupy the same
+visual height, and side-by-side panels invite exactly that comparison.
+
 ## Decision Framework
 
 Start from what you have, then how panels relate:

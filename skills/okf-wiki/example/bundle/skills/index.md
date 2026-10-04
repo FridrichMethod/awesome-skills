@@ -1,6 +1,6 @@
 # skills
 
-Every skill the marketplace ships, one concept per file, grouped by [plugin](../plugins/index.md). 63 skills across 11 plugins.
+Every skill the marketplace ships, one concept per file, grouped by [plugin](../plugins/index.md). 63 skills across 12 plugins.
 
 ## [journalism-core](../plugins/journalism-core.md)
 - [ai-writing-detox](ai-writing-detox.md)
@@ -36,7 +36,6 @@ Every skill the marketplace ships, one concept per file, grouped by [plugin](../
 - [mobile-debugging](mobile-debugging.md)
 - [one-way-door](one-way-door.md)
 - [python-pipeline](python-pipeline.md)
-- [test-first-bugs](test-first-bugs.md)
 - [vibe-coding](vibe-coding.md)
 - [web-scraping](web-scraping.md)
 - [web-ui-best-practices](web-ui-best-practices.md)
@@ -44,6 +43,7 @@ Every skill the marketplace ships, one concept per file, grouped by [plugin](../
 
 ## [security-toolkit](../plugins/security-toolkit.md)
 - [api-hardening](api-hardening.md)
+- [private-secret-scanning](private-secret-scanning.md)
 - [secure-auth](secure-auth.md)
 - [security-checklist](security-checklist.md)
 - [supply-chain-hardening](supply-chain-hardening.md)
@@ -62,7 +62,6 @@ Every skill the marketplace ships, one concept per file, grouped by [plugin](../
 - [requesting-code-review](requesting-code-review.md)
 - [subagent-driven-development](subagent-driven-development.md)
 - [systematic-debugging](systematic-debugging.md)
-- [test-driven-development](test-driven-development.md)
 - [using-git-worktrees](using-git-worktrees.md)
 - [using-superjawn](using-superjawn.md)
 - [verification-before-completion](verification-before-completion.md)
@@ -86,3 +85,6 @@ Every skill the marketplace ships, one concept per file, grouped by [plugin](../
 - [video-download](video-download.md)
 - [video-frames](video-frames.md)
 - [video-transcribe](video-transcribe.md)
+
+## [web-design-picker](../plugins/web-design-picker.md)
+- [web-design-picker](web-design-picker.md)

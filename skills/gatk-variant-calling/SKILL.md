@@ -45,6 +45,67 @@ gatk --version
 # From gs://gcp-public-data--broad-references/hg38/v0/ (requires gsutil or Broad FTP)
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: referenceBundle
+    kind: derived
+    source: upstream
+    ask: "Which reference FASTA were the BAMs aligned to?"
+    default: "carried from the alignment stage; must match exactly"
+
+  - id: D2
+    param: callingIntervals
+    kind: required
+    source: user
+    ask: "Call across the whole genome, or restrict to capture targets or regions of interest?"
+    default: null
+
+  - id: D3
+    param: cohortMode
+    kind: required
+    source: user
+    ask: "Call each sample on its own, or emit GVCFs now and genotype the cohort jointly afterwards?"
+    default: "joint genotyping when more than one sample is being analysed together"
+
+  - id: D4
+    param: filteringStrategy
+    kind: required
+    source: user
+    depends_on: [D3]
+    ask: "Filter calls with fixed hard thresholds, or train a variant-recalibration model on the cohort?"
+    default: "hard filters; recalibration needs a cohort large enough to train on"
+
+  - id: D5
+    param: knownSites
+    kind: optional
+    source: user
+    ask: "Annotate calls against a known-variant resource such as dbSNP?"
+    default: "none"
+
+  - id: D6
+    param: callConfidence
+    kind: optional
+    source: user
+    ask: "How confident must a genotype be before the variant is emitted at all?"
+    default: 30
+
+  - id: D7
+    param: threadsAndHeap
+    kind: never_ask
+    source: data
+    reason: "Pair-HMM threads and JVM heap size affect runtime and memory, not the calls"
+    default: "4 threads, heap sized to the genome"
+```
+
+D4 hangs on D3 because variant recalibration is a cohort method - it has
+nothing to train on for a single sample, so the filtering choice is only
+meaningful once the cohort question is answered.
+
 ## Quick Start
 
 ```bash

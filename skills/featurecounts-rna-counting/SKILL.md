@@ -39,6 +39,54 @@ featureCounts -v
 sudo apt-get install subread
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: annotation
+    kind: required
+    source: upstream
+    ask: "Which GTF/GFF annotation file should be used, and does its assembly exactly match the BAM alignment reference?"
+    default: null
+
+  - id: D2
+    param: strandSpecific
+    kind: required
+    source: data
+    ask: "Which strandedness did the representative-alignment check infer, and does it agree with the library preparation?"
+    default: null
+
+  - id: D3
+    param: -t, -g
+    kind: optional
+    source: user
+    ask: "Should expression be summarized from exons to genes, or from another feature type for a specific downstream question?"
+    default: "-t exon -g gene_id"
+
+  - id: D4
+    param: -M, -O
+    kind: optional
+    source: user
+    ask: "Should reads with multiple genomic mappings or overlapping gene assignments be included in the count matrix?"
+    default: "exclude both multi-mappers and multi-overlap reads"
+
+  - id: D5
+    param: --minOverlap, --fracOverlap
+    kind: optional_conditional
+    source: user
+    ask: "Does the assay or feature definition require a minimum overlap stricter than one aligned base?"
+    default: "--minOverlap 1 --fracOverlap 0"
+```
+
+Incorrect library strandedness can substantially reduce or misassign counts;
+the magnitude varies by gene and annotation, so infer it from the data and
+treat an ambiguous result as a QC failure. Enabling multi-mapper counting can
+inflate counts for paralogs and repeat-associated genes. Neither setting
+necessarily produces a software error.
+
 ## Quick Start
 
 ```bash

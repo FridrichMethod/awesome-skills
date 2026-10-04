@@ -31,6 +31,108 @@ popV (Population Voting for single-cell annotation) annotates a query scRNA-seq 
 pip install popv scvi-tools harmonypy bbknn celltypist
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: annotationStrategy
+    kind: required
+    source: user
+    ask: "Name cell types from canonical markers by hand over the clusters, transfer them from an annotated reference by ensemble consensus, or do both and compare the two?"
+    default: "ensemble transfer, then confirm against markers"
+
+  - id: D2
+    param: tissueContext
+    kind: required
+    source: user
+    ask: "Which tissue is this, and in what state - healthy adult, fetal or developmental, diseased, or perturbed?"
+    default: null
+
+  - id: D3
+    param: referenceAtlas
+    kind: required
+    source: literature
+    depends_on: [D2]
+    ask: "Which annotated reference matches that tissue AND that state?"
+    default: null
+
+  - id: D4
+    param: referenceLabelColumn
+    kind: required
+    source: data
+    depends_on: [D3]
+    ask: "Which column of the reference holds the cell type labels, and at what granularity?"
+    default: null
+
+  - id: D5
+    param: markerValidation
+    kind: required
+    source: user
+    depends_on: [D1]
+    ask: "Should the consensus labels be checked against canonical marker expression before they are accepted?"
+    default: "checked - method agreement measures consistency, not correctness"
+
+  - id: D6
+    param: validationMarkerPanel
+    kind: required
+    source: literature
+    depends_on: [D2, D5]
+    ask: "Which canonical markers should the consensus types be confirmed against?"
+    default: null
+    skip_if: "marker validation declined"
+
+  - id: D7
+    param: consensusThreshold
+    kind: required
+    source: user
+    ask: "How many of the annotation methods must agree before a label is trusted?"
+    default: "80% agreement"
+
+  - id: D8
+    param: methodSubset
+    kind: required
+    source: user
+    ask: "Run the full method panel, or drop the slow model-based ones?"
+    default: "all methods"
+
+  - id: D9
+    param: variableGeneCount
+    kind: optional
+    source: user
+    ask: "How many variable genes should the embedding and nearest-neighbour methods use?"
+    default: 4000
+
+  - id: D10
+    param: trainingEpochs
+    kind: optional_conditional
+    source: data
+    depends_on: [D8]
+    ask: "Do the model-based methods need longer training for a large or complex query?"
+    default: "50 unsupervised, 20 semi-supervised"
+    skip_if: "model-based methods excluded"
+
+  - id: D11
+    param: gpuUse
+    kind: never_ask
+    source: data
+    reason: "Falls back to CPU automatically; affects runtime only"
+    default: true
+```
+
+D1 is asked even though the user has arrived at an ensemble annotator, because
+the alternative is not visible from here: manual marker naming and reference
+transfer fail in opposite directions. If the answer is manual only, this skill
+is not the tool — see `single-cell-annotation-guide`.
+
+D5 matters more here than it looks. The agreement score in D7 measures whether
+the methods concur, not whether they are right — several methods sharing one
+unsuitable reference agree with each other confidently. Markers are the only
+outside check. D4 sets the granularity of every downstream comparison: a
+reference labelled at lineage level cannot produce subtype calls.
+
 ## Quick Start
 
 Minimal pipeline from labeled reference and unlabeled query to annotated result:

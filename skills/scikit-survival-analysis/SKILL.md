@@ -33,6 +33,72 @@ pip install scikit-survival scikit-learn pandas numpy matplotlib
 
 **Data format**: Survival outcomes are NumPy structured arrays with `(event, time)` fields. Events are boolean (True = event occurred, False = censored). Times are positive floats.
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: timeAndEventColumns
+    kind: required
+    source: data
+    ask: "Which column holds follow-up time, which holds the event indicator, and does the indicator mark the event or censoring?"
+    default: null
+
+  - id: D2
+    param: eventDefinition
+    kind: required
+    source: user
+    depends_on: [D1]
+    ask: "Which event is being modelled, and are competing events treated as censoring?"
+    default: null
+
+  - id: D3
+    param: covariates
+    kind: required
+    source: data
+    ask: "Which variables enter the model, and are any measured after baseline?"
+    default: null
+
+  - id: D4
+    param: modelFamily
+    kind: required
+    source: user
+    ask: "A proportional-hazards model whose coefficients are interpretable, or an ensemble that predicts better but does not yield hazard ratios?"
+    default: "Cox proportional hazards"
+
+  - id: D5
+    param: regularization
+    kind: required
+    source: user
+    depends_on: [D3, D4]
+    ask: "With more covariates than events, should coefficients be penalized - and toward selection or toward shrinkage?"
+    default: "none"
+
+  - id: D6
+    param: validationScheme
+    kind: required
+    source: user
+    ask: "How should performance be estimated - cross-validation, a held-out split, or an external cohort?"
+    default: "cross-validation"
+
+  - id: D7
+    param: ensembleHyperparameters
+    kind: optional_conditional
+    source: user
+    depends_on: [D4]
+    ask: "How many trees, how deep, and at what learning rate?"
+    default: "100 estimators, depth 3, learning rate 0.1"
+    skip_if: "a proportional-hazards model was chosen"
+```
+
+D1 and D2 are asked before anything else because a flipped event indicator
+fits a model of the time to *not* having the event, and every hazard ratio
+comes back inverted without any warning. D3 carries the other silent error:
+a covariate measured after baseline leaks the outcome into the predictors and
+produces an impressive concordance index that will not replicate.
+
 ## Quick Start
 
 ```python

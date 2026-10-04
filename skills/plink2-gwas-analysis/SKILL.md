@@ -52,6 +52,69 @@ fi
 pip install pandas numpy matplotlib scipy
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: phenotype
+    kind: required
+    source: data
+    ask: "Which column holds the trait being tested, and is it a measurement or a case/control status?"
+    default: null
+
+  - id: D2
+    param: regressionMode
+    kind: derived
+    source: data
+    depends_on: [D1]
+    ask: "Should the association test be linear or logistic?"
+    default: "linear for a quantitative trait, logistic for case/control"
+
+  - id: D3
+    param: qcThresholds
+    kind: required
+    source: user
+    ask: "Where should variants and samples be cut for allele frequency, missingness, and Hardy-Weinberg departure?"
+    default: "MAF 0.01, variant missingness 0.05, sample missingness 0.02, HWE 1e-6"
+
+  - id: D4
+    param: covariates
+    kind: required
+    source: data
+    ask: "Which covariates belong in the model - age, sex, batch, study site?"
+    default: null
+
+  - id: D5
+    param: populationStructure
+    kind: required
+    source: user
+    ask: "How many principal components should be included to absorb ancestry differences?"
+    default: "10, computed from LD-pruned variants"
+
+  - id: D6
+    param: ldPruning
+    kind: optional
+    source: user
+    depends_on: [D5]
+    ask: "Which window and correlation threshold should thin variants before computing the components?"
+    default: "50 variant window, step 5, r-squared 0.2"
+
+  - id: D7
+    param: threads
+    kind: never_ask
+    source: data
+    reason: "Affects runtime only, not the association statistics"
+    default: "min(8, available_cores)"
+```
+
+D5 hangs on D4 because the components are themselves covariates - how many to
+include is a question about the covariate set, not a separate knob. Omitting
+them entirely is the classic way to produce a genome-wide significant result
+that reflects ancestry rather than the trait.
+
 ## Quick Start
 
 ```bash

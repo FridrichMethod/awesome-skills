@@ -40,3 +40,18 @@ def test_punctuation_guard_is_part_of_the_reviewer_contract() -> None:
 
     assert "Avoid em dashes, en dashes, and colons" in router
     assert "Do not use dash punctuation or colons" in router
+
+def test_forensic_consistency_audit_is_required_after_freezing() -> None:
+    router = read("SKILL.md")
+    workflow = read("references/reviewer-workflow.md")
+    qa = read("references/qa-checklist.md")
+    audit = read("references/forensic-consistency-audit.md")
+
+    assert "forensic consistency audit" in router
+    assert "confirmed internal error" in router
+    assert "Never feed audit findings back into reviewer contexts" in router
+    assert "Run the forensic consistency audit in a separate editorial pass" in workflow
+    assert "Forensic consistency checks" in qa
+    assert "aggregation_ambiguity" in audit
+    assert "provenance_gap" in audit
+    assert "Existing code and artifacts must reproduce existing headline numbers" in audit

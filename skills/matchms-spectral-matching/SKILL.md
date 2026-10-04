@@ -33,6 +33,67 @@ uv pip install matchms[chemistry]
 - Input: spectral data in MGF, MSP, mzML, mzXML, JSON, or pickle format
 - Reference library in any supported format for matching
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: referenceLibrary
+    kind: required
+    source: user
+    ask: "Which spectral library should queries be matched against?"
+    default: null
+
+  - id: D2
+    param: similarityMeasure
+    kind: required
+    source: user
+    ask: "Should matching require the same precursor mass, or allow a mass shift so modified analogues still match?"
+    default: "cosine on matched peaks, precursor mass fixed"
+
+  - id: D3
+    param: peakMatchTolerance
+    kind: required
+    source: data
+    ask: "How close must two peaks be in m/z to count as the same fragment?"
+    default: "0.1 Da - tighten toward 0.005 for high-resolution data"
+
+  - id: D4
+    param: spectrumPreprocessing
+    kind: required
+    source: user
+    ask: "Which peaks should be discarded before scoring - low-intensity noise, peaks near the precursor, or spectra with too few peaks to be informative?"
+    default: "drop peaks under 1% relative intensity, require at least 10 peaks"
+
+  - id: D5
+    param: scoreCutoff
+    kind: required
+    source: user
+    ask: "What similarity score, and how many matched peaks, should a hit need before it is reported as an identification?"
+    default: null
+
+  - id: D6
+    param: peakWeighting
+    kind: optional
+    source: user
+    ask: "Should the score weight fragment m/z as well as intensity, favouring informative high-mass fragments?"
+    default: "intensity only"
+
+  - id: D7
+    param: fingerprintSettings
+    kind: optional_conditional
+    source: user
+    ask: "Which molecular fingerprint should structural similarity use, when comparing hits to known structures?"
+    default: "not computed"
+```
+
+D3 and D5 have no safe shared default because they trade off directly: a loose
+tolerance with a low score cutoff returns an identification for every query
+spectrum, all of them plausible-looking. Set the tolerance from the
+instrument's actual accuracy and the cutoff from what the library supports.
+
 ## Quick Start
 
 ```python

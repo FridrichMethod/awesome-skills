@@ -47,6 +47,68 @@ bcftools index -t variants.vcf.gz   # creates .tbi
 bcftools index -c variants.vcf.gz   # creates .csi (for chromosomes > 512 Mb)
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: filterExpression
+    kind: required
+    source: user
+    ask: "Which variants should survive - by depth, genotype quality, allele balance, or population frequency?"
+    default: null
+
+  - id: D2
+    param: multiallelicHandling
+    kind: required
+    source: user
+    ask: "Should multi-allelic records be split into one row per alternate allele before filtering and annotation?"
+    default: "split - most annotation and comparison tools assume one alternate per row"
+
+  - id: D3
+    param: leftAlignment
+    kind: required
+    source: upstream
+    depends_on: [D2]
+    ask: "Should indels be left-aligned against the reference so the same variant is written identically across callers?"
+    default: "left-aligned when a reference FASTA is available"
+
+  - id: D4
+    param: sampleSubset
+    kind: optional
+    source: user
+    ask: "Should the output be restricted to particular samples?"
+    default: "all samples"
+
+  - id: D5
+    param: regionSubset
+    kind: optional
+    source: user
+    ask: "Should records be restricted to particular regions?"
+    default: "whole file"
+
+  - id: D6
+    param: outputFormat
+    kind: optional
+    source: upstream
+    ask: "Which container should the result be written in?"
+    default: "bgzip-compressed VCF with an index"
+
+  - id: D7
+    param: threads
+    kind: never_ask
+    source: data
+    reason: "Compression threads affect runtime only, not the records"
+    default: "min(4, available_cores)"
+```
+
+D2 and D3 together decide whether two VCFs of the same sample can be compared
+at all. Unsplit multi-allelic rows and right-aligned indels produce apparent
+private variants that are the same variant written differently - and every
+downstream intersection then reports a difference that does not exist.
+
 ## Quick Start
 
 ```bash

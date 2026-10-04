@@ -39,6 +39,46 @@ multiqc --version
 conda install -c bioconda multiqc
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: searchScope
+    kind: required
+    source: data
+    ask: "Which directories should be scanned, and are there old or partial runs in them that must be excluded?"
+    default: "the pipeline output root, with no exclusions"
+
+  - id: D2
+    param: sampleNameCleaning
+    kind: required
+    source: data
+    ask: "Do the discovered sample names collapse correctly, or do suffixes from different tools split one sample into several rows?"
+    default: "built-in extension stripping; verify the resulting sample list"
+
+  - id: D3
+    param: moduleFilter
+    kind: optional
+    source: user
+    ask: "Report on every tool found, or only some?"
+    default: "all modules detected"
+
+  - id: D4
+    param: exportData
+    kind: optional_conditional
+    source: upstream
+    ask: "Should the parsed metrics be written as flat tables for a later programmatic QC gate?"
+    default: "HTML report only"
+```
+
+MultiQC aggregates rather than analyses, so most of its parameters are
+presentation. The two that are not are D1 and D2: a stale directory in scope
+silently adds samples that were never part of this run, and wrong name cleaning
+reports one sample as several. Both produce a clean-looking report.
+
 ## Workflow
 
 ### Step 1: Generate Tool-Specific QC Files

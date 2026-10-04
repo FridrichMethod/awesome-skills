@@ -1,10 +1,12 @@
 ---
 name: pi-agent
-description: Build with and use Pi, the minimal terminal coding harness. Use for installing Pi, configuring providers/models/settings/environment variables, creating Pi skills/extensions/packages/themes/prompt templates, embedding Pi through the SDK, integrating over RPC or JSON event streams, parsing sessions, running local models through the llama.cpp router, developing custom Pi providers and TUI components, or using ecosystem packages such as pi-subagents (delegation/orchestration), pi-mcp-adapter (MCP servers), pi-interview (interactive forms), and pi-web-access (web search, fetching, video understanding).
+description: Builds with and operates Pi, the minimal terminal coding harness. Use for installing Pi, configuring providers/models/settings/environment variables, creating Pi skills/extensions/packages/themes/prompt templates, embedding Pi through the SDK, integrating over RPC or JSON event streams, parsing sessions, running local models through the llama.cpp router, developing custom Pi providers and TUI components, or using ecosystem packages such as pi-subagents (delegation/orchestration), pi-mcp-adapter (MCP servers), pi-interview (interactive forms), and pi-web-access (web search, fetching, video understanding).
 license: MIT
 compatibility: Requires Node.js >= 22.19 and npm for Pi CLI and SDK usage. Pi package name is @earendil-works/pi-coding-agent.
 metadata:
-  version: "1.4"
+  version: "1.6"
+  last-reviewed: "2026-09-30"
+  upstream-version: "0.99.2"
   skill-author: K-Dense Inc.
 ---
 
@@ -34,7 +36,7 @@ Pick the reference before answering or coding:
 | Build terminal UI components | `references/tui.md` |
 | Package extensions/skills/prompts/themes | `references/packages.md` |
 | Delegate to subagents, chains, parallel runs, orchestration | `references/pi-subagents.md` |
-| Connect MCP servers, MCP tool discovery/config | `references/pi-mcp-adapter.md` |
+| Connect MCP servers, codemode, MCP tool discovery/config | `references/mcp.md` (built-in), `references/pi-mcp-adapter.md` (optional adapter) |
 | Interactive interview forms, structured user input | `references/pi-interview.md` |
 | Web search, URL/PDF/repo fetching, video understanding | `references/pi-web-access.md` |
 | Author Pi skills | `references/skills.md` |
@@ -49,6 +51,14 @@ Pick the reference before answering or coding:
 Prefer the SDK for Node/TypeScript apps that need type safety, direct state access, in-process custom tools/extensions, or custom resource loading. Use `createAgentSession()` for a single stable session; use `createAgentSessionRuntime()` when the app must replace sessions through new/resume/fork/clone/import flows. Auth and model lookup go through `ModelRuntime.create()`.
 
 Prefer RPC mode when the client is not Node.js, needs process isolation, or wants a language-agnostic JSONL protocol. Start with `pi --mode rpc --no-session` for stateless subprocess integration, then add session flags when persistence matters. Split records on `\n` only — Node `readline` is not protocol-compliant.
+
+For RPC clients, correlate responses by unique request `id`, not arrival order,
+and keep consuming events after a successful `prompt` response. Success means
+accepted, queued, or handled; it is not completion. Subscribe before sending the
+prompt, and wait for `agent_settled` for runs that actually start, because
+`agent_end` may precede retries or queued work. If the response reports
+`disposition: "handled"`, no run started and no settled event is owed. See the
+[upstream RPC lifecycle](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/rpc.md).
 
 Prefer JSON mode for one-shot command-line pipelines that only need streamed events, not bidirectional control: `pi --mode json "prompt"`.
 
@@ -80,7 +90,9 @@ pi update --all
 
 ## Source Coverage
 
-These references summarize the Pi documentation at `https://pi.dev/docs/latest` and every docs page found under it, as of Pi **0.84.2** (docs source: `packages/coding-agent/docs/` in `https://github.com/earendil-works/pi`, formerly `pi-mono`). They also cover the package pages for `pi-subagents`, `pi-mcp-adapter`, `pi-interview`, and `pi-web-access` at `https://pi.dev/packages/`, cross-checked against the published npm READMEs and package docs (`pi-web-access` 0.22.0, `pi-mcp-adapter` 2.25.0, `pi-subagents` 0.49.0, `pi-interview` 0.11.0). When exact API behavior matters, prefer the cited reference page and inspect installed TypeScript definitions under `node_modules/@earendil-works/pi-coding-agent/dist/` and `node_modules/@earendil-works/pi-ai/dist/`.
+These references were reviewed against the official Pi **0.99.2** release (2026-09-30), its published npm runtime and declarations, and current [Pi documentation](https://pi.dev/docs/latest). Source: [earendil-works/pi v0.99.2](https://github.com/earendil-works/pi/tree/v0.99.2/packages/coding-agent). Ecosystem contracts were checked against published `pi-subagents` **0.74.0**, `pi-mcp-adapter` **4.0.0**, `pi-interview` **0.13.0**, and `pi-web-access` **0.35.0** sources. These releases are the compatibility baseline, not interchangeable historical APIs.
+
+Local checks cover CLI/RPC control, SDK sessions and transcript projection, mocked model/tool execution, extension loading, and example configuration/schema contracts. Authentication flows, paid model/search calls, graphical UI, and external sandboxes are documentation-verified only; deployment examples requiring them are illustrative. Check `pi --version`, `pi --help`, the installed package README, and TypeScript declarations before adapting examples to another release. Pi 0.99 includes native MCP; pi-subagents 0.74 removes `workflowScript`; adapter 4.0 uses `mcp-adapter.json` and `/mcp-adapter`.
 
 ## Citing Scientific Agent Skills
 

@@ -42,6 +42,67 @@ bwa-mem2 version
 # 2.2.1
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: reference_bundle
+    kind: required
+    source: user
+    ask: "Which species and genome assembly should reads be aligned against?"
+    default: null
+
+  - id: D2
+    param: read_group
+    kind: required
+    source: user
+    ask: "What sample name and library identity should be stamped into each alignment?"
+    default: null
+
+  - id: D3
+    param: downstream_compatibility
+    kind: derived
+    source: upstream
+    ask: "Will GATK or Picard consume this BAM, requiring supplementary alignments flagged and soft-clipped?"
+    default: "-M -Y when a GATK/Picard step follows"
+
+  - id: D4
+    param: seedLength
+    kind: optional
+    source: user
+    ask: "Do these reads need a shorter seed than the default to map sensitively?"
+    default: 19
+
+  - id: D5
+    param: minAlignmentScore
+    kind: optional
+    source: user
+    ask: "How weak an alignment is still worth reporting?"
+    default: 30
+
+  - id: D6
+    param: interleavedInput
+    kind: derived
+    source: data
+    ask: "Are both mates held in a single interleaved FASTQ?"
+    default: false
+    skip_if: "reads supplied as separate R1/R2 files"
+
+  - id: D7
+    param: threads
+    kind: never_ask
+    source: data
+    reason: "Affects runtime only, not the alignments"
+    default: "min(8, available_cores)"
+```
+
+D2 is not cosmetic. The sample name in the read group is what joint genotyping
+groups by; an omitted or duplicated one silently merges or splits samples
+downstream, long after the alignment itself looks fine.
+
 ## Quick Start
 
 ```bash

@@ -41,6 +41,82 @@ git clone https://github.com/alexdobin/STAR
 cd STAR/source && make STAR
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: reference_bundle
+    kind: required
+    source: user
+    ask: "Which species, genome assembly, and matching GTF annotation release should be used?"
+    default: null
+
+  - id: D2
+    param: --sjdbOverhang
+    kind: derived
+    source: data
+    ask: "What is the longest trimmed read length observed in the FASTQ files?"
+    default: "maximum trimmed read length minus 1"
+
+  - id: D3
+    param: --quantMode
+    kind: derived
+    source: upstream
+    ask: "Does the downstream workflow require STAR gene counts, transcriptome BAM for RSEM, or only the genomic BAM?"
+    default: "no quantMode; emit a coordinate-sorted genomic BAM"
+
+  - id: D4
+    param: --twopassMode
+    kind: optional
+    source: user
+    ask: "Should alignment prioritize sensitive discovery of novel splice junctions?"
+    default: "None"
+
+  - id: D5
+    param: --outFilterMultimapNmax
+    kind: optional
+    source: user
+    ask: "How many genomic loci may a read match before it is treated as too ambiguous to align?"
+    default: 10
+
+  - id: D6
+    param: --outFilterMismatchNmax
+    kind: optional
+    source: user
+    ask: "Does this assay require a non-default maximum number of alignment mismatches?"
+    default: 10
+
+  - id: D7
+    param: --alignIntronMax
+    kind: optional_conditional
+    source: literature
+    ask: "Does the organism or assay require an intron-length limit different from the reference bundle's standard setting?"
+    default: 1000000
+
+  - id: D8
+    param: --genomeSAindexNbases
+    kind: never_ask
+    source: data
+    reason: "Calculated from genome length to size the index; it affects memory use, not the biological result."
+    default: "min(14, floor(log2(genome_length) / 2 - 1))"
+
+  - id: D9
+    param: --runThreadN
+    kind: never_ask
+    source: data
+    reason: "Affects runtime only, not the alignments"
+    default: "min(8, available_cores)"
+```
+
+D2 is measured from the input FASTQ rather than chosen by the user. The GTF,
+genome FASTA, and STAR index must all come from the same reference release.
+`GeneCounts` produces STAR's own counts; omit it when featureCounts will produce
+the count matrix. `TranscriptomeSAM` is for transcriptome-BAM consumers such as
+RSEM, not ordinary Salmon quantification.
+
 ## Quick Start
 
 ```bash

@@ -29,6 +29,52 @@ pip install pysam
 
 **Note**: Requires htslib C library (bundled with pip install on most platforms). On some Linux systems, may need `libhts-dev` or equivalent. Index files (`.bai`, `.tbi`, `.fai`) required for random access — create with `pysam.index()`, `pysam.tabix_index()`, or `pysam.faidx()`.
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: mappingQualityFloor
+    kind: required
+    source: user
+    ask: "Below what mapping confidence should reads be ignored when piling up or counting?"
+    default: "0 - no filter"
+
+  - id: D2
+    param: baseQualityFloor
+    kind: required
+    source: user
+    ask: "How confident must an individual base call be to be counted at a position?"
+    default: 15
+
+  - id: D3
+    param: regionTruncation
+    kind: required
+    source: user
+    ask: "Should a pileup report only positions inside the requested region, or every position touched by an overlapping read?"
+    default: "not truncated - overlapping reads extend the reported range"
+
+  - id: D4
+    param: indexRequirement
+    kind: derived
+    source: data
+    ask: "Is the file indexed, or must records be streamed sequentially?"
+    default: "indexed random access"
+
+  - id: D5
+    param: iteratorSafety
+    kind: never_ask
+    source: user
+    reason: "Whether simultaneous iterators are allowed is an API-usage concern with a small overhead cost, not a result-changing choice"
+    default: false
+```
+
+D3 is the one that surprises people: an untruncated pileup returns positions
+outside the region that was asked for, so per-region statistics computed
+straight off the result cover a wider span than intended.
+
 ## Quick Start
 
 ```python

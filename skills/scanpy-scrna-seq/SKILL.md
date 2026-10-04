@@ -34,6 +34,99 @@ Scanpy is a scalable Python toolkit for analyzing single-cell RNA-seq data built
 pip install "scanpy[leiden]" anndata
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: pct_counts_mt
+    kind: required
+    source: data
+    ask: "Dying cells leak cytoplasmic RNA and read as high-mitochondrial - where should the cut sit for this tissue?"
+    default: "20% (PBMC ~5%, solid tumour ~20%; propose from the observed distribution)"
+
+  - id: D2
+    param: batch_key
+    kind: required
+    source: data
+    ask: "Which variable separates samples that were processed apart (donor, run, 10X lane), so its effect is not read as biology?"
+    default: null
+    skip_if: "all cells come from one sample and one processing run"
+
+  - id: D3
+    param: resolution
+    kind: optional
+    source: user
+    ask: "How finely should cells be split - broad lineages, or subtypes within them?"
+    default: "0.8 (0.1-0.3 broad lineages, 1.0-2.0 fine subtypes)"
+
+  - id: D4
+    param: n_top_genes
+    kind: optional
+    source: user
+    ask: "How many variable genes should drive the embedding? More captures subtle states but adds noise."
+    default: 2000
+
+  - id: D5
+    param: n_pcs
+    kind: optional_conditional
+    source: data
+    depends_on: [D4]
+    ask: "How many principal components carry real structure, by the variance-ratio elbow?"
+    default: 40
+
+  - id: D6
+    param: min_genes, min_cells
+    kind: optional_conditional
+    source: data
+    ask: "Where should empty droplets and undetected genes be cut off?"
+    default: "cells with <200 genes, genes in <3 cells"
+
+  - id: D6b
+    param: annotationStrategy
+    kind: required
+    source: user
+    ask: "After clustering, should clusters be named from canonical markers by hand, or handed to a reference-based annotator?"
+    default: "manual marker-based within this skill; see `single-cell-annotation-guide` to choose"
+
+  - id: D6c
+    param: markerPanel
+    kind: required
+    source: literature
+    depends_on: [D6b]
+    ask: "Which canonical markers define the populations expected in this tissue and state?"
+    default: null
+    skip_if: "annotation delegated to a reference-based tool"
+
+  - id: D7
+    param: method (rank_genes_groups)
+    kind: optional
+    source: user
+    ask: "Which test should rank marker genes per cluster?"
+    default: "wilcoxon"
+
+  - id: D8
+    param: target_sum, flavor
+    kind: optional
+    source: user
+    ask: "Should the standard library-size normalization and Seurat v3 highly-variable-gene selection be used?"
+    default: "target_sum 1e4, flavor seurat_v3"
+
+  - id: D9
+    param: random_state
+    kind: never_ask
+    source: data
+    reason: "Fixes the draw for reproducibility; does not change what the data supports"
+    default: 0
+```
+
+D5 hangs on D4 because the elbow is read off a PCA computed over the selected
+variable genes — a different gene count moves where it sits. D2 shapes the
+pipeline rather than a single call: naming a batch adds a correction stage
+(`harmony-batch-correction` or ComBat) before the neighbor graph.
+
 ## Workflow
 
 ### Step 1: Setup and Data Loading

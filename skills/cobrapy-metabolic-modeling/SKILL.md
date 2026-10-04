@@ -32,6 +32,81 @@ COBRApy is a Python package for constraint-based reconstruction and analysis (CO
 pip install cobra
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: modelSource
+    kind: required
+    source: user
+    ask: "Which genome-scale reconstruction, and which version, should be used?"
+    default: null
+
+  - id: D2
+    param: objectiveFunction
+    kind: required
+    source: user
+    depends_on: [D1]
+    ask: "What should the model be asked to maximize - biomass production, a specific product, or ATP yield?"
+    default: "the reconstruction's own biomass reaction"
+
+  - id: D3
+    param: mediumConstraints
+    kind: required
+    source: user
+    depends_on: [D1]
+    ask: "Which nutrients are available, and at what uptake rates?"
+    default: "the reconstruction's default medium"
+
+  - id: D4
+    param: analysisType
+    kind: required
+    source: user
+    ask: "A single optimal flux distribution, the feasible range of each flux, or a sampled distribution over the solution space?"
+    default: "single optimal distribution"
+
+  - id: D5
+    param: optimalityFraction
+    kind: required
+    source: user
+    depends_on: [D4]
+    ask: "What fraction of the optimum must solutions retain when reporting flux ranges?"
+    default: 1.0
+    skip_if: "not a flux-variability analysis"
+
+  - id: D6
+    param: looplessConstraint
+    kind: optional
+    source: user
+    ask: "Should thermodynamically infeasible internal loops be excluded, at a large runtime cost?"
+    default: "loops allowed"
+
+  - id: D7
+    param: sampleCount
+    kind: optional_conditional
+    source: user
+    depends_on: [D4]
+    ask: "How many flux samples should be drawn, and how far apart?"
+    default: "not sampling"
+    skip_if: "not a sampling analysis"
+
+  - id: D8
+    param: solverProcesses
+    kind: never_ask
+    source: data
+    reason: "Parallel workers affect runtime only, not the fluxes"
+    default: "min(4, available_cores)"
+```
+
+D2 and D3 together are the model: flux balance analysis reports the optimum of
+whatever objective it is given under whatever medium it is given, and it
+returns a complete, feasible flux distribution for a wrong pair as readily as a
+right one. The default biomass objective encodes the original authors' growth
+assumptions, which may not be the condition being studied.
+
 ## Quick Start
 
 ```python

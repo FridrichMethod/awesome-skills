@@ -21,6 +21,7 @@ response. If the user wants rebuttal writing, route to `nature-response`.
 - Run each reviewer in a genuinely separate context, subagent, process, or invocation. If the environment cannot isolate contexts, generate one reviewer report per invocation or explicitly state that mutual blindness cannot be guaranteed; never present shared-context drafting as independent peer review.
 - Define emphasis briefs before any report is generated. They are working lenses, not reviewer identities, specialties, institutions, or biographies.
 - Freeze each individual report before comparing them. Natural duplication or disagreement is valid evidence of independent review and must not be edited away to manufacture diversity.
+- After all reports are frozen, run `references/forensic-consistency-audit.md` as a separate editorial pass. Audit arithmetic, metric bounds, aggregation levels, prose-table ordering, duplicate displays, dispersion anomalies, provenance and reproducibility. Never feed audit findings back into reviewer contexts or edit frozen reports after comparison.
 - Identify who would be interested in the results and why.
 - Identify technical failings that must be addressed before the authors' case is established.
 - Give every substantive concern a stable ID, a faithful `claim_pointer`, and a verifiable `evidence_pointer`; mark missing locations instead of inventing them.
@@ -57,9 +58,10 @@ If the provided material is partial, perform a bounded review and mark the asses
 4. Launch each reviewer in an isolated context. Pass only the immutable review packet, that reviewer's emphasis brief, the common report skeleton, and the same grounding rules.
 5. Inside each isolated review, independently assess readiness and the source-grounded axes, then build that reviewer's own concern ledger using `references/technical-concern-taxonomy.md`. If relevant, load only the applicable section of `references/domain-specific-review-gates.md` inside that same isolated context.
 6. Finalize and freeze every reviewer report. Do not show a completed or partial report to another reviewer, and do not redistribute concerns to control overlap.
-7. Only after all reports are frozen, compare them in a separate synthesis pass. Reconcile independently created concerns to shared synthesis keys, and label consensus only when at least two reports independently raise the same underlying concern.
-8. Generate `Cross-review synthesis (post-review; not shown to reviewers)` with consensus blocking concerns, other major concerns, the minor-revision checklist, and genuine differences in emphasis or judgment.
-9. Run QA for reviewer isolation, severity calibration, blocking calibration, evidence anchoring, groundedness, coverage, role boundaries, and non-invention. Overlap is measured only after freezing and must never trigger retroactive rewriting of individual reports.
+7. After all reports are frozen, run the forensic consistency audit in a separate editorial pass using `references/forensic-consistency-audit.md`. Classify findings as confirmed internal error, aggregation ambiguity, provenance gap, suspected duplication, unresolved input needed, not assessable, or passed. Do not feed audit findings back into reviewer contexts or edit frozen reports after comparison.
+8. Compare the frozen reports in a separate synthesis pass. Reconcile independently created concerns to shared synthesis keys, and label consensus only when at least two reports independently raise the same underlying concern. Keep reviewer consensus and forensic audit findings separate.
+9. Generate `Cross-review synthesis (post-review; not shown to reviewers)` with consensus blocking concerns, other major concerns, forensic consistency findings, the minor-revision checklist, and genuine differences in emphasis or judgment.
+10. Run QA for reviewer isolation, severity calibration, blocking calibration, evidence anchoring, groundedness, coverage, role boundaries, non-invention, and forensic consistency. Overlap is measured only after freezing and must never trigger retroactive rewriting of individual reports.
 
 ## Output format
 
@@ -114,6 +116,7 @@ Cross-review synthesis (post-review; not shown to reviewers)
 - **Consensus blocking concerns** [items]
 - **Other consensus major concerns** [items]
 - **Where emphasis differs across reviewers** [text]
+- **Forensic consistency findings** [confirmed errors, aggregation ambiguities, provenance gaps, suspected duplication, unresolved author input]
 - **Minor revision checklist** [items]
 - **Broad-interest / significance readout** [text]
 - **Most important issues to resolve before a strong Nature-style case is established** [items]
@@ -138,6 +141,9 @@ Risk / unsupported claims
 - Do not create Major or Minor concerns merely to fill a quota or make reviewer reports look balanced.
 - Do not downgrade a core evidence, validity, ethics, or integrity problem to Minor because it is
   easy to describe, and do not upgrade a local presentation issue merely to sound severe.
+- Do not label a numerical anomaly a confirmed error without arithmetic proof or source data.
+- Do not hide confirmed internal contradictions merely because no reviewer identified them.
+- Do not present an audit finding as reviewer consensus unless at least two frozen reports independently raised the same underlying concern.
 
 ## Related files
 
@@ -151,6 +157,7 @@ Risk / unsupported claims
 | [references/report-structure.md](references/report-structure.md) | You need the default output contract or section anatomy |
 | [references/role-boundaries.md](references/role-boundaries.md) | You need constraints on reviewer differences and editor-versus-reviewer boundaries |
 | [references/qa-checklist.md](references/qa-checklist.md) | You are finalizing an output and need groundedness / non-invention checks |
+| [references/forensic-consistency-audit.md](references/forensic-consistency-audit.md) | You need the mandatory post-review audit of arithmetic, metric bounds, aggregation level, prose-table consistency, provenance, dispersion anomalies, or reproducibility gates |
 | [../nature-shared/core/consistency-sweep.md](../nature-shared/core/consistency-sweep.md) | You are checking the manuscript against itself: headline counts that do not reconcile with the Methods, one metric at two precisions, a superlative contradicted by the paper's own table, overlapping error bars presented as an advantage, or internal summaries that disagree |
 | [references/editorial criteria and processes.md](<references/editorial criteria and processes.md>) | You need the primary local Nature source text |
 

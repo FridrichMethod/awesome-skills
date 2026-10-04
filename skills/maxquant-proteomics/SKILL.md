@@ -38,6 +38,86 @@ pip install pandas numpy scipy matplotlib seaborn statsmodels gseapy
 pip install pymaxquant
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: quantificationStrategy
+    kind: required
+    source: user
+    ask: "How were samples quantified - label-free, SILAC, or isobaric tags?"
+    default: null
+
+  - id: D2
+    param: proteinSequenceDatabase
+    kind: required
+    source: user
+    ask: "Which organism's protein FASTA, and which release, should spectra be searched against?"
+    default: null
+
+  - id: D3
+    param: digestionEnzyme
+    kind: required
+    source: user
+    ask: "Which protease was used, and how many missed cleavages should be allowed?"
+    default: "trypsin, up to 2 missed cleavages"
+
+  - id: D4
+    param: modifications
+    kind: required
+    source: user
+    ask: "Which modifications are fixed, and which variable - and is there an enrichment such as phospho to search for?"
+    default: "fixed carbamidomethyl on cysteine; variable oxidation and N-terminal acetylation"
+
+  - id: D5
+    param: falseDiscoveryRates
+    kind: required
+    source: user
+    ask: "What false-discovery rate should peptide and protein identifications be held to?"
+    default: "1% at both levels"
+
+  - id: D6
+    param: matchBetweenRuns
+    kind: required
+    source: user
+    depends_on: [D1]
+    ask: "Should identifications be transferred between runs by retention time, recovering more proteins at the cost of some transferred errors?"
+    default: "off"
+
+  - id: D7
+    param: lfqMinRatioCount
+    kind: optional
+    source: user
+    depends_on: [D1]
+    ask: "How many shared peptides must two samples have before their abundances are normalized against each other?"
+    default: 2
+    skip_if: "labelled quantification"
+
+  - id: D8
+    param: missingValueImputation
+    kind: required
+    source: user
+    ask: "How should proteins missing from a sample be treated - left missing, or imputed as below the detection limit?"
+    default: "imputed from a downshifted distribution"
+
+  - id: D9
+    param: differentialThresholds
+    kind: required
+    source: user
+    ask: "What significance and fold-change cuts define a changed protein?"
+    default: "FDR 0.05, log2 fold change 1.0"
+```
+
+D8 is where proteomics differs from RNA-seq and where results most often turn
+on an unexamined default. A protein absent from every control and present in
+every treated sample is the strongest possible result or an artefact of
+detection limits, and the imputation choice decides which one the volcano plot
+shows. D6 interacts with it: transferred identifications fill in exactly the
+values that would otherwise be imputed.
+
 ## Quick Start
 
 ```python

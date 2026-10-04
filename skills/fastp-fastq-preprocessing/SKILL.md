@@ -41,6 +41,88 @@ chmod +x fastp
 fastp --version
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: -i / -I
+    kind: required
+    source: data
+    ask: "Were these reads sequenced from single-end or paired-ends of each fragment?"
+    default: "read off the file inventory - paired when R1/R2 mates are present"
+
+  - id: D2
+    param: library_prep
+    kind: required
+    source: user
+    ask: "Which library prep produced these reads - 5'-, 3'-, small RNA, lnRNA or amplicon?"
+    default: null
+
+  - id: D3
+    param: --trim_poly_x
+    kind: optional
+    source: user
+    depends_on: [D2]
+    ask: "Trim polyA/polyT tails left by the capture step?"
+    default: "on for 3'-enriched RNA-seq, off otherwise"
+
+  - id: D4
+    param: --adapter_sequence / --detect_adapter_for_pe
+    kind: required
+    source: user
+    depends_on: [D1]
+    ask: "Auto-detect the adapter, or supply the kit's sequence explicitly?"
+    default: "auto-detect"
+
+  - id: D5
+    param: --length_required
+    kind: required
+    source: user
+    depends_on: [D2]
+    ask: "Reads shorter than this after trimming are discarded - how short is too short to map?"
+    default: "15 (raise to ~36 for standard RNA-seq; keep low for small RNA)"
+
+  - id: D6
+    param: --qualified_quality_phred
+    kind: optional
+    source: user
+    ask: "How confident must a base call be before it counts as good quality?"
+    default: "15 (20 = 1% error)"
+
+  - id: D7
+    param: --correction
+    kind: optional
+    source: user
+    depends_on: [D1]
+    ask: "Correct mismatched bases where the two mates overlap?"
+    default: "off"
+    skip_if: "single-end input - there is no overlap to compare"
+
+  - id: D8
+    param: --low_complexity_filter
+    kind: optional_conditional
+    source: data
+    ask: "Drop low-complexity reads (homopolymer and short-repeat runs)?"
+    default: "off"
+
+  - id: D9
+    param: --thread, --split
+    kind: never_ask
+    source: data
+    reason: "Parallelism and output sharding; affect runtime and file layout, not the reads kept"
+    default: "8 threads, no split"
+```
+
+D2 is asked outright rather than guessed, because the prep drives two later
+answers: it decides whether polyA trimming is correct (D3, a 3'-enriched library
+ends in a capture tail that is not biological sequence) and where the length
+floor belongs (D5 — a 36 bp minimum that is right for RNA-seq discards the
+entire read in a small-RNA run). D4 and D7 hang on D1 because both describe what
+to do with a mate pair.
+
 ## Quick Start
 
 ```bash

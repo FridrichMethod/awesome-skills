@@ -50,6 +50,86 @@ installGenome.pl mm10
 pip install pandas matplotlib seaborn
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: genomeAssembly
+    kind: derived
+    source: upstream
+    ask: "Which assembly are the peak coordinates on?"
+    default: "carried from the peak-calling stage"
+
+  - id: D2
+    param: searchWindow
+    kind: required
+    source: user
+    ask: "How wide a window around each peak centre should be searched?"
+    default: "200 bp for TF ChIP, 150 bp for ATAC"
+
+  - id: D3
+    param: backgroundRegions
+    kind: required
+    source: user
+    ask: "Compare peaks against GC-matched random genomic regions, or against a specific control set?"
+    default: "auto-generated GC-matched background"
+
+  - id: D4
+    param: repeatMasking
+    kind: required
+    source: user
+    ask: "Mask repetitive sequence, which otherwise dominates the enrichment as false positives?"
+    default: "masked"
+
+  - id: D5
+    param: denovoDiscovery
+    kind: required
+    source: user
+    ask: "Search for previously undescribed motifs, or only test the known-motif library?"
+    default: "known motifs only - de novo discovery is roughly ten times slower"
+
+  - id: D6
+    param: motifLengths
+    kind: optional
+    source: user
+    depends_on: [D5]
+    ask: "Which motif widths should the de novo search try?"
+    default: "8, 10, 12"
+    skip_if: "de novo discovery disabled"
+
+  - id: D7
+    param: numDenovoMotifs
+    kind: optional
+    source: user
+    depends_on: [D5]
+    ask: "How many de novo motifs should be reported?"
+    default: 25
+    skip_if: "de novo discovery disabled"
+
+  - id: D8
+    param: knownMotifMismatches
+    kind: optional
+    source: user
+    ask: "How loosely may a sequence match a known motif and still count?"
+    default: 2
+
+  - id: D9
+    param: threads
+    kind: never_ask
+    source: data
+    reason: "Affects runtime only, not the enrichment"
+    default: "min(8, available_cores)"
+```
+
+D1 is derived rather than asked: peak coordinates are meaningless outside the
+assembly they were called on, so the answer is whatever the upstream stage used,
+not a preference. D3 is the decision most often left at its default without
+thought - a background that does not match the peaks in GC content produces
+enrichment for GC content rather than for biology.
+
 ## Quick Start
 
 ```bash

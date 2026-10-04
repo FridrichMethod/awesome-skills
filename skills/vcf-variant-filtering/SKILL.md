@@ -76,6 +76,67 @@ bcftools query -f '%FILTER\n' input.vcf | grep -v '^\.$' | head
 
 Understanding the FILTER column is the first step in any VCF quality assessment. Always inspect it before deciding whether additional filtering is needed.
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: analysisGoal
+    kind: required
+    source: user
+    ask: "What is the filtered call set for - a rare-disease search, a somatic variant list, a population study, or a genotyping panel?"
+    default: null
+
+  - id: D2
+    param: filteringApproach
+    kind: required
+    source: user
+    depends_on: [D1]
+    ask: "Fixed hard thresholds, or a recalibration model trained on the cohort?"
+    default: "hard filters; recalibration needs a cohort large enough to train on"
+
+  - id: D3
+    param: qualityThresholds
+    kind: required
+    source: user
+    depends_on: [D2]
+    ask: "Where should depth, genotype quality, and strand-bias cuts sit?"
+    default: null
+
+  - id: D4
+    param: frequencyFilter
+    kind: required
+    source: user
+    depends_on: [D1]
+    ask: "Should variants common in reference populations be removed, and at what frequency?"
+    default: "no frequency filter"
+
+  - id: D5
+    param: consequenceFilter
+    kind: required
+    source: user
+    depends_on: [D1]
+    ask: "Should the set be restricted by predicted consequence - coding only, high-impact only, or everything?"
+    default: "everything"
+
+  - id: D6
+    param: inheritanceModel
+    kind: optional_conditional
+    source: user
+    depends_on: [D1]
+    ask: "Is there a family structure to filter on - de novo, recessive, compound heterozygous?"
+    default: "none"
+    skip_if: "single unrelated sample"
+```
+
+Every decision here hangs on D1, and that is the point: there is no generally
+correct filter. A rare-disease search removes anything common in the
+population; a population-genetics study needs exactly those variants kept.
+Applying a remembered threshold set without asking what the call set is for
+silently answers a different question.
+
 ## Decision Framework
 
 ```

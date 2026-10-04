@@ -42,6 +42,71 @@ tar xzvf salmon-1.10.0_linux_x86_64.tar.gz
 export PATH="$PWD/salmon-latest_linux_x86_64/bin:$PATH"
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: reference
+    kind: required
+    source: user
+    ask: "Which reference bundle should be used: species, genome assembly, and annotation release?"
+    default: null
+
+  - id: D2
+    param: decoyAwareIndex
+    kind: derived
+    source: upstream
+    depends_on: [D1]
+    ask: "Does the selected reference bundle include a matching genome FASTA for building a decoy-aware index?"
+    default: true
+
+  - id: D3
+    param: libType
+    kind: required
+    source: data
+    ask: "Salmon inferred this library type from representative reads. Does it agree with the library preparation?"
+    default: "A; inspect and confirm the inferred type in aux_info/meta_info.json"
+
+  - id: D4
+    param: biasCorrection
+    kind: optional
+    source: literature
+    ask: "Should sequence- and GC-composition bias correction be enabled for cross-sample quantification?"
+    default:
+      seqBias: true
+      gcBias: true
+
+  - id: D5
+    param: numBootstraps
+    kind: optional_conditional
+    source: upstream
+    ask: "Will downstream analysis use inferential replicates (e.g., Swish/fishpond or sleuth)?"
+    default: 0
+
+  - id: D6
+    param: selectiveAlignment
+    kind: optional
+    source: literature
+    ask: "Should selective alignment with range-factorized equivalence classes be used for this quantification?"
+    default:
+      validateMappings: true
+      rangeFactorizationBins: 4
+
+  - id: D7
+    param: threads
+    kind: never_ask
+    source: data
+    reason: "Uses available CPU cores to affect runtime only, not quantification."
+    default: "min(8, available_cores)"
+```
+
+D2 depends on D1 because the transcriptome and decoy genome must be from the
+same reference release. D3 is a required confirmation after inspecting Salmon's
+inferred library type; an ambiguous or unexpected inference is a QC failure.
+
 ## Quick Start
 
 ```bash

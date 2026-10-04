@@ -1,6 +1,6 @@
 ---
 name: "single-cell-annotation-guide"
-description: "Decision framework for manual marker-based, automated (CellTypist), and reference-based (popV) cell type annotation in scRNA-seq. Three-tier strategy: Tier 1 manual markers, Tier 2 CellTypist, Tier 3 popV ensemble transfer. Use when planning or troubleshooting annotation."
+description: "Cell type annotation strategy for scRNA-seq: name clusters manually from canonical markers, transfer labels from a reference (CellTypist, popV), or do both and validate one against the other. Covers matching tissue and developmental stage, marker evidence, annotation confidence, doublets, unresolved clusters. Use when planning or troubleshooting how to annotate cells."
 license: "CC-BY-4.0"
 ---
 
@@ -56,6 +56,92 @@ Marker gene evidence is not all equally reliable. Evidence categories, from most
 4. **Single-study markers**: Genes described as markers in a single publication but not yet widely replicated. These should be treated as supporting evidence, not definitive.
 
 When building a marker panel for annotation, prioritize cross-validated markers (Category 3) and use canonical published markers (Category 1) as anchors.
+
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code. The Decision
+Framework below explains the reasoning; this block is the machine-readable
+form of it.
+
+```yaml
+decisions:
+  - id: D1
+    param: tissueContext
+    kind: required
+    source: user
+    ask: "Which tissue is this, and in what state - healthy adult, fetal or developmental, diseased, cultured, or perturbed?"
+    default: null
+
+  - id: D2
+    param: annotationStrategy
+    kind: required
+    source: user
+    depends_on: [D1]
+    ask: "Name cell types from canonical markers by hand over the clusters, transfer labels from an annotated reference, or do both and compare them against each other?"
+    default: null
+
+  - id: D3
+    param: referenceAtlas
+    kind: required
+    source: literature
+    depends_on: [D1, D2]
+    ask: "Which annotated reference matches this tissue AND this developmental or disease state?"
+    default: null
+    skip_if: "manual marker-based annotation only"
+
+  - id: D4
+    param: markerPanel
+    kind: required
+    source: literature
+    depends_on: [D1, D2]
+    ask: "Which canonical markers define the populations expected in this tissue and state?"
+    default: null
+    skip_if: "reference label transfer only, with no marker check"
+
+  - id: D5
+    param: markerValidation
+    kind: required
+    source: user
+    depends_on: [D2]
+    ask: "Should transferred labels be checked against canonical marker expression before they are accepted, so a mismatched reference shows itself?"
+    default: "checked - every assigned type is confirmed against its markers"
+    skip_if: "manual marker-based annotation only, where markers are already the evidence"
+
+  - id: D6
+    param: labelGranularity
+    kind: required
+    source: user
+    depends_on: [D1]
+    ask: "Name broad lineages, or subtypes and activation states within them?"
+    default: null
+
+  - id: D7
+    param: unresolvedClusters
+    kind: required
+    source: user
+    ask: "What should happen to clusters that match no expected type - labelled by their top markers, left unassigned, or investigated as possible doublets or artefacts?"
+    default: "left unassigned and reported"
+
+  - id: D8
+    param: doubletHandling
+    kind: required
+    source: data
+    ask: "Have doublets been removed upstream, or could clusters co-expressing two lineages still be present?"
+    default: null
+```
+
+D1 comes first because it determines both of the things D3 and D4 offer: a
+reference and a marker panel are only valid for the tissue **and** the state
+they were built from. Fetal populations are not adult populations wearing
+different names, and a tumour carries states no healthy atlas contains — an
+adult reference applied to fetal tissue still labels every cell, confidently
+and wrongly.
+
+D2 and D5 are the pair worth keeping separate. Automated transfer is fast and
+has no way to say "these cells are not in my reference"; canonical markers are
+interpretable but miss what nobody thought to look for. Running both and
+comparing is the combination the Decision Framework recommends for anything
+novel, and D5 is what makes it a check rather than two independent guesses.
 
 ## Decision Framework
 

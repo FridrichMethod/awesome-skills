@@ -31,6 +31,82 @@ PyDESeq2 is a Python reimplementation of the R DESeq2 package for differential g
 pip install pydeseq2 matplotlib seaborn
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: design
+    kind: required
+    source: data
+    ask: "Which column of the sample sheet separates the groups you want to compare?"
+    default: null
+
+  - id: D2
+    param: contrast
+    kind: required
+    source: user
+    depends_on: [D1]
+    ask: "Within that column, which group is the baseline the others are measured against?"
+    default: null
+
+  - id: D3
+    param: design
+    kind: required
+    source: data
+    depends_on: [D1]
+    ask: "Is there a nuisance variable to adjust for (batch, donor, sex, sequencing run)?"
+    default: "none - compare groups without covariates"
+    skip_if: "sample sheet carries no column besides the grouping variable"
+
+  - id: D4
+    param: alpha
+    kind: optional
+    source: user
+    ask: "How strong must the evidence be before a gene counts as changed (false-discovery rate)?"
+    default: 0.05
+
+  - id: D5
+    param: lfc_cutoff
+    kind: optional
+    source: user
+    ask: "How large a fold change is worth reporting, on top of the statistical call?"
+    default: "|log2FC| > 0.58 (1.5x change)"
+
+  - id: D6
+    param: min_total_counts
+    kind: optional_conditional
+    source: data
+    ask: "Genes with very few reads cannot be tested - where should the floor sit?"
+    default: 10
+
+  - id: D7
+    param: lfc_shrink
+    kind: optional
+    source: user
+    ask: "Shrink fold-change estimates so low-count genes stop dominating the rankings and plots?"
+    default: "applied for ranking and visualization, not for significance calls"
+
+  - id: D8
+    param: refit_cooks, cooks_filter, independent_filter
+    kind: optional
+    source: user
+    ask: "Should DESeq2 retain its default outlier replacement and adaptive filtering behavior?"
+    default: true
+
+  - id: D9
+    param: n_cpus
+    kind: never_ask
+    source: data
+    reason: "Affects runtime only, not the result"
+    default: 4
+```
+
+`design` appears twice because the formula is assembled from both D1 and D3;
+D2 then selects which coefficient of that fitted model is tested.
+
 ## Workflow
 
 ### Step 1: Data Loading and Validation

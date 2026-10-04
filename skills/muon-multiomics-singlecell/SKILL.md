@@ -35,6 +35,71 @@ pip install "muon[all]" "scanpy[leiden]" anndata
 pip install mofapy2
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: modalities
+    kind: required
+    source: data
+    ask: "Which measurement types are being integrated, and are they from the same cells or matched separately?"
+    default: null
+
+  - id: D2
+    param: perModalityEmbedding
+    kind: required
+    source: data
+    depends_on: [D1]
+    ask: "How should each modality be reduced before joint analysis - PCA for expression, latent semantic indexing for accessibility?"
+    default: null
+
+  - id: D3
+    param: integrationMethod
+    kind: required
+    source: user
+    depends_on: [D1]
+    ask: "Join the modalities by a weighted nearest-neighbour graph, or by a shared factor model?"
+    default: "weighted nearest neighbours"
+
+  - id: D4
+    param: clusterResolution
+    kind: required
+    source: user
+    ask: "How finely should the joint graph be split into cell groups?"
+    default: 1.0
+
+  - id: D5
+    param: neighborhoodSize
+    kind: optional
+    source: user
+    ask: "How many neighbours should define each cell's local structure?"
+    default: 30
+
+  - id: D6
+    param: accessibilityNormalization
+    kind: optional
+    source: user
+    ask: "Which scaling should the accessibility modality use before dimensionality reduction?"
+    default: "TF-IDF at 1e4"
+
+  - id: D7
+    param: factorCount
+    kind: optional_conditional
+    source: user
+    depends_on: [D3]
+    ask: "How many latent factors should the shared factor model infer?"
+    default: 10
+    skip_if: "weighted nearest-neighbour integration"
+```
+
+D2 is not a formality. Applying expression-style PCA to accessibility data
+before joint analysis lets sequencing depth dominate the first component, and
+the weighted graph then down-weights a modality for being uninformative when
+the preprocessing is what made it so.
+
 ## Quick Start
 
 ```python

@@ -50,6 +50,77 @@ samtools index tumor.bam
 samtools index normal.bam
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: sequencingMethod
+    kind: required
+    source: data
+    ask: "Was this whole-genome, hybrid-capture exome, or amplicon sequencing?"
+    default: null
+
+  - id: D2
+    param: referenceNormals
+    kind: required
+    source: user
+    ask: "Which normal samples should define the expected coverage baseline?"
+    default: null
+
+  - id: D3
+    param: targetRegions
+    kind: required
+    source: user
+    depends_on: [D1]
+    ask: "Which BED file describes the captured regions?"
+    default: null
+    skip_if: "whole-genome sequencing - there are no capture targets"
+
+  - id: D4
+    param: tumorPurity
+    kind: required
+    source: user
+    ask: "What fraction of the sample is tumour rather than contaminating normal tissue?"
+    default: "1.0 - assumes a pure sample, which understates every copy-number change"
+
+  - id: D5
+    param: ploidy
+    kind: required
+    source: user
+    ask: "What baseline ploidy should absolute copy number be called against?"
+    default: 2
+
+  - id: D6
+    param: segmentMethod
+    kind: optional
+    source: user
+    ask: "Which algorithm should join bins into segments?"
+    default: "circular binary segmentation"
+
+  - id: D7
+    param: binSizes
+    kind: optional_conditional
+    source: user
+    depends_on: [D1]
+    ask: "Do the default target and antitarget bin sizes suit this capture design?"
+    default: "200 bp targets, 150 kb antitargets"
+
+  - id: D8
+    param: processes
+    kind: never_ask
+    source: data
+    reason: "Affects runtime only, not the copy-number calls"
+    default: "min(8, available_cores)"
+```
+
+D2 and D4 are the two that decide whether the calls mean anything. A flat
+reference instead of matched normals leaves capture bias in the log2 ratios,
+and a purity of 1.0 on a 40%-tumour sample compresses every real gain and loss
+toward neutral. Both produce a complete, plausible-looking segment table.
+
 ## Quick Start
 
 ```bash

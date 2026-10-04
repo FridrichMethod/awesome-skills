@@ -52,6 +52,64 @@ Gene ID format also varies by organism: eukaryotic species typically require Ent
 
 The KEGG REST API (`rest.kegg.jp`) is rate-limited, frequently slow, and prone to timeouts. Both `clusterProfiler::enrichKEGG()` and direct HTTP requests to KEGG can fail unpredictably. Planning for API failures is not optional -- it is a necessary part of any KEGG-based workflow. Strategies include pre-fetching and caching pathway data, using offline gene set databases bundled with gseapy, and implementing retry logic with timeouts.
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: organismCode
+    kind: required
+    source: upstream
+    ask: "Which species should pathways be looked up for?"
+    default: "carried from the dataset"
+
+  - id: D2
+    param: identifierMapping
+    kind: required
+    source: data
+    depends_on: [D1]
+    ask: "Which identifier type do the genes carry, and how should unmapped ones be handled?"
+    default: null
+
+  - id: D3
+    param: testingApproach
+    kind: required
+    source: upstream
+    ask: "Test a significant-gene list against pathways (over-representation), or the whole ranked list without a cut (enrichment)?"
+    default: "over-representation when the input is a gene list"
+
+  - id: D4
+    param: backgroundSet
+    kind: required
+    source: upstream
+    depends_on: [D3]
+    ask: "Which genes form the background - everything measured in this experiment, or the whole annotated genome?"
+    default: "the genes tested in this experiment"
+    skip_if: "ranked-list enrichment, which uses the ranking rather than a background"
+
+  - id: D5
+    param: pathwayScope
+    kind: optional
+    source: user
+    ask: "Should all pathway categories be tested, or only metabolism, signalling, or disease maps?"
+    default: "all categories"
+
+  - id: D6
+    param: significanceThreshold
+    kind: required
+    source: user
+    ask: "How strong must a pathway's evidence be, after correcting for the number of pathways tested?"
+    default: "adjusted p-value 0.05"
+```
+
+D4 is the decision most often skipped and the one that most changes the answer.
+Using the whole genome as background when the experiment only measured
+expressed genes makes every tissue-specific pathway look enriched - the
+enrichment is against genes that were never measurable, not against the
+experiment.
+
 ## Decision Framework
 
 ```

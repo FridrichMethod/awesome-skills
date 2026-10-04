@@ -51,6 +51,84 @@ which cd-hit blastp mcl bedtools mafft
 pip install pandas matplotlib seaborn biopython dendropy
 ```
 
+## Pre-flight Interview
+
+Settle these with the user before writing any analysis code.
+
+```yaml
+decisions:
+  - id: D1
+    param: inputAnnotations
+    kind: derived
+    source: upstream
+    ask: "Which GFF3 files, and were they all produced by the same annotation tool and version?"
+    default: "the annotation stage output"
+
+  - id: D2
+    param: identityThreshold
+    kind: required
+    source: user
+    ask: "How similar must two proteins be to count as the same gene? Lower values merge diverged orthologs; higher values split them."
+    default: "95%"
+
+  - id: D3
+    param: coreDefinition
+    kind: required
+    source: user
+    ask: "In what fraction of isolates must a gene appear before it counts as core?"
+    default: "99%"
+
+  - id: D4
+    param: paralogSplitting
+    kind: required
+    source: user
+    ask: "Should duplicated genes within a genome be split into separate families, or kept together?"
+    default: "split"
+
+  - id: D5
+    param: coreAlignment
+    kind: required
+    source: upstream
+    ask: "Is a concatenated core-gene alignment needed for a downstream phylogeny?"
+    default: "not produced - it is the slowest stage by a wide margin"
+
+  - id: D6
+    param: alignmentSpeed
+    kind: optional
+    source: user
+    depends_on: [D5]
+    ask: "Align every gene accurately, or use the fast route sufficient for tree building?"
+    default: "fast alignment"
+    skip_if: "no core alignment requested"
+
+  - id: D7
+    param: clusterInflation
+    kind: optional
+    source: user
+    ask: "How tightly should the clustering step group families?"
+    default: 1.5
+
+  - id: D8
+    param: maxClusters
+    kind: optional_conditional
+    source: data
+    ask: "Is the expected number of gene families above the default cap?"
+    default: 50000
+
+  - id: D9
+    param: processes
+    kind: never_ask
+    source: data
+    reason: "Affects runtime only, not the gene families"
+    default: "min(8, available_cores)"
+```
+
+D1 is derived and carries a consistency requirement rather than a choice:
+Roary compares annotations, so GFF3 files from different annotation tools or
+database versions produce apparent presence/absence differences that are
+annotation artefacts, not biology. D2 and D3 together decide the size of the
+core genome, which is usually the headline number of the analysis.
+
 ## Quick Start
 
 ```bash
