@@ -3,7 +3,9 @@
 
 Run from the repo root. Clones each upstream shallow, finds every SKILL.md,
 de-duplicates nested skill dirs, and copies the skill roots into ./skills/
-with last-source-wins on name conflict (P0 / specialized repos go last).
+with content-based deduplication and explicit, source-qualified variants on
+frontmatter name conflicts. library_sources.json records observed provenance;
+existing content without provenance is protected as legacy content.
 
 Filters out:
 - .git/, __pycache__/, *.pyc, node_modules/, .DS_Store
@@ -15,6 +17,8 @@ Filters out:
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import os
 import re
 import shutil
@@ -23,9 +27,12 @@ import sys
 import tempfile
 from pathlib import Path
 
+import yaml
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SKILLS_DEST = REPO_ROOT / "skills"
 README_PATH = REPO_ROOT / "README.md"
+LIBRARY_SOURCES_PATH = REPO_ROOT / "library_sources.json"
 
 # README headline figures are derived from the live tree on every sync so they
 # never drift between runs. Badge/prose use a rounded "<floor>+" figure; the
@@ -47,13 +54,8 @@ _YAML_PROBLEM_PREFIXES = ("{", "[", "!", "&", "*", ">", "|", "%", "@", "`")
 # below become a nested mapping. We collapse those into one quoted scalar.
 _FOLDED_SCALAR_MARKERS = {">", ">-", ">+", "|", "|-", "|+"}
 
-# (url, local_name, description). Order matters — later entries win on conflict.
-# Order rationale:
-#   1) Broad bio/scientific/medical libraries first (provide volume baseline).
-#   2) Specialized bio/academic curations next (refine on top).
-#   3) General-purpose dev-workflow collections after (override generic
-#      names like `brainstorming` with their higher-quality versions).
-#   4) Official Anthropic + Superpowers + Karpathy last (highest authority).
+# (url, local_name, description). Order only determines which new variant gets
+# the plain directory ID; no source wins a frontmatter name conflict.
 UPSTREAMS = [
     # --- bio / scientific / medical libraries (volume baseline) ---
     ("https://github.com/K-Dense-AI/claude-scientific-skills.git", "kdense-sci", "K-Dense scientific-skills"),
@@ -72,7 +74,7 @@ UPSTREAMS = [
     # --- general-purpose dev/productivity collections ---
     ("https://github.com/wshobson/agents.git", "wshobson-agents", "wshobson agents (155 dev skills, 35.5k ⭐)"),
     ("https://github.com/anthropics/claude-plugins-official.git", "anthropics-plugins", "Anthropic official plugins (19.5k ⭐)"),
-    # --- foundational / highest-authority (win last on conflict) ---
+    # --- foundational / official collections ---
     ("https://github.com/forrestchang/andrej-karpathy-skills.git", "karpathy-skills", "Andrej Karpathy CLAUDE.md skill (133.3k ⭐)"),
     ("https://github.com/anthropics/skills.git", "anthropics-skills", "Anthropic official skills (136.1k ⭐)"),
     ("https://github.com/obra/superpowers.git", "obra-superpowers", "Superpowers methodology framework (194.6k ⭐)"),
@@ -580,42 +582,285 @@ def copy_skill(src: Path, dest: Path, lfs_paths: set[Path]) -> tuple[int, int, i
     return files_copied, frontmatter_normalized, missing_frontmatter
 
 
-def sync_upstream(url: str, name: str, description: str, staging: Path, stats: dict):
+def skill_frontmatter_name(skill_root: Path) -> str:
+    """Read the loader's identity, rather than assuming the directory name."""
+    lines = (skill_root / "SKILL.md").read_text(encoding="utf-8").splitlines()
+    if not lines or lines[0].strip() != "---":
+        raise ValueError(f"Missing frontmatter: {skill_root / 'SKILL.md'}")
+    end = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), None)
+    if end is None:
+        raise ValueError(f"Unclosed frontmatter: {skill_root / 'SKILL.md'}")
+    metadata = yaml.safe_load("\n".join(lines[1:end]))
+    name = metadata.get("name") if isinstance(metadata, dict) else None
+    if not isinstance(name, str) or not name.strip():
+        raise ValueError(f"Missing string name: {skill_root / 'SKILL.md'}")
+    return name
+
+
+def skill_tree_digest(root: Path) -> str:
+    """Hash the complete copied tree, including paths, empty dirs and links.
+
+    Links are hashed as links and never traversed. Executable bits matter;
+    timestamps and other host-specific permissions do not.
+    """
+    digest = hashlib.sha256()
+
+    def visit(path: Path, relative: str) -> None:
+        if path.is_symlink():
+            kind, content = b"link", os.readlink(path).encode()
+        elif path.is_dir():
+            kind, content = b"dir", b""
+        elif path.is_file():
+            kind = b"executable" if path.stat().st_mode & 0o111 else b"file"
+            content = path.read_bytes()
+        else:
+            raise ValueError(f"Unsupported tree entry: {path}")
+        for part in (kind, relative.encode(), content):
+            digest.update(len(part).to_bytes(8, "big"))
+            digest.update(part)
+        if kind == b"dir":
+            for child in sorted(path.iterdir(), key=lambda p: p.name):
+                visit(child, f"{relative}/{child.name}")
+
+    visit(root, ".")
+    return digest.hexdigest()
+
+
+def _origin_key(origin: dict) -> tuple[str | None, str | None]:
+    return origin.get("repository"), origin.get("path")
+
+
+class LibrarySources:
+    """Protect unproven content and track each observation without guessing.
+
+    A matching repository/path can update its sole, unmodified recorded copy.
+    Shared, modified, or legacy copies are preserved and get a new variant.
+    Historical observations keep ``current: false`` when a source advances.
+    """
+
+    def __init__(self, skills_dest: Path, metadata_path: Path):
+        self.skills_dest = skills_dest
+        self.metadata_path = metadata_path
+        self.entries: dict = {}
+        self.actual: dict[str, tuple[str | None, str]] = {}
+        if metadata_path.exists():
+            self.entries = json.loads(metadata_path.read_text(encoding="utf-8"))
+            if not isinstance(self.entries, dict):
+                raise ValueError("library_sources.json must be an object")
+            for skill_id, entry in self.entries.items():
+                if (
+                    not isinstance(skill_id, str)
+                    or skill_id in {".", ".."}
+                    or Path(skill_id).name != skill_id
+                    or not isinstance(entry, dict)
+                    or not isinstance(entry.get("origins"), list)
+                    or not all(isinstance(origin, dict) for origin in entry["origins"])
+                ):
+                    raise ValueError(f"Invalid library provenance record: {skill_id!r}")
+        if not skills_dest.exists():
+            return
+        for root in sorted(skills_dest.iterdir()):
+            if not root.is_symlink() and not (root.is_dir() and (root / "SKILL.md").is_file()):
+                continue
+            name = None
+            if not root.is_symlink():
+                try:
+                    name = skill_frontmatter_name(root)
+                except (OSError, UnicodeError, ValueError, yaml.YAMLError):
+                    # An invalid old skill still cannot be overwritten.
+                    pass
+            tree_digest = skill_tree_digest(root)
+            self.actual[root.name] = name, tree_digest
+            if root.name not in self.entries:
+                self.entries[root.name] = {
+                    "name": name,
+                    "digest": tree_digest,
+                    "origins": [
+                        {
+                            "kind": "legacy",
+                            "path": f"skills/{root.name}",
+                            "note": "Pre-existing content; upstream provenance is unknown.",
+                        }
+                    ],
+                }
+            elif self.entries[root.name].get("digest") != tree_digest:
+                self.entries[root.name]["locally_modified"] = True
+
+    def _refresh(self, skill_id: str) -> None:
+        """Recheck a destination immediately before deduplication/replacement."""
+        root = self.skills_dest / skill_id
+        if not os.path.lexists(root):
+            self.actual.pop(skill_id, None)
+            return
+        name = None
+        if not root.is_symlink():
+            try:
+                name = skill_frontmatter_name(root)
+            except (OSError, UnicodeError, ValueError, yaml.YAMLError):
+                pass
+        tree_digest = skill_tree_digest(root)
+        self.actual[skill_id] = name, tree_digest
+        if self.entries[skill_id].get("digest") != tree_digest:
+            self.entries[skill_id]["locally_modified"] = True
+
+    def _observe(self, skill_id: str, origin: dict) -> None:
+        key = _origin_key(origin)
+        for other_id, entry in self.entries.items():
+            for previous in entry["origins"]:
+                if _origin_key(previous) == key:
+                    previous["current"] = other_id == skill_id
+        origins = self.entries[skill_id]["origins"]
+        existing = next((o for o in origins if _origin_key(o) == key), None)
+        if existing is None:
+            origins.append(origin)
+        else:
+            existing.update(origin)
+
+    def _variant_id(self, base: str, source_name: str, origin: dict) -> str:
+        source = re.sub(r"[^a-zA-Z0-9_-]", "-", source_name)
+        key = json.dumps(_origin_key(origin), ensure_ascii=True).encode()
+        qualified = f"{base}--{source}--{hashlib.sha256(key).hexdigest()[:10]}"
+        skill_id = qualified
+        suffix = 2
+        while skill_id in self.entries or os.path.lexists(self.skills_dest / skill_id):
+            skill_id = f"{qualified}-{suffix}"
+            suffix += 1
+        return skill_id
+
+    def install(self, candidate: Path, source_name: str, origin: dict) -> tuple[str, str]:
+        name = skill_frontmatter_name(candidate)
+        tree_digest = skill_tree_digest(candidate)
+        same_content = sorted(skill_id for skill_id, actual in self.actual.items() if actual == (name, tree_digest))
+        for skill_id in same_content:
+            self._refresh(skill_id)
+            if self.actual.get(skill_id) == (name, tree_digest):
+                self._observe(skill_id, origin)
+                return skill_id, "deduplicated"
+
+        key = _origin_key(origin)
+        previous = [
+            skill_id
+            for skill_id, entry in self.entries.items()
+            if skill_id in self.actual
+            and any(_origin_key(o) == key and o.get("current", True) for o in entry["origins"])
+        ]
+        for skill_id in previous:
+            self._refresh(skill_id)
+        replaceable = [
+            skill_id
+            for skill_id in previous
+            if skill_id in self.actual
+            and not self.entries[skill_id].get("locally_modified")
+            and self.entries[skill_id].get("digest") == self.actual[skill_id][1]
+            and all(_origin_key(o) == key for o in self.entries[skill_id]["origins"])
+            and not (self.skills_dest / skill_id).is_symlink()
+        ]
+        if len(replaceable) == 1:
+            skill_id = replaceable[0]
+            action = "updated"
+        else:
+            skill_id = candidate.name
+            same_name = any(actual[0] == name for actual in self.actual.values())
+            if same_name or skill_id in self.entries or os.path.lexists(self.skills_dest / skill_id):
+                skill_id = self._variant_id(skill_id, source_name, origin)
+            action = "new"
+
+        # Overwrite is reachable only with a sole recorded repository/path and
+        # an unchanged full-tree digest. Unproven roots always get a variant.
+        copy_skill(candidate, self.skills_dest / skill_id, set())
+        self.actual[skill_id] = name, tree_digest
+        self.entries[skill_id] = {"name": name, "digest": tree_digest, "origins": []}
+        self._observe(skill_id, origin)
+        conflicts = self.conflicts().get(name, [])
+        if conflicts:
+            print(f"  NAME CONFLICT {name!r}: {', '.join(conflicts)}; all variants preserved", file=sys.stderr)
+        return skill_id, action
+
+    def conflicts(self) -> dict[str, list[str]]:
+        names: dict[str, list[str]] = {}
+        for skill_id, (name, _) in self.actual.items():
+            if name is not None:
+                names.setdefault(name, []).append(skill_id)
+        return {
+            name: sorted(ids) for name, ids in names.items() if len({self.actual[skill_id][1] for skill_id in ids}) > 1
+        }
+
+    def save(self) -> None:
+        conflicts = self.conflicts()
+        for skill_id, entry in self.entries.items():
+            entry.pop("conflicts", None)
+            if skill_id in self.actual and self.actual[skill_id][0] in conflicts:
+                entry["conflicts"] = conflicts[self.actual[skill_id][0]]
+        content = json.dumps(self.entries, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+        if self.metadata_path.exists() and self.metadata_path.read_text(encoding="utf-8") == content:
+            return
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=self.metadata_path.parent,
+            prefix=f".{self.metadata_path.name}.",
+            delete=False,
+        ) as temporary:
+            temporary.write(content)
+            temporary_path = Path(temporary.name)
+        try:
+            temporary_path.replace(self.metadata_path)
+        finally:
+            temporary_path.unlink(missing_ok=True)
+
+
+def sync_upstream(url: str, name: str, description: str, staging: Path, stats: dict, library: LibrarySources):
     repo_dir = staging / name
     print(f"\n[{name}] {description}")
     print(f"  cloning {url} ...")
     if not shallow_clone(url, repo_dir):
         stats[name] = {"new": 0, "updated": 0, "removed": 0, "total": 0, "error": "clone_failed"}
         return
+    revision = run(["git", "rev-parse", "HEAD"], cwd=repo_dir).stdout.strip()
     lfs_paths = find_lfs_pointer_files(repo_dir)
     if lfs_paths:
         print(f"  flagged {len(lfs_paths)} LFS pointer files to skip")
     roots = find_skill_roots(repo_dir)
-    new = updated = 0
+    new = updated = deduplicated = invalid = 0
     frontmatter_normalized = 0
     missing_frontmatter = 0
     for root in roots:
         skill_name = root.name
         if skill_name.startswith(".") or skill_name in SKIP_TOPLEVEL_NAMES:
             continue
-        dest = SKILLS_DEST / skill_name
-        existed = dest.exists()
-        _, normalized_count, missing_count = copy_skill(root, dest, lfs_paths)
+        # Compare the final filtered/sanitized content, not the raw upstream.
+        prepared = staging / "prepared" / name / root.relative_to(repo_dir)
+        _, normalized_count, missing_count = copy_skill(root, prepared, lfs_paths)
         frontmatter_normalized += normalized_count
         missing_frontmatter += missing_count
-        if existed:
+        origin = {
+            "repository": url,
+            "revision": revision,
+            "path": root.relative_to(repo_dir).as_posix(),
+            "current": True,
+        }
+        try:
+            _, action = library.install(prepared, name, origin)
+        except (ValueError, yaml.YAMLError) as error:
+            invalid += 1
+            print(f"  invalid skill {origin['path']}: {error}", file=sys.stderr)
+            continue
+        if action == "updated":
             updated += 1
-        else:
+        elif action == "new":
             new += 1
-    print(f"  installed: {new} new, {updated} updated (total roots: {len(roots)})")
+        else:
+            deduplicated += 1
+    print(
+        f"  installed: {new} new, {updated} updated, {deduplicated} deduplicated, {invalid} invalid (total roots: {len(roots)})"
+    )
     if frontmatter_normalized or missing_frontmatter:
-        print(
-            "  frontmatter: "
-            f"{frontmatter_normalized} normalized, {missing_frontmatter} missing"
-        )
+        print(f"  frontmatter: {frontmatter_normalized} normalized, {missing_frontmatter} missing")
     stats[name] = {
         "new": new,
         "updated": updated,
+        "deduplicated": deduplicated,
+        "invalid": invalid,
         "removed": 0,
         "total": len(roots),
         "frontmatter_normalized": frontmatter_normalized,
@@ -627,18 +872,20 @@ def write_summary(stats: dict, before: int, after: int) -> str:
     lines = [
         "Per-repo sync summary:",
         "",
-        "| Source | New | Updated | Total roots |",
-        "|---|---:|---:|---:|",
+        "| Source | New | Updated | Deduplicated | Invalid | Total roots |",
+        "|---|---:|---:|---:|---:|---:|",
     ]
     for repo, s in stats.items():
         if "error" in s:
-            lines.append(f"| {repo} | — | — | error: {s['error']} |")
+            lines.append(f"| {repo} | — | — | — | — | error: {s['error']} |")
         else:
-            lines.append(f"| {repo} | {s['new']} | {s['updated']} | {s['total']} |")
+            lines.append(
+                f"| {repo} | {s['new']} | {s['updated']} | {s.get('deduplicated', 0)} | {s.get('invalid', 0)} | {s['total']} |"
+            )
             if s.get("frontmatter_normalized") or s.get("missing_frontmatter"):
                 lines.append(
                     f"| frontmatter | {s.get('frontmatter_normalized', 0)} normalized | "
-                    f"{s.get('missing_frontmatter', 0)} missing |  |"
+                    f"{s.get('missing_frontmatter', 0)} missing |  |  |  |"
                 )
     lines.append("")
     lines.append(f"Skills before: {before}, after: {after} (delta: {after - before:+d})")
@@ -746,18 +993,28 @@ def main(argv: list[str] | None = None) -> int:
         return sanitize_only(args.target)
 
     SKILLS_DEST.mkdir(parents=True, exist_ok=True)
+    try:
+        library = LibrarySources(SKILLS_DEST, LIBRARY_SOURCES_PATH)
+    except (OSError, ValueError, yaml.YAMLError) as error:
+        print(f"Cannot safely load library provenance: {error}", file=sys.stderr)
+        return 1
     before = sum(1 for p in SKILLS_DEST.iterdir() if p.is_dir())
     print(f"Skills before: {before}")
     stats: dict = {}
     with tempfile.TemporaryDirectory(prefix="awesome-skills-staging-") as tmpdir:
         staging = Path(tmpdir)
         for url, name, desc in UPSTREAMS:
-            sync_upstream(url, name, desc, staging, stats)
+            sync_upstream(url, name, desc, staging, stats, library)
+    library.save()
     after = sum(1 for p in SKILLS_DEST.iterdir() if p.is_dir())
     if update_readme_counts(README_PATH, after, len(UPSTREAMS)):
         print(f"Updated README counts: {after:,} skills, {len(UPSTREAMS)} sources")
     print()
     summary = write_summary(stats, before, after)
+    conflicts = library.conflicts()
+    if conflicts:
+        summary += "\n\nFrontmatter name conflicts (variants preserved):\n"
+        summary += "\n".join(f"- `{name}`: {', '.join(ids)}" for name, ids in sorted(conflicts.items()))
     print(summary)
     step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if step_summary:

@@ -32,14 +32,16 @@ jobs:
 
       - name: Run sync script
         id: sync
-        run: python scripts/sync_skills.py
+        run: |
+          python -m pip install PyYAML
+          python scripts/sync_skills.py
 
       - name: Detect changes
         id: changes
         run: |
-          if [[ -z "$(git status --porcelain skills/)" ]]; then
+          if [[ -z "$(git status --porcelain skills/ README.md library_sources.json)" ]]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "No skill changes detected."
+            echo "No skill, provenance, or count changes detected."
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
             added=$(git status --porcelain skills/ | grep -c '^??' || true)
@@ -61,7 +63,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           # README headline counts are regenerated from the live tree by the
           # sync script — stage it alongside skills/ so they stay in lockstep.
-          git add skills/ README.md
+          git add skills/ README.md library_sources.json
           today=$(date -u +%Y-%m-%d)
           git commit -m "chore: weekly upstream skill sync (${today})
 
