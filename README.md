@@ -30,7 +30,7 @@ Agent skills are how you give Claude Code or Codex CLI deep, reusable expertise 
 2. **Filters** out things that break installs (Git LFS pointers, files >40 MB, bundled vector DBs, stale `.gitattributes`).
 3. **Auto-syncs** every Sunday so your skill library stays current without manual work.
 
-The result is one URL + one curl command that bootstraps a fresh laptop with **2,100+ vetted skills** ready for use in Claude Code or Codex.
+The result is one URL + one curl command that bootstraps a fresh laptop with **2,100+ vetted skills** available through a searchable cache and independent client selections.
 
 ---
 
@@ -39,8 +39,9 @@ The result is one URL + one curl command that bootstraps a fresh laptop with **2
 - [Quick install](#quick-install)
   - [Flags](#flags)
   - [Env overrides](#env-overrides)
-  - [Common recipes](#common-recipes)
-  - [From a local clone](#from-a-local-clone-rare)
+  - [Migration and recovery](#migration-and-recovery)
+  - [Offline Codex validation](#offline-codex-validation)
+  - [From a local clone](#from-a-local-clone)
 - [Sources](#sources)
 - [Highlights](#highlights)
   - [AI4Protein / structural biology](#ai4protein--structural-biology)
@@ -60,80 +61,99 @@ The result is one URL + one curl command that bootstraps a fresh laptop with **2
 curl -fsSL https://raw.githubusercontent.com/FridrichMethod/awesome-skills/main/install.sh | bash
 ```
 
-The installer:
+The installer keeps a complete library outside skill discovery and installs independent, persistent selections:
 
-1. Downloads a tarball of this repo into a tempdir.
-2. `rsync`s `skills/` into both `~/.claude/skills/` and `~/.codex/skills/`.
-3. Cleans up the tempdir on exit. Nothing left on disk.
+- **Codex starts with one `awesome-skills-library` skill**, whose description tells the model how to search the full cache, read a skill directly, or enable its source ID. Built-in, plugin, and user skills stay under their existing owners.
+- **Claude keeps the full collection by default**, including existing paths. Its selection is independent of Codex. Different-content name collisions are reported and all Claude variants remain available; Codex requires an explicit, unambiguous selection.
+- Repeated installs and an updater running `install.sh` **without arguments preserve both clients' choices**. New upstream entries join Claude's default `@all` selection; they do not join Codex's selected collection.
 
-**Requirements:** `bash`, `curl`, `tar`, `rsync`. All four are standard on macOS and most Linux distros. On a fresh Debian/Ubuntu: `sudo apt-get install -y rsync`.
+**Requirements:** Bash and Python 3.11+ with PyYAML (`python3 -m pip install 'PyYAML>=6.0'`). Remote bootstrap also needs `curl`; local installs need no network. Use the existing project environment with `SKILLS_PYTHON=/path/to/venv/bin/python` when appropriate. The installer never installs Python dependencies implicitly.
 
 ### Flags
 
 ```bash
-curl -fsSL .../install.sh | bash -s -- --claude-only
+./install.sh --codex-only --enable protein-design-workflow
+./install.sh --codex-only --enable academic-paper
+./install.sh --codex-only --disable academic-paper
+./install.sh --list --search protein
 ```
 
 | Flag | Effect |
 |---|---|
-| `--claude-only` | install only into `~/.claude/skills` |
-| `--codex-only`  | install only into `~/.codex/skills` |
-| `--dry-run`     | preview what would change without writing |
-| `--delete`      | mirror exactly — remove local skills not in the repo |
-| `-h`, `--help`  | print usage |
+| `--claude-only`, `--codex-only` | operate on one client |
+| `--enable ID`, `--disable ID` | persistently add/remove a directory source ID; repeatable; requires one client |
+| `--selection ID,ID` | replace one client's selection; `--selection ''` disables all managed skills |
+| `--list`, `--search TEXT` | inspect the complete library's IDs, frontmatter names, descriptions, hashes, origins, and conflicts |
+| `--source DIR` | use another local `skills/` tree |
+| `--dry-run` | compute an exact plan with **zero filesystem writes**, including no `mkdir` or bootstrap tempdir |
+| `--restore BACKUP` | restore a migration/update transaction; reject later user edits or selection changes |
+| `--delete` | deprecated compatibility flag; only verified managed deselections are pruned |
+| `-h`, `--help` | print usage |
+
+IDs refer to directories, but conflicts are checked using frontmatter `name` and complete tree fingerprints. Codex deduplicates identical selected aliases while retaining all source IDs and origins in its manifest/cache index. Different-content variants are preserved in the cache and cannot be enabled together for Codex. For Codex, an external skill with the same name and different content also blocks installation before changes are made. Claude keeps every selected variant, reports external conflicts, and preserves user edits. Neither skill names nor catalog ordering are changed.
 
 ### Env overrides
 
 | Variable | Default | Effect |
 |---|---|---|
-| `SKILLS_BRANCH` | `main` | install from a different branch |
-| `SKILLS_CLAUDE_DEST` | `$HOME/.claude/skills` | override Claude install path |
-| `SKILLS_CODEX_DEST` | `$HOME/.codex/skills` | override Codex install path |
+| `SKILLS_BRANCH` | `main` | remote branch |
+| `SKILLS_CLAUDE_DEST` | `$HOME/.claude/skills` | Claude discovery destination |
+| `SKILLS_CODEX_DEST` | `$HOME/.codex/skills` | Codex discovery destination |
+| `SKILLS_STATE_DIR` | `$HOME/.local/share/awesome-skills` | client selections, ownership manifests, recovery journals/backups |
+| `SKILLS_CACHE_DIR` | `$HOME/.cache/awesome-skills` | immutable content snapshots and searchable provenance index |
+| `SKILLS_PYTHON` | `python3` | interpreter containing PyYAML |
 
-> [!IMPORTANT]
-> When using `curl … | bash`, env vars must be set on `bash`, **not** on `curl`. Either `export` them first or place them on the pipe's right side:
->
-> ```bash
-> # ✓ works
-> export SKILLS_CLAUDE_DEST=/custom/claude
-> curl -fsSL .../install.sh | bash
->
-> # ✓ also works
-> curl -fsSL .../install.sh | SKILLS_CLAUDE_DEST=/custom/claude bash
->
-> # ✗ silently ignored — only curl sees the var
-> SKILLS_CLAUDE_DEST=/custom/claude curl -fsSL .../install.sh | bash
-> ```
+State and cache must stay outside discovery, disjoint from install destinations, with no symlink ancestors. Both client destinations must be disjoint, including when updating only one client. Custom destinations are saved for subsequent no-argument updates. State and destinations must share a filesystem for reversible atomic moves; for a custom mount, set `SKILLS_STATE_DIR` to a directory on that mount. The state directory must persist across updater runs. The installer does not edit Codex/Claude configuration, dotfiles, or `~/.agents` configuration.
 
-### Common recipes
+When using `curl … | bash`, put env vars on **bash**, or export them first:
 
 ```bash
-# Preview only — no files written
 curl -fsSL https://raw.githubusercontent.com/FridrichMethod/awesome-skills/main/install.sh \
-  | bash -s -- --dry-run
-
-# Mirror exactly (remove local skills that aren't in the repo)
-curl -fsSL https://raw.githubusercontent.com/FridrichMethod/awesome-skills/main/install.sh \
-  | bash -s -- --delete
-
-# Install only Codex skills, into a custom dir
-export SKILLS_CODEX_DEST=/opt/agents/codex/skills
-curl -fsSL https://raw.githubusercontent.com/FridrichMethod/awesome-skills/main/install.sh \
-  | bash -s -- --codex-only
-
-# Shell alias for periodic refresh
-alias sync-skills='curl -fsSL https://raw.githubusercontent.com/FridrichMethod/awesome-skills/main/install.sh | bash'
+  | SKILLS_PYTHON=/path/to/venv/bin/python bash -s -- --codex-only --dry-run
 ```
 
-### From a local clone (rare)
+### Migration and recovery
 
-If you already have the repo cloned, `./install.sh` detects the adjacent `skills/` directory and skips the download.
+Preview a legacy full install before applying it:
+
+```bash
+./install.sh --codex-only --dry-run > codex-migration-plan.json
+# Review the exact actions, before/after hashes, and preserved entries in that file.
+./install.sh --codex-only
+# The installer prints a transaction BACKUP directory. Restore it with:
+./install.sh --restore BACKUP --dry-run
+./install.sh --restore BACKUP
+```
+
+A legacy install without a manifest is adopted **only when its entire directory matches the current source snapshot**, including support files, extra/missing files, permissions, and symlink targets. A directory name alone is insufficient. Older copies differing from that snapshot remain untouched. Manifested copies are movable only if their recorded fingerprint still matches. Modified managed copies retain their old fingerprint so repeated updates continue to preserve them.
+
+`.system`, hidden directories, every top-level symlink, `sherlock-kit`, `microsoft-foundry`, and `foundry` are protected, including skills using those frontmatter names in differently named directories. Unknown and modified entries are reported and preserved. No operation runs `rsync --delete` over a skills root. Removed or replaced owned directories are moved into a transaction backup, with old client state recorded before live changes. Replacements are fully prepared and verified first. Restore preserves unrelated entries and refuses to overwrite later user changes. Backups and cache generations are retained for recovery; prune them deliberately after review.
+
+Preserving unverifiable legacy skills can leave discovery overloaded. Inspect the plan and use your own backups/provenance to resolve those entries; the installer does not infer ownership or silently delete them. External/plugin collections can also exceed Codex limits independently of this repository. Restart Codex after selection changes, then verify its actual model catalog.
+
+### Offline Codex validation
+
+```bash
+SKILLS_PYTHON=/path/to/venv/bin/python \
+  /path/to/venv/bin/python -B scripts/verify_codex_catalog.py
+```
+
+The verifier detects the installed version and available debug/protocol features, runs discovery and prompt preview in a temporary HOME with no credentials, and compares a legacy fixture with the migrated selection. It checks fixture Sherlock/Foundry names **and descriptions** in the actual model-visible catalog, traversal warnings, and a no-argument updater rerun. It disables remote plugins/apps and blocks network proxies, invokes no model, and cleans its temporary environment. Unsupported debug interfaces are reported explicitly; discovery counts and rendering limits are measured, not hard-coded. Counts can differ because Codex intentionally hides some discovered system skills.
+
+### From a local clone
+
+`./install.sh` uses the adjacent library and installer. The cache also includes a standalone helper, so full-library search and selective enablement work after removing the original clone:
+
+```bash
+python3 -B CACHE/libraries/SNAPSHOT/install_skills.py --list --search protein
+python3 -B CACHE/libraries/SNAPSHOT/install_skills.py --codex-only --enable SOURCE_ID
+```
 
 ---
 
 ## Sources
 
-Skills are aggregated from these upstream repositories — credit and gratitude to the original authors. Sources are grouped by scope; within `scripts/sync_skills.py` they are listed in install order (later = wins on name collision). Currently **17 sources**.
+Skills are aggregated from these upstream repositories — credit and gratitude to the original authors. Sources are grouped by scope; within `scripts/sync_skills.py` every observed origin is recorded in `library_sources.json`. Currently **17 sources**.
 
 ### Bio / scientific / medical
 
@@ -167,7 +187,7 @@ Skills are aggregated from these upstream repositories — credit and gratitude 
 | [anthropics/skills](https://github.com/anthropics/skills) | 136.1k | 18 | **Official Anthropic** skills — algorithmic-art, brand-guidelines, canvas-design, claude-api, doc-coauthoring, mcp-builder, pdf, pptx, xlsx, etc. |
 | [obra/superpowers](https://github.com/obra/superpowers) | 194.6k | 14 | Anthropic-blessed methodology framework — brainstorming, TDD, debugging, planning, code review, subagent-driven dev |
 
-> On name collision, **later sources in the install order overwrite earlier ones**. The order in `scripts/sync_skills.py` places specialized protein-design and academic-writing skills last so they win conflicts.
+> Sync preserves different-content same-name variants under source-qualified directory IDs, records their origins and conflicts, and never changes their frontmatter names. Identical variants can share content with all observed origins retained. Legacy entries have unknown upstream provenance until observed; historical variants lost by the former overwrite policy cannot be reconstructed from this checkout.
 
 ---
 
@@ -218,7 +238,7 @@ flowchart LR
     C --> D[Clone each upstream<br/>shallow into tempdir]
     D --> E[Find skill roots<br/>de-dupe nested]
     E --> F[Filter:<br/>.gitattributes / LFS<br/>>40MB files<br/>vector DBs]
-    F --> G[Copy into skills/<br/>last-source-wins]
+    F --> G[Retain distinct variants<br/>record source provenance]
     G --> H{Changes?}
     H -- yes --> I[Bot commits +<br/>pushes to main]
     H -- no --> J[Exit clean]
@@ -243,7 +263,10 @@ awesome-skills/
 ├── skills/                          ← 2,120 skill dirs (managed by sync; do not edit directly)
 ├── install.sh                       ← one-line installer (curl|bash compatible)
 ├── scripts/
-│   └── sync_skills.py               ← aggregation logic
+│   ├── sync_skills.py               ← aggregation + provenance
+│   ├── install_skills.py            ← selection + ownership + recovery
+│   └── verify_codex_catalog.py      ← offline model-catalog verification
+├── library_sources.json             ← observed origins and conflicts
 ├── .github/
 │   ├── workflows/sync-skills.yml    ← weekly auto-sync
 │   ├── ISSUE_TEMPLATE/              ← new-source · broken-skill · installer-bug

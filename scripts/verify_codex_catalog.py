@@ -208,8 +208,13 @@ def catalog_entries(prompt: list[dict]) -> list[dict]:
 
 def measure(codex: str, env: dict[str, str], work: Path, overrides: list[str] | None = None) -> dict:
     skills, errors, stderr = discover(codex, env, work)
+    disabled = [arg for feature in REMOTE_FEATURES for arg in ("--disable", feature)]
     prompt = json.loads(
-        run([codex, "debug", "prompt-input", *(overrides or []), "Offline skill catalog verification"], env, work)
+        run(
+            [codex, "debug", "prompt-input", *disabled, *(overrides or []), "Offline skill catalog verification"],
+            env,
+            work,
+        )
     )
     entries = catalog_entries(prompt)
     descriptions = {entry["name"]: entry["description"] for entry in entries}

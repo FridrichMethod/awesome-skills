@@ -19,7 +19,7 @@ We do **not** accept direct edits to files inside `skills/`. Those get overwritt
 
 1. Open the [`new-source`](.github/ISSUE_TEMPLATE/new-source.yml) issue template.
 2. Include: repo URL, star count, license, approximate skill count, focus area, and why it complements (not duplicates) existing sources.
-3. If accepted, add to `UPSTREAMS` in `scripts/sync_skills.py`. **Order matters** — later entries win on name collision. Place P0/specialized sources last.
+3. If accepted, add to `UPSTREAMS` in `scripts/sync_skills.py`. The sync preserves different-content variants and records observed origins/conflicts in `library_sources.json`; source order does not authorize overwriting another origin.
 4. Run `python scripts/sync_skills.py` locally and verify no LFS/large-file issues.
 5. Open a PR. The workflow will run on the PR; the bot will not push from PR branches.
 
@@ -34,11 +34,11 @@ If a skill ships a file that breaks `git push` (LFS pointer without blob, file >
 ## Testing the sync script
 
 ```bash
-# Smoke-run (no destination write — operates on the repo's own ./skills/)
+# Use an isolated worktree: this writes skills/, provenance, and README counts.
 python scripts/sync_skills.py
 
 # Check delta vs HEAD
-git status --porcelain skills/ | head -20
+git status --porcelain skills/ library_sources.json README.md
 ```
 
 ## Testing install.sh
@@ -55,9 +55,19 @@ SKILLS_CLAUDE_DEST=/tmp/awesome-test/c \
 SKILLS_CODEX_DEST=/tmp/awesome-test/x \
 bash install.sh --dry-run
 
-# Full curl pipe round-trip (after pushing your branch)
-curl -fsSL https://raw.githubusercontent.com/FridrichMethod/awesome-skills/<your-branch>/install.sh | bash -s -- --dry-run
+# Full curl pipe round-trip (only after explicitly publishing your branch)
+curl -fsSL https://raw.githubusercontent.com/FridrichMethod/awesome-skills/your-branch/install.sh | SKILLS_BRANCH=your-branch bash -s -- --dry-run
 ```
+
+Run the temporary HOME contract tests and optional local Codex integration in the existing Python environment:
+
+```bash
+python -B -m pytest tests
+AWESOME_SKILLS_CODEX_INTEGRATION=1 python -B -m pytest tests/test_codex_catalog.py
+python -B scripts/verify_codex_catalog.py
+```
+
+The verifier starts no model turn, copies no credentials, and cleans its isolated HOME. It checks actual discovery and model-visible descriptions, not just installed files. Experimental interfaces are capability-gated; unsupported versions produce an explicit skip.
 
 ## Coding style
 

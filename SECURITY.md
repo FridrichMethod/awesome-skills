@@ -26,7 +26,8 @@ If you find a genuinely exploitable issue in a skill's code (not a transitive-de
 
 ## Supply chain
 
-- `install.sh` fetches the repo tarball over HTTPS from `github.com/FridrichMethod/awesome-skills`.
+- The remote `install.sh` bootstrap fetches its Python helper and repository archive over HTTPS; downloads and dry-run inspection stay in memory. Local installs use the adjacent library.
+- Ownership manifests and exact legacy tree fingerprints bound changes to unmodified installer copies. Replacement/removal transactions retain backups, protect symlinks and unknown skills, and validate recovery paths.
 - The sync workflow uses pinned major versions of `actions/checkout` and `actions/setup-python`.
 - Pre-commit hooks are pinned in `.pre-commit-config.yaml`.
 
