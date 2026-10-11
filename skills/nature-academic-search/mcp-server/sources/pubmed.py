@@ -7,6 +7,7 @@ import time
 from typing import Any
 
 import defusedxml.ElementTree as ET
+from xml.etree.ElementTree import Element
 
 import requests
 
@@ -66,7 +67,7 @@ def _get(endpoint: str, params: dict[str, Any], timeout: int = 30) -> requests.R
     return resp
 
 
-def _parse_article(article: ET.Element) -> dict[str, Any]:
+def _parse_article(article: Element) -> dict[str, Any]:
     """Parse a single PubmedArticle XML element into the unified result dict."""
     citation = article.find("MedlineCitation")
     if citation is None:
@@ -81,7 +82,8 @@ def _parse_article(article: ET.Element) -> dict[str, Any]:
 
     # Title
     title_el = art.find("ArticleTitle")
-    title = title_el.text.strip() if title_el is not None and title_el.text else ""
+    # itertext() keeps text after inline markup such as <i>...</i>; .text stops at the first child.
+    title = " ".join("".join(title_el.itertext()).split()) if title_el is not None else ""
 
     # Authors
     authors: list[str] = []

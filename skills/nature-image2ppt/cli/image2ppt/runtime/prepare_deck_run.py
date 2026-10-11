@@ -11,6 +11,7 @@ from _input_normalization import normalize_inputs
 
 WIDE_SLIDE = {"width": 13.333, "height": 7.5, "size_mode": "wide"}
 PX_PER_INCH = 96
+MAX_SLIDE_INCHES = 56  # PowerPoint's maximum slide width/height
 ASPECT_16_9 = 16 / 9
 ASPECT_TOLERANCE = 0.03
 
@@ -27,11 +28,14 @@ def is_close_to_wide(width_px, height_px):
 
 
 def source_size_slide(width_px, height_px):
+    # PowerPoint rejects slides larger than 56 in per side, so a very large source
+    # image gets a coarser px/inch rather than an invalid <p:sldSz>.
+    px_per_inch = max(PX_PER_INCH, width_px / MAX_SLIDE_INCHES, height_px / MAX_SLIDE_INCHES)
     return {
-        "width": width_px / PX_PER_INCH,
-        "height": height_px / PX_PER_INCH,
+        "width": width_px / px_per_inch,
+        "height": height_px / px_per_inch,
         "size_mode": "source",
-        "px_per_inch": PX_PER_INCH,
+        "px_per_inch": px_per_inch,
     }
 
 

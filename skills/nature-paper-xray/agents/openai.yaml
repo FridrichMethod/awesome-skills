@@ -1,0 +1,4 @@
+interface:
+  display_name: "Nature Paper X-Ray"
+  short_description: "Reconstruct how a paper's authors actually got there"
+  default_prompt: "Use $nature-paper-xray to read this paper closely: reconstruct the authors' real starting point and the bet they placed, separate load-bearing design from decoration, ground the key formulas in worked examples, and check how far the evidence reaches."

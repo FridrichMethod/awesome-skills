@@ -70,6 +70,9 @@
 - `references/qa-contract.md`：导出前检查项、source-data 约束和静态预检入口。
 - `references/ai-graphical-abstract-workflow.md`：AI 图形摘要的信息简报、构图与配色、期刊政策门、人工科学核验、披露和 provenance 工作流。
 - `references/openrouter-image-generation.md`：OpenRouter / GPT Image 2 的 provider-specific 生成与 QA 路径。
+- `references/vector-schematic-workflow.md`：手工绘制可编辑 SVG 架构图、流程图和机制图的“先确认简报、再绘制、再终检”工作流。
+- `references/vector-schematic-style-rules.md`：SVG 示意图的字体、配色、线条、容器、图例和常见错误规范。
+- `scripts/audit_svg_schematic.py`：按最终尺寸检查 SVG 文字字号、画布宽度、画布外文字和禁用元素。
 - `scripts/validate_figure.py`：Python/R 绘图源码的可复现静态 QA。
 - `scripts/audit_pdf_text.py`：扫描导出 PDF 的 `Tf` 操作符，发现 mathtext 上下标等低于 5 pt 的实际字形。
 - `scripts/audit_panel_alignment.py` 与 `scripts/panel_alignment.R`：在最终物理尺寸下测量 Matplotlib axes 或 R patchwork/gtable，对同行 3/4 panel 等宽、同行/同列边界、跨行面板共享外边界、panel 标签和重复间距执行阻断式自动审计。

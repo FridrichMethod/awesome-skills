@@ -43,13 +43,14 @@ def read_latex_project(path: Path, ancestors: tuple[Path, ...] = ()) -> str:
         if not raw_target or "\\" in raw_target:
             return match.group(0)
         target = Path(raw_target)
-        if not target.suffix:
-            target = target.with_suffix(".tex")
         if not target.is_absolute():
             target = path.parent / target
-        if not target.is_file():
+        # LaTeX tries name.tex first and then the literal name, so "sec1.final" is sec1.final.tex.
+        candidates = [target] if target.suffix == ".tex" else [target.with_name(target.name + ".tex"), target]
+        found = next((candidate for candidate in candidates if candidate.is_file()), None)
+        if found is None:
             return match.group(0)
-        return read_latex_project(target, (*ancestors, path))
+        return read_latex_project(found, (*ancestors, path))
 
     return INPUT_PATTERN.sub(expand, text)
 

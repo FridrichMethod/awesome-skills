@@ -39,7 +39,7 @@ def write_config(path: Path, data: dict) -> None:
 
 def get_backend(path: Path) -> int:
     backend = read_config(path).get("backend")
-    if backend in VALID_BACKENDS:
+    if isinstance(backend, str) and backend in VALID_BACKENDS:
         print(backend)
         return 0
     return 1

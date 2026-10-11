@@ -70,6 +70,9 @@ Start with a figure contract rather than a template:
 - `references/qa-contract.md`: export QA, source-data constraints, and static-preflight entry points.
 - `references/ai-graphical-abstract-workflow.md`: message brief, composition and color, journal-policy gate, human scientific verification, disclosure, and provenance for AI-assisted graphical abstracts.
 - `references/openrouter-image-generation.md`: provider-specific OpenRouter / GPT Image 2 generation and QA.
+- `references/vector-schematic-workflow.md`: brief-then-draw-then-check workflow for hand-built editable SVG architecture, pipeline, and mechanism schematics.
+- `references/vector-schematic-style-rules.md`: type, colour, line, container, legend, and failure conventions for SVG schematics.
+- `scripts/audit_svg_schematic.py`: final-size audit of SVG text size, canvas width, off-canvas text, and forbidden constructs.
 - `scripts/validate_figure.py`: reproducible static QA for Python and R plotting source.
 - `scripts/audit_pdf_text.py`: scan exported PDF `Tf` operators for real glyph runs below the 5 pt floor, including reduced mathtext scripts.
 - `scripts/audit_panel_alignment.py` and `scripts/panel_alignment.R`: measure final-size Matplotlib axes or R patchwork/gtable geometry and block unequal widths in three/four-panel rows, row/column edges, shared outer edges of spanning panels, panel labels, or repeated-gutter misalignment.

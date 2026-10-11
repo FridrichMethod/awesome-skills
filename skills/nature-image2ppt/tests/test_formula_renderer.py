@@ -9,7 +9,14 @@ ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_DIR = ROOT / "cli/image2ppt/runtime"
 sys.path.insert(0, str(RUNTIME_DIR))
 
-from formula_renderer import FormulaRenderError, build_latex_document, formula_image_fragment, select_latex_engine  # noqa: E402
+from formula_renderer import (  # noqa: E402
+    FormulaRenderError,
+    _check_keep_workdir,
+    _maybe_keep_workdir,
+    build_latex_document,
+    formula_image_fragment,
+    select_latex_engine,
+)
 
 
 class FormulaRendererTest(unittest.TestCase):
@@ -34,6 +41,32 @@ class FormulaRendererTest(unittest.TestCase):
         self.assertEqual([100.0, 120.0, 300.0, 80.0], fragment["images"][0]["box_px"])
         self.assertEqual("latex-rendered-formula", fragment["asset_provenance"][0]["source_type"])
         self.assertFalse(fragment["formula_inventory"][0]["editable"])
+
+    def test_keep_workdir_refuses_a_directory_with_other_content(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            assets = Path(tmp) / "assets"
+            assets.mkdir()
+            (assets / "figure.png").write_bytes(b"png")
+            with self.assertRaises(FormulaRenderError):
+                _check_keep_workdir(assets)
+            work = Path(tmp) / "work"
+            work.mkdir()
+            (work / "formula.tex").write_text("x", encoding="utf-8")
+            with self.assertRaises(FormulaRenderError):
+                _maybe_keep_workdir(work, assets)
+            self.assertTrue((assets / "figure.png").exists())
+
+    def test_keep_workdir_replaces_its_own_previous_copy_and_empty_dirs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            work = Path(tmp) / "work"
+            work.mkdir()
+            (work / "formula.tex").write_text("new", encoding="utf-8")
+            target = Path(tmp) / "debug"
+            target.mkdir()  # empty directory is fine
+            _maybe_keep_workdir(work, target)
+            (work / "formula.tex").write_text("newer", encoding="utf-8")
+            _maybe_keep_workdir(work, target)  # second run replaces the first copy
+            self.assertEqual("newer", (target / "formula.tex").read_text(encoding="utf-8"))
 
     def test_missing_explicit_engine_is_clear(self):
         with self.assertRaises(FormulaRenderError) as ctx:

@@ -3,12 +3,12 @@ import io
 import json
 import posixpath
 import shutil
-import subprocess
+import subprocess  # nosec
 import tempfile
 import zipfile
 from datetime import datetime
 from pathlib import Path
-from xml.etree import ElementTree as ET
+from defusedxml import ElementTree as ET
 
 from PIL import Image
 
@@ -49,11 +49,26 @@ def copy_input(src, input_dir):
     return dest
 
 
+def flatten_to_rgb(image):
+    """Convert to RGB, compositing any transparency onto white.
+
+    A bare convert("RGB") drops the alpha channel and exposes whatever colour is
+    stored under transparent pixels, which is usually black.
+    """
+    has_alpha = "A" in image.getbands() or image.mode == "P" and "transparency" in image.info
+    if not has_alpha:
+        return image.convert("RGB")
+    rgba = image.convert("RGBA")
+    background = Image.new("RGB", rgba.size, (255, 255, 255))
+    background.paste(rgba, mask=rgba.getchannel("A"))
+    return background
+
+
 def save_image_page(src, page_dir):
     page_dir.mkdir(parents=True, exist_ok=True)
     out = page_dir / "source.png"
     with Image.open(src) as image:
-        image.convert("RGB").save(out)
+        flatten_to_rgb(image).save(out)
     return out
 
 
@@ -100,9 +115,16 @@ def rel_source_part(rels_name):
     return posixpath.normpath(posixpath.join(directory, source))
 
 
+def join_part(base_dir, target):
+    """Resolve an OPC relationship target: "/ppt/x" is package-absolute, anything else is relative."""
+    if target.startswith("/"):
+        return posixpath.normpath(target.lstrip("/"))
+    return posixpath.normpath(posixpath.join(base_dir, target))
+
+
 def resolve_target(rels_name, target):
     source = rel_source_part(rels_name)
-    return posixpath.normpath(posixpath.join(posixpath.dirname(source), target))
+    return join_part(posixpath.dirname(source), target)
 
 
 def collect_notes_from_pptx(pptx_path, notes_dir=None):
@@ -121,7 +143,7 @@ def collect_notes_from_pptx(pptx_path, notes_dir=None):
             rel_id = sld_id.attrib.get(f"{{{NS['r']}}}id")
             target = rels_by_id.get(rel_id)
             if target:
-                slide_parts.append(posixpath.normpath(posixpath.join("ppt", target)))
+                slide_parts.append(join_part("ppt", target))
         for page_index, slide_part in enumerate(slide_parts, start=1):
             rels_name = f"{posixpath.dirname(slide_part)}/_rels/{posixpath.basename(slide_part)}.rels"
             note = {"page_index": page_index, "text": "", "text_sha256": sha256_text(""), "source_slide": slide_part}
@@ -163,7 +185,7 @@ def slide_parts_from_pptx(zip_file):
         rel_id = sld_id.attrib.get(f"{{{NS['r']}}}id")
         target = rels_by_id.get(rel_id)
         if target:
-            slide_parts.append(posixpath.normpath(posixpath.join("ppt", target)))
+            slide_parts.append(join_part("ppt", target))
     if not slide_parts:
         raise ValueError("PPTX has no slides.")
     return slide_parts
@@ -228,7 +250,7 @@ def extract_image_based_pptx_pages(pptx_path, pages_dir):
             page_dir.mkdir(parents=True, exist_ok=True)
             out = page_dir / "source.png"
             with Image.open(io.BytesIO(z.read(image_part))) as image:
-                image.convert("RGB").save(out)
+                flatten_to_rgb(image).save(out)
             outputs.append(out)
     return outputs
 

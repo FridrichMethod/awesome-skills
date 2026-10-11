@@ -59,4 +59,36 @@ describe("OA provider waterfall", () => {
     assert.equal(result.oaAssessment, "confirmed_oa");
     assert.equal(result.oaAttempts.length >= 1, true);
   });
+
+  test("a publisher text-and-data-mining licence does not prove open access", async () => {
+    const result = await downloadOpenAccessArticle({
+      doi: "10.1234/paywalled",
+      title: "Paywalled",
+      license: "http://www.elsevier.com/tdm/userlicense/1.0/",
+      publisherPdfUrl: "https://publisher.example/p.pdf",
+    }, {
+      email: "researcher@example.org",
+      outDir: fs.mkdtempSync(path.join(os.tmpdir(), "oa-")),
+      fetchImpl: async (url) => String(url).includes("unpaywall")
+        ? Response.json({ is_oa: false, oa_locations: [] })
+        : String(url).includes("europepmc")
+          ? Response.json({ resultList: { result: [] } })
+          : new Response("forbidden", { status: 403 }),
+    });
+    assert.equal(result.oaAssessment, "confirmed_closed");
+    assert.equal(result.oaAttempts.some((attempt) => attempt.source === "publisher_oa"), false);
+  });
+
+  test("a Creative Commons licence URL still confirms open access", async () => {
+    const result = await downloadOpenAccessArticle({
+      doi: "10.1234/cc",
+      title: "CC",
+      license: "https://creativecommons.org/licenses/by/4.0/",
+    }, {
+      email: "",
+      outDir: fs.mkdtempSync(path.join(os.tmpdir(), "oa-")),
+      fetchImpl: async () => new Response("unavailable", { status: 503 }),
+    });
+    assert.equal(result.oaAssessment, "confirmed_oa");
+  });
 });

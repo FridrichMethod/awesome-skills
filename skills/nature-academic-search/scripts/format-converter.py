@@ -31,6 +31,7 @@ import argparse
 import defusedxml.ElementTree as ET
 import requests
 from urllib.parse import urlencode, urlparse
+from urllib.request import urlopen
 
 from converters import (
     convert_from_medline,
@@ -75,12 +76,13 @@ def esearch(query, max_results=5):
 def efetch_medline(pmid, retries=1):
     params = {"db": "pubmed", "id": pmid, "rettype": "medline", "retmode": "text"}
     url = f"{EUTILS_BASE}/efetch.fcgi?{urlencode(params)}"
-    for attempt in range(retries):
+    attempts = max(1, retries)  # --retry 0 must still try once
+    for attempt in range(attempts):
         try:
             with urlopen(url, timeout=30) as resp:
                 return resp.read().decode("utf-8")
         except Exception as e:
-            if attempt == retries - 1:
+            if attempt == attempts - 1:
                 print(f"  EFetch error for PMID {pmid}: {e}")
                 return None
             time.sleep(DELAY * (attempt + 1))
@@ -138,13 +140,14 @@ def download_crossref(doi, output_dir, fmt, retries=1):
     print(f"  Downloading DOI: {doi}")
     time.sleep(DELAY)
     url = f"{CROSSREF_BASE}/{doi}"
-    for attempt in range(retries):
+    attempts = max(1, retries)  # --retry 0 must still try once
+    for attempt in range(attempts):
         try:
             with urlopen(url, timeout=30) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
             break
         except Exception as e:
-            if attempt == retries - 1:
+            if attempt == attempts - 1:
                 return False, f"CrossRef API error for DOI {doi}: {e}"
             time.sleep(DELAY * (attempt + 1))
 
@@ -177,13 +180,14 @@ def download_arxiv(arxiv_id, output_dir, fmt, retries=1):
     time.sleep(DELAY)
     params = {"id_list": arxiv_id, "max_results": 1}
     url = f"{ARXIV_BASE}?{urlencode(params)}"
-    for attempt in range(retries):
+    attempts = max(1, retries)  # --retry 0 must still try once
+    for attempt in range(attempts):
         try:
             with urlopen(url, timeout=30) as resp:
                 xml_data = resp.read().decode("utf-8")
             break
         except Exception as e:
-            if attempt == retries - 1:
+            if attempt == attempts - 1:
                 return False, f"arXiv API error for ID {arxiv_id}: {e}"
             time.sleep(DELAY * (attempt + 1))
 

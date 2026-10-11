@@ -162,7 +162,8 @@ def request_images(payload: dict[str, Any], args: argparse.Namespace) -> dict[st
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")
         raise SystemExit(f"Image request failed ({exc.code}) at {args.api_url}: {body}") from exc
-    except urllib.error.URLError as exc:
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        # A timeout while waiting for headers or reading the body raises a bare TimeoutError/OSError.
         raise SystemExit(f"Image request failed at {args.api_url}: {exc}") from exc
 
 
@@ -182,8 +183,11 @@ def save_outputs(response: dict[str, Any], payload: dict[str, Any], args: argpar
             outpath.write_bytes(decode_b64_image(item["b64_json"]))
             saved.append(str(outpath))
         elif "url" in item:
-            with urllib.request.urlopen(item["url"], timeout=args.timeout) as image_response:
-                outpath.write_bytes(image_response.read())
+            try:
+                with urllib.request.urlopen(item["url"], timeout=args.timeout) as image_response:
+                    outpath.write_bytes(image_response.read())
+            except OSError as exc:  # URLError, HTTPError and timeouts are all OSError subclasses
+                raise SystemExit(f"Image download failed for response item {index} ({item['url']}): {exc}") from exc
             saved.append(str(outpath))
         else:
             raise SystemExit(f"No image bytes or URL in response item {index}: {item}")

@@ -906,6 +906,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.error("layout JSON is required unless --self-test is used")
     try:
         manifest = json.loads(Path(args.layout).read_text(encoding="utf-8"))
+        if not isinstance(manifest, dict):
+            raise ValueError("layout JSON must be an object")
         report = audit_layout_manifest(
             manifest,
             tolerance_pt=args.tolerance_pt,

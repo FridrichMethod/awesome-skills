@@ -169,5 +169,25 @@ class AuthorExportTests(unittest.TestCase):
             self.assertFalse(output.exists())
 
 
+class CrossrefDateTests(unittest.TestCase):
+    def test_null_date_parts_do_not_crash_or_print_none(self):
+        item = {"issued": {"date-parts": [[None]]}}
+        self.assertEqual(MODULE.date_parts(item), [])
+        self.assertEqual(MODULE.year_from_item(item), "")
+        self.assertEqual(MODULE.y1_from_item(item), "")
+
+    def test_a_later_date_field_is_used_when_the_first_is_null(self):
+        item = {"published-print": {"date-parts": [[None]]}, "issued": {"date-parts": [[2021, 5]]}}
+        self.assertEqual(MODULE.year_from_item(item), "2021")
+        self.assertEqual(MODULE.y1_from_item(item), "2021/05/01")
+
+    def test_null_month_falls_back_to_year_only(self):
+        item = {"issued": {"date-parts": [[2021, None]]}}
+        self.assertEqual(MODULE.y1_from_item(item), "2021/01/01")
+
+    def test_missing_date_object_is_tolerated(self):
+        self.assertEqual(MODULE.year_from_item({"issued": None}), "")
+
+
 if __name__ == "__main__":
     unittest.main()

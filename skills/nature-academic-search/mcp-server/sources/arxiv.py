@@ -1,11 +1,14 @@
 """arXiv data source via REST API (Atom XML feed)."""
 
+from __future__ import annotations
+
 import re
 import time
 import urllib.parse
 from datetime import datetime
 
 import defusedxml.ElementTree as ET
+from xml.etree.ElementTree import Element
 import requests
 
 from utils.config import get_config
@@ -240,10 +243,13 @@ class ArxivSource:
                 entries.append(parsed)
         return entries
 
-    def _parse_entry(self, entry: ET.Element) -> dict | None:
+    def _parse_entry(self, entry: Element) -> dict | None:
         """Extract a single paper record from an Atom <entry>."""
         arxiv_id_raw = _text(entry, "atom:id", ARXIV_NS)
         if not arxiv_id_raw:
+            return None
+        # arXiv reports a bad request as an <entry> whose id is http://arxiv.org/api/errors#...
+        if "/api/errors" in arxiv_id_raw:
             return None
 
         title = _text(entry, "atom:title", ARXIV_NS) or ""
@@ -326,7 +332,7 @@ class ArxivSource:
 # ------------------------------------------------------------------
 
 
-def _text(parent: ET.Element, xpath: str, ns: dict) -> str | None:
+def _text(parent: Element, xpath: str, ns: dict) -> str | None:
     """Return stripped text of a sub-element, or None."""
     el = parent.find(xpath, ns)
     if el is not None and el.text:

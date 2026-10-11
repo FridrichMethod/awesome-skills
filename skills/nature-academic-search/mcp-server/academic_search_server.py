@@ -559,13 +559,14 @@ def _format_basic_citation(paper: dict, style: str) -> str:
     This is a fallback for non-DOI papers where CrossRef content
     negotiation is not available.
     """
-    authors = paper.get("authors", [])
-    title = paper.get("title", "Untitled")
-    year = paper.get("year", "n.d.")
-    journal = paper.get("journal", "")
-    doi = paper.get("doi", "")
-    arxiv_id = paper.get("arxiv_id", "")
-    pmid = paper.get("pmid", "")
+    # Sources set missing fields to None, which .get(key, default) would not replace.
+    authors = paper.get("authors") or []
+    title = paper.get("title") or "Untitled"
+    year = paper.get("year")
+    journal = paper.get("journal") or ""
+    doi = paper.get("doi") or ""
+    arxiv_id = paper.get("arxiv_id") or ""
+    pmid = paper.get("pmid") or ""
 
     # Author formatting
     if len(authors) > 3:
@@ -597,7 +598,7 @@ def _format_basic_citation(paper: dict, style: str) -> str:
         return ref
 
     # Default APA-like
-    parts = [f"{author_str} ({year}). {title}."]
+    parts = [f"{author_str} ({year or 'n.d.'}). {title}."]
     if journal:
         parts.append(f" *{journal}*.")
     if doi:

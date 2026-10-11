@@ -1,0 +1,21 @@
+name: nature-paper-xray
+version: 1.0.0
+description: >
+  Declarative manifest for the single-paper close-reading workflow. SKILL.md uses
+  this to keep the always-needed reading stance small, while loading the full
+  protocol or the evidence-boundary checklist only when the request needs them.
+
+# Design note: nature-paper-xray is a comprehension skill, not a review or a
+# summary skill. Every reading needs the protocol and the reconstruction stance,
+# but the adversarial evidence checks and the paper-type action layer belong on
+# demand: a question about one formula should not load the whole audit list.
+
+always_load:
+  - references/deep-reading-protocol.md
+
+references:
+  on_demand:
+    - condition: the request asks whether the results hold up, or the reading must state what the evidence does and does not support — numbers, baseline alignment, selection pressure, leakage, cost, scope
+      path: references/evidence-boundary.md
+    - condition: the paper type is unclear, or the reading emphasis must shift between algorithmic, methods, hypothesis, research, and review papers
+      path: ../nature-shared/core/paper-type-taxonomy.md

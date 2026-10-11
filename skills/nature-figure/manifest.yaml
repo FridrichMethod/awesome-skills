@@ -32,6 +32,16 @@ routes:
     reference: references/openrouter-image-generation.md
     script: scripts/generate_openrouter_schematic.py
 
+  vector_schematic_workflow:
+    detect: |
+      Use this route when the user wants a hand-built, editable SVG schematic:
+      system or method architecture, pipeline overview, agent or model block
+      diagram, or mechanism or process flow. It skips the Python/R backend gate
+      because it draws structure rather than plotting data. Confirm a written
+      brief before drawing and run the SVG audit script before delivery.
+    reference: references/vector-schematic-workflow.md
+    script: scripts/audit_svg_schematic.py
+
 preference:
   backend_script: scripts/nature_figure_backend.py
   config_env: NATURE_FIGURE_CONFIG
@@ -94,6 +104,10 @@ references:
       path: references/openrouter-image-generation.md
     - condition: AI-assisted graphical abstract planning, generation, revision, audit, journal-policy check, scientific verification, disclosure, or provenance
       path: references/ai-graphical-abstract-workflow.md
+    - condition: "vector schematic route: hand-built editable SVG architecture, pipeline, agent, or mechanism diagram, brief-then-draw workflow, and final-size SVG audit"
+      path: references/vector-schematic-workflow.md
+    - condition: "colour, line, arrowhead, container, legend, and common-failure conventions for SVG architecture or mechanism schematics"
+      path: references/vector-schematic-style-rules.md
     - condition: writing or auditing figure/table legend text — Fig. N | title, panel style, stats in legend, Source Data boilerplate, attribution; load the flagship Nature requirements too when that is the target journal
       path: references/figure-legend-conventions.md
     - condition: "end-to-end walkthroughs: bars, trends, heatmaps"

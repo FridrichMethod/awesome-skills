@@ -474,7 +474,8 @@ class ScopusSource:
 
 def _search_entries(data: dict[str, Any]) -> list[dict[str, Any]]:
     entries = data.get("search-results", {}).get("entry", [])
-    return _as_list(entries)
+    # An empty result set comes back as entry: [{"error": "Result set was empty"}], which is not a paper.
+    return [entry for entry in _as_list(entries) if isinstance(entry, dict) and "error" not in entry]
 
 
 def _total_results(data: dict[str, Any]) -> int:

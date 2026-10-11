@@ -7,6 +7,14 @@ import {
 } from "./open-access.mjs";
 import { STATUS } from "./status-codes.mjs";
 
+// A Crossref licence URL is only evidence of open access when it is an open licence. Paywalled
+// articles routinely carry publisher text-and-data-mining or user licences (for example
+// elsevier.com/tdm/userlicense), which say nothing about free access.
+export function isOpenLicense(license = "") {
+  const value = String(license || "");
+  return /creativecommons\.org\/(licenses|publicdomain)\//i.test(value) || /^cc[-_ ]?(by|0|zero)/i.test(value.trim());
+}
+
 function httpsForFtp(url = "") {
   return String(url).replace(/^ftp:\/\/ftp\.ncbi\.nlm\.nih\.gov\//i, "https://ftp.ncbi.nlm.nih.gov/");
 }
@@ -83,13 +91,13 @@ export async function downloadOpenAccessArticle(article, {
     }
   }
   const unpaywall = parseUnpaywallRecord(unpaywallRecord);
-  const publisher = article.publisherPdfUrl && article.license
+  const publisher = article.publisherPdfUrl && isOpenLicense(article.license)
     ? [{ source: "publisher_oa", url: article.publisherPdfUrl, format: "pdf", version: "publishedVersion", license: article.license }]
     : [];
   const attempt = await tryCandidates(article, [...unpaywall, ...publisher], { outDir, fetchImpl });
   allAttempts.push(...attempt.attempts);
   if (attempt.downloaded) return attempt.downloaded;
-  const confirmedOa = Boolean(pmcid || unpaywallRecord?.is_oa || article.license);
+  const confirmedOa = Boolean(pmcid || unpaywallRecord?.is_oa || isOpenLicense(article.license));
   const confirmedClosed = Boolean(unpaywallChecked && unpaywallRecord?.is_oa === false);
   return {
     status: STATUS.OA_NOT_FOUND,

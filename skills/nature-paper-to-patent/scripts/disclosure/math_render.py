@@ -26,7 +26,8 @@ _DEFAULT_ASSETS = "math_figures"
 _INLINE_RE = re.compile(
     r"(?<!\$)\$(?!\$)((?:\\.|[^$\n])+?)\$(?!\$)(?!\s*<!--)"
 )
-_INLINE_PAREN_RE = re.compile(r"\\\(((?:\\.|[^)])+?)\\\)(?!\s*<!--)")
+# Any characters up to the first closing \) so that \(f(x)\) matches; [^)] would stop at the inner ")".
+_INLINE_PAREN_RE = re.compile(r"\\\(((?:(?!\\\)).)+?)\\\)(?!\s*<!--)")
 _HIDDEN_IMG_COMMENT_RE = re.compile(
     r"<!--\s*!\[[^\]]*\]\([^)]+\)\s*-->"
 )

@@ -78,12 +78,17 @@ def normalize_prefix(raw: Path) -> Path:
     return raw
 
 
+def with_extension(prefix: Path, extension: str) -> Path:
+    """Append ``extension`` to the prefix; ``Path.with_suffix`` would clip a dotted stem like ``Fig.2``."""
+    return prefix.with_name(prefix.name + extension)
+
+
 def save_bundle(fig: Any, output: Path) -> dict[str, str]:
     output = normalize_prefix(output)
     paths = {
-        "svg": str(output.with_suffix(".svg")),
-        "pdf": str(output.with_suffix(".pdf")),
-        "tiff": str(output.with_suffix(".tiff")),
+        "svg": str(with_extension(output, ".svg")),
+        "pdf": str(with_extension(output, ".pdf")),
+        "tiff": str(with_extension(output, ".tiff")),
     }
     fig.savefig(paths["svg"], bbox_inches="tight", facecolor="white")
     fig.savefig(paths["pdf"], bbox_inches="tight", facecolor="white")
@@ -93,7 +98,7 @@ def save_bundle(fig: Any, output: Path) -> dict[str, str]:
 
 
 def write_qa(output: Path, qa: dict[str, Any]) -> Path:
-    path = normalize_prefix(output).with_suffix(".qa.json")
+    path = with_extension(normalize_prefix(output), ".qa.json")
     path.write_text(json.dumps(qa, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return path
 

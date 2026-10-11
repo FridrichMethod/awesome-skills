@@ -109,7 +109,7 @@ def check_term_groups(
     return findings
 
 
-NUMBER_PATTERN = re.compile(r"(?<![\w.])([+-]?(?:\d+\.\d+|\d+))(?![\w.])")
+NUMBER_PATTERN = re.compile(r"(?<![\w.])([+-]?(?:\d+\.\d+|\d+))(?!\w|\.\d)")
 
 
 def decimal_places(token: str) -> int:
@@ -159,8 +159,7 @@ LENGTH_PATTERN = re.compile(
     r"(?<![\w.])([+-]?(?:\d+\.\d+|\d+))\s*(?:\\,\s*)?"
     r"(?:\\(?:mathrm|text)\s*\{\s*)?(μm|µm|um|mm|cm|m)(?:\s*\})?"
     r"(?![A-Za-z])",
-    re.IGNORECASE,
-)
+)  # case-sensitive on purpose: "mM" (millimolar) must not read as "mm"
 
 
 def normalized_unit(unit: str) -> str:

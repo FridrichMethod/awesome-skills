@@ -50,6 +50,21 @@ def normalize(text: str) -> str:
     return re.sub(r"\s+", "", text)
 
 
+def term_is_introduced(term: str, basis: str, claim: str) -> bool:
+    """Whether the term (or a 2+ character prefix of it) has an antecedent.
+
+    TERM_INTRO captures up to 20 characters after 所述/该 with no word boundary,
+    so the captured string is often a noun plus the verb phrase that follows it.
+    An antecedent is the prefix occurring in an earlier claim, or in this claim
+    without a 所述/该 in front of it.
+    """
+    for end in range(2, len(term) + 1):
+        prefix = term[:end]
+        if prefix in basis or re.search(rf"(?<!所述)(?<!该){re.escape(prefix)}", claim):
+            return True
+    return False
+
+
 def audit(text: str) -> list[Finding]:
     claims = split_claims(text)
     findings = []
@@ -111,10 +126,12 @@ def audit(text: str) -> list[Finding]:
         searchable_basis = previous_text + "".join(
             claim_map.get(ref, "") for ref in refs
         )
-        for term in sorted(set(TERM_INTRO.findall(body))):
-            if term in {"方法", "装置", "设备", "系统", "步骤", "程序"}:
+        # "根据权利要求1所述的装置" captures "的装置"; drop the 的 so the generic head noun is skipped.
+        terms = {found[1:] if found.startswith("的") else found for found in TERM_INTRO.findall(body)}
+        for term in sorted(terms):
+            if len(term) < 2 or term in {"方法", "装置", "设备", "系统", "步骤", "程序"}:
                 continue
-            if term not in searchable_basis and compact.find(term) <= 4:
+            if not term_is_introduced(term, searchable_basis, compact):
                 findings.append(
                     Finding(
                         "WARNING",

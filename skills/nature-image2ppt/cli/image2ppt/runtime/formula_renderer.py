@@ -55,6 +55,7 @@ def render_latex_asset(
 ) -> dict[str, Any]:
     if not tex.strip():
         raise FormulaRenderError("LaTeX input is empty.")
+    _check_keep_workdir(keep_workdir)
     out_path = resolve_output_path(out, page_dir)
     fmt = normalise_format(output_format, out_path)
     source_tex = out_path.with_suffix(".tex")
@@ -250,10 +251,35 @@ def _latex_error_message(result: subprocess.CompletedProcess[str]) -> str:
     return f"LaTeX render failed with exit code {result.returncode}.\n{tail}"
 
 
+KEEP_WORKDIR_MARKER = ".image2ppt-formula-workdir"
+
+
+def _check_keep_workdir(keep_workdir: str | Path | None) -> None:
+    """Refuse a --keep-workdir target that holds anything this command did not write.
+
+    The debug copy replaces an earlier copy of itself, but it must never delete an
+    existing directory such as the page's assets/ folder.
+    """
+    if not keep_workdir:
+        return
+    target = Path(keep_workdir)
+    if not target.exists():
+        return
+    if not target.is_dir():
+        raise FormulaRenderError(f"--keep-workdir target is not a directory: {target}")
+    if any(target.iterdir()) and not (target / KEEP_WORKDIR_MARKER).exists():
+        raise FormulaRenderError(
+            f"--keep-workdir target already exists and is not a previous formula work directory: {target}. "
+            "Choose a new or empty directory."
+        )
+
+
 def _maybe_keep_workdir(workdir: Path, keep_workdir: str | Path | None) -> None:
     if not keep_workdir:
         return
     target = Path(keep_workdir)
+    _check_keep_workdir(target)
     if target.exists():
         shutil.rmtree(target)
     shutil.copytree(workdir, target)
+    (target / KEEP_WORKDIR_MARKER).write_text("", encoding="utf-8")

@@ -50,7 +50,7 @@ _INLINE_MATH_WITH_HIDDEN_IMG_RE = re.compile(
     r"<!--\s*!\[([^\]]*)\]\(([^)]+)\)\s*-->"
 )
 _INLINE_MATH_PAREN_WITH_HIDDEN_IMG_RE = re.compile(
-    r"\\\(((?:\\.|[^)])+?)\\\)\s*"
+    r"\\\(((?:(?!\\\)).)+?)\\\)\s*"
     r"<!--\s*!\[([^\]]*)\]\(([^)]+)\)\s*-->"
 )
 

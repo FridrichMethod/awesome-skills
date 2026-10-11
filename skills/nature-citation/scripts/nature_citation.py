@@ -467,9 +467,17 @@ def first(values: list[Any] | None, default: str = "") -> str:
 
 def date_parts(item: dict[str, Any]) -> list[int]:
     for key in ("published-print", "published-online", "published", "issued"):
-        parts = item.get(key, {}).get("date-parts")
-        if parts and parts[0]:
-            return parts[0]
+        parts = (item.get(key) or {}).get("date-parts")
+        if not (parts and parts[0]):
+            continue
+        # Crossref uses [[null]] for an unknown date; keep only the leading integer fields.
+        clean: list[int] = []
+        for value in parts[0]:
+            if not isinstance(value, int) or isinstance(value, bool):
+                break
+            clean.append(value)
+        if clean:
+            return clean
     return []
 
 

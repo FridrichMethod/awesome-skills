@@ -320,6 +320,34 @@
         }
       ],
       "files": []
+    },
+    {
+      "id": "vector-schematic-brief-gate",
+      "prompt": "Draw an editable single-column architecture figure for my multi-agent system: an orchestrator dispatches tasks to planner, coder and critic agents that share a tool layer and memory. It is for a Nature Machine Intelligence submission.",
+      "expected_output": "The assistant treats this as a vector schematic, not a data plot: it does not ask Python or R, writes a short brief (components with new/existing/external tags, numbered main path, one-point argument, assumptions, caption draft) and asks the user to confirm it before drawing. It sizes the canvas from the journal rules (89 mm single column, 5-7 pt text), and plans to run scripts/audit_svg_schematic.py on the SVG and inspect the render before delivery.",
+      "assertions": [
+        {
+          "name": "no_backend_question",
+          "description": "Does not ask whether to use Python or R, because the task draws structure rather than plotting data."
+        },
+        {
+          "name": "brief_before_drawing",
+          "description": "Presents a brief with component tags, a numbered main path, assumptions to confirm, and a caption draft, and waits for confirmation before producing the SVG."
+        },
+        {
+          "name": "final_size_rules",
+          "description": "Uses the journal's 89 mm single-column width and keeps ordinary text between 5 pt and 7 pt at final size."
+        },
+        {
+          "name": "audit_and_visual_check",
+          "description": "Runs audit_svg_schematic.py and inspects a render at final size, and does not claim the audit detects overlaps or crossing arrows."
+        },
+        {
+          "name": "no_invented_content",
+          "description": "Does not add components, flows, or numbers that the user did not supply."
+        }
+      ],
+      "files": []
     }
   ]
 }

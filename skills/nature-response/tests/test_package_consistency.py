@@ -109,6 +109,35 @@ class PackageConsistencyTests(unittest.TestCase):
 
         self.assertEqual([], findings)
 
+    def test_input_of_a_dotted_filename_appends_tex(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manuscript = self.write(root, "main.tex", r"\input{sec1.final}")
+            self.write(root, "sec1.final.tex", MANUSCRIPT_TEXT)
+            response = self.write(root, "response.tex", RESPONSE_TEXT)
+
+            findings = CHECKER.run_checks(manuscript, response)
+
+        self.assertEqual([], findings)
+
+    def test_input_with_explicit_tex_extension_still_works(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manuscript = self.write(root, "main.tex", r"\input{methods.tex}")
+            self.write(root, "methods.tex", MANUSCRIPT_TEXT)
+            response = self.write(root, "response.tex", RESPONSE_TEXT)
+
+            self.assertEqual([], CHECKER.run_checks(manuscript, response))
+
+    def test_input_of_an_existing_extensionless_file_is_still_read(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manuscript = self.write(root, "main.tex", r"\input{methods.txt}")
+            self.write(root, "methods.txt", MANUSCRIPT_TEXT)
+            response = self.write(root, "response.tex", RESPONSE_TEXT)
+
+            self.assertEqual([], CHECKER.run_checks(manuscript, response))
+
     def test_declared_cross_reference_substitution_passes(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

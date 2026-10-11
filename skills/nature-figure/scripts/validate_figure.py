@@ -461,11 +461,14 @@ def check_resolution(source: str, _backend: str) -> Finding:
 
 def candidate_widths_mm(source: str, backend: str) -> list[float]:
     widths: list[float] = []
-    for value in re.findall(r"(?:fig_)?width_mm\s*[:=]\s*(\d+(?:\.\d+)?)", source, re.IGNORECASE):
+    for value in re.findall(r"(?:fig_)?width_mm\s*(?:[:=]|<-)\s*(\d+(?:\.\d+)?)", source, re.IGNORECASE):
         widths.append(float(value))
     if backend == "python":
-        for value in re.findall(r"figsize\s*=\s*\(\s*(\d+(?:\.\d+)?)", source, re.IGNORECASE):
-            widths.append(float(value) * 25.4)
+        # ``figsize=(183 / 25.4, ...)`` already states millimetres; a bare number is inches.
+        for value, per_mm in re.findall(
+            r"figsize\s*=\s*\(\s*(\d+(?:\.\d+)?)(\s*/\s*25\.4)?", source, re.IGNORECASE
+        ):
+            widths.append(float(value) if per_mm else float(value) * 25.4)
     else:
         mm_calls = re.findall(
             r"(?:ggsave|agg_tiff|svglite|cairo_pdf)\s*\([^)]*?width\s*=\s*(\d+(?:\.\d+)?)[^)]*?units\s*=\s*['\"]mm['\"]",
