@@ -111,18 +111,18 @@ def test_permission_change_prevents_legacy_adoption(sandbox):
     assert installer.fingerprint(target) == before
 
 
-def test_symlinks_system_sherlock_foundry_agents_protected(sandbox):
+def test_symlinks_hidden_renamed_copies_and_agents_protected(sandbox):
     home, source = sandbox
     codex = home / ".codex/skills"
     codex.mkdir(parents=True)
     (codex / "alpha").symlink_to(source / "alpha", target_is_directory=True)
     (codex / "first-party").symlink_to(source / "beta", target_is_directory=True)
-    for name in ["sherlock-kit", "microsoft-foundry", "foundry", ".system"]:
-        skill(source, name)
-        shutil.copytree(source / name, codex / name)
-    skill(codex, "different-directory", name="microsoft-foundry")
-    skill(home / ".agents/skills", "sherlock-kit")
+    skill(codex / ".system", "bundled")
+    shutil.copytree(source / "beta", codex / "different-directory")
+    skill(home / ".agents/skills", "agents-only")
     (home / ".agents/config.json").write_text("user config")
+    assert all(installer.protected(codex / name) for name in ["alpha", "first-party", ".system"])
+    assert not installer.protected(codex / "different-directory")  # kept as unowned, not by name
     agents = installer.fingerprint(home / ".agents")
     old = {p.name: installer.fingerprint(p) for p in codex.iterdir()}
     run(source, "--codex-only", "--delete")
@@ -180,6 +180,22 @@ def test_update_adds_only_new_claude_skill_and_preserves_codex_choice(sandbox):
     assert not (home / ".codex/skills/gamma").exists()
     assert state(home)["selection"] == ["@library"]
     assert (home / ".claude/skills/alpha/helper.txt").read_text() == "upstream update"
+
+
+def test_new_library_skill_manifest_is_accepted_by_later_runs(sandbox):
+    # Ownership never depends on a name: what one run records, later runs and restore accept.
+    home, source = sandbox
+    run(source)
+    skill(source, "late-upstream")
+    run(source)
+    assert "late-upstream" in state(home, "claude")["managed"]
+    before = installer.fingerprint(home)
+    run(source)
+    assert installer.fingerprint(home) == before
+    run(source, "--claude-only", "--disable", "late-upstream")
+    assert not (home / ".claude/skills/late-upstream").exists()
+    run(source, "--restore", str(backups(home)[-1]))
+    assert (home / ".claude/skills/late-upstream").exists()
 
 
 def test_identical_frontmatter_names_deduplicate_with_provenance(sandbox):

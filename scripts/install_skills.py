@@ -34,7 +34,6 @@ except ImportError:
 REPOSITORY = "https://github.com/FridrichMethod/awesome-skills"
 SCHEMA = 1
 ROUTER = "awesome-skills-library"
-PROTECTED = {".system", "sherlock-kit", "microsoft-foundry", "foundry"}
 
 
 class InstallError(Exception):
@@ -274,15 +273,7 @@ def conflict_groups(skills: dict) -> dict:
 
 
 def protected(path: Path) -> bool:
-    if path.name.startswith(".") or path.is_symlink() or path.name.lower() in PROTECTED:
-        return True
-    skill = path / "SKILL.md"
-    if skill.is_file():
-        try:
-            return metadata(skill.read_bytes(), str(skill))["name"].lower() in PROTECTED
-        except InstallError:
-            pass
-    return False
+    return path.name.startswith(".") or path.is_symlink()
 
 
 def no_symlink_ancestors(path: Path):
@@ -320,7 +311,7 @@ def validate_state(value: dict, client: str):
         raise InstallError(f"Invalid ownership manifest: {client}")
     for entry, info in value["managed"].items():
         valid_entry(entry)
-        if entry.lower() in PROTECTED or not isinstance(info, dict) or info.get("sha256") is None:
+        if not isinstance(info, dict) or info.get("sha256") is None:
             raise InstallError(f"Invalid ownership record: {client}:{entry}")
         valid_hash(info["sha256"])
 
@@ -607,8 +598,6 @@ def _restore(backup: Path, state: Path, dry_run: bool):
             raise InstallError(f"Client selection changed after this transaction: {client['client']}")
         for action in client["actions"]:
             valid_entry(action.get("entry"))
-            if action["entry"].lower() in PROTECTED:
-                raise InstallError(f"Protected recovery entry: {action['entry']}")
             valid_hash(action.get("before"))
             valid_hash(action.get("after"))
             if action.get("before") == action.get("after"):
