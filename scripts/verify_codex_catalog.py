@@ -24,8 +24,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURES = {
-    "sherlock-kit": "Offline fixture for Sherlock job management; no credentials or cluster connection.",
-    "microsoft-foundry": "Offline fixture for Microsoft Foundry model guidance; no credentials or API calls.",
+    "external-linked": "Offline fixture for a symlinked skill outside the library; no credentials or network access.",
+    "external-copied": "Offline fixture for a copied skill outside the library; no credentials or API calls.",
 }
 ROUTER = "awesome-skills-library"
 REMOTE_FEATURES = ("plugins", "apps", "remote_plugin")
@@ -269,12 +269,12 @@ def prepare_fixture(source: Path, installer: Path, root: Path) -> tuple[Path, di
     agents = home / ".agents/skills"
     agents.mkdir(parents=True)
     for name, description in FIXTURES.items():
-        target = home / "fixture-skill-content" / name if name == "sherlock-kit" else agents / name
+        target = home / "fixture-skill-content" / name if name == "external-linked" else agents / name
         target.mkdir(parents=True)
         (target / "SKILL.md").write_text(
             f"---\nname: {name}\ndescription: {json.dumps(description)}\n---\nOffline fixture only.\n"
         )
-        if name == "sherlock-kit":
+        if name == "external-linked":
             (agents / name).symlink_to(target, target_is_directory=True)
     return bundle, {
         "top_level_skill_documents": len(list(library.glob("*/SKILL.md"))),
@@ -297,7 +297,7 @@ def verify(codex: str, source: Path, installer: Path, compare_budget: int | None
         larger_budget = (
             measure(codex, env, work, ["-c", f"skills.max_context_tokens={compare_budget}"]) if compare_budget else None
         )
-        fixture_link = home / ".agents/skills/sherlock-kit"
+        fixture_link = home / ".agents/skills/external-linked"
         link_before = os.readlink(fixture_link)
         agents_before = {name: (home / ".agents/skills" / name / "SKILL.md").read_bytes() for name in FIXTURES}
         run(["bash", str(bundle / "install.sh"), "--codex-only"], env, work, timeout=120)
@@ -322,7 +322,7 @@ def verify(codex: str, source: Path, installer: Path, compare_budget: int | None
                 not all(measurement["fixtures_visible_with_description"].values())
                 or not measurement["library_visible_with_description"]
             ):
-                raise VerificationError(f"{label}: library/Sherlock/Foundry descriptions are missing")
+                raise VerificationError(f"{label}: library or external fixture descriptions are missing")
             if measurement["with_description"] != measurement["model_visible"]:
                 raise VerificationError(f"{label}: model-visible descriptions were omitted")
         if not selection_preserved or codex_plan["actions"] or not protected_fixtures_preserved:

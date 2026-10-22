@@ -24,8 +24,8 @@ def test_catalog_parser_reads_model_input_and_preserves_missing_descriptions():
 ### Skill roots
 - `r0` = `/temporary/skills`
 ### Available skills
-- sherlock-kit: Description with: a colon. (file: r0/sherlock-kit/SKILL.md)
-- microsoft-foundry: (file: r0/microsoft-foundry/SKILL.md)
+- external-linked: Description with: a colon. (file: r0/external-linked/SKILL.md)
+- external-copied: (file: r0/external-copied/SKILL.md)
 </skills_instructions>""",
                 }
             ],
@@ -33,8 +33,8 @@ def test_catalog_parser_reads_model_input_and_preserves_missing_descriptions():
     ]
     entries = verifier.catalog_entries(prompt)
     assert entries == [
-        {"name": "sherlock-kit", "description": "Description with: a colon.", "path": "r0/sherlock-kit/SKILL.md"},
-        {"name": "microsoft-foundry", "description": "", "path": "r0/microsoft-foundry/SKILL.md"},
+        {"name": "external-linked", "description": "Description with: a colon.", "path": "r0/external-linked/SKILL.md"},
+        {"name": "external-copied", "description": "", "path": "r0/external-copied/SKILL.md"},
     ]
 
 
@@ -114,10 +114,10 @@ def test_fixture_copies_documents_and_layout_without_support_files(tmp_path):
     assert (bundle / "skills/real-skill/SKILL.md").read_bytes() == (skill / "SKILL.md").read_bytes()
     assert (bundle / "skills/real-skill/references").is_dir()
     assert not (bundle / "skills/real-skill/references/private-data.txt").exists()
-    link = root / "home/.agents/skills/sherlock-kit"
+    link = root / "home/.agents/skills/external-linked"
     assert link.is_symlink()
     assert link.resolve().is_relative_to(root / "home")
-    assert verifier.FIXTURES["sherlock-kit"] in (link / "SKILL.md").read_text()
+    assert verifier.FIXTURES["external-linked"] in (link / "SKILL.md").read_text()
 
 
 def test_discovery_rejects_operating_system_home_fallback(monkeypatch, tmp_path):
