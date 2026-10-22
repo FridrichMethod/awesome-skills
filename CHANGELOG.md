@@ -19,9 +19,11 @@ All notable changes to this project are documented here. The format is based on 
 
 ### Changed
 - README headline counts are now **derived dynamically** from the live skill tree on every sync instead of hand-maintained. `scripts/sync_skills.py` gained `update_readme_counts()`, which rewrites the skills badge + intro/bootstrap prose (rounded `<floor>+`, e.g. `1,900+`), the repo-layout tree line (exact count, e.g. `1,973`), and the sources badge/intro/heading (`len(UPSTREAMS)`). The substitution is idempotent; `main()` calls it after each sync and the `sync-skills` workflow now stages `README.md` alongside `skills/`. Covered by `tests/test_readme_counts.py` (5 cases).
+- `scripts/verify_codex_catalog.py` and its tests use neutral `external-linked` and `external-copied` fixtures in place of `sherlock-kit` and `microsoft-foundry`. Their purpose is unchanged: two skills outside the library, one exposed through a symlink in the temporary `~/.agents/skills`, must stay model-visible with their descriptions after migration.
 
 ### Fixed
 - `.github/dependabot.yml` no longer requests the `github-actions` label, which does not exist in this repo. Dependabot was posting a "labels could not be found" warning on every GitHub Actions update PR.
+- `scripts/install_skills.py` no longer reserves the names `sherlock-kit`, `microsoft-foundry` and `foundry`. If the weekly sync had brought a library skill with one of them, Claude's default `@all` selection would have installed and recorded it on the first run, and every later run would then have rejected the manifest with `Invalid ownership record`. The generic rules are unchanged: hidden entries (including Codex's `.system`), top-level symlinks, unknown and modified entries are preserved, `~/.agents` is never written, and Codex still refuses or skips a selection whose frontmatter name collides with a skill in `~/.agents/skills`.
 
 ## [0.3.1] — 2026-05-20
 
