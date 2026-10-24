@@ -91,6 +91,8 @@ The library is a git partial clone (`--filter=blob:none`) with a cone-mode spars
 - **Change detection is per skill, by git tree id.** Each ownership record stores the tree id it was installed from. A selected skill whose tree id is unchanged and whose directory still exists is skipped after a single `lstat`: nothing is hashed or rewritten. Only skills whose tree changed (or that are missing, newly selected, or deselected) are examined, so destination work is proportional to what changed.
 - **Only the blobs of selected skills that changed are downloaded**: the installer narrows the sparse checkout to exactly those skill directories, lets git batch-fetch their missing blobs, copies and verifies them, and narrows the checkout back to `scripts/` and the root files. Unselected skills are never downloaded. Claude's default `@all` selection downloads the whole library once, on its first install.
 - **One run at a time**: the installer holds its own lock (`flock` on Linux and macOS, `msvcrt` on Windows) across fetch, planning and apply, and exits `75` when another run holds it.
+- **Unattended runs heal themselves.** An update killed mid-apply is undone at the start of the next run, which then applies normally; if a file it would restore was edited since, the run exits `3` and names the `--restore` command instead. Under the lock the installer removes stale git `*.lock` files and leftover partial clones; a clone that fails for a reason other than an unreachable remote is moved aside (`library.broken-<time>`, only the newest kept) and cloned again once. Inherited `GIT_*` variables (a hook's `GIT_DIR`, `GIT_INDEX_FILE`, injected `GIT_CONFIG_COUNT` config, ...) and system or global git attributes are ignored, so a run started inside another repository never touches it.
+- **One bad entry does not stop the rest.** A library entry that cannot be checked out on every platform (a Windows-invalid or reserved name such as `aux` or `a:b`, a case-only twin, a symlink, a submodule, `.gitattributes`/`.gitmodules`) or that is missing from the index is skipped with a warning; an installed copy of it is kept as it is. A skill whose copy fails to prepare or verify is skipped too, the others still update, and the run exits `1` naming it.
 - **Native Windows** uses `git -c core.longpaths=true`, extended-length (`\\?\`) paths in Python for deeply nested skills, and plain copies (never links). Executable bits are not representable there and are ignored when comparing content.
 
 ### Flags
@@ -107,9 +109,10 @@ The library is a git partial clone (`--filter=blob:none`) with a cone-mode spars
 | `--claude-only`, `--codex-only` | operate on one client |
 | `--enable ID`, `--disable ID` | persistently add/remove a directory source ID; repeatable; requires one client |
 | `--selection ID,ID` | replace one client's selection; `--selection ''` disables all managed skills |
-| `--list`, `--search TEXT` | inspect the complete library's IDs, frontmatter names, descriptions, tree ids, origins, and conflicts; reads the clone offline as of its last update (or a throwaway blobless clone when none exists) |
+| `--list`, `--search TEXT` | inspect the complete library's IDs, frontmatter names, descriptions, tree ids, origins, and conflicts; reads the clone offline as of its last update (a remote `--list` needs an existing install) |
 | `--source DIR` | use another local `skills/` tree |
-| `--dry-run` | compute the exact plan against the remote tip with **zero writes to HOME** (state, data, destinations); when the local clone is behind, the plan is computed from a throwaway blobless clone in the system temp directory |
+| `--dry-run` | compute the exact plan against the remote tip without writing state or destinations and without moving the clone's checkout; it fetches new commits and trees into an existing clone (a remote dry run needs an existing install). `--list` and `--dry-run` may lazily fetch missing objects into the clone |
+| `--allow-mass-removal` | let an update without selection flags remove more than half of a client's managed skills (at least 20); otherwise such an update is refused, since it usually means a broken library |
 | `--restore BACKUP` | restore a migration/update transaction; reject later user edits or selection changes |
 | `--delete` | deprecated compatibility flag; only verified managed deselections are pruned |
 | `-h`, `--help` | print usage |
@@ -131,6 +134,7 @@ IDs refer to directories, but conflicts are checked using frontmatter `name` and
 | `SKILLS_STATE_DIR` | `$HOME/.local/share/awesome-skills` (Windows: `%LOCALAPPDATA%\awesome-skills`) | client selections, ownership manifests, recovery journals/backups, lock |
 | `SKILLS_CACHE_DIR` | `$HOME/.cache/awesome-skills` | where the former tarball installer kept snapshots; read only to remove them |
 | `SKILLS_PYTHON` | `python3` (Windows: `py -3`, then `python`) | interpreter containing PyYAML |
+| `SKILLS_KEEP_BACKUPS` | `5` | finished transaction backups kept after each update; `0` keeps all |
 
 With `XDG_DATA_HOME` unset, data and state share one directory. State, data and the legacy cache must stay outside discovery, disjoint from install destinations, with no symlink ancestors. Both client destinations must be disjoint, including when updating only one client. Custom destinations are saved for subsequent no-argument updates. State and destinations must share a filesystem for reversible atomic moves; for a custom mount, set `SKILLS_STATE_DIR` to a directory on that mount. The state directory must persist across updater runs. The installer does not edit Codex/Claude configuration, dotfiles, or `~/.agents` configuration.
 
@@ -150,16 +154,17 @@ curl -fsSL https://raw.githubusercontent.com/FridrichMethod/awesome-skills/main/
 | `0` | success, including `Already current; selection preserved.` |
 | `1` | error, with one message naming the missing tool or failing step; the previous install is left intact |
 | `2` | usage error |
+| `3` | an interrupted update cannot be undone automatically because a file changed since; a person must act (the message names the `--restore` command) |
 | `75` | another installer run holds the lock (callers may ignore it) |
 
 ### Migration and recovery
 
 **From the tarball installer (0.3.x and earlier):** the first run of this version recognizes the existing ownership manifests. A managed copy whose bytes and executable bits equal the library's current tree is recorded with its tree id and **not copied again** (permission differences such as tarball `0664` modes do not count); modified managed copies stay preserved as before. The old router, which pointed into the cache, is replaced. Once no managed router comes from the old installer, the snapshot directories it created under `~/.cache/awesome-skills/libraries/` (recognized by their 64-hex names and exact layout) are removed; nothing else there is touched. The first run downloads the blobs of selected skills once, then later runs are incremental.
 
-Preview a legacy full install before applying it:
+Preview a change before applying it, and undo a transaction:
 
 ```bash
-./install.sh --codex-only --dry-run > codex-migration-plan.json
+./install.sh --codex-only --dry-run > codex-plan.json
 # Review the exact actions, before/after hashes, and preserved entries in that file.
 ./install.sh --codex-only
 # The installer prints a transaction BACKUP directory. Restore it with:
@@ -167,9 +172,9 @@ Preview a legacy full install before applying it:
 ./install.sh --restore BACKUP
 ```
 
-A legacy install without a manifest is adopted **only when its entire directory matches the current library tree**, including support files, extra/missing files, permissions (`0644`/`0755` files, `0755` directories as this installer writes them), and symlink targets. A directory name alone is insufficient. Older copies differing from that snapshot remain untouched. Manifested copies are movable only if their recorded fingerprint still matches. Modified managed copies retain their old fingerprint so repeated updates continue to preserve them.
+A directory without a manifest is adopted **only when it is selected and its entire directory matches the current library tree**, including support files, extra/missing files, permissions (`0644`/`0755` files, `0755` directories as this installer writes them), and symlink targets; it is then recorded instead of copied again. A directory name alone is insufficient. An unmanaged directory that is not selected is never adopted or removed, even when identical to a library skill, so copies left by pre-manifest installers stay in place for you to remove; older copies differing from the library also remain untouched. Manifested copies are movable only if their recorded fingerprint still matches. Modified managed copies retain their old fingerprint so repeated updates continue to preserve them.
 
-Hidden entries such as Codex's own `.system` and every top-level symlink (and, on Windows, junction) are protected; no skill name is reserved. Unknown and modified entries are reported and preserved. No operation runs `rsync --delete` over a skills root. Removed or replaced owned directories are moved into a transaction backup, with old client state recorded before live changes. Replacements are fully prepared and verified first. Restore preserves unrelated entries and refuses to overwrite later user changes. A run interrupted while downloading or preparing copies changes nothing live and does not block later runs. Backups are retained for recovery; prune them deliberately after review.
+Hidden entries such as Codex's own `.system` and every top-level symlink (and, on Windows, junction) are protected; no skill name is reserved. Unknown and modified entries are reported and preserved. No operation runs `rsync --delete` over a skills root. Removed or replaced owned directories are moved into a transaction backup, with old client state recorded before live changes. Replacements are fully prepared and verified first. Restore preserves unrelated entries and refuses to overwrite later user changes. A run interrupted while downloading or preparing copies changes nothing live and does not block later runs; one interrupted while moving entries is rolled back at once, or by the next run. The newest `SKILLS_KEEP_BACKUPS` (default 5) finished backups are kept; older ones are pruned after each update.
 
 Preserving unverifiable legacy skills can leave discovery overloaded. Inspect the plan and use your own backups/provenance to resolve those entries; the installer does not infer ownership or silently delete them. External/plugin collections can also exceed Codex limits independently of this repository. Restart Codex after selection changes, then verify its actual model catalog.
 
@@ -283,7 +288,8 @@ flowchart LR
     D --> E[Find skill roots<br/>de-dupe nested]
     E --> F[Filter:<br/>.gitattributes / LFS<br/>>40MB files<br/>vector DBs]
     F --> G[Retain distinct variants<br/>record source provenance]
-    G --> G2[Regenerate library_index.json]
+    G --> G1[Reject skills the installer<br/>could not install everywhere]
+    G1 --> G2[Regenerate library_index.json]
     G2 --> H{Changes?}
     H -- yes --> I[Bot commits +<br/>pushes to main]
     H -- no --> J[Exit clean]
