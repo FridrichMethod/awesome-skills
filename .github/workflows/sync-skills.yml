@@ -34,7 +34,16 @@ jobs:
         id: sync
         run: |
           python -m pip install PyYAML
-          python scripts/sync_skills.py
+          # Exit 3: some upstream skills were rejected (not portable to every client
+          # platform, or unreadable); the valid rest is committed below and the run
+          # then fails. Any other failure stops here and nothing is committed.
+          status=0
+          python scripts/sync_skills.py || status=$?
+          if [[ "$status" -eq 3 ]]; then
+            echo "rejected=true" >> "$GITHUB_OUTPUT"
+          elif [[ "$status" -ne 0 ]]; then
+            exit "$status"
+          fi
 
       - name: Detect changes
         id: changes
@@ -72,3 +81,9 @@ jobs:
           modified: ${MODIFIED}
           deleted: ${DELETED}"
           git push
+
+      - name: Fail on rejected upstream skills
+        if: steps.sync.outputs.rejected == 'true'
+        run: |
+          echo "::error::Upstream skills were rejected; the valid rest was committed. See the REJECTED lines in the sync step."
+          exit 1

@@ -17,6 +17,7 @@ Filters out:
 from __future__ import annotations
 
 import argparse
+import functools
 import hashlib
 import importlib.util
 import json
@@ -35,6 +36,9 @@ SKILLS_DEST = REPO_ROOT / "skills"
 README_PATH = REPO_ROOT / "README.md"
 LIBRARY_SOURCES_PATH = REPO_ROOT / "library_sources.json"
 LIBRARY_INDEX_PATH = REPO_ROOT / "library_index.json"
+# Exit status when some upstream skills were rejected but the valid rest was synced.
+# The workflow commits the valid rest, then fails the run so the rejection is seen.
+REJECTED_EXIT = 3
 
 # README headline figures are derived from the live tree on every sync so they
 # never drift between runs. Badge/prose use a rounded "<floor>+" figure; the
@@ -724,10 +728,17 @@ class LibrarySources:
         qualified = f"{base}--{source}--{hashlib.sha256(key).hexdigest()[:10]}"
         skill_id = qualified
         suffix = 2
-        while skill_id in self.entries or os.path.lexists(self.skills_dest / skill_id):
+        while self._taken(skill_id):
             skill_id = f"{qualified}-{suffix}"
             suffix += 1
         return skill_id
+
+    def _taken(self, skill_id: str) -> bool:
+        """An ID is taken by an exact or case-only match: Windows and macOS cannot hold both."""
+        if skill_id in self.entries or os.path.lexists(self.skills_dest / skill_id):
+            return True
+        folded = skill_id.casefold()
+        return any(other.casefold() == folded for other in (*self.entries, *self.actual))
 
     def install(self, candidate: Path, source_name: str, origin: dict) -> tuple[str, str]:
         name = skill_frontmatter_name(candidate)
@@ -763,7 +774,7 @@ class LibrarySources:
         else:
             skill_id = candidate.name
             same_name = any(actual[0] == name for actual in self.actual.values())
-            if same_name or skill_id in self.entries or os.path.lexists(self.skills_dest / skill_id):
+            if same_name or self._taken(skill_id):
                 skill_id = self._variant_id(skill_id, source_name, origin)
             action = "new"
 
@@ -811,6 +822,36 @@ class LibrarySources:
             temporary_path.unlink(missing_ok=True)
 
 
+def candidate_problems(prepared: Path, skill_id: str) -> list[str]:
+    """Why a filtered, sanitized upstream skill must not enter skills/: the installer's own
+    portability rules (Windows names, case-only collisions, links, git metadata files)
+    plus frontmatter it can parse. Checked before anything is copied into the library."""
+    installer = _installer()
+    kinds = {}
+    for path in sorted(prepared.rglob("*")):
+        if path.is_symlink():
+            kinds[path.relative_to(prepared).as_posix()] = "link"
+        elif path.is_file():
+            kinds[path.relative_to(prepared).as_posix()] = "file"
+    problems = installer.skill_problems(skill_id, kinds)
+    try:
+        installer.metadata((prepared / "SKILL.md").read_bytes(), skill_id)
+    except (installer.InstallError, OSError) as error:
+        problems.append(str(error))
+    return problems
+
+
+def library_problems(skills: Path) -> list[str]:
+    """The same rules over the whole tree, including content synced before they existed."""
+    installer = _installer()
+    ids = installer.skill_ids(skills)
+    problems = [f"{skill_id}: {reason}" for skill_id, reason in installer.case_collisions(ids).items()]
+    for skill_id in ids:
+        found = candidate_problems(skills / skill_id, skill_id)
+        problems += [f"{skill_id}: {p}" for p in found if not p.startswith("Invalid frontmatter")]
+    return problems
+
+
 def sync_upstream(url: str, name: str, description: str, staging: Path, stats: dict, library: LibrarySources):
     repo_dir = staging / name
     print(f"\n[{name}] {description}")
@@ -823,7 +864,7 @@ def sync_upstream(url: str, name: str, description: str, staging: Path, stats: d
     if lfs_paths:
         print(f"  flagged {len(lfs_paths)} LFS pointer files to skip")
     roots = find_skill_roots(repo_dir)
-    new = updated = deduplicated = invalid = 0
+    new = updated = deduplicated = invalid = rejected = 0
     frontmatter_normalized = 0
     missing_frontmatter = 0
     for root in roots:
@@ -841,6 +882,11 @@ def sync_upstream(url: str, name: str, description: str, staging: Path, stats: d
             "path": root.relative_to(repo_dir).as_posix(),
             "current": True,
         }
+        problems = candidate_problems(prepared, skill_name)
+        if problems:
+            rejected += 1
+            print(f"  REJECTED {origin['path']}: {'; '.join(problems[:5])}", file=sys.stderr)
+            continue
         try:
             _, action = library.install(prepared, name, origin)
         except (ValueError, yaml.YAMLError) as error:
@@ -854,7 +900,8 @@ def sync_upstream(url: str, name: str, description: str, staging: Path, stats: d
         else:
             deduplicated += 1
     print(
-        f"  installed: {new} new, {updated} updated, {deduplicated} deduplicated, {invalid} invalid (total roots: {len(roots)})"
+        f"  installed: {new} new, {updated} updated, {deduplicated} deduplicated, {invalid} invalid, "
+        f"{rejected} rejected (total roots: {len(roots)})"
     )
     if frontmatter_normalized or missing_frontmatter:
         print(f"  frontmatter: {frontmatter_normalized} normalized, {missing_frontmatter} missing")
@@ -863,6 +910,7 @@ def sync_upstream(url: str, name: str, description: str, staging: Path, stats: d
         "updated": updated,
         "deduplicated": deduplicated,
         "invalid": invalid,
+        "rejected": rejected,
         "removed": 0,
         "total": len(roots),
         "frontmatter_normalized": frontmatter_normalized,
@@ -874,20 +922,21 @@ def write_summary(stats: dict, before: int, after: int) -> str:
     lines = [
         "Per-repo sync summary:",
         "",
-        "| Source | New | Updated | Deduplicated | Invalid | Total roots |",
-        "|---|---:|---:|---:|---:|---:|",
+        "| Source | New | Updated | Deduplicated | Invalid | Rejected | Total roots |",
+        "|---|---:|---:|---:|---:|---:|---:|",
     ]
     for repo, s in stats.items():
         if "error" in s:
-            lines.append(f"| {repo} | — | — | — | — | error: {s['error']} |")
+            lines.append(f"| {repo} | — | — | — | — | — | error: {s['error']} |")
         else:
             lines.append(
-                f"| {repo} | {s['new']} | {s['updated']} | {s.get('deduplicated', 0)} | {s.get('invalid', 0)} | {s['total']} |"
+                f"| {repo} | {s['new']} | {s['updated']} | {s.get('deduplicated', 0)} | {s.get('invalid', 0)} "
+                f"| {s.get('rejected', 0)} | {s['total']} |"
             )
             if s.get("frontmatter_normalized") or s.get("missing_frontmatter"):
                 lines.append(
                     f"| frontmatter | {s.get('frontmatter_normalized', 0)} normalized | "
-                    f"{s.get('missing_frontmatter', 0)} missing |  |  |  |"
+                    f"{s.get('missing_frontmatter', 0)} missing |  |  |  |  |"
                 )
     lines.append("")
     lines.append(f"Skills before: {before}, after: {after} (delta: {after - before:+d})")
@@ -938,6 +987,7 @@ def update_readme_counts(readme: Path, skill_count: int, source_count: int) -> b
     return False
 
 
+@functools.cache
 def _installer():
     """The installer defines how SKILL.md frontmatter is read; the index must agree with it."""
     path = Path(__file__).with_name("install_skills.py")
@@ -947,9 +997,10 @@ def _installer():
     return module
 
 
-def write_library_index(skills: Path = SKILLS_DEST, path: Path = LIBRARY_INDEX_PATH) -> bool:
+def write_library_index(skills: Path | None = None, path: Path | None = None) -> bool:
     """Regenerate the committed full-library index (names and descriptions) the installer
     reads instead of downloading every skill body. Returns True when the file changed."""
+    skills, path = skills or SKILLS_DEST, path or LIBRARY_INDEX_PATH
     installer = _installer()
     content = installer.index_text(installer.build_index(skills))
     if path.exists() and path.read_text(encoding="utf-8") == content:
@@ -1046,8 +1097,18 @@ def main(argv: list[str] | None = None) -> int:
         for url, name, desc in UPSTREAMS:
             sync_upstream(url, name, desc, staging, stats, library)
     library.save()
-    if write_library_index():
-        print(f"Updated {LIBRARY_INDEX_PATH.name}")
+    problems = library_problems(SKILLS_DEST)
+    if problems:
+        for problem in problems[:50]:
+            print(f"::error::skills/{problem}", file=sys.stderr)
+        print(f"{len(problems)} library entries break installer rules; nothing should be committed.", file=sys.stderr)
+        return 1
+    try:
+        if write_library_index():
+            print(f"Updated {LIBRARY_INDEX_PATH.name}")
+    except (_installer().InstallError, OSError, ValueError) as error:
+        print(f"::error::Could not regenerate {LIBRARY_INDEX_PATH.name}: {error}", file=sys.stderr)
+        return 1
     after = sum(1 for p in SKILLS_DEST.iterdir() if p.is_dir())
     if update_readme_counts(README_PATH, after, len(UPSTREAMS)):
         print(f"Updated README counts: {after:,} skills, {len(UPSTREAMS)} sources")
@@ -1058,10 +1119,13 @@ def main(argv: list[str] | None = None) -> int:
         summary += "\n\nFrontmatter name conflicts (variants preserved):\n"
         summary += "\n".join(f"- `{name}`: {', '.join(ids)}" for name, ids in sorted(conflicts.items()))
     print(summary)
+    rejected = sum(s.get("rejected", 0) for s in stats.values())
+    if rejected:
+        summary += f"\n\n{rejected} upstream skill(s) were rejected; see the REJECTED lines in the sync log."
     step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if step_summary:
         Path(step_summary).write_text(summary + "\n", encoding="utf-8")
-    return 0
+    return REJECTED_EXIT if rejected else 0
 
 
 if __name__ == "__main__":
