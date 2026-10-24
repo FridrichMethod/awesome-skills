@@ -590,7 +590,9 @@ class Library:
         colliding = case_collisions(ids, indexed or frozenset())
         accepted = []
         for skill_id in ids:
-            problems = [p for p in skill_problems(skill_id, kinds[skill_id]) if links or not p.endswith("link")]
+            problems = [
+                p for p in skill_problems(skill_id, kinds[skill_id]) if not (links and p.endswith(": symbolic link"))
+            ]
             if skill_id in colliding:
                 problems.insert(0, colliding[skill_id])
             if indexed is not None and skill_id not in indexed:

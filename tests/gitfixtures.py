@@ -100,6 +100,16 @@ class Upstream:
         unchecked = ["-c", "core.protectNTFS=false", "-c", "core.protectHFS=false", "-c", "core.ignoreCase=false"]
         git("-C", str(self.work), *unchecked, "update-index", "--add", "--cacheinfo", f"100644,{blob},{path}")
 
+    def commit_with_links(self, message: str, links: dict):
+        """Commit the worktree plus symlink entries (path -> target) staged through the index only,
+        so the test needs no symlink support on the host."""
+        put(self.work / installer.INDEX, installer.index_text(installer.build_index(self.work / "skills")))
+        git("-C", str(self.work), "add", "-A")
+        for path, target in links.items():
+            blob = git("-C", str(self.work), "hash-object", "-w", "--stdin", stdin=target.encode()).strip()
+            git("-C", str(self.work), "update-index", "--add", "--cacheinfo", f"120000,{blob},{path}")
+        self.commit_index(message)
+
     def commit_index(self, message: str):
         git("-C", str(self.work), "commit", "-q", "-m", message)
         git("-C", str(self.work), "push", "-q", "origin", "HEAD:main")

@@ -584,3 +584,29 @@ def test_corruption_signatures():
         assert installer.corrupted(installer.GitError("git x failed", stderr))
     for stderr in ("fatal: early EOF", "Operation too slow.", "No space left on device", "error: invalid path 'a:b'"):
         assert not installer.corrupted(installer.GitError("git x failed", stderr))
+
+
+def test_symlinks_from_the_remote_library_are_never_installed(remote, capsys):
+    home, upstream = remote
+    run()
+    beta = installer.fingerprint(home / ".claude/skills/beta")
+    upstream.skill("evil")
+    upstream.commit_with_links(
+        "links out of the skill",
+        {
+            "skills/evil/key": "../../.ssh/id_rsa",
+            "skills/evil/passwd": "/etc/passwd",
+            "skills/beta/key": "../../.ssh/id_rsa",
+        },
+    )
+    assert run() == 0
+    err = capsys.readouterr().err
+    assert "skipping library entry evil" in err and "key: symbolic link" in err
+    assert "skipping library entry beta" in err
+    claude = home / ".claude/skills"
+    assert not (claude / "evil").exists()
+    assert installer.fingerprint(claude / "beta") == beta, "an installed copy is frozen, never updated with the link"
+    assert not any(installer.is_link(p) for p in installer.native(home).rglob("*") if ".git" not in p.parts)
+    assert not (clone(home) / "skills/evil").exists(), "the entry is never checked out"
+    with pytest.raises(installer.InstallError, match="Cannot enable"):
+        run("--codex-only", "--enable", "evil")

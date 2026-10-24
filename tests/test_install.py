@@ -943,3 +943,15 @@ def test_backups_are_ordered_by_their_clock_independent_stamp(sandbox):
     (earlier / "restore.json").write_text(journal.replace('"status": "complete"', '"status": "applying"'))
     found = installer.interrupted_transaction(installer.native(state_dir(home)))
     assert found == installer.native(earlier), "every kept journal is checked, not only the newest"
+
+
+def test_a_local_tree_may_still_contain_links(sandbox, tmp_path):
+    home, source = sandbox
+    if not can_symlink(tmp_path):
+        pytest.skip("symlinks unavailable")
+    linked = skill(source, "linked")
+    (linked / "helper-link").symlink_to("helper.txt")
+    assert run(source) == 0
+    installed = home / ".claude/skills/linked/helper-link"
+    assert installer.is_link(installed) and os.readlink(installed) == "helper.txt"
+    assert "linked" in state(home, "claude")["managed"]
