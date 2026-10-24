@@ -513,7 +513,7 @@ def test_a_stalled_remote_fails_instead_of_holding_the_lock(remote, monkeypatch,
     monkeypatch.setenv("SKILLS_REPOSITORY_URL", stalling_remote)
     for fresh in (False, True):
         if fresh:
-            shutil.rmtree(clone(home))
+            installer.rmtree(clone(home))  # git marks pack files read-only on Windows
         started = time.monotonic()
         with pytest.raises(installer.GitError, match="too slow"):
             run()
