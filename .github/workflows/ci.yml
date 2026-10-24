@@ -2,22 +2,34 @@ name: ci
 
 on:
   push:
-    branches: [main]
+    branches: [main, "ci/**"]
     paths:
       - "scripts/**"
       - "tests/**"
+      - "skills/**"
+      - "install.sh"
+      - "install.ps1"
+      - "library_index.json"
       - "pyproject.toml"
       - ".github/workflows/ci.yml"
   pull_request:
     paths:
       - "scripts/**"
       - "tests/**"
+      - "skills/**"
+      - "install.sh"
+      - "install.ps1"
+      - "library_index.json"
       - "pyproject.toml"
       - ".github/workflows/ci.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
+
+env:
+  # The PowerShell bootstrap tests must run on every runner (pwsh ships on all three), never skip.
+  AWESOME_SKILLS_REQUIRE_PWSH: "1"
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -26,7 +38,7 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -44,8 +56,57 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest pyyaml ruff
 
+      - name: Tool versions
+        run: |
+          git --version
+          pwsh --version
+
       - name: Lint with ruff
         run: ruff check scripts/ tests/
 
+      - name: Lint install.sh
+        run: shellcheck -s bash -e SC2155 install.sh
+
       - name: Run pytest
-        run: pytest tests/ -v
+        run: pytest tests/ -v -rs
+
+  # The installer on native Windows (install.ps1, msvcrt lock, long paths) and on macOS.
+  # The skill tree is not needed there, so the checkout leaves it out.
+  installer:
+    name: installer (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+
+    steps:
+      - name: Keep committed line endings
+        run: git config --global core.autocrlf false
+
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            scripts
+            tests
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pyyaml
+
+      - name: Tool versions
+        run: |
+          git --version
+          pwsh --version
+
+      - name: Run installer tests
+        run: pytest tests/test_install.py tests/test_git_transport.py tests/test_bootstrap.py tests/test_codex_catalog.py -v -rs
