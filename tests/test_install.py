@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import io
 import json
 import os
 import shutil
 import subprocess
 import sys
-import tarfile
 from pathlib import Path
 
 import pytest
@@ -16,6 +14,21 @@ import pytest
 from scripts import install_skills as installer
 
 ROOT = Path(__file__).resolve().parents[1]
+POSIX_MODES = pytest.mark.skipif(os.name == "nt", reason="native Windows has no POSIX permission bits")
+
+
+def can_symlink(tmp_path):
+    try:
+        (tmp_path / "symlink-probe").symlink_to(tmp_path, target_is_directory=True)
+    except OSError:
+        return False
+    (tmp_path / "symlink-probe").unlink()
+    return True
+
+
+def snapshot(root):
+    """Every entry's mtime, size and mode: an unchanged run must not rewrite anything."""
+    return {str(p): (p.lstat().st_mtime_ns, p.lstat().st_size, p.lstat().st_mode) for p in sorted(root.rglob("*"))}
 
 
 def skill(root, skill_id, name=None, body="body", description=None):
@@ -36,6 +49,10 @@ def sandbox(tmp_path, monkeypatch):
     skill(source, "alpha")
     skill(source, "beta")
     monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    monkeypatch.setenv("LOCALAPPDATA", str(home / "AppData/Local"))
+    monkeypatch.delenv("XDG_DATA_HOME", raising=False)
+    monkeypatch.delenv("CODEX_HOME", raising=False)
     for key in list(os.environ):
         if key.startswith("SKILLS_"):
             monkeypatch.delenv(key)
@@ -47,15 +64,25 @@ def run(source, *args):
     return installer.main(["--source", str(source), *args])
 
 
+def state_dir(home):
+    return home / ("AppData/Local" if os.name == "nt" else ".local/share") / "awesome-skills"
+
+
 def state(home, client="codex"):
-    return json.loads((home / f".local/share/awesome-skills/{client}.json").read_text())
+    return json.loads((state_dir(home) / f"{client}.json").read_text())
 
 
 def backups(home):
-    return sorted((home / ".local/share/awesome-skills/backups").iterdir())
+    return sorted((state_dir(home) / "backups").iterdir())
 
 
-def test_first_install_and_no_argument_updater(sandbox):
+def listed(capsys, source, *args):
+    capsys.readouterr()
+    run(source, "--list", *args)
+    return json.loads(capsys.readouterr().out)
+
+
+def test_first_install_and_no_argument_updater(sandbox, capsys):
     home, source = sandbox
     run(source)
     codex = home / ".codex/skills"
@@ -63,14 +90,19 @@ def test_first_install_and_no_argument_updater(sandbox):
     assert sorted(p.name for p in codex.iterdir()) == [installer.ROUTER]
     assert sorted(p.name for p in claude.iterdir()) == ["alpha", "beta"]
     run(source, "--codex-only", "--enable", "alpha")
-    before = installer.fingerprint(home)
-    run(source)  # dotfiles updater: no selection/client arguments
+    before, times = installer.fingerprint(home), snapshot(home)
+    capsys.readouterr()
+    run(source)  # consumer updater: no selection/client arguments
+    assert capsys.readouterr().out == "Already current; selection preserved.\n"
     assert installer.fingerprint(home) == before
+    assert snapshot(home) == times
     assert state(home)["selection"] == ["@library", "alpha"]
     assert state(home, "claude")["selection"] == ["@all"]
-    cache = next((home / ".cache/awesome-skills/libraries").iterdir())
-    assert (cache / "skills/beta/SKILL.md").exists()
-    assert json.loads((cache / "index.json").read_text())["beta"]["origins"]
+    assert state(home, "claude")["managed"]["beta"]["origins"]
+    assert state(home, "claude")["managed"]["beta"]["tree"] == installer.tree_id(
+        installer.local_listing(source / "beta")
+    )
+    assert not (home / ".cache").exists()
 
 
 def test_legacy_migration_exact_content_and_recovery(sandbox):
@@ -100,19 +132,23 @@ def test_user_edit_extra_file_mode_and_unknown_are_preserved(sandbox):
     assert installer.fingerprint(unknown) == old["unowned"]
 
 
+@POSIX_MODES
 def test_permission_change_prevents_legacy_adoption(sandbox):
     home, source = sandbox
     target = home / ".codex/skills/alpha"
     target.parent.mkdir(parents=True)
     shutil.copytree(source / "alpha", target)
-    (target / "helper.txt").chmod(0o600)
+    mode = (target / "helper.txt").stat().st_mode & 0o777
+    (target / "helper.txt").chmod(0o640 if mode == 0o600 else 0o600)  # differs from the source under any umask
     before = installer.fingerprint(target)
     run(source, "--codex-only")
     assert installer.fingerprint(target) == before
 
 
-def test_symlinks_hidden_renamed_copies_and_agents_protected(sandbox):
+def test_symlinks_hidden_renamed_copies_and_agents_protected(sandbox, tmp_path):
     home, source = sandbox
+    if not can_symlink(tmp_path):
+        pytest.skip("symlinks unavailable")
     codex = home / ".codex/skills"
     codex.mkdir(parents=True)
     (codex / "alpha").symlink_to(source / "alpha", target_is_directory=True)
@@ -198,7 +234,7 @@ def test_new_library_skill_manifest_is_accepted_by_later_runs(sandbox):
     assert (home / ".claude/skills/late-upstream").exists()
 
 
-def test_identical_frontmatter_names_deduplicate_with_provenance(sandbox):
+def test_identical_frontmatter_names_deduplicate_with_provenance(sandbox, capsys):
     home, source = sandbox
     shutil.copytree(source / "alpha", source / "alias")
     run(source, "--codex-only", "--selection", "alpha,alias")
@@ -206,11 +242,12 @@ def test_identical_frontmatter_names_deduplicate_with_provenance(sandbox):
     info = next(iter(state(home)["managed"].values()))
     assert info["source_ids"] == ["alias", "alpha"]
     assert "origins" in info
-    cache = next((home / ".cache/awesome-skills/libraries").iterdir())
-    assert json.loads((cache / "index.json").read_text())["alias"]["origins"]
+    index = listed(capsys, source)
+    assert index["skills"]["alias"]["origins"]
+    assert index["skills"]["alias"]["tree"] == index["skills"]["alpha"]["tree"]
 
 
-def test_different_same_names_require_explicit_variant(sandbox):
+def test_different_same_names_require_explicit_variant(sandbox, capsys):
     home, source = sandbox
     skill(source, "variant", name="alpha", body="different content")
     before = installer.fingerprint(home)
@@ -219,8 +256,7 @@ def test_different_same_names_require_explicit_variant(sandbox):
     assert installer.fingerprint(home) == before
     run(source, "--codex-only", "--selection", "variant")
     assert (home / ".codex/skills/variant").exists()
-    cache = next((home / ".cache/awesome-skills/libraries").iterdir())
-    assert (cache / "skills/alpha/SKILL.md").exists()
+    assert listed(capsys, source)["conflicts"] == {"alpha": ["alpha", "variant"]}
 
 
 def test_claude_full_preserves_variants_and_reports_conflicts(sandbox, capsys):
@@ -288,21 +324,16 @@ def test_restore_refuses_later_user_modification(sandbox):
     assert installer.fingerprint(home) == before
 
 
-def test_cached_helper_is_self_contained_and_keeps_snapshot(sandbox):
+def test_local_router_points_at_running_helper_and_source(sandbox):
     home, source = sandbox
     run(source, "--codex-only")
-    cache_root = home / ".cache/awesome-skills/libraries"
-    cache = next(cache_root.iterdir())
-    result = subprocess.run(
-        [sys.executable, "-B", str(cache / "install_skills.py"), "--codex-only", "--enable", "alpha"],
-        capture_output=True,
-        text=True,
-    )
-    assert result.returncode == 0, result.stderr
-    assert len(list(cache_root.iterdir())) == 1
-    assert (home / ".codex/skills/alpha").exists()
+    body = (home / ".codex/skills" / installer.ROUTER / "SKILL.md").read_text()
+    assert str(ROOT / "scripts/install_skills.py") in body
+    assert f"--source {source}" in body.replace("'", "").replace('"', "")
+    assert not (home / ".cache").exists()
 
 
+@pytest.mark.skipif(os.name == "nt", reason="install.sh is the POSIX bootstrap; install.ps1 is covered separately")
 def test_local_shell_updater_preserves_selection_without_arguments(sandbox):
     home, source = sandbox
     clone = source.parent
@@ -318,31 +349,19 @@ def test_local_shell_updater_preserves_selection_without_arguments(sandbox):
     assert not (home / ".codex/skills/beta").exists()
 
 
-def test_remote_dry_run_archive_is_in_memory(sandbox, monkeypatch):
-    home, source = sandbox
-    buf = io.BytesIO()
-    with tarfile.open(fileobj=buf, mode="w:gz") as archive:
-        archive.add(source, arcname="repo-main/skills")
-        archive.add(ROOT / "scripts/install_skills.py", arcname="repo-main/scripts/install_skills.py")
-    payload = buf.getvalue()
-    monkeypatch.setattr(installer, "urlopen", lambda *a, **kw: io.BytesIO(payload))
-    before = installer.fingerprint(home)
-    installer.main(["--remote", "--codex-only", "--dry-run"])
-    assert installer.fingerprint(home) == before
-    # Remote bootstrap executes via python -c: __file__ does not exist.
-    monkeypatch.delattr(installer, "__file__")
-    installer.main(["--remote", "--codex-only", "--dry-run"])
-    assert installer.fingerprint(home) == before
+STORAGE = pytest.mark.parametrize("variable", ["SKILLS_DATA_DIR", "SKILLS_STATE_DIR", "SKILLS_CACHE_DIR"])
 
 
-def test_reject_symlink_destination_and_discovered_cache(sandbox, monkeypatch):
+@STORAGE
+def test_reject_symlink_destination_and_discovered_storage(sandbox, monkeypatch, tmp_path, variable):
     home, source = sandbox
     (home / ".codex").mkdir()
-    (home / ".codex/skills").symlink_to(source)
-    with pytest.raises(installer.InstallError, match="symlink"):
-        run(source, "--codex-only")
-    (home / ".codex/skills").unlink()
-    monkeypatch.setenv("SKILLS_CACHE_DIR", str(home / ".codex/skills/cache"))
+    if can_symlink(tmp_path):
+        (home / ".codex/skills").symlink_to(source, target_is_directory=True)
+        with pytest.raises(installer.InstallError, match="symlink"):
+            run(source, "--codex-only")
+        (home / ".codex/skills").unlink()
+    monkeypatch.setenv(variable, str(home / ".codex/skills/cache"))
     with pytest.raises(installer.InstallError, match="disjoint"):
         run(source, "--codex-only")
 
@@ -426,19 +445,11 @@ def test_interrupted_preparation_keeps_live_entries_and_is_restorable(sandbox, m
     assert installer.fingerprint(codex) == before
 
 
-def test_no_argument_update_rebuilds_missing_cache(sandbox):
-    home, source = sandbox
-    run(source, "--codex-only")
-    cache = next((home / ".cache/awesome-skills/libraries").iterdir())
-    shutil.rmtree(cache)
-    run(source, "--codex-only")
-    assert (cache / "skills/alpha/SKILL.md").exists()
-
-
-def test_cache_dotdot_cannot_bypass_discovery_separation(sandbox, monkeypatch):
+@STORAGE
+def test_storage_dotdot_cannot_bypass_discovery_separation(sandbox, monkeypatch, variable):
     home, source = sandbox
     (home / "unused").mkdir()
-    monkeypatch.setenv("SKILLS_CACHE_DIR", str(home / "unused/../.codex/skills/full-cache"))
+    monkeypatch.setenv(variable, str(home / "unused/../.codex/skills/full-cache"))
     before = installer.fingerprint(home)
     with pytest.raises(installer.InstallError, match="disjoint"):
         run(source, "--codex-only")
@@ -462,7 +473,7 @@ def test_custom_destination_persists_for_no_argument_updater(sandbox, monkeypatc
     run(source, "--codex-only", "--enable", "alpha")
     monkeypatch.delenv("SKILLS_CODEX_DEST")
     run(source)
-    assert state(home)["destination"] == str(dest)
+    assert state(home)["destination"] == str(installer.native(dest))
     assert (dest / "alpha").exists()
     assert not (home / ".codex/skills").exists()
 
@@ -492,46 +503,13 @@ def test_restore_rejects_path_traversal_entry(sandbox):
     assert installer.fingerprint(home) == before
 
 
-def test_changed_cache_helper_is_rejected(sandbox):
+def test_broken_symlink_state_is_never_replaced(sandbox, tmp_path):
     home, source = sandbox
-    run(source, "--codex-only")
-    cache = next((home / ".cache/awesome-skills/libraries").iterdir())
-    (cache / "install_skills.py").write_text("# edited helper")
-    before = installer.fingerprint(home)
-    with pytest.raises(installer.InstallError, match="Cache helper changed"):
-        run(source, "--codex-only")
-    assert installer.fingerprint(home) == before
-
-
-def test_helper_code_is_part_of_cache_snapshot(sandbox, tmp_path, monkeypatch):
-    _, source = sandbox
-    first = installer.Library(source)
-    helper = tmp_path / "new-installer.py"
-    helper.write_bytes(first.helper + b"\n# new version\n")
-    monkeypatch.setattr(installer, "__file__", str(helper))
-    second = installer.Library(source)
-    assert first.skills == second.skills
-    assert first.snapshot != second.snapshot
-
-
-def test_duplicate_archive_member_is_rejected_before_writes(sandbox, monkeypatch):
-    home, source = sandbox
-    buf = io.BytesIO()
-    with tarfile.open(fileobj=buf, mode="w:gz") as archive:
-        archive.add(source, arcname="repo-main/skills")
-        archive.add(source / "alpha/SKILL.md", arcname="repo-main/skills/alpha/SKILL.md")
-    monkeypatch.setattr(installer, "urlopen", lambda *a, **kw: io.BytesIO(buf.getvalue()))
-    before = installer.fingerprint(home)
-    with pytest.raises(installer.InstallError, match="Duplicate archive member"):
-        installer.main(["--remote", "--codex-only"])
-    assert installer.fingerprint(home) == before
-
-
-def test_broken_symlink_state_is_never_replaced(sandbox):
-    home, source = sandbox
-    state_dir = home / ".local/share/awesome-skills"
-    state_dir.mkdir(parents=True)
-    (state_dir / "codex.json").symlink_to(home / "missing-state.json")
+    if not can_symlink(tmp_path):
+        pytest.skip("symlinks unavailable")
+    root = state_dir(home)
+    root.mkdir(parents=True)
+    (root / "codex.json").symlink_to(home / "missing-state.json")
     before = installer.fingerprint(home)
     with pytest.raises(installer.InstallError, match="symlink state"):
         run(source, "--codex-only")
@@ -561,7 +539,7 @@ def test_cross_filesystem_preflight_preserves_all_live_entries(sandbox, monkeypa
     codex = home / ".codex/skills"
     shutil.copytree(source, codex)
     before = installer.fingerprint(codex)
-    state_root = home / ".local/share/awesome-skills"
+    state_root = installer.native(state_dir(home))
     original = Path.stat
 
     def other_device(path, *args, **kwargs):
@@ -581,7 +559,7 @@ def test_cross_filesystem_preflight_preserves_all_live_entries(sandbox, monkeypa
 
 def test_state_lock_prevents_concurrent_apply(sandbox):
     home, source = sandbox
-    state_root = home / ".local/share/awesome-skills"
+    state_root = state_dir(home)
     with installer.state_lock(state_root), pytest.raises(installer.InstallError, match="Another"):
         run(source, "--codex-only")
     assert not (home / ".codex").exists()
@@ -594,28 +572,32 @@ def test_installation_does_not_require_git(sandbox, monkeypatch):
     assert (home / ".codex/skills" / installer.ROUTER).exists()
 
 
+@STORAGE
 @pytest.mark.parametrize("relative", ["workspace/.agents/skills/full", "workspace/.codex/skills/full"])
-def test_cache_cannot_move_overload_into_project_discovery(sandbox, monkeypatch, relative):
+def test_storage_cannot_move_overload_into_project_discovery(sandbox, monkeypatch, relative, variable):
     home, source = sandbox
-    monkeypatch.setenv("SKILLS_CACHE_DIR", str(home / relative))
+    monkeypatch.setenv(variable, str(home / relative))
     before = installer.fingerprint(home)
     with pytest.raises(installer.InstallError, match="disjoint"):
         run(source, "--codex-only")
     assert installer.fingerprint(home) == before
 
 
-def test_cache_cannot_move_overload_into_custom_codex_home(sandbox, monkeypatch):
+@STORAGE
+def test_storage_cannot_move_overload_into_custom_codex_home(sandbox, monkeypatch, variable):
     home, source = sandbox
     monkeypatch.setenv("CODEX_HOME", str(home / "custom-codex"))
-    monkeypatch.setenv("SKILLS_CACHE_DIR", str(home / "custom-codex/skills/full"))
+    monkeypatch.setenv(variable, str(home / "custom-codex/skills/full"))
     before = installer.fingerprint(home)
     with pytest.raises(installer.InstallError, match="disjoint"):
         run(source, "--codex-only")
     assert installer.fingerprint(home) == before
 
 
-def test_single_client_cannot_target_symlinked_claude_collection(sandbox, monkeypatch):
+def test_single_client_cannot_target_symlinked_claude_collection(sandbox, monkeypatch, tmp_path):
     home, source = sandbox
+    if not can_symlink(tmp_path):
+        pytest.skip("symlinks unavailable")
     actual = home / "shared-claude"
     shutil.copytree(source, actual / "skills")
     (home / ".claude").symlink_to(actual, target_is_directory=True)
@@ -626,12 +608,15 @@ def test_single_client_cannot_target_symlinked_claude_collection(sandbox, monkey
     assert installer.fingerprint(actual) == before
 
 
-def test_cache_cannot_target_symlinked_global_discovery(sandbox, monkeypatch):
+@STORAGE
+def test_storage_cannot_target_symlinked_global_discovery(sandbox, monkeypatch, tmp_path, variable):
     home, source = sandbox
+    if not can_symlink(tmp_path):
+        pytest.skip("symlinks unavailable")
     actual = home / "shared-claude"
     actual.mkdir()
     (home / ".claude").symlink_to(actual, target_is_directory=True)
-    monkeypatch.setenv("SKILLS_CACHE_DIR", str(actual / "skills/full-cache"))
+    monkeypatch.setenv(variable, str(actual / "skills/full-cache"))
     before = installer.fingerprint(home)
     with pytest.raises(installer.InstallError, match="disjoint"):
         run(source, "--codex-only")

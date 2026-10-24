@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 import re
@@ -33,6 +34,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 SKILLS_DEST = REPO_ROOT / "skills"
 README_PATH = REPO_ROOT / "README.md"
 LIBRARY_SOURCES_PATH = REPO_ROOT / "library_sources.json"
+LIBRARY_INDEX_PATH = REPO_ROOT / "library_index.json"
 
 # README headline figures are derived from the live tree on every sync so they
 # never drift between runs. Badge/prose use a rounded "<floor>+" figure; the
@@ -936,6 +938,34 @@ def update_readme_counts(readme: Path, skill_count: int, source_count: int) -> b
     return False
 
 
+def _installer():
+    """The installer defines how SKILL.md frontmatter is read; the index must agree with it."""
+    path = Path(__file__).with_name("install_skills.py")
+    spec = importlib.util.spec_from_file_location("awesome_skills_installer", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def write_library_index(skills: Path = SKILLS_DEST, path: Path = LIBRARY_INDEX_PATH) -> bool:
+    """Regenerate the committed full-library index (names and descriptions) the installer
+    reads instead of downloading every skill body. Returns True when the file changed."""
+    installer = _installer()
+    content = installer.index_text(installer.build_index(skills))
+    if path.exists() and path.read_text(encoding="utf-8") == content:
+        return False
+    with tempfile.NamedTemporaryFile(
+        mode="w", encoding="utf-8", newline="\n", dir=path.parent, prefix=f".{path.name}.", delete=False
+    ) as temporary:
+        temporary.write(content)
+        temporary_path = Path(temporary.name)
+    try:
+        temporary_path.replace(path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
+    return True
+
+
 def sanitize_only(target: Path) -> int:
     """Walk `target` and apply `sanitize_skill_frontmatter` to every SKILL.md.
 
@@ -971,6 +1001,8 @@ def sanitize_only(target: Path) -> int:
             print(f"  unrecoverable: {f.relative_to(target.parent)}", file=sys.stderr)
         if len(invalid_files) > 20:
             print(f"  ... and {len(invalid_files) - 20} more", file=sys.stderr)
+    if target.resolve() == SKILLS_DEST.resolve() and write_library_index():
+        print(f"Updated {LIBRARY_INDEX_PATH.name}")
     return 0
 
 
@@ -982,6 +1014,11 @@ def main(argv: list[str] | None = None) -> int:
         help="skip upstream sync; only normalize/sanitize existing SKILL.md files in ./skills/",
     )
     parser.add_argument(
+        "--index-only",
+        action="store_true",
+        help="skip upstream sync; only regenerate library_index.json from ./skills/",
+    )
+    parser.add_argument(
         "--target",
         type=Path,
         default=SKILLS_DEST,
@@ -991,6 +1028,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.sanitize_only:
         return sanitize_only(args.target)
+    if args.index_only:
+        print(f"{LIBRARY_INDEX_PATH.name}: {'updated' if write_library_index() else 'already current'}")
+        return 0
 
     SKILLS_DEST.mkdir(parents=True, exist_ok=True)
     try:
@@ -1006,6 +1046,8 @@ def main(argv: list[str] | None = None) -> int:
         for url, name, desc in UPSTREAMS:
             sync_upstream(url, name, desc, staging, stats, library)
     library.save()
+    if write_library_index():
+        print(f"Updated {LIBRARY_INDEX_PATH.name}")
     after = sum(1 for p in SKILLS_DEST.iterdir() if p.is_dir())
     if update_readme_counts(README_PATH, after, len(UPSTREAMS)):
         print(f"Updated README counts: {after:,} skills, {len(UPSTREAMS)} sources")

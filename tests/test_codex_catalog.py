@@ -46,6 +46,13 @@ def test_unrecognized_preview_is_not_reported_as_success(prompt):
         verifier.catalog_entries(prompt)
 
 
+def test_updater_output_is_one_line_when_current_and_a_plan_otherwise():
+    assert verifier.updater_actions("Already current; selection preserved.\n", "codex") == []
+    plan = {"clients": [{"client": "claude", "actions": []}, {"client": "codex", "actions": [{"entry": "x"}]}]}
+    output = json.dumps(plan, indent=2) + "\nRecovery backup: /tmp/backup\n"
+    assert verifier.updater_actions(output, "codex") == [{"entry": "x"}]
+
+
 def test_isolation_omits_authentication_and_live_home(monkeypatch, tmp_path):
     monkeypatch.setenv("OPENAI_API_KEY", "fixture-secret-never-forwarded")
     monkeypatch.setenv("CODEX_HOME", "/live/codex")

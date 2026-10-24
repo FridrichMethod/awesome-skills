@@ -50,6 +50,7 @@ def isolated_env(home: Path, temporary: Path) -> dict[str, str]:
         "XDG_DATA_HOME": str(home / ".local/share"),
         "TMPDIR": str(temporary),
         "SKILLS_STATE_DIR": str(home / ".local/share/awesome-skills"),
+        "SKILLS_DATA_DIR": str(home / ".local/share/awesome-skills"),
         "SKILLS_CACHE_DIR": str(home / ".cache/awesome-skills"),
         "SKILLS_PYTHON": sys.executable,
         "RUST_LOG": "warn",
@@ -60,6 +61,15 @@ def isolated_env(home: Path, temporary: Path) -> dict[str, str]:
         env[key] = "http://127.0.0.1:9"
     env.update(NO_PROXY="", no_proxy="")
     return env
+
+
+def updater_actions(output: str, client: str) -> list:
+    """A run with nothing to change prints one line; any other run prints its JSON plan first."""
+    text = output.strip()
+    if text == "Already current; selection preserved.":
+        return []
+    plan, _ = json.JSONDecoder().raw_decode(text)
+    return next(item for item in plan["clients"] if item["client"] == client)["actions"]
 
 
 def run(command: list[str], env: dict[str, str], cwd: Path, timeout: int = 45) -> str:
@@ -306,10 +316,9 @@ def verify(codex: str, source: Path, installer: Path, compare_budget: int | None
         state_before = json.loads(state_path.read_text())
         # Deliberately no installer flags: this is the updater's invocation.
         output = run(["bash", str(bundle / "install.sh")], env, work, timeout=120)
-        updater_plan, _ = json.JSONDecoder().raw_decode(output.lstrip())
+        codex_actions = updater_actions(output, "codex")
         state_after = json.loads(state_path.read_text())
         updated = measure(codex, env, work)
-        codex_plan = next(client for client in updater_plan["clients"] if client["client"] == "codex")
         selection_preserved = state_before["selection"] == state_after["selection"]
         agents_after = {name: (home / ".agents/skills" / name / "SKILL.md").read_bytes() for name in FIXTURES}
         protected_fixtures_preserved = (
@@ -325,7 +334,7 @@ def verify(codex: str, source: Path, installer: Path, compare_budget: int | None
                 raise VerificationError(f"{label}: library or external fixture descriptions are missing")
             if measurement["with_description"] != measurement["model_visible"]:
                 raise VerificationError(f"{label}: model-visible descriptions were omitted")
-        if not selection_preserved or codex_plan["actions"] or not protected_fixtures_preserved:
+        if not selection_preserved or codex_actions or not protected_fixtures_preserved:
             raise VerificationError("No-argument updater changed Codex selection or protected fixtures")
         summary = {
             "status": "passed",
@@ -335,7 +344,7 @@ def verify(codex: str, source: Path, installer: Path, compare_budget: int | None
             "after": after,
             "after_no_argument_update": updated,
             "no_argument_update_preserved_selection": selection_preserved,
-            "no_argument_update_codex_actions": len(codex_plan["actions"]),
+            "no_argument_update_codex_actions": len(codex_actions),
             "protected_symlink_and_agents_preserved": protected_fixtures_preserved,
         }
         if larger_budget is not None:

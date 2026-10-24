@@ -39,7 +39,7 @@ jobs:
       - name: Detect changes
         id: changes
         run: |
-          if [[ -z "$(git status --porcelain skills/ README.md library_sources.json)" ]]; then
+          if [[ -z "$(git status --porcelain skills/ README.md library_sources.json library_index.json)" ]]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "No skill, provenance, or count changes detected."
           else
@@ -61,9 +61,10 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # README headline counts are regenerated from the live tree by the
-          # sync script — stage it alongside skills/ so they stay in lockstep.
-          git add skills/ README.md library_sources.json
+          # README headline counts and the installer's library index are
+          # regenerated from the live tree by the sync script; stage them
+          # alongside skills/ so they stay in lockstep.
+          git add skills/ README.md library_sources.json library_index.json
           today=$(date -u +%Y-%m-%d)
           git commit -m "chore: weekly upstream skill sync (${today})
 
