@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import errno
 import json
 import os
 import shutil
+import socket
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -819,3 +822,60 @@ def test_unportable_local_entries_are_skipped_with_a_warning(sandbox, capsys):
     err = capsys.readouterr().err
     assert "skipping library entry colon" in err and "skipping library entry aux" in err
     assert sorted(os.listdir(home / ".claude/skills")) == ["alpha", "beta"]
+
+
+def without_flock(monkeypatch):
+    def unsupported(fd):
+        raise OSError(errno.ENOLCK, "No locks available")  # as on an NFS home without lockd
+
+    monkeypatch.setattr(installer, "kernel_lock", unsupported)
+
+
+def hold_directory_lock(home, **owner):
+    lock = state_dir(home) / ".lock.d"
+    lock.mkdir(parents=True)
+    (lock / "owner.json").write_text(json.dumps({"started": time.time(), **owner}))
+    return lock
+
+
+def test_without_flock_a_directory_lock_takes_its_place(sandbox, monkeypatch):
+    home, source = sandbox
+    without_flock(monkeypatch)
+    assert run(source) == 0
+    assert not (state_dir(home) / ".lock.d").exists()
+    lock = hold_directory_lock(home, host="other-login-node", pid=1)
+    with pytest.raises(installer.LockBusy, match="other-login-node pid 1"):
+        run(source)
+    owner = json.loads((lock / "owner.json").read_text())
+    owner["started"] = time.time() - installer.STALE_LOCK_SECONDS - 60
+    (lock / "owner.json").write_text(json.dumps(owner))
+    assert run(source) == 0, "a lock older than any run is stale"
+    assert not lock.exists()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="liveness of a pid is not probed on Windows; only age counts")
+def test_directory_lock_of_a_dead_process_on_this_host_is_taken_over(sandbox, monkeypatch):
+    home, source = sandbox
+    without_flock(monkeypatch)
+    finished = subprocess.Popen([sys.executable, "-c", "pass"])
+    finished.wait()
+    hold_directory_lock(home, host=socket.gethostname(), pid=finished.pid)
+    assert run(source) == 0
+    hold_directory_lock(home, host=socket.gethostname(), pid=os.getpid())
+    with pytest.raises(installer.LockBusy):
+        run(source)
+
+
+def test_a_state_directory_that_cannot_be_locked_fails_with_advice(sandbox, monkeypatch):
+    _, source = sandbox
+    without_flock(monkeypatch)
+    original = os.mkdir
+
+    def refuse(path, *args, **kwargs):
+        if str(path).endswith(".lock.d"):
+            raise PermissionError(errno.EACCES, "Permission denied")
+        return original(path, *args, **kwargs)
+
+    monkeypatch.setattr(installer.os, "mkdir", refuse)
+    with pytest.raises(installer.InstallError, match="set SKILLS_STATE_DIR and SKILLS_DATA_DIR"):
+        run(source)

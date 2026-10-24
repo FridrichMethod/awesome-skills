@@ -17,6 +17,7 @@ import os
 import re
 import shlex
 import shutil
+import socket
 import stat
 import subprocess
 import sys
@@ -58,6 +59,12 @@ SPARSE_INDEX_GIT = (2, 37, 0)
 LOCK_BUSY = 75
 RECOVERY_REFUSED = 3
 KEEP_BACKUPS = 5
+STALE_LOCK_SECONDS = 6 * 3600  # far above the longest run (a first install takes minutes)
+LOCK_UNSUPPORTED = {errno.ENOLCK, errno.ENOSYS, errno.EOPNOTSUPP, getattr(errno, "ENOTSUP", errno.EOPNOTSUPP)}
+# A stalled connection is abandoned instead of holding the lock forever: HTTP transfers
+# slower than 1000 B/s for 60 s abort (GIT_HTTP_LOW_SPEED_* override), and ssh, unless
+# configured by the user, never prompts and gives up on a silent peer.
+SSH_COMMAND = "ssh -o BatchMode=yes -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4"
 MASS_REMOVAL_SHARE, MASS_REMOVAL_MINIMUM = 0.5, 20
 WINDOWS = os.name == "nt"
 LINK_TAGS = {0xA000000C, 0xA0000003}  # IO_REPARSE_TAG_SYMLINK, IO_REPARSE_TAG_MOUNT_POINT (junction)
@@ -90,6 +97,8 @@ GIT_ENV_KEEP = frozenset(
         "GIT_SSL_KEY",
         "GIT_SSL_NO_VERIFY",
         "GIT_HTTP_USER_AGENT",
+        "GIT_HTTP_LOW_SPEED_LIMIT",
+        "GIT_HTTP_LOW_SPEED_TIME",
         "GIT_CONFIG_GLOBAL",
         "GIT_CONFIG_SYSTEM",
         "GIT_CONFIG_NOSYSTEM",
@@ -511,6 +520,10 @@ class Git:
         self.version = tuple(int(part or 0) for part in match.groups()) if match else (0, 0, 0)
         if self.version < minimum:
             raise InstallError(f"git {wanted} or newer is required; found {found or 'an unknown version'}")
+        if not {"GIT_SSH", "GIT_SSH_COMMAND"} & set(self.env) and not self.text(
+            None, "config", "--get", "core.sshCommand", check=False
+        ):
+            self.env["GIT_SSH_COMMAND"] = SSH_COMMAND
 
     def run(self, repo: Path | None, *args: str, stdin: str = "", check: bool = True) -> bytes:
         command = [self.exe]
@@ -1231,32 +1244,106 @@ def mass_removal(args, plans: list) -> str | None:
 # --- Locking, applying and restoring ---------------------------------------------------
 
 
+def kernel_lock(fd: int):
+    if fcntl is not None:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    else:
+        os.lseek(fd, 0, os.SEEK_SET)
+        msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
+
+
+def kernel_unlock(fd: int):
+    if fcntl is None:
+        os.lseek(fd, 0, os.SEEK_SET)
+        msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+
+
 @contextmanager
 def state_lock(directory: Path):
-    """An exclusive, non-blocking lock owned by this installer (flock, or msvcrt on Windows)."""
+    """An exclusive, non-blocking lock owned by this installer (flock, or msvcrt on Windows).
+    Where the filesystem has no working flock (some NFS or Lustre homes), an atomic mkdir
+    lock that records host and pid takes its place."""
     path = directory / ".lock"
     no_symlink_ancestors(path)
     directory.mkdir(parents=True, exist_ok=True)
     fd = os.open(path, os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0), 0o644)
     try:
         try:
-            if fcntl is not None:
-                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            else:
-                os.lseek(fd, 0, os.SEEK_SET)
-                msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
+            kernel_lock(fd)
         except OSError as exc:
             if isinstance(exc, BlockingIOError) or exc.errno in {errno.EACCES, errno.EAGAIN, errno.EDEADLK}:
                 raise LockBusy(f"Another awesome-skills installer is running (lock: {display(path)})") from exc
-            raise
+            if exc.errno not in LOCK_UNSUPPORTED:
+                raise
+            with directory_lock(directory, exc):
+                yield
+            return
         try:
             yield
         finally:
-            if fcntl is None:
-                os.lseek(fd, 0, os.SEEK_SET)
-                msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+            kernel_unlock(fd)
     finally:
         os.close(fd)
+
+
+def process_alive(pid) -> bool:
+    if WINDOWS or not isinstance(pid, int) or pid <= 0:
+        return True  # unknown: only age makes a lock stale there
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def stale_lock(lock: Path, owner: dict) -> bool:
+    try:
+        started = float(owner.get("started", os.lstat(lock).st_mtime))
+    except (OSError, TypeError, ValueError):
+        return False
+    if time.time() - started > STALE_LOCK_SECONDS:
+        return True
+    return owner.get("host") == socket.gethostname() and not process_alive(owner.get("pid"))
+
+
+@contextmanager
+def directory_lock(directory: Path, reason: OSError):
+    lock = directory / ".lock.d"
+    mine = {"host": socket.gethostname(), "pid": os.getpid(), "started": time.time(), "token": uuid.uuid4().hex}
+    for attempt in range(2):
+        try:
+            os.mkdir(lock)
+            break
+        except FileExistsError:
+            try:
+                owner = read_json(lock / "owner.json", {})
+            except (InstallError, ValueError, OSError):
+                owner = {}
+            if attempt or not stale_lock(lock, owner):
+                holder = f"{owner.get('host', '?')} pid {owner.get('pid', '?')}"
+                raise LockBusy(
+                    f"Another awesome-skills installer is running (lock: {display(lock)}, {holder})"
+                ) from None
+            aside = directory / f".lock.d.stale-{uuid.uuid4().hex}"
+            move(lock, aside)  # atomic: only one contender takes a stale lock over
+            rmtree(aside)
+        except OSError as exc:
+            raise InstallError(
+                f"Cannot lock {display(directory)}: flock is unsupported there ({reason.strerror}) and an "
+                f"atomic mkdir lock failed ({exc.strerror}); set SKILLS_STATE_DIR and SKILLS_DATA_DIR "
+                "to a directory on a local filesystem"
+            ) from exc
+    try:
+        atomic_json(lock / "owner.json", mine)
+        yield
+    finally:
+        try:
+            if read_json(lock / "owner.json", {}).get("token") == mine["token"]:
+                rmtree(lock)
+        except (InstallError, ValueError, OSError) as exc:
+            warn(f"could not remove the lock {display(lock)}: {exc}")
 
 
 def backup_dirs(state: Path) -> list[Path]:

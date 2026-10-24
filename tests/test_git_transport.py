@@ -6,9 +6,12 @@ import json
 import os
 import re
 import shutil
+import socket
 import stat
 import subprocess
 import sys
+import threading
+import time
 
 import pytest
 
@@ -481,3 +484,48 @@ def test_inherited_git_environment_never_reaches_another_repository(remote, monk
 def test_only_sha1_libraries_are_supported():
     with pytest.raises(installer.InstallError, match="SHA-1 is required"):
         installer.GitLibrary(None, ROOT, "a" * 64, worktree=False)
+
+
+@pytest.fixture
+def stalling_remote():
+    """An HTTP remote on 127.0.0.1 that accepts connections and never answers."""
+    server = socket.create_server(("127.0.0.1", 0))
+    held = []
+
+    def accept():
+        while True:
+            try:
+                held.append(server.accept()[0])
+            except OSError:
+                return
+
+    threading.Thread(target=accept, daemon=True).start()
+    yield f"http://127.0.0.1:{server.getsockname()[1]}/library.git"
+    server.close()
+    for connection in held:
+        connection.close()
+
+
+def test_a_stalled_remote_fails_instead_of_holding_the_lock(remote, monkeypatch, stalling_remote):
+    home, upstream = remote
+    monkeypatch.setenv("GIT_HTTP_LOW_SPEED_TIME", "2")  # instead of the 60 s default
+    run()
+    monkeypatch.setenv("SKILLS_REPOSITORY_URL", stalling_remote)
+    for fresh in (False, True):
+        if fresh:
+            shutil.rmtree(clone(home))
+        started = time.monotonic()
+        with pytest.raises(installer.GitError, match="too slow"):
+            run()
+        assert time.monotonic() - started < 60
+        assert not list(data_dir(home).glob(f"{installer.CLONE}.broken-*"))
+        assert not list(data_dir(home).glob(f".{installer.CLONE}.tmp-*"))
+    monkeypatch.setenv("SKILLS_REPOSITORY_URL", upstream.url)
+    assert run() == 0, "the lock was released"
+
+
+def test_ssh_never_prompts_or_waits_forever_unless_configured(remote, monkeypatch):
+    assert installer.Git().env["GIT_SSH_COMMAND"] == installer.SSH_COMMAND
+    assert "BatchMode=yes" in installer.SSH_COMMAND and "ConnectTimeout=" in installer.SSH_COMMAND
+    monkeypatch.setenv("GIT_SSH_COMMAND", "ssh -i fixture-key")
+    assert installer.Git().env["GIT_SSH_COMMAND"] == "ssh -i fixture-key"
