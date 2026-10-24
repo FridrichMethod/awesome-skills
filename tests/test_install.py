@@ -6,7 +6,6 @@ import errno
 import json
 import os
 import shutil
-import socket
 import subprocess
 import sys
 import time
@@ -730,7 +729,7 @@ def test_interrupted_update_with_a_later_user_edit_needs_a_person(sandbox):
     alpha = home / ".claude/skills/alpha"
     (alpha / "helper.txt").write_text("edited after the crash\n")
     before = installer.fingerprint(home / ".claude")
-    with pytest.raises(installer.RecoveryRefused, match="could not be undone automatically.*--restore"):
+    with pytest.raises(installer.PersonNeeded, match="could not be undone automatically.*--restore"):
         run(source)
     assert installer.fingerprint(home / ".claude") == before
     result = subprocess.run(
@@ -738,7 +737,7 @@ def test_interrupted_update_with_a_later_user_edit_needs_a_person(sandbox):
         capture_output=True,
         text=True,
     )
-    assert result.returncode == installer.RECOVERY_REFUSED, result.stderr
+    assert result.returncode == installer.NEEDS_PERSON, result.stderr
 
 
 def test_exception_mid_apply_rolls_back_at_once(sandbox, monkeypatch):
@@ -796,8 +795,14 @@ def test_update_that_would_remove_most_managed_skills_is_refused(sandbox):
         shutil.rmtree(source / f"extra-{i:02d}")
     claude = home / ".claude/skills"
     before = installer.fingerprint(claude)
-    with pytest.raises(installer.InstallError, match="Refusing to remove 23 of 25 managed claude skills"):
+    with pytest.raises(installer.PersonNeeded, match="Refusing to remove 23 of 25 managed claude skills.*--allow"):
         run(source)
+    result = subprocess.run(
+        [sys.executable, "-B", str(ROOT / "scripts/install_skills.py"), "--source", str(source)],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == installer.NEEDS_PERSON, result.stderr
     assert installer.fingerprint(claude) == before
     assert run(source, "--allow-mass-removal") == 0
     assert sorted(os.listdir(claude)) == ["alpha", "beta"]
@@ -831,51 +836,110 @@ def without_flock(monkeypatch):
     monkeypatch.setattr(installer, "kernel_lock", unsupported)
 
 
-def hold_directory_lock(home, **owner):
-    lock = state_dir(home) / ".lock.d"
-    lock.mkdir(parents=True)
-    (lock / "owner.json").write_text(json.dumps({"started": time.time(), **owner}))
+def lock_file(home):
+    return installer.native(state_dir(home)) / ".lock.excl"
+
+
+def hold_lock_file(home, started):
+    lock = lock_file(home)
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    lock.write_bytes(json.dumps({"token": "other-run", "started": started}).encode())
     return lock
 
 
-def test_without_flock_a_directory_lock_takes_its_place(sandbox, monkeypatch):
+def test_without_flock_an_exclusive_lock_file_takes_its_place(sandbox, monkeypatch):
     home, source = sandbox
     without_flock(monkeypatch)
     assert run(source) == 0
-    assert not (state_dir(home) / ".lock.d").exists()
-    lock = hold_directory_lock(home, host="other-login-node", pid=1)
-    with pytest.raises(installer.LockBusy, match="other-login-node pid 1"):
+    assert not lock_file(home).exists()
+    hold_lock_file(home, time.time())
+    with pytest.raises(installer.LockBusy, match="Another awesome-skills installer is running"):
         run(source)
-    owner = json.loads((lock / "owner.json").read_text())
-    owner["started"] = time.time() - installer.STALE_LOCK_SECONDS - 60
-    (lock / "owner.json").write_text(json.dumps(owner))
+    hold_lock_file(home, time.time() - installer.STALE_LOCK_SECONDS - 60)
     assert run(source) == 0, "a lock older than any run is stale"
-    assert not lock.exists()
+    assert not lock_file(home).exists() and not list(lock_file(home).parent.glob(".lock.excl.stale-*"))
 
 
-@pytest.mark.skipif(os.name == "nt", reason="liveness of a pid is not probed on Windows; only age counts")
-def test_directory_lock_of_a_dead_process_on_this_host_is_taken_over(sandbox, monkeypatch):
+def test_an_unreadable_old_lock_file_is_stale_by_its_age(sandbox, monkeypatch):
     home, source = sandbox
     without_flock(monkeypatch)
-    finished = subprocess.Popen([sys.executable, "-c", "pass"])
-    finished.wait()
-    hold_directory_lock(home, host=socket.gethostname(), pid=finished.pid)
+    lock = hold_lock_file(home, 0)
+    lock.write_bytes(b"{partial")  # its run died while writing it
+    old = time.time() - installer.STALE_LOCK_SECONDS - 60
+    os.utime(lock, (old, old))
     assert run(source) == 0
-    hold_directory_lock(home, host=socket.gethostname(), pid=os.getpid())
+    lock.write_bytes(b"{partial")
+    with pytest.raises(installer.LockBusy):
+        run(source)  # the same content written just now is a live lock
+
+
+def test_takeover_never_keeps_a_lock_another_run_just_took(sandbox, monkeypatch):
+    home, source = sandbox
+    without_flock(monkeypatch)
+    lock = hold_lock_file(home, time.time() - installer.STALE_LOCK_SECONDS - 60)
+    fresh = json.dumps({"token": "contender", "started": time.time()}).encode()
+    original = os.rename
+
+    def contender_first(src, dst):
+        if Path(src) == lock:  # between our read and our rename, a contender took the lock over
+            lock.unlink()
+            lock.write_bytes(fresh)
+        return original(src, dst)
+
+    monkeypatch.setattr(installer.os, "rename", contender_first)
     with pytest.raises(installer.LockBusy):
         run(source)
+    assert lock.read_bytes() == fresh, "the contender's lock is put back"
+    assert not list(lock.parent.glob(".lock.excl.stale-*"))
+    assert not (home / ".claude").exists()
+
+
+def test_a_lock_that_vanishes_during_takeover_is_retried(sandbox, monkeypatch):
+    home, source = sandbox
+    without_flock(monkeypatch)
+    lock = hold_lock_file(home, time.time() - installer.STALE_LOCK_SECONDS - 60)
+    original = os.rename
+
+    def released(src, dst):
+        if Path(src) == lock:
+            lock.unlink()  # its owner (or another contender) removed it first
+        return original(src, dst)
+
+    monkeypatch.setattr(installer.os, "rename", released)
+    assert run(source) == 0
+    assert not lock.exists()
 
 
 def test_a_state_directory_that_cannot_be_locked_fails_with_advice(sandbox, monkeypatch):
     _, source = sandbox
     without_flock(monkeypatch)
-    original = os.mkdir
+    original = os.open
 
-    def refuse(path, *args, **kwargs):
-        if str(path).endswith(".lock.d"):
+    def refuse(path, flags, *args, **kwargs):
+        if str(path).endswith(".lock.excl"):
             raise PermissionError(errno.EACCES, "Permission denied")
-        return original(path, *args, **kwargs)
+        return original(path, flags, *args, **kwargs)
 
-    monkeypatch.setattr(installer.os, "mkdir", refuse)
+    monkeypatch.setattr(installer.os, "open", refuse)
     with pytest.raises(installer.InstallError, match="set SKILLS_STATE_DIR and SKILLS_DATA_DIR"):
         run(source)
+
+
+def test_backups_are_ordered_by_their_clock_independent_stamp(sandbox):
+    home, source = sandbox
+    run(source)
+    root = installer.native(state_dir(home)) / "backups"
+    journal = (installer.backup_dirs(installer.native(state_dir(home)))[-1] / "restore.json").read_text()
+    # Local wall-clock names that run backwards across a daylight-saving change:
+    later = root / "20261101T013000-02000000000000000002-bbbbbbbb"
+    earlier = root / "20261101T015959-02000000000000000001-aaaaaaaa"
+    for path, status in ((earlier, "complete"), (later, "applying")):
+        path.mkdir()
+        (path / "restore.json").write_text(journal.replace('"status": "complete"', f'"status": "{status}"'))
+    ordered = installer.backup_dirs(installer.native(state_dir(home)))
+    assert ordered[-2:] == [installer.native(earlier), installer.native(later)]
+    assert installer.interrupted_transaction(installer.native(state_dir(home))) == installer.native(later)
+    (later / "restore.json").write_text(journal)
+    (earlier / "restore.json").write_text(journal.replace('"status": "complete"', '"status": "applying"'))
+    found = installer.interrupted_transaction(installer.native(state_dir(home)))
+    assert found == installer.native(earlier), "every kept journal is checked, not only the newest"

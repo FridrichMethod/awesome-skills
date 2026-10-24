@@ -436,26 +436,6 @@ def test_a_broken_clone_is_moved_aside_once_and_cloned_again(remote, capsys):
     assert len(list(data_dir(home).glob(f"{installer.CLONE}.broken-*"))) == 1
 
 
-def test_a_failed_blob_download_heals_the_clone_and_retries(remote, monkeypatch, capsys):
-    home, upstream = remote
-    run()
-    upstream.skill("alpha", files={"helper.txt": "alpha revised\n"})
-    upstream.commit("revise alpha")
-    original, calls = installer.GitLibrary._sparse, []
-
-    def corrupt_once(self, directories):
-        calls.append(directories)
-        if len(calls) == 1:
-            raise installer.GitError("git sparse-checkout failed: simulated corrupt pack")
-        original(self, directories)
-
-    monkeypatch.setattr(installer.GitLibrary, "_sparse", corrupt_once)
-    assert run() == 0
-    assert "simulated corrupt pack" in capsys.readouterr().err
-    assert (home / ".claude/skills/alpha/helper.txt").read_bytes() == b"alpha revised\n"
-    assert len(list(data_dir(home).glob(f"{installer.CLONE}.broken-*"))) == 1
-
-
 def test_inherited_git_environment_never_reaches_another_repository(remote, monkeypatch, tmp_path):
     home, upstream = remote
     other = tmp_path / "other"
@@ -529,3 +509,78 @@ def test_ssh_never_prompts_or_waits_forever_unless_configured(remote, monkeypatc
     assert "BatchMode=yes" in installer.SSH_COMMAND and "ConnectTimeout=" in installer.SSH_COMMAND
     monkeypatch.setenv("GIT_SSH_COMMAND", "ssh -i fixture-key")
     assert installer.Git().env["GIT_SSH_COMMAND"] == "ssh -i fixture-key"
+
+
+def test_a_failed_blob_download_is_reported_not_healed(remote, monkeypatch):
+    home, upstream = remote
+    run()
+    installed = installer.fingerprint(home / ".claude")
+    upstream.skill("alpha", files={"helper.txt": "alpha revised\n"})
+    upstream.commit("revise alpha")
+    original = installer.GitLibrary._sparse
+
+    def drop(self, directories):
+        if len(directories) > 1:
+            raise installer.GitError("git sparse-checkout failed: fatal: early EOF", "fatal: early EOF")
+        original(self, directories)
+
+    monkeypatch.setattr(installer.GitLibrary, "_sparse", drop)
+    with pytest.raises(installer.GitError, match="early EOF"):
+        run()
+    assert installer.fingerprint(home / ".claude") == installed
+    assert not list(data_dir(home).glob(f"{installer.CLONE}.broken-*"))
+    monkeypatch.setattr(installer.GitLibrary, "_sparse", original)
+    assert run() == 0
+    assert (home / ".claude/skills/alpha/helper.txt").read_bytes() == b"alpha revised\n"
+
+
+def fail_once(monkeypatch, command: str, stderr: str) -> list:
+    original, calls = installer.Git.run, []
+
+    def run_git(self, repo, *args, **kwargs):
+        if args and args[0] == command:
+            calls.append(args)
+            if len(calls) == 1:
+                raise installer.GitError(f"git {command} failed: {stderr}", stderr)
+        return original(self, repo, *args, **kwargs)
+
+    monkeypatch.setattr(installer.Git, "run", run_git)
+    return calls
+
+
+def test_a_dropped_transfer_is_retried_once(remote, monkeypatch, capsys):
+    home, upstream = remote
+    run()
+    upstream.skill("beta", files={"helper.txt": "beta revised\n"})
+    upstream.commit("revise beta")
+    calls = fail_once(monkeypatch, "fetch", "fatal: the remote end hung up unexpectedly")
+    assert run() == 0
+    assert len(calls) == 2 and "retrying once" in capsys.readouterr().err
+    assert (home / ".claude/skills/beta/helper.txt").read_bytes() == b"beta revised\n"
+    assert not list(data_dir(home).glob(f"{installer.CLONE}.broken-*"))
+
+
+def test_a_full_disk_is_not_mistaken_for_a_broken_clone(remote, monkeypatch):
+    home, upstream = remote
+    run()
+    upstream.skill("beta", files={"helper.txt": "beta revised\n"})
+    upstream.commit("revise beta")
+    fail_once(monkeypatch, "checkout", "error: unable to write file README.md: No space left on device")
+    with pytest.raises(installer.GitError, match="No space left on device"):
+        run()
+    assert is_library(clone(home)) and not list(data_dir(home).glob(f"{installer.CLONE}.broken-*"))
+
+
+def is_library(path):
+    return installer.is_library_clone(installer.native(path))
+
+
+def test_corruption_signatures():
+    for stderr in (
+        "fatal: not a git repository: '/x/.git'",
+        "error: unable to read sha1 file of a",
+        "fatal: bad object HEAD",
+    ):
+        assert installer.corrupted(installer.GitError("git x failed", stderr))
+    for stderr in ("fatal: early EOF", "Operation too slow.", "No space left on device", "error: invalid path 'a:b'"):
+        assert not installer.corrupted(installer.GitError("git x failed", stderr))

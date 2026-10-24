@@ -17,7 +17,6 @@ import os
 import re
 import shlex
 import shutil
-import socket
 import stat
 import subprocess
 import sys
@@ -57,9 +56,9 @@ MIN_GIT = (2, 29, 0)
 # never checks (and refuses) a Windows-invalid path deep inside a skill nobody selected.
 SPARSE_INDEX_GIT = (2, 37, 0)
 LOCK_BUSY = 75
-RECOVERY_REFUSED = 3
+NEEDS_PERSON = 3  # an interrupted update or a mass removal needs a person's decision
 KEEP_BACKUPS = 5
-STALE_LOCK_SECONDS = 6 * 3600  # far above the longest run (a first install takes minutes)
+STALE_LOCK_SECONDS = 6 * 3600  # a fallback lock this old is stale: far above the longest run
 LOCK_UNSUPPORTED = {errno.ENOLCK, errno.ENOSYS, errno.EOPNOTSUPP, getattr(errno, "ENOTSUP", errno.EOPNOTSUPP)}
 # A stalled connection is abandoned instead of holding the lock forever: HTTP transfers
 # slower than 1000 B/s for 60 s abort (GIT_HTTP_LOW_SPEED_* override), and ssh, unless
@@ -83,31 +82,38 @@ GIT_CONFIG = (
     "http.lowSpeedTime=60",
 )
 # Inherited GIT_* variables (a hook's GIT_DIR, GIT_INDEX_FILE, injected GIT_CONFIG_COUNT
-# and so on) are dropped; only transport, TLS, tracing and config-file selection pass.
+# and so on) are dropped; only ssh, proxy, TLS, config-file selection and the low-speed
+# overrides pass.
 GIT_ENV_KEEP = frozenset(
     {
         "GIT_SSH",
         "GIT_SSH_COMMAND",
         "GIT_SSH_VARIANT",
-        "GIT_ASKPASS",
         "GIT_PROXY_COMMAND",
         "GIT_SSL_CAINFO",
         "GIT_SSL_CAPATH",
         "GIT_SSL_CERT",
         "GIT_SSL_KEY",
-        "GIT_SSL_NO_VERIFY",
-        "GIT_HTTP_USER_AGENT",
-        "GIT_HTTP_LOW_SPEED_LIMIT",
-        "GIT_HTTP_LOW_SPEED_TIME",
         "GIT_CONFIG_GLOBAL",
         "GIT_CONFIG_SYSTEM",
         "GIT_CONFIG_NOSYSTEM",
-        "GIT_CURL_VERBOSE",
-        "GIT_TRACE",
-        "GIT_TRACE_CURL",
-        "GIT_TRACE_PACKET",
-        "GIT_TRACE_PERFORMANCE",
+        "GIT_HTTP_LOW_SPEED_LIMIT",
+        "GIT_HTTP_LOW_SPEED_TIME",
     }
+)
+# Only these mean the clone itself is damaged; anything else (a slow or dropped link, a
+# full disk) is retried or reported, never answered by deleting and re-cloning.
+CORRUPTION = (
+    "not a git repository",
+    "bad object",
+    "invalid object",
+    "unable to read",
+    "corrupt",
+    "could not parse",
+    "needed a single revision",
+    "bad revision",
+    "unknown revision",
+    "bad index",
 )
 WINDOWS_INVALID = re.compile(r'[<>:"|?*\x00-\x1f\\]|[. ]$|^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$', re.IGNORECASE)
 GIT_METADATA_FILES = {".gitattributes", ".gitmodules"}
@@ -128,9 +134,18 @@ class LockBusy(InstallError):
 class GitError(InstallError):
     """A git command failed."""
 
+    def __init__(self, message: str, stderr: str = ""):
+        super().__init__(message)
+        self.stderr = stderr
 
-class RecoveryRefused(InstallError):
-    """An interrupted update cannot be undone without a person."""
+
+class PersonNeeded(InstallError):
+    """Exit 3: an interrupted update cannot be undone, or an update would remove most skills."""
+
+
+def corrupted(error: GitError) -> bool:
+    text = (getattr(error, "stderr", "") or str(error)).lower()
+    return any(signature in text for signature in CORRUPTION)
 
 
 def warn(message: str):
@@ -542,11 +557,15 @@ class Git:
         if check and result.returncode:
             lines = [line for line in result.stderr.decode("utf-8", "replace").splitlines() if line.strip()]
             detail = lines[-1].strip() if lines else f"exit status {result.returncode}"
-            raise GitError(f"git {args[0]} failed: {detail}")
+            raise GitError(f"git {args[0]} failed: {detail}", "\n".join(lines))
         return result.stdout
 
     def text(self, repo: Path | None, *args: str, check: bool = True) -> str:
         return self.run(repo, *args, check=check).decode("utf-8", "replace").strip()
+
+
+def valid_index_entry(info) -> bool:
+    return isinstance(info, dict) and isinstance(info.get("name"), str) and bool(info["name"].strip())
 
 
 def is_library_clone(path: Path) -> bool:
@@ -566,9 +585,22 @@ class Library:
         self.skipped: dict = {}  # source ID -> why it cannot be installed here
         self.revision = "unversioned"
 
-    def skip(self, skill_id: str, reason: str):
-        self.skipped[skill_id] = reason
-        warn(f"skipping library entry {skill_id}: {reason}")
+    def screen(self, ids: list[str], kinds: dict, indexed: set | None = None, links: bool = False) -> list[str]:
+        """The IDs installable on every platform; the others are skipped with a warning."""
+        colliding = case_collisions(ids, indexed or frozenset())
+        accepted = []
+        for skill_id in ids:
+            problems = [p for p in skill_problems(skill_id, kinds[skill_id]) if links or not p.endswith("link")]
+            if skill_id in colliding:
+                problems.insert(0, colliding[skill_id])
+            if indexed is not None and skill_id not in indexed:
+                problems.insert(0, f"no valid entry in {INDEX}")
+            if problems:
+                self.skipped[skill_id] = "; ".join(problems[:3])
+                warn(f"skipping library entry {skill_id}: {self.skipped[skill_id]}")
+            else:
+                accepted.append(skill_id)
+        return accepted
 
     def listing(self, skill_id: str) -> dict:
         raise NotImplementedError
@@ -613,20 +645,15 @@ class DirLibrary(Library):
             )
             if result.returncode == 0:
                 self.revision = result.stdout.strip()
-        self._listings, self._fingerprints = {}, {}
+        self._fingerprints = {}
         ids = skill_ids(source)
-        colliding = case_collisions(ids)
-        for skill_id in ids:
-            listing = local_listing(source / skill_id)
-            kinds = {rel: "link" if mode == "120000" else "file" for rel, (mode, _) in listing.items()}
-            problems = [p for p in skill_problems(skill_id, kinds) if not p.endswith("symbolic link")]
-            if skill_id in colliding:
-                problems.insert(0, colliding[skill_id])
-            if problems:
-                self.skip(skill_id, "; ".join(problems[:3]))
-                continue
+        self._listings = {skill_id: local_listing(source / skill_id) for skill_id in ids}
+        kinds = {
+            i: {rel: "link" if m == "120000" else "file" for rel, (m, _) in self._listings[i].items()} for i in ids
+        }
+        for skill_id in self.screen(ids, kinds, links=True):  # a local tree may link
+            listing = self._listings[skill_id]
             fm = metadata((source / skill_id / "SKILL.md").read_bytes(), skill_id)
-            self._listings[skill_id] = listing
             self.skills[skill_id] = {
                 "name": fm["name"],
                 "description": fm.get("description", ""),
@@ -660,11 +687,11 @@ class GitLibrary(Library):
 
     kind = "git"
 
-    def __init__(self, git: Git, repo: Path, commit: str, worktree: bool, healer=None):
+    def __init__(self, git: Git, repo: Path, commit: str, worktree: bool):
         super().__init__()
         if not re.fullmatch(r"[0-9a-f]{40}", commit):
             raise InstallError(f"Unsupported library object format at {display(repo)} (SHA-1 is required)")
-        self.git, self.repo, self.worktree, self.revision, self.healer = git, repo, worktree, commit, healer
+        self.git, self.repo, self.worktree, self.revision = git, repo, worktree, commit
         self._prepared = False
         trees, files, kinds = {}, defaultdict(dict), defaultdict(dict)
         for record in git.run(repo, "ls-tree", "-r", "-t", "-z", commit, "--", "skills").split(b"\0"):
@@ -690,18 +717,9 @@ class GitLibrary(Library):
             raise InstallError(f"Unsupported library index {INDEX} at {commit[:12]}")
         provenance = self._json(PROVENANCE, required=False)
         ids = sorted(i for i in trees if "SKILL.md" in files.get(i, {}))
-        indexed = {i for i in ids if isinstance(index["skills"].get(i), dict)}
-        colliding = case_collisions(ids, indexed)
-        for skill_id in ids:
-            info = index["skills"].get(skill_id)
-            problems = skill_problems(skill_id, kinds[skill_id])
-            if skill_id in colliding:
-                problems.insert(0, colliding[skill_id])
-            if not isinstance(info, dict) or not isinstance(info.get("name"), str) or not info["name"].strip():
-                problems.insert(0, f"no valid entry in {INDEX}")
-            if problems:
-                self.skip(skill_id, "; ".join(problems[:3]))
-                continue
+        indexed = {i for i in ids if valid_index_entry(index["skills"].get(i))}
+        for skill_id in self.screen(ids, kinds, indexed):
+            info = index["skills"][skill_id]
             self.skills[skill_id] = {
                 "name": info["name"],
                 "description": info.get("description", ""),
@@ -729,14 +747,7 @@ class GitLibrary(Library):
         if not self.worktree:
             raise InstallError("Internal error: preparing content from a read-only library")
         self._prepared = True
-        directories = ["scripts", *(f"skills/{skill_id}" for skill_id in sorted(set(ids)))]
-        try:
-            self._sparse(directories)
-        except GitError as exc:
-            if self.healer is None or not self.healer(exc):
-                raise
-            self.git.run(self.repo, "checkout", "--quiet", "--force", "--detach", self.revision)
-            self._sparse(directories)
+        self._sparse(["scripts", *(f"skills/{skill_id}" for skill_id in sorted(set(ids)))])
 
     def release(self):
         if self._prepared:
@@ -770,36 +781,46 @@ class GitLibrary(Library):
         return {"kind": self.kind, "path": display(self.repo), "revision": self.revision}
 
 
+def retried(action):
+    """A failed transfer that is not corruption (a dropped or stalled link) is retried once."""
+    try:
+        return action()
+    except GitError as exc:
+        if corrupted(exc):
+            raise
+        warn(f"{exc}; retrying once")
+        time.sleep(1)
+        return action()
+
+
 def create_clone(git: Git, data: Path, url: str, branch: str):
     """Clone into a temporary sibling, check out only scripts/ and root files, then rename into place."""
     data.mkdir(parents=True, exist_ok=True)
     temp, repo = data / f".{CLONE}.tmp-{uuid.uuid4().hex}", data / CLONE
+
+    def clone():
+        if os.path.lexists(temp):
+            rmtree(temp)
+        args = ["--filter=blob:none", "--no-checkout", "--single-branch", "--branch", branch, "--", url]
+        git.run(None, "clone", "--quiet", *args, display(temp))
+
     try:
-        git.run(
-            None,
-            "clone",
-            "--quiet",
-            "--filter=blob:none",
-            "--no-checkout",
-            "--single-branch",
-            "--branch",
-            branch,
-            "--",
-            url,
-            display(temp),
-        )
+        retried(clone)
         (temp / ".git" / MARKER).write_bytes(b"awesome-skills library clone, managed by install_skills.py\n")
         index = ["--sparse-index"] if git.version >= SPARSE_INDEX_GIT else []
         git.run(temp, "sparse-checkout", "init", "--cone", *index)
         git.run(temp, "sparse-checkout", "set", "--stdin", stdin="scripts\n")
-        commit = git.text(temp, "rev-parse", "--verify", "--quiet", f"refs/remotes/origin/{branch}^{{commit}}")
-        git.run(temp, "checkout", "--quiet", "--force", "--detach", commit)
+        tip = git.text(temp, "rev-parse", "--verify", f"refs/remotes/origin/{branch}^{{commit}}")
+        git.run(temp, "checkout", "--quiet", "--force", "--detach", tip)
         git.run(temp, "update-ref", "-d", f"refs/heads/{branch}", check=False)
         move(temp, repo)
     except BaseException:
         if os.path.lexists(temp):
             rmtree(temp)
         raise
+    for older in sorted(data.glob(f"{CLONE}.broken-*"))[:-1]:  # only now that a clone works again
+        if plain_dir(older):
+            rmtree(older)
 
 
 def sweep_clone_leftovers(data: Path):
@@ -817,20 +838,17 @@ def sweep_clone_leftovers(data: Path):
             warn(f"removed {len(stale)} stale git lock file(s) in {display(git_dir)}")
 
 
-def heal_clone(git: Git, data: Path, url: str, branch: str, error: Exception) -> bool:
-    """A broken clone (not a network failure) is moved aside, keeping one, and cloned again."""
-    if "invalid path" in str(error):
-        return False  # a path this platform cannot check out: a fresh clone fails the same way
+def heal_clone(git: Git, data: Path, url: str, branch: str, error: GitError) -> bool:
+    """A corrupted clone is moved aside and cloned again once, if the remote is reachable."""
+    if not corrupted(error):
+        return False
     try:
         remote_tip(git, url, branch)
     except GitError:
-        return False  # the remote is unreachable: a fresh clone would not help
-    for old in data.glob(f"{CLONE}.broken-*"):
-        if plain_dir(old):
-            rmtree(old)
-    broken = data / f"{CLONE}.broken-{time.strftime('%Y%m%dT%H%M%S')}"
+        return False  # a fresh clone would not get through either
+    broken = data / f"{CLONE}.broken-{time.time_ns():020d}"
     move(data / CLONE, broken)
-    warn(f"library clone failed ({error}); moved it to {display(broken)} and cloning again")
+    warn(f"library clone is damaged ({error}); moved it to {display(broken)} and cloning again")
     create_clone(git, data, url, branch)
     return True
 
@@ -840,22 +858,20 @@ def refresh_clone(git: Git, data: Path, url: str, branch: str, checkout: bool) -
     if git.text(repo, "config", "--get", "remote.origin.url", check=False) != url:
         git.run(repo, "remote", "set-url", "origin", url)
     ref = f"refs/remotes/origin/{branch}"
-    git.run(
-        repo,
-        "fetch",
+    fetch = [
         "--quiet",
         "--no-tags",
         "--no-write-fetch-head",
         "--no-auto-maintenance",
         "origin",
         f"+refs/heads/{branch}:{ref}",
-    )
-    commit = git.text(repo, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}")
-    moved = git.text(repo, "rev-parse", "--verify", "--quiet", "HEAD", check=False) != commit
+    ]
+    retried(lambda: git.run(repo, "fetch", *fetch))
+    tip = git.text(repo, "rev-parse", "--verify", f"{ref}^{{commit}}")
+    moved = git.text(repo, "rev-parse", "--verify", "--quiet", "HEAD", check=False) != tip
     if moved and checkout:
-        git.run(repo, "checkout", "--quiet", "--force", "--detach", commit)
-    healer = (lambda exc: heal_clone(git, data, url, branch, exc)) if checkout else None
-    return GitLibrary(git, repo, commit, worktree=checkout, healer=healer), moved
+        git.run(repo, "checkout", "--quiet", "--force", "--detach", tip)
+    return GitLibrary(git, repo, tip, worktree=checkout), moved
 
 
 def update_clone(git: Git, data: Path, url: str, branch: str) -> tuple[GitLibrary, bool]:
@@ -1275,7 +1291,7 @@ def state_lock(directory: Path):
                 raise LockBusy(f"Another awesome-skills installer is running (lock: {display(path)})") from exc
             if exc.errno not in LOCK_UNSUPPORTED:
                 raise
-            with directory_lock(directory, exc):
+            with exclusive_file_lock(directory, exc):
                 yield
             return
         try:
@@ -1286,89 +1302,98 @@ def state_lock(directory: Path):
         os.close(fd)
 
 
-def process_alive(pid) -> bool:
-    if WINDOWS or not isinstance(pid, int) or pid <= 0:
-        return True  # unknown: only age makes a lock stale there
+def lock_age(content: bytes, path: Path) -> float:
     try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
-    return True
+        started = float(json.loads(content.decode("utf-8"))["started"])
+    except (ValueError, KeyError, TypeError, UnicodeError):
+        started = os.lstat(path).st_mtime  # written partly by a run that died at once
+    return time.time() - started
 
 
-def stale_lock(lock: Path, owner: dict) -> bool:
-    try:
-        started = float(owner.get("started", os.lstat(lock).st_mtime))
-    except (OSError, TypeError, ValueError):
-        return False
-    if time.time() - started > STALE_LOCK_SECONDS:
-        return True
-    return owner.get("host") == socket.gethostname() and not process_alive(owner.get("pid"))
+def busy(lock: Path) -> LockBusy:
+    return LockBusy(f"Another awesome-skills installer is running (lock: {display(lock)})")
 
 
 @contextmanager
-def directory_lock(directory: Path, reason: OSError):
-    lock = directory / ".lock.d"
-    mine = {"host": socket.gethostname(), "pid": os.getpid(), "started": time.time(), "token": uuid.uuid4().hex}
-    for attempt in range(2):
+def exclusive_file_lock(directory: Path, reason: OSError):
+    """Where flock is unsupported (some NFS or Lustre homes): an O_EXCL file holding a random
+    token and start time. It is stale only by age, and is taken over by an atomic rename to a
+    unique name, after which the moved file must be exactly the one judged stale."""
+    lock = directory / ".lock.excl"
+    mine = json.dumps({"token": uuid.uuid4().hex, "started": time.time()}).encode()
+    for _ in range(3):
         try:
-            os.mkdir(lock)
-            break
+            fd = os.open(lock, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0), 0o644)
         except FileExistsError:
             try:
-                owner = read_json(lock / "owner.json", {})
-            except (InstallError, ValueError, OSError):
-                owner = {}
-            if attempt or not stale_lock(lock, owner):
-                holder = f"{owner.get('host', '?')} pid {owner.get('pid', '?')}"
-                raise LockBusy(
-                    f"Another awesome-skills installer is running (lock: {display(lock)}, {holder})"
-                ) from None
-            aside = directory / f".lock.d.stale-{uuid.uuid4().hex}"
-            move(lock, aside)  # atomic: only one contender takes a stale lock over
-            rmtree(aside)
+                judged = lock.read_bytes()
+                if lock_age(judged, lock) <= STALE_LOCK_SECONDS:
+                    raise busy(lock) from None
+                aside = directory / f".lock.excl.stale-{uuid.uuid4().hex}"
+                os.rename(lock, aside)
+            except FileNotFoundError:
+                continue  # released or taken over meanwhile: look again
+            if aside.read_bytes() != judged:
+                try:  # a contender's fresh lock was moved: put it back, it is theirs
+                    os.link(aside, lock)
+                except OSError:
+                    pass
+                aside.unlink(missing_ok=True)
+                raise busy(lock) from None
+            aside.unlink(missing_ok=True)
+            continue
         except OSError as exc:
             raise InstallError(
                 f"Cannot lock {display(directory)}: flock is unsupported there ({reason.strerror}) and an "
-                f"atomic mkdir lock failed ({exc.strerror}); set SKILLS_STATE_DIR and SKILLS_DATA_DIR "
+                f"exclusive lock file failed ({exc.strerror}); set SKILLS_STATE_DIR and SKILLS_DATA_DIR "
                 "to a directory on a local filesystem"
             ) from exc
+        try:
+            os.write(fd, mine)
+        finally:
+            os.close(fd)
+        break
+    else:
+        raise busy(lock)
     try:
-        atomic_json(lock / "owner.json", mine)
         yield
     finally:
         try:
-            if read_json(lock / "owner.json", {}).get("token") == mine["token"]:
-                rmtree(lock)
-        except (InstallError, ValueError, OSError) as exc:
+            if lock.read_bytes() == mine:
+                lock.unlink()
+        except OSError as exc:
             warn(f"could not remove the lock {display(lock)}: {exc}")
+
+
+def backup_order(path: Path) -> int:
+    """Names carry time.time_ns(); time zones and daylight saving cannot reorder them."""
+    match = re.search(r"-(\d{20})-", path.name)
+    return int(match.group(1)) if match else os.lstat(path).st_mtime_ns
 
 
 def backup_dirs(state: Path) -> list[Path]:
     backups = state / "backups"
     no_symlink_ancestors(backups)
-    return sorted(p for p in backups.iterdir() if plain_dir(p)) if plain_dir(backups) else []
+    return sorted((p for p in backups.iterdir() if plain_dir(p)), key=backup_order) if plain_dir(backups) else []
 
 
-def interrupted_transaction(state: Path) -> Path | None:
-    """Only the newest transaction can be unfinished: every run recovers it before starting another."""
-    newest = backup_dirs(state)[-1:]
-    if newest and read_json(newest[0] / "restore.json", {}).get("status") == "applying":
-        return newest[0]
+def interrupted_transaction(state: Path, keep: int = KEEP_BACKUPS) -> Path | None:
+    """The newest unfinished transaction among the kept ones (every run recovers it first)."""
+    for saved in reversed(backup_dirs(state)[-keep:] if keep else backup_dirs(state)):
+        if read_json(saved / "restore.json", {}).get("status") == "applying":
+            return saved
     return None
 
 
-def recover(state: Path) -> Path | None:
+def recover(state: Path, keep: int = KEEP_BACKUPS) -> Path | None:
     """Undo an update that was killed mid-apply, so the run can start from the previous install."""
-    stale = interrupted_transaction(state)
+    stale = interrupted_transaction(state, keep)
     if stale is None:
         return None
     try:
         restore(stale, state, dry_run=False, quiet=True)
     except InstallError as exc:
-        raise RecoveryRefused(
+        raise PersonNeeded(
             f"An interrupted update could not be undone automatically: {exc}. "
             f"Resolve it, then run --restore {display(stale)}"
         ) from exc
@@ -1403,17 +1428,19 @@ def preflight(plans: list, state: Path):
                 )
 
 
-def apply_plans(plans: list, state: Path, library: Library, router: dict) -> Path | None:
+def apply_plans(plans: list, state: Path, library: Library, router: dict, keep: int = KEEP_BACKUPS) -> Path | None:
     """Apply verified plans as one recoverable transaction. The caller holds the lock."""
     preflight(plans, state)
     changed = [p for p in plans if p["actions"] or read_json(state / f"{p['client']}.json", {}) != p["state"]]
     if not changed:
         return None
-    if interrupted_transaction(state):
-        raise InstallError(f"Incomplete transaction; restore it first with --restore {interrupted_transaction(state)}")
+    pending = interrupted_transaction(state, keep)
+    if pending:
+        raise InstallError(f"Incomplete transaction; restore it first with --restore {display(pending)}")
     # Download first: a failed transfer leaves no transaction behind.
     library.prepare([a["source"] for p in changed for a in p["actions"] if a.get("source") not in (None, "@library")])
-    backup = state / "backups" / (time.strftime("%Y%m%dT%H%M%S") + f"-{time.time_ns():020d}-" + uuid.uuid4().hex[:8])
+    stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime()) + f"-{time.time_ns():020d}-" + uuid.uuid4().hex[:8]
+    backup = state / "backups" / stamp
     no_symlink_ancestors(backup)
     backup.mkdir(parents=True)
     journal = {"schema": SCHEMA, "state_dir": str(state), "status": "preparing", "clients": []}
@@ -1839,13 +1866,13 @@ def run_update(args, git, home, state, data, legacy_cache, source, url, branch, 
         # before planning: both happen under the lock. A local plan is computed without writes.
         if remote and args.dry_run:
             existing_clone(data)  # before the lock: a dry run on a fresh HOME writes nothing
-        locked = remote or (not args.dry_run and interrupted_transaction(state) is not None)
+        locked = remote or (not args.dry_run and interrupted_transaction(state, keep) is not None)
         if locked:
             stack.enter_context(state_lock(state))
             if remote and data != state:
                 stack.enter_context(state_lock(data))
             if not args.dry_run:
-                recover(state)
+                recover(state, keep)
         clients = resolve_clients(args, home, storage, source)
         library = stack.enter_context(
             open_library(git, source, data, url, branch, "dry-run" if args.dry_run else "apply")
@@ -1853,15 +1880,15 @@ def run_update(args, git, home, state, data, legacy_cache, source, url, branch, 
         plans, router = make_plans(args, clients, library, home)
         blocked = mass_removal(args, plans)
         if args.dry_run:
-            emit(report(True, library, plans, legacy_caches(legacy_cache), interrupted_transaction(state)))
+            emit(report(True, library, plans, legacy_caches(legacy_cache), interrupted_transaction(state, keep)))
             if blocked:
                 warn(blocked)
             return 0
         if blocked:
-            raise InstallError(blocked)
+            raise PersonNeeded(blocked)
         if not locked:
             stack.enter_context(state_lock(state))
-        backup = apply_plans(plans, state, library, router)
+        backup = apply_plans(plans, state, library, router, keep)
         if backup:
             prune_backups(state, keep)
         removed = remove_legacy_caches(legacy_cache) if migrated(state) else []
@@ -1889,9 +1916,9 @@ if __name__ == "__main__":
     except LockBusy as exc:
         print(f"awesome-skills: {exc}", file=sys.stderr)
         raise SystemExit(LOCK_BUSY) from None
-    except RecoveryRefused as exc:
+    except PersonNeeded as exc:
         print(f"awesome-skills: {exc}", file=sys.stderr)
-        raise SystemExit(RECOVERY_REFUSED) from None
+        raise SystemExit(NEEDS_PERSON) from None
     except (InstallError, OSError, ValueError) as exc:
         print(f"awesome-skills: {exc}", file=sys.stderr)
         raise SystemExit(1) from None
