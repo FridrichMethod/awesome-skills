@@ -144,30 +144,6 @@ def test_deleted_managed_copy_is_reinstalled_alone(remote):
     assert snapshot(claude / "alpha") == alpha
 
 
-def test_dry_run_and_list_never_write(remote, capsys):
-    home, upstream = remote
-    assert run("--dry-run") == 0
-    plan = json.loads(capsys.readouterr().out)
-    claude = next(c for c in plan["clients"] if c["client"] == "claude")
-    assert sorted(a["entry"] for a in claude["actions"]) == ["alpha", "beta"]
-    assert run("--list", "--search", "beta") == 0
-    assert sorted(json.loads(capsys.readouterr().out)["skills"]) == ["beta"]
-    assert snapshot(home) == {}, "a dry run or listing on a fresh HOME creates nothing"
-    run()
-    head = git("-C", str(clone(home)), "rev-parse", "HEAD").strip()
-    upstream.skill("beta", files={"helper.txt": "beta revised\n"})
-    upstream.commit("revise beta")
-    before = snapshot(home)
-    capsys.readouterr()
-    run("--dry-run")
-    plan = json.loads(capsys.readouterr().out)
-    claude = next(c for c in plan["clients"] if c["client"] == "claude")
-    assert [(a["entry"], a["tree"]) for a in claude["actions"]] == [("beta", upstream.trees()["beta"])]
-    assert snapshot(home) == before and git("-C", str(clone(home)), "rev-parse", "HEAD").strip() == head
-    run("--list")
-    assert json.loads(capsys.readouterr().out)["revision"] == head  # offline: the last update
-
-
 def make_legacy_install(home, upstream):
     """What the tarball installer left behind: manifests without tree ids, GitHub tarball modes, a cache."""
     state, claude, codex = data_dir(home), home / ".claude/skills", home / ".codex/skills"
@@ -265,17 +241,6 @@ def test_old_git_fails_before_writing(remote, monkeypatch, tmp_path):
     assert snapshot(home) == {}
 
 
-def test_stale_index_fails_closed(remote):
-    home, upstream = remote
-    run()
-    installed = installer.fingerprint(home / ".claude")
-    upstream.skill("gamma")
-    upstream.commit("forgot the index", index=False)
-    with pytest.raises(installer.InstallError, match="does not match skills/"):
-        run()
-    assert installer.fingerprint(home / ".claude") == installed
-
-
 def test_router_helper_in_the_data_dir_serves_the_clone(remote, tmp_path):
     home, _ = remote
     run()
@@ -304,6 +269,7 @@ def test_failed_fetch_keeps_the_previous_install(remote, monkeypatch, tmp_path):
     with pytest.raises(installer.InstallError, match="git fetch failed"):
         run()
     assert installer.fingerprint(home / ".claude") == installed
+    assert not list(data_dir(home).glob("library.broken-*")), "an unreachable remote is not a broken clone"
 
 
 def test_foreign_directory_at_the_clone_path_is_refused(remote):
@@ -366,3 +332,147 @@ def test_executable_bits_follow_the_tree(remote):
     assert stat.S_IMODE((alpha / "run.sh").stat().st_mode) == 0o755
     assert stat.S_IMODE((alpha / "helper.txt").stat().st_mode) == 0o644
     assert installer.tree_id(installer.local_listing(alpha)) == upstream.trees()["alpha"]
+
+
+def test_list_and_dry_run_need_an_installed_clone(remote):
+    home, _ = remote
+    for args in (["--list"], ["--dry-run"]):
+        with pytest.raises(installer.InstallError, match="No library clone"):
+            run(*args)
+    assert snapshot(home) == {}
+
+
+def test_dry_run_fetches_but_never_moves_the_install(remote, capsys):
+    home, upstream = remote
+    run()
+    repo = clone(home)
+    head = git("-C", str(repo), "rev-parse", "HEAD").strip()
+    upstream.skill("beta", files={"helper.txt": "beta revised\n"})
+    upstream.commit("revise beta")
+    untouched = [home / ".claude", home / ".codex", repo / "scripts", repo / installer.INDEX]
+    before = [snapshot(p) for p in untouched], snapshot(data_dir(home) / "claude.json")
+    capsys.readouterr()
+    assert run("--dry-run") == 0
+    plan = json.loads(capsys.readouterr().out)
+    claude = next(c for c in plan["clients"] if c["client"] == "claude")
+    assert [(a["entry"], a["tree"]) for a in claude["actions"]] == [("beta", upstream.trees()["beta"])]
+    assert ([snapshot(p) for p in untouched], snapshot(data_dir(home) / "claude.json")) == before
+    assert git("-C", str(repo), "rev-parse", "HEAD").strip() == head
+    run("--list")
+    assert json.loads(capsys.readouterr().out)["revision"] == head  # offline: the last update
+    run()
+    assert (home / ".claude/skills/beta/helper.txt").read_bytes() == b"beta revised\n"
+
+
+def test_stale_index_skips_only_the_unindexed_skill(remote, capsys):
+    home, upstream = remote
+    run()
+    upstream.skill("gamma")
+    upstream.skill("beta", files={"helper.txt": "beta revised\n"})
+    upstream.commit("forgot the index", index=False)
+    assert run() == 0
+    assert "skipping library entry gamma: no valid entry in library_index.json" in capsys.readouterr().err
+    assert not (home / ".claude/skills/gamma").exists()
+    assert (home / ".claude/skills/beta/helper.txt").read_bytes() == b"beta revised\n"
+
+
+def test_unportable_upstream_entries_are_skipped_and_managed_ones_frozen(remote, capsys):
+    home, upstream = remote
+    run()
+    beta = installer.fingerprint(home / ".claude/skills/beta")
+    record = manifest(home, "claude")["managed"]["beta"]
+    upstream.raw("skills/beta/bad:name.txt", "not a Windows file name\n")
+    upstream.raw("skills/Alpha/SKILL.md", "---\nname: Alpha\ndescription: Case twin.\n---\n")
+    upstream.raw("skills/nul/SKILL.md", "---\nname: nul\ndescription: Reserved name.\n---\n")
+    upstream.commit_index("unportable entries")
+    assert run() == 0
+    err = capsys.readouterr().err
+    assert "skipping library entry beta: no valid entry" not in err
+    assert "skipping library entry beta" in err and "not a portable (Windows) file name" in err
+    assert "skipping library entry Alpha" in err and "differs only in case from alpha" in err
+    assert "skipping library entry alpha" not in err, "the indexed member of a case group is kept"
+    assert "skipping library entry nul" in err
+    assert installer.fingerprint(home / ".claude/skills/beta") == beta
+    assert manifest(home, "claude")["managed"]["beta"] == record, "a skipped managed entry is frozen, not removed"
+    assert sorted(os.listdir(home / ".claude/skills")) == ["alpha", "beta"]
+    with pytest.raises(installer.InstallError, match="Cannot enable"):
+        run("--codex-only", "--enable", "beta")
+
+
+def test_stale_git_locks_and_interrupted_clones_are_cleaned(remote, capsys):
+    home, upstream = remote
+    run()
+    repo = clone(home)
+    put(repo / ".git/index.lock", "")
+    put(data_dir(home) / f".{installer.CLONE}.tmp-{'0' * 32}" / "partial", "")
+    upstream.skill("alpha", files={"helper.txt": "alpha revised\n"})
+    upstream.commit("revise alpha")
+    assert run() == 0
+    assert "removed 1 stale git lock file(s)" in capsys.readouterr().err
+    assert not (repo / ".git/index.lock").exists()
+    assert not list(data_dir(home).glob(f".{installer.CLONE}.tmp-*"))
+    assert (home / ".claude/skills/alpha/helper.txt").read_bytes() == b"alpha revised\n"
+
+
+def test_a_broken_clone_is_moved_aside_once_and_cloned_again(remote, capsys):
+    home, upstream = remote
+    run()
+    repo = clone(home)
+    for attempt in range(2):
+        put(repo / ".git/HEAD", "garbage\n")
+        upstream.skill("beta", files={"helper.txt": f"beta revision {attempt}\n"})
+        upstream.commit(f"revise beta {attempt}")
+        assert run() == 0
+        assert "moved it to" in capsys.readouterr().err
+        assert (home / ".claude/skills/beta/helper.txt").read_bytes() == f"beta revision {attempt}\n".encode()
+    assert len(list(data_dir(home).glob(f"{installer.CLONE}.broken-*"))) == 1
+
+
+def test_a_failed_blob_download_heals_the_clone_and_retries(remote, monkeypatch, capsys):
+    home, upstream = remote
+    run()
+    upstream.skill("alpha", files={"helper.txt": "alpha revised\n"})
+    upstream.commit("revise alpha")
+    original, calls = installer.GitLibrary._sparse, []
+
+    def corrupt_once(self, directories):
+        calls.append(directories)
+        if len(calls) == 1:
+            raise installer.GitError("git sparse-checkout failed: simulated corrupt pack")
+        original(self, directories)
+
+    monkeypatch.setattr(installer.GitLibrary, "_sparse", corrupt_once)
+    assert run() == 0
+    assert "simulated corrupt pack" in capsys.readouterr().err
+    assert (home / ".claude/skills/alpha/helper.txt").read_bytes() == b"alpha revised\n"
+    assert len(list(data_dir(home).glob(f"{installer.CLONE}.broken-*"))) == 1
+
+
+def test_inherited_git_environment_never_reaches_another_repository(remote, monkeypatch, tmp_path):
+    home, upstream = remote
+    other = tmp_path / "other"
+    git("init", "-q", str(other))
+    put(other / "file.txt", "mine\n")
+    git("-C", str(other), "add", "file.txt")
+    git("-C", str(other), "-c", "user.name=t", "-c", "user.email=t@example.invalid", "commit", "-qm", "mine")
+    before = git("-C", str(other), "for-each-ref"), (other / ".git/index").read_bytes(), snapshot(other)
+    attributes = tmp_path / "global-attributes"
+    attributes.write_text("* text eol=crlf\n")
+    with open(os.environ["GIT_CONFIG_GLOBAL"], "a") as config:
+        config.write(f"[core]\n\tautocrlf = true\n\tattributesFile = {attributes.as_posix()}\n")
+    with monkeypatch.context() as hook:  # what a git hook or a shell inside another repo exports
+        hook.setenv("GIT_DIR", str(other / ".git"))
+        hook.setenv("GIT_WORK_TREE", str(other))
+        hook.setenv("GIT_INDEX_FILE", str(other / ".git/index"))
+        hook.setenv("GIT_OBJECT_DIRECTORY", str(other / ".git/objects"))
+        hook.setenv("GIT_CONFIG_COUNT", "1")
+        hook.setenv("GIT_CONFIG_KEY_0", "core.autocrlf")
+        hook.setenv("GIT_CONFIG_VALUE_0", "true")
+        assert run() == 0
+    assert (git("-C", str(other), "for-each-ref"), (other / ".git/index").read_bytes(), snapshot(other)) == before
+    assert (home / ".claude/skills/alpha/nested/deep/data.txt").read_bytes() == b"alpha data\n"
+
+
+def test_only_sha1_libraries_are_supported():
+    with pytest.raises(installer.InstallError, match="SHA-1 is required"):
+        installer.GitLibrary(None, ROOT, "a" * 64, worktree=False)

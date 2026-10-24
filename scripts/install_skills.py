@@ -3,7 +3,8 @@
 
 Remote installs keep the library as a blobless, sparse git clone in the data directory.
 An update fetches new commits and trees, then downloads only the blobs of selected skills
-whose git tree changed. --dry-run and --list never write to HOME.
+whose git tree changed. --list reads that clone; --dry-run fetches into it but never moves
+its checkout or writes state or destinations. Either may lazily fetch objects into the clone.
 """
 
 from __future__ import annotations
@@ -52,6 +53,9 @@ CLONE = "library"
 MARKER = "awesome-skills-library"  # file in the clone's .git directory
 MIN_GIT = (2, 29, 0)
 LOCK_BUSY = 75
+RECOVERY_REFUSED = 3
+KEEP_BACKUPS = 5
+MASS_REMOVAL_SHARE, MASS_REMOVAL_MINIMUM = 0.5, 20
 WINDOWS = os.name == "nt"
 LINK_TAGS = {0xA000000C, 0xA0000003}  # IO_REPARSE_TAG_SYMLINK, IO_REPARSE_TAG_MOUNT_POINT (junction)
 FILE_MODES = {"100644": 0o644, "100755": 0o755}
@@ -62,11 +66,39 @@ GIT_CONFIG = (
     "core.longpaths=true",
     "core.fsmonitor=false",
     f"core.hooksPath={os.devnull}",
+    f"core.attributesFile={os.devnull}",
     "gc.autoDetach=false",
     "advice.detachedHead=false",
     "http.lowSpeedLimit=1000",
     "http.lowSpeedTime=60",
 )
+# Inherited GIT_* variables (a hook's GIT_DIR, GIT_INDEX_FILE, injected GIT_CONFIG_COUNT
+# and so on) are dropped; only transport, TLS, tracing and config-file selection pass.
+GIT_ENV_KEEP = frozenset(
+    {
+        "GIT_SSH",
+        "GIT_SSH_COMMAND",
+        "GIT_SSH_VARIANT",
+        "GIT_ASKPASS",
+        "GIT_PROXY_COMMAND",
+        "GIT_SSL_CAINFO",
+        "GIT_SSL_CAPATH",
+        "GIT_SSL_CERT",
+        "GIT_SSL_KEY",
+        "GIT_SSL_NO_VERIFY",
+        "GIT_HTTP_USER_AGENT",
+        "GIT_CONFIG_GLOBAL",
+        "GIT_CONFIG_SYSTEM",
+        "GIT_CONFIG_NOSYSTEM",
+        "GIT_CURL_VERBOSE",
+        "GIT_TRACE",
+        "GIT_TRACE_CURL",
+        "GIT_TRACE_PACKET",
+        "GIT_TRACE_PERFORMANCE",
+    }
+)
+WINDOWS_INVALID = re.compile(r'[<>:"|?*\x00-\x1f\\]|[. ]$|^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$', re.IGNORECASE)
+GIT_METADATA_FILES = {".gitattributes", ".gitmodules"}
 LEGACY_CACHE_FILES = {"index.json", "install_skills.py", "library_sources.json", "skills"}
 LEGACY_SNAPSHOT = re.compile(r"[0-9a-f]{64}")
 LEGACY_TEMP = re.compile(r"[0-9a-f]{64}\.tmp-[0-9a-f]{32}")
@@ -79,6 +111,18 @@ class InstallError(Exception):
 
 class LockBusy(InstallError):
     pass
+
+
+class GitError(InstallError):
+    """A git command failed."""
+
+
+class RecoveryRefused(InstallError):
+    """An interrupted update cannot be undone without a person."""
+
+
+def warn(message: str):
+    print(f"awesome-skills: warning: {message}", file=sys.stderr)
 
 
 # --- Paths -----------------------------------------------------------------------------
@@ -158,6 +202,57 @@ def overlap(a: Path, b: Path) -> bool:
     return a == b or a in b.parents or b in a.parents
 
 
+def name_problem(name: str) -> str | None:
+    if not name or name in {".", ".."} or "/" in name:
+        return "invalid name"
+    return "not a portable (Windows) file name" if WINDOWS_INVALID.search(name) else None
+
+
+def path_problems(paths) -> list[str]:
+    """Paths git cannot check out everywhere: Windows-invalid names and case-only collisions."""
+    every = set()
+    for rel in paths:
+        parts = rel.split("/")
+        every.update("/".join(parts[:i]) for i in range(1, len(parts) + 1))
+    problems, seen = [], {}
+    for rel in sorted(every):
+        reason = name_problem(rel.rsplit("/", 1)[-1])
+        if reason:
+            problems.append(f"{rel}: {reason}")
+        other = seen.setdefault(rel.casefold(), rel)
+        if other != rel:
+            problems.append(f"{rel}: differs only in case from {other}")
+    return problems
+
+
+def skill_problems(skill_id: str, kinds: dict) -> list[str]:
+    """Why a skill (relative path -> "file", "link", ...) cannot be installed on every platform."""
+    reason = "hidden" if skill_id.startswith(".") else name_problem(skill_id)
+    problems = [f"{skill_id}: {reason}"] if reason else []
+    for rel, kind in sorted(kinds.items()):
+        if kind != "file":
+            problems.append(f"{rel}: {'symbolic link' if kind == 'link' else kind}")
+        if rel.rsplit("/", 1)[-1] in GIT_METADATA_FILES:
+            problems.append(f"{rel}: git metadata file")
+    return problems + path_problems(kinds)
+
+
+def case_collisions(ids, preferred=frozenset()) -> dict:
+    """IDs that differ only in case cannot coexist on Windows or macOS checkouts. When exactly
+    one member of a group is preferred (it has a valid index entry), only the others are reported."""
+    groups = defaultdict(list)
+    for skill_id in ids:
+        groups[skill_id.casefold()].append(skill_id)
+    found = {}
+    for group in groups.values():
+        if len(group) < 2:
+            continue
+        keep = [i for i in group if i in preferred]
+        for skill_id in [i for i in group if i != keep[0]] if len(keep) == 1 else group:
+            found[skill_id] = f"differs only in case from {', '.join(o for o in group if o != skill_id)}"
+    return found
+
+
 # --- Content identity ------------------------------------------------------------------
 
 
@@ -196,11 +291,8 @@ def fingerprint(path: Path) -> str | None:
     return digest(tree(path))
 
 
-def blob_id(data: bytes, algorithm: str = "sha1") -> str:
-    h = hashlib.new(algorithm)
-    h.update(b"blob %d\0" % len(data))
-    h.update(data)
-    return h.hexdigest()
+def blob_id(data: bytes) -> str:
+    return hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest()
 
 
 def local_entries(path: Path) -> dict:
@@ -226,7 +318,7 @@ def local_entries(path: Path) -> dict:
     return out
 
 
-def local_listing(path: Path, algorithm: str = "sha1") -> dict:
+def local_listing(path: Path) -> dict:
     """Git's view of a directory: relative POSIX path -> (mode, object id).
 
     Directories are implicit, so empty ones vanish as they do in git. Native Windows
@@ -236,10 +328,10 @@ def local_listing(path: Path, algorithm: str = "sha1") -> dict:
     for rel, (kind, bits) in local_entries(path).items():
         p = path.joinpath(*rel.split("/"))
         if kind == "link":
-            out[rel] = ("120000", blob_id(os.fsencode(os.readlink(p)), algorithm))
+            out[rel] = ("120000", blob_id(os.fsencode(os.readlink(p))))
         elif kind == "file":
             executable = not WINDOWS and bits & stat.S_IXUSR
-            out[rel] = ("100755" if executable else "100644", blob_id(p.read_bytes(), algorithm))
+            out[rel] = ("100755" if executable else "100644", blob_id(p.read_bytes()))
     return out
 
 
@@ -253,7 +345,7 @@ def listing_kinds(listing: dict) -> dict:
     return kinds
 
 
-def tree_id(listing: dict, algorithm: str = "sha1") -> str:
+def tree_id(listing: dict) -> str:
     """The git tree object id of a listing, computed without git."""
     root: dict = {}
     for rel, entry in listing.items():
@@ -272,10 +364,7 @@ def tree_id(listing: dict, algorithm: str = "sha1") -> str:
             else:
                 rows.append((raw, value[0].encode() + b" " + raw + b"\0" + bytes.fromhex(value[1])))
         body = b"".join(row for _, row in sorted(rows))
-        h = hashlib.new(algorithm)
-        h.update(b"tree %d\0" % len(body))
-        h.update(body)
-        return h.hexdigest()
+        return hashlib.sha1(b"tree %d\0" % len(body) + body).hexdigest()
 
     return build(root)
 
@@ -292,17 +381,17 @@ def same_files(expected: dict, actual: dict) -> bool:
     return True
 
 
-def same_tree(expected: dict, path: Path, algorithm: str) -> bool:
+def same_tree(expected: dict, path: Path) -> bool:
     """Same paths, bytes, link targets and executable bits; other permission bits are ignored."""
     if not plain_dir(path):
         return False
     kinds = {rel: kind for rel, kind in listing_kinds(expected).items() if kind != "dir"}
     if {rel: kind for rel, (kind, _) in local_entries(path).items() if kind != "dir"} != kinds:
         return False  # cheap stat-only rejection before reading any bytes
-    return same_files(expected, local_listing(path, algorithm))
+    return same_files(expected, local_listing(path))
 
 
-def exact_tree(expected: dict, path: Path, algorithm: str) -> bool:
+def exact_tree(expected: dict, path: Path) -> bool:
     """The whole directory is what this installer writes: no extra entries, canonical modes."""
     if not plain_dir(path):
         return False
@@ -315,7 +404,7 @@ def exact_tree(expected: dict, path: Path, algorithm: str) -> bool:
         for rel, (kind, bits) in entries.items():
             if kind == "dir" and bits != DIR_MODE or kind == "file" and bits != FILE_MODES.get(expected[rel][0]):
                 return False
-    return same_files(expected, local_listing(path, algorithm))
+    return same_files(expected, local_listing(path))
 
 
 # --- Metadata --------------------------------------------------------------------------
@@ -381,11 +470,25 @@ def read_json(path: Path, default: dict) -> dict:
 def atomic_json(path: Path, value: dict):
     path.parent.mkdir(parents=True, exist_ok=True)
     temp = path.with_name(path.name + ".tmp-" + uuid.uuid4().hex)
-    temp.write_bytes((json.dumps(value, indent=2, sort_keys=True) + "\n").encode())
-    os.replace(temp, path)
+    try:
+        temp.write_bytes((json.dumps(value, indent=2, sort_keys=True) + "\n").encode())
+        os.replace(temp, path)
+    except BaseException:
+        try:
+            temp.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
 
 
 # --- Git -------------------------------------------------------------------------------
+
+
+def git_env() -> dict:
+    env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_") or key in GIT_ENV_KEEP}
+    env.update(GIT_TERMINAL_PROMPT="0", GCM_INTERACTIVE="never", GIT_LFS_SKIP_SMUDGE="1", GIT_ATTR_NOSYSTEM="1")
+    env["LC_ALL"] = "C"
+    return env
 
 
 class Git:
@@ -394,10 +497,8 @@ class Git:
         exe = shutil.which("git")
         if not exe:
             raise InstallError(f"git {wanted} or newer is required; git was not found on PATH")
-        self.exe = exe
-        self.env = dict(os.environ, GIT_TERMINAL_PROMPT="0", GCM_INTERACTIVE="never", GIT_LFS_SKIP_SMUDGE="1")
-        self.env["LC_ALL"] = "C"
-        found = self.run(None, "--version").decode("utf-8", "replace").strip()
+        self.exe, self.env = exe, git_env()
+        found = self.text(None, "--version")
         match = re.search(r"(\d+)\.(\d+)(?:\.(\d+))?", found)
         if not match or tuple(int(part or 0) for part in match.groups()) < MIN_GIT:
             raise InstallError(f"git {wanted} or newer is required; found {found or 'an unknown version'}")
@@ -407,12 +508,19 @@ class Git:
         for item in GIT_CONFIG:
             command += ["-c", item]
         if repo is not None:
-            command += ["-C", display(repo)]
-        result = subprocess.run([*command, *args], input=stdin.encode(), capture_output=True, env=self.env)
+            # Never discover a repository: a broken clone must fail, not fall back to an enclosing one.
+            command += ["-C", display(repo), f"--git-dir={display(repo / '.git')}", f"--work-tree={display(repo)}"]
+        result = subprocess.run(
+            [*command, *args],
+            input=stdin.encode(),
+            capture_output=True,
+            env=self.env,
+            cwd=tempfile.gettempdir() if repo is None else None,
+        )
         if check and result.returncode:
             lines = [line for line in result.stderr.decode("utf-8", "replace").splitlines() if line.strip()]
             detail = lines[-1].strip() if lines else f"exit status {result.returncode}"
-            raise InstallError(f"git {args[0]} failed: {detail}")
+            raise GitError(f"git {args[0]} failed: {detail}")
         return result.stdout
 
     def text(self, repo: Path | None, *args: str, check: bool = True) -> str:
@@ -430,11 +538,15 @@ class Library:
     """The complete library index, plus skill content on demand."""
 
     kind = ""
-    algorithm = "sha1"
 
     def __init__(self):
         self.skills: dict = {}
+        self.skipped: dict = {}  # source ID -> why it cannot be installed here
         self.revision = "unversioned"
+
+    def skip(self, skill_id: str, reason: str):
+        self.skipped[skill_id] = reason
+        warn(f"skipping library entry {skill_id}: {reason}")
 
     def listing(self, skill_id: str) -> dict:
         raise NotImplementedError
@@ -475,13 +587,23 @@ class DirLibrary(Library):
                 capture_output=True,
                 text=True,
                 stdin=subprocess.DEVNULL,
+                env=git_env(),
             )
             if result.returncode == 0:
                 self.revision = result.stdout.strip()
         self._listings, self._fingerprints = {}, {}
-        for skill_id in skill_ids(source):
-            fm = metadata((source / skill_id / "SKILL.md").read_bytes(), skill_id)
+        ids = skill_ids(source)
+        colliding = case_collisions(ids)
+        for skill_id in ids:
             listing = local_listing(source / skill_id)
+            kinds = {rel: "link" if mode == "120000" else "file" for rel, (mode, _) in listing.items()}
+            problems = [p for p in skill_problems(skill_id, kinds) if not p.endswith("symbolic link")]
+            if skill_id in colliding:
+                problems.insert(0, colliding[skill_id])
+            if problems:
+                self.skip(skill_id, "; ".join(problems[:3]))
+                continue
+            fm = metadata((source / skill_id / "SKILL.md").read_bytes(), skill_id)
             self._listings[skill_id] = listing
             self.skills[skill_id] = {
                 "name": fm["name"],
@@ -516,12 +638,13 @@ class GitLibrary(Library):
 
     kind = "git"
 
-    def __init__(self, git: Git, repo: Path, commit: str, home: Path, worktree: bool):
+    def __init__(self, git: Git, repo: Path, commit: str, worktree: bool, healer=None):
         super().__init__()
-        self.git, self.repo, self.home, self.worktree, self.revision = git, repo, home, worktree, commit
-        self.algorithm = "sha256" if len(commit) == 64 else "sha1"
+        if not re.fullmatch(r"[0-9a-f]{40}", commit):
+            raise InstallError(f"Unsupported library object format at {display(repo)} (SHA-1 is required)")
+        self.git, self.repo, self.worktree, self.revision, self.healer = git, repo, worktree, commit, healer
         self._prepared = False
-        trees, files = {}, defaultdict(dict)
+        trees, files, kinds = {}, defaultdict(dict), defaultdict(dict)
         for record in git.run(repo, "ls-tree", "-r", "-t", "-z", commit, "--", "skills").split(b"\0"):
             if not record:
                 continue
@@ -533,21 +656,30 @@ class GitLibrary(Library):
             if len(parts) == 2:
                 if kind == "tree":
                     trees[parts[1]] = oid
-            elif kind == "blob":
-                files[parts[1]]["/".join(parts[2:])] = (mode, oid)
             elif kind != "tree":
-                raise InstallError(f"Unsupported library entry ({kind}): {'/'.join(parts)}")
-        ids = sorted(i for i in trees if "SKILL.md" in files.get(i, {}))
+                rel = "/".join(parts[2:])
+                files[parts[1]][rel] = (mode, oid)
+                if mode in FILE_MODES:
+                    kinds[parts[1]][rel] = "file"
+                else:
+                    kinds[parts[1]][rel] = {"120000": "link", "160000": "submodule"}.get(mode, f"mode {mode}")
         index = self._json(INDEX, required=True)
         if index.get("schema") != SCHEMA or not isinstance(index.get("skills"), dict):
             raise InstallError(f"Unsupported library index {INDEX} at {commit[:12]}")
-        if set(index["skills"]) != set(ids):
-            raise InstallError(f"Library index {INDEX} does not match skills/ at {commit[:12]}")
         provenance = self._json(PROVENANCE, required=False)
+        ids = sorted(i for i in trees if "SKILL.md" in files.get(i, {}))
+        indexed = {i for i in ids if isinstance(index["skills"].get(i), dict)}
+        colliding = case_collisions(ids, indexed)
         for skill_id in ids:
-            info = index["skills"][skill_id]
+            info = index["skills"].get(skill_id)
+            problems = skill_problems(skill_id, kinds[skill_id])
+            if skill_id in colliding:
+                problems.insert(0, colliding[skill_id])
             if not isinstance(info, dict) or not isinstance(info.get("name"), str) or not info["name"].strip():
-                raise InstallError(f"Invalid library index entry: {skill_id}")
+                problems.insert(0, f"no valid entry in {INDEX}")
+            if problems:
+                self.skip(skill_id, "; ".join(problems[:3]))
+                continue
             self.skills[skill_id] = {
                 "name": info["name"],
                 "description": info.get("description", ""),
@@ -567,7 +699,7 @@ class GitLibrary(Library):
         return self._files[skill_id]
 
     def adoptable(self, skill_id, path):
-        return exact_tree(self._files[skill_id], path, self.algorithm)
+        return exact_tree(self._files[skill_id], path)
 
     def prepare(self, ids):
         if not ids:
@@ -575,7 +707,14 @@ class GitLibrary(Library):
         if not self.worktree:
             raise InstallError("Internal error: preparing content from a read-only library")
         self._prepared = True
-        self._sparse(["scripts", *(f"skills/{skill_id}" for skill_id in sorted(set(ids)))])
+        directories = ["scripts", *(f"skills/{skill_id}" for skill_id in sorted(set(ids)))]
+        try:
+            self._sparse(directories)
+        except GitError as exc:
+            if self.healer is None or not self.healer(exc):
+                raise
+            self.git.run(self.repo, "checkout", "--quiet", "--force", "--detach", self.revision)
+            self._sparse(directories)
 
     def release(self):
         if self._prepared:
@@ -599,19 +738,20 @@ class GitLibrary(Library):
                         target.joinpath(*rel.split("/")), DIR_MODE if kind == "dir" else FILE_MODES[expected[rel][0]]
                     )
             os.chmod(target, DIR_MODE)
-        if not same_tree(expected, target, self.algorithm):
+        if not same_tree(expected, target):
             raise InstallError(f"Checked-out content differs from the library tree: {skill_id}")
 
     def router_command(self):
-        return display(self.home / "scripts" / "install_skills.py"), []
+        return display(self.repo / "scripts" / "install_skills.py"), []
 
     def describe(self):
-        return {"kind": self.kind, "path": display(self.home), "revision": self.revision}
+        return {"kind": self.kind, "path": display(self.repo), "revision": self.revision}
 
 
-def create_clone(git: Git, data: Path, repo: Path, url: str, branch: str):
+def create_clone(git: Git, data: Path, url: str, branch: str):
+    """Clone into a temporary sibling, check out only scripts/ and root files, then rename into place."""
     data.mkdir(parents=True, exist_ok=True)
-    temp = data / f".{CLONE}.tmp-{uuid.uuid4().hex}"
+    temp, repo = data / f".{CLONE}.tmp-{uuid.uuid4().hex}", data / CLONE
     try:
         git.run(
             None,
@@ -629,6 +769,9 @@ def create_clone(git: Git, data: Path, repo: Path, url: str, branch: str):
         (temp / ".git" / MARKER).write_bytes(b"awesome-skills library clone, managed by install_skills.py\n")
         git.run(temp, "sparse-checkout", "init", "--cone")
         git.run(temp, "sparse-checkout", "set", "--stdin", stdin="scripts\n")
+        commit = git.text(temp, "rev-parse", "--verify", "--quiet", f"refs/remotes/origin/{branch}^{{commit}}")
+        git.run(temp, "checkout", "--quiet", "--force", "--detach", commit)
+        git.run(temp, "update-ref", "-d", f"refs/heads/{branch}", check=False)
         move(temp, repo)
     except BaseException:
         if os.path.lexists(temp):
@@ -636,87 +779,124 @@ def create_clone(git: Git, data: Path, repo: Path, url: str, branch: str):
         raise
 
 
-def update_clone(git: Git, data: Path, url: str, branch: str) -> tuple[GitLibrary, bool]:
-    """Fetch new commits and trees, and move the clone to the branch tip (writes only if it moved)."""
+def sweep_clone_leftovers(data: Path):
+    """Under the lock nothing else uses the clone: drop interrupted clones and stale git locks."""
+    if plain_dir(data):
+        for leftover in data.glob(f".{CLONE}.tmp-*"):
+            if plain_dir(leftover):
+                rmtree(leftover)
+    git_dir = data / CLONE / ".git"
+    if is_library_clone(data / CLONE):
+        stale = [*git_dir.glob("*.lock"), *git_dir.glob("info/*.lock"), *(git_dir / "refs").rglob("*.lock")]
+        for lock in stale:
+            lock.unlink(missing_ok=True)
+        if stale:
+            warn(f"removed {len(stale)} stale git lock file(s) in {display(git_dir)}")
+
+
+def heal_clone(git: Git, data: Path, url: str, branch: str, error: Exception) -> bool:
+    """A broken clone (not a network failure) is moved aside, keeping one, and cloned again."""
+    try:
+        remote_tip(git, url, branch)
+    except GitError:
+        return False  # the remote is unreachable: a fresh clone would not help
+    for old in data.glob(f"{CLONE}.broken-*"):
+        if plain_dir(old):
+            rmtree(old)
+    broken = data / f"{CLONE}.broken-{time.strftime('%Y%m%dT%H%M%S')}"
+    move(data / CLONE, broken)
+    warn(f"library clone failed ({error}); moved it to {display(broken)} and cloning again")
+    create_clone(git, data, url, branch)
+    return True
+
+
+def refresh_clone(git: Git, data: Path, url: str, branch: str, checkout: bool) -> tuple[GitLibrary, bool]:
     repo = data / CLONE
-    created = not os.path.lexists(repo)
-    if created:
-        create_clone(git, data, repo, url, branch)
-    elif not is_library_clone(repo):
-        raise InstallError(f"Not an awesome-skills library clone: {display(repo)}; move it away and rerun")
     if git.text(repo, "config", "--get", "remote.origin.url", check=False) != url:
         git.run(repo, "remote", "set-url", "origin", url)
     ref = f"refs/remotes/origin/{branch}"
-    if not created:
-        git.run(
-            repo,
-            "fetch",
-            "--quiet",
-            "--no-tags",
-            "--no-write-fetch-head",
-            "--no-auto-maintenance",
-            "origin",
-            f"+refs/heads/{branch}:{ref}",
-        )
+    git.run(
+        repo,
+        "fetch",
+        "--quiet",
+        "--no-tags",
+        "--no-write-fetch-head",
+        "--no-auto-maintenance",
+        "origin",
+        f"+refs/heads/{branch}:{ref}",
+    )
     commit = git.text(repo, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}")
-    moved = created or git.text(repo, "rev-parse", "--verify", "--quiet", "HEAD", check=False) != commit
-    if moved:
+    moved = git.text(repo, "rev-parse", "--verify", "--quiet", "HEAD", check=False) != commit
+    if moved and checkout:
         git.run(repo, "checkout", "--quiet", "--force", "--detach", commit)
-        git.run(repo, "update-ref", "-d", f"refs/heads/{branch}", check=False)
-    return GitLibrary(git, repo, commit, repo, worktree=True), moved
+    healer = (lambda exc: heal_clone(git, data, url, branch, exc)) if checkout else None
+    return GitLibrary(git, repo, commit, worktree=checkout, healer=healer), moved
+
+
+def update_clone(git: Git, data: Path, url: str, branch: str) -> tuple[GitLibrary, bool]:
+    """Fetch new commits and trees and check out the tip (writes only if it moved). Lock held."""
+    repo = data / CLONE
+    sweep_clone_leftovers(data)
+    if not os.path.lexists(repo):
+        create_clone(git, data, url, branch)
+        return refresh_clone(git, data, url, branch, checkout=True)[0], True
+    if not is_library_clone(repo):
+        raise InstallError(f"Not an awesome-skills library clone: {display(repo)}; move it away and rerun")
+    try:
+        return refresh_clone(git, data, url, branch, checkout=True)
+    except GitError as exc:
+        if not heal_clone(git, data, url, branch, exc):
+            raise
+        return refresh_clone(git, data, url, branch, checkout=True)[0], True
+
+
+def existing_clone(data: Path) -> Path:
+    repo = data / CLONE
+    if not is_library_clone(repo):
+        raise InstallError(
+            f"No library clone at {display(repo)} yet; install once first (or use a local checkout's install.sh)"
+        )
+    return repo
 
 
 @contextmanager
 def open_library(git: Git | None, source: Path | None, data: Path, url: str, branch: str, mode: str):
-    """mode: "apply" updates the clone (lock held); "list" and "dry-run" never write to HOME."""
+    """mode "apply" updates and checks out the clone; "dry-run" only fetches into it. Lock held."""
     if git is None:
         yield DirLibrary(source)
         return
-    home = data / CLONE
-    if mode == "apply":
-        library, moved = update_clone(git, data, url, branch)
-        try:
-            yield library
-        finally:
-            try:
-                library.release()
-            except InstallError as exc:
-                print(f"awesome-skills: warning: {exc}", file=sys.stderr)
-        if moved:
-            git.run(home, "gc", "--auto", "--quiet", check=False)
+    if mode == "dry-run":
+        existing_clone(data)
+        sweep_clone_leftovers(data)
+        yield refresh_clone(git, data, url, branch, checkout=False)[0]
         return
-    if is_library_clone(home):
-        head = git.text(home, "rev-parse", "--verify", "--quiet", "HEAD^{commit}", check=False)
-        if head and (mode == "list" or remote_tip(git, url, branch) == head):
-            yield GitLibrary(git, home, head, home, worktree=False)
-            return
-    # No current clone: read the tip from a throwaway shallow, blobless clone.
-    temporary = Path(tempfile.mkdtemp(prefix="awesome-skills-"))
+    library, moved = update_clone(git, data, url, branch)
     try:
-        clone = native(temporary) / CLONE
-        git.run(
-            None,
-            "clone",
-            "--quiet",
-            "--filter=blob:none",
-            "--no-checkout",
-            "--depth",
-            "1",
-            "--single-branch",
-            "--branch",
-            branch,
-            "--",
-            url,
-            display(clone),
-        )
-        yield GitLibrary(git, clone, git.text(clone, "rev-parse", "--verify", "HEAD^{commit}"), home, worktree=False)
+        yield library
     finally:
-        rmtree(temporary)
+        try:
+            library.release()
+        except InstallError as exc:
+            warn(str(exc))
+    if moved:
+        git.run(data / CLONE, "gc", "--auto", "--quiet", check=False)
+
+
+def listed_library(git: Git | None, source: Path | None, data: Path) -> Library:
+    """--list reads the clone at its last update, offline (missing objects may be fetched lazily)."""
+    if git is None:
+        return DirLibrary(source)
+    repo = existing_clone(data)
+    return GitLibrary(git, repo, git.text(repo, "rev-parse", "--verify", "HEAD^{commit}"), worktree=False)
 
 
 def remote_tip(git: Git, url: str, branch: str) -> str:
-    line = git.text(None, "ls-remote", "--exit-code", url, f"refs/heads/{branch}")
-    return line.split()[0] if line else ""
+    ref = f"refs/heads/{branch}"
+    for line in git.text(None, "ls-remote", "--exit-code", url, ref).splitlines():
+        oid, _, name = line.partition("\t")
+        if name == ref:
+            return oid
+    return ""
 
 
 # --- Router ----------------------------------------------------------------------------
@@ -761,8 +941,8 @@ reversibly removes an unmodified managed copy. `--dry-run` previews all actions
 without writing. `--list` reports conflicts. Selection changes require a client flag.
 """
     entries = {"": ("dir", 0o755, b""), "SKILL.md": ("file", 0o644, body.encode())}
-    listing = {"SKILL.md": ("100644", blob_id(body.encode(), library.algorithm))}
-    return {"entries": entries, "listing": listing, "tree": tree_id(listing, library.algorithm)}
+    listing = {"SKILL.md": ("100644", blob_id(body.encode()))}
+    return {"entries": entries, "listing": listing, "tree": tree_id(listing)}
 
 
 def write_tree(entries: dict, target: Path):
@@ -806,7 +986,7 @@ def valid_hash(value):
 
 
 def valid_tree(value):
-    if value is not None and (not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", value)):
+    if value is not None and (not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{40}", value)):
         raise InstallError(f"Invalid tree id: {value!r}")
 
 
@@ -830,23 +1010,27 @@ def validate_state(value: dict, client: str):
 
 
 def selection(args, client: str, old: dict, library: Library) -> list[str]:
+    known = set(library.skills) | set(library.skipped)
+    blocked = sorted(set(args.enable) & set(library.skipped))
+    if blocked:
+        raise InstallError(f"Cannot enable {blocked}: {'; '.join(library.skipped[i] for i in blocked)}")
     ids = old.get("selection", ["@library"] if client == "codex" else ["@all"])
     if args.selection is not None:
         ids = [v for v in args.selection.split(",") if v]
     ids = set(library.skills) | (set(ids) - {"@all"}) if "@all" in ids and args.disable else set(ids)
     ids.update(args.enable)
-    unknown_disable = set(args.disable) - set(library.skills) - set(ids) - {"@library", "@all"}
+    unknown_disable = set(args.disable) - known - set(ids) - {"@library", "@all"}
     if unknown_disable:
         raise InstallError(f"Unknown source IDs to disable: {sorted(unknown_disable)}")
     ids.difference_update(args.disable)
-    unknown = ids - set(library.skills) - {"@library", "@all"}
+    unknown = ids - known - {"@library", "@all"}
     if unknown:
         raise InstallError(f"Unknown source IDs: {sorted(unknown)} (use --list --search)")
     return sorted(ids)
 
 
 def desired_entries(client: str, ids: list[str], library: Library, router: dict) -> tuple[dict, dict]:
-    selected = set(library.skills) if "@all" in ids else set(ids) - {"@library"}
+    selected = set(library.skills) if "@all" in ids else set(ids) & set(library.skills)
     if "@library" in ids and ROUTER in selected:
         raise InstallError(f"Source ID collides with reserved library entry: {ROUTER}")
     selected_info = {i: library.skills[i] for i in selected}
@@ -896,16 +1080,22 @@ def plan_entries(client, dest, managed, desired, library, router) -> tuple[list,
             # Unchanged since this installer recorded it: a cheap existence check, no hashing.
             new_managed[entry] = dict(want, sha256=rec["sha256"])
             continue
-        if present and not want and not rec and entry not in library.skills:
-            kept.append(kept_entry(entry))  # unknown entries are never hashed or claimed
+        if rec and entry in library.skipped:
+            new_managed[entry] = rec  # frozen: never updated or removed while the entry is skipped
+            kept.append(kept_entry(entry, f"library entry skipped: {library.skipped[entry]}"))
+            continue
+        if present and not want and not rec:
+            # Never hashed, claimed or removed, even when identical to a library skill.
+            kept.append(kept_entry(entry, "not installed by awesome-skills"))
             continue
         current = fingerprint(target) if present else None
         owned = False
         if current is not None and not protected(target):
-            if rec:
-                owned = current == rec["sha256"]
-            elif entry in library.skills:
-                owned = library.adoptable(entry, target)
+            owned = (
+                current == rec["sha256"]
+                if rec
+                else bool(want) and entry in library.skills and library.adoptable(entry, target)
+            )
         if current is not None and not owned:
             kept.append(kept_entry(entry))
             if rec:
@@ -913,11 +1103,11 @@ def plan_entries(client, dest, managed, desired, library, router) -> tuple[list,
                 # recognizing the edited copy, including after deselection.
                 new_managed[entry] = rec
             if want and not rec and client == "codex":
-                if want["source_ids"] != ["@library"] or not same_tree(router["listing"], target, library.algorithm):
+                if want["source_ids"] != ["@library"] or not same_tree(router["listing"], target):
                     raise InstallError(f"Cannot install {client}:{entry}: preserved destination differs: {target}")
             continue
         if want:
-            if current is not None and same_tree(expected_listing(want, library, router), target, library.algorithm):
+            if current is not None and same_tree(expected_listing(want, library, router), target):
                 new_managed[entry] = dict(want, sha256=current)  # identical content: record, do not copy
             else:
                 new_managed[entry] = dict(want, sha256=None)  # filled in once the copy is prepared
@@ -953,16 +1143,14 @@ def external_skills(client: str, dest: Path, kept: list, home: Path) -> dict:
     return external
 
 
-def external_conflicts(external: dict, algorithm: str) -> dict:
+def external_conflicts(external: dict) -> dict:
     by_name = defaultdict(list)
     for entry, ext in external.items():
         by_name[ext["name"]].append(entry)
     groups = {}
     for name, entries in sorted(by_name.items()):
-        if len(entries) > 1:
-            trees = {tree_id(local_listing(external[e]["path"], algorithm), algorithm) for e in entries}
-            if len(trees) > 1:
-                groups[name] = entries
+        if len(entries) > 1 and len({tree_id(local_listing(external[e]["path"])) for e in entries}) > 1:
+            groups[name] = entries
     return groups
 
 
@@ -978,7 +1166,7 @@ def plan_client(client, dest, old, ids, library, router, home) -> dict:
         for other, ext in external.items():
             if other == entry or ext["name"] != info["name"]:
                 continue
-            if not same_tree(expected_listing(info, library, router), ext["path"], library.algorithm):
+            if not same_tree(expected_listing(info, library, router), ext["path"]):
                 if client == "codex":
                     raise InstallError(
                         f"Frontmatter name conflict with preserved {display(ext['path'])}: {info['name']} ({entry})"
@@ -990,20 +1178,12 @@ def plan_client(client, dest, old, ids, library, router, home) -> dict:
             if client == "codex":
                 target, rec = dest / entry, managed.get(entry)
                 current = fingerprint(target)
-                owned = current is not None and not protected(target)
-                owned = owned and (current == rec["sha256"] if rec else library.adoptable(entry, target))
-                if current is not None and not owned:
-                    # A modified copy found through the unchanged-entry shortcut stays preserved.
-                    if rec:
-                        new_managed[entry] = rec
-                    else:
-                        new_managed.pop(entry)
-                    kept.append(kept_entry(entry))
-                    break
-                new_managed.pop(entry, None)
                 actions = [a for a in actions if a["entry"] != entry]
-                if current is not None:
+                new_managed.pop(entry, None)
+                if current is not None and rec and current == rec["sha256"] and not protected(target):
                     actions.append({"entry": entry, "before": current, "after": None})
+                elif current is not None and rec:
+                    new_managed[entry] = rec  # a modified copy found through the shortcut stays preserved
                 kept.append(kept_entry(entry, f"identical external name at {other}; not claimed"))
                 break
     new = {"schema": SCHEMA, "client": client, "destination": str(dest), "selection": ids, "managed": new_managed}
@@ -1013,10 +1193,27 @@ def plan_client(client, dest, old, ids, library, router, home) -> dict:
         "actions": actions,
         "preserved": kept,
         "conflicts": conflicts,
-        "external_conflicts": external_conflicts(external, library.algorithm),
+        "external_conflicts": external_conflicts(external),
+        "failed": [],
         "state": new,
         "previous_state": old,
+        "managed_before": managed,
     }
+
+
+def mass_removal(args, plans: list) -> str | None:
+    """A no-argument update that would remove most managed skills is refused unless asked for."""
+    if args.allow_mass_removal or args.selection is not None or args.enable or args.disable:
+        return None
+    for p in plans:
+        before = p["managed_before"]
+        removing = [a for a in p["actions"] if a.get("source") is None and a["entry"] in before]
+        if len(removing) >= MASS_REMOVAL_MINIMUM and len(removing) > MASS_REMOVAL_SHARE * len(before):
+            return (
+                f"Refusing to remove {len(removing)} of {len(before)} managed {p['client']} skills in one update; "
+                "rerun with --allow-mass-removal if that is intended"
+            )
+    return None
 
 
 # --- Locking, applying and restoring ---------------------------------------------------
@@ -1050,16 +1247,43 @@ def state_lock(directory: Path):
         os.close(fd)
 
 
-def journal_status(path: Path):
-    """Read a journal's status without parsing megabytes of saved state each run."""
-    try:
-        with path.open("rb") as stream:
-            stream.seek(max(0, path.stat().st_size - 256))
-            tail = stream.read().decode("utf-8", "replace")
-    except FileNotFoundError:
+def backup_dirs(state: Path) -> list[Path]:
+    backups = state / "backups"
+    no_symlink_ancestors(backups)
+    return sorted(p for p in backups.iterdir() if plain_dir(p)) if plain_dir(backups) else []
+
+
+def interrupted_transaction(state: Path) -> Path | None:
+    """Only the newest transaction can be unfinished: every run recovers it before starting another."""
+    newest = backup_dirs(state)[-1:]
+    if newest and read_json(newest[0] / "restore.json", {}).get("status") == "applying":
+        return newest[0]
+    return None
+
+
+def recover(state: Path) -> Path | None:
+    """Undo an update that was killed mid-apply, so the run can start from the previous install."""
+    stale = interrupted_transaction(state)
+    if stale is None:
         return None
-    match = re.search(r'"status": "(\w+)"\s*\}\s*$', tail)
-    return match.group(1) if match else read_json(path, {}).get("status")
+    try:
+        restore(stale, state, dry_run=False, quiet=True)
+    except InstallError as exc:
+        raise RecoveryRefused(
+            f"An interrupted update could not be undone automatically: {exc}. "
+            f"Resolve it, then run --restore {display(stale)}"
+        ) from exc
+    print(f"Recovered an interrupted update: {display(stale)}")
+    return stale
+
+
+def prune_backups(state: Path, keep: int):
+    """Keep the newest finished transactions; never touch one that is still applying."""
+    if keep <= 0:
+        return
+    for saved in backup_dirs(state)[:-keep]:
+        if read_json(saved / "restore.json", {}).get("status") in {"complete", "restored", "preparing", None}:
+            rmtree(saved)
 
 
 def preflight(plans: list, state: Path):
@@ -1086,15 +1310,11 @@ def apply_plans(plans: list, state: Path, library: Library, router: dict) -> Pat
     changed = [p for p in plans if p["actions"] or read_json(state / f"{p['client']}.json", {}) != p["state"]]
     if not changed:
         return None
-    backups = state / "backups"
-    no_symlink_ancestors(backups)
-    if backups.exists():
-        for saved in backups.iterdir():
-            if journal_status(saved / "restore.json") == "applying":
-                raise InstallError(f"Incomplete transaction; restore it first with --restore {display(saved)}")
+    if interrupted_transaction(state):
+        raise InstallError(f"Incomplete transaction; restore it first with --restore {interrupted_transaction(state)}")
     # Download first: a failed transfer leaves no transaction behind.
     library.prepare([a["source"] for p in changed for a in p["actions"] if a.get("source") not in (None, "@library")])
-    backup = backups / (time.strftime("%Y%m%dT%H%M%S") + f"-{time.time_ns():020d}-" + uuid.uuid4().hex[:8])
+    backup = state / "backups" / (time.strftime("%Y%m%dT%H%M%S") + f"-{time.time_ns():020d}-" + uuid.uuid4().hex[:8])
     no_symlink_ancestors(backup)
     backup.mkdir(parents=True)
     journal = {"schema": SCHEMA, "state_dir": str(state), "status": "preparing", "clients": []}
@@ -1116,6 +1336,20 @@ def apply_plans(plans: list, state: Path, library: Library, router: dict) -> Pat
         item["new_state"], item["actions"] = p["state"], p["actions"]
     journal["status"] = "applying"
     atomic_json(backup / "restore.json", journal)
+    try:
+        move_live_entries(changed, state, backup)
+    except BaseException:
+        try:
+            restore(backup, state, dry_run=False, quiet=True)  # put the previous install back now
+        except InstallError as exc:
+            warn(f"automatic rollback failed ({exc}); the next run retries it")
+        raise
+    journal["status"] = "complete"
+    atomic_json(backup / "restore.json", journal)
+    return backup
+
+
+def move_live_entries(changed: list, state: Path, backup: Path):
     for p in changed:
         dest = Path(p["destination"])
         for action in p["actions"]:
@@ -1130,31 +1364,16 @@ def apply_plans(plans: list, state: Path, library: Library, router: dict) -> Pat
                 dest.mkdir(parents=True, exist_ok=True)
                 move(backup / "prepared" / p["client"] / entry, target)
         atomic_json(state / f"{p['client']}.json", p["state"])
-    journal["status"] = "complete"
-    atomic_json(backup / "restore.json", journal)
-    return backup
 
 
 def prepare_copies(changed: list, backup: Path, library: Library, router: dict):
-    """Fully prepare and verify replacements before any live entry moves."""
+    """Prepare and verify replacements before any live entry moves. A skill that fails is
+    skipped (its live copy and record stay as they were) and reported; the others proceed."""
     try:
         for p in changed:
-            for action in p["actions"]:
-                if action.get("source") is None:
-                    continue
-                entry = action["entry"]
-                prepared = backup / "prepared" / p["client"] / entry
-                prepared.parent.mkdir(parents=True, exist_ok=True)
-                if action["source"] == "@library":
-                    write_tree(router["entries"], prepared)
-                    expected = router["listing"]
-                else:
-                    library.materialize(action["source"], prepared)
-                    expected = library.listing(action["source"])
-                if not same_tree(expected, prepared, library.algorithm):
-                    raise InstallError(f"Prepared copy changed: {display(prepared)}; recovery journal: {backup}")
-                action["after"] = fingerprint(prepared)
-                p["state"]["managed"][entry]["sha256"] = action["after"]
+            for action in list(p["actions"]):
+                if action.get("source") is not None:
+                    prepare_one(p, action, backup, library, router)
     except BaseException:
         if (backup / "prepared").exists():
             try:
@@ -1164,7 +1383,38 @@ def prepare_copies(changed: list, backup: Path, library: Library, router: dict):
         raise
 
 
-def restore(backup: Path, state: Path, dry_run: bool):
+def prepare_one(p: dict, action: dict, backup: Path, library: Library, router: dict):
+    entry = action["entry"]
+    prepared = backup / "prepared" / p["client"] / entry
+    try:
+        prepared.parent.mkdir(parents=True, exist_ok=True)
+        if action["source"] == "@library":
+            write_tree(router["entries"], prepared)
+            expected = router["listing"]
+        else:
+            library.materialize(action["source"], prepared)
+            expected = library.listing(action["source"])
+        if not same_tree(expected, prepared):
+            raise InstallError(f"Prepared copy changed: {display(prepared)}")
+        name = metadata((prepared / "SKILL.md").read_bytes(), entry)["name"]
+        if name != p["state"]["managed"][entry]["name"]:
+            raise InstallError(f"Frontmatter name {name!r} differs from {INDEX}")
+    except (InstallError, OSError) as exc:
+        if os.path.lexists(prepared):
+            rmtree(prepared)
+        p["actions"].remove(action)
+        previous = p["managed_before"].get(entry)
+        if previous:
+            p["state"]["managed"][entry] = previous
+        else:
+            p["state"]["managed"].pop(entry, None)
+        p["failed"].append({"entry": entry, "source": action["source"], "error": str(exc)})
+        return
+    action["after"] = fingerprint(prepared)
+    p["state"]["managed"][entry]["sha256"] = action["after"]
+
+
+def restore(backup: Path, state: Path, dry_run: bool, quiet: bool = False):
     no_symlink_ancestors(backup)
     if backup.parent != state / "backups":
         raise InstallError(f"Recovery backup must belong to this state directory: {display(state)}")
@@ -1176,16 +1426,15 @@ def restore(backup: Path, state: Path, dry_run: bool):
         or not isinstance(journal.get("clients"), list)
     ):
         raise InstallError(f"Invalid or already restored journal: {display(backup)}")
+    operations = [] if journal["status"] == "preparing" else restore_operations(backup, state, journal)
+    if not quiet:
+        print(json.dumps({"restore": display(backup), "targets": [display(t) for t, _, _ in operations]}, indent=2))
+    if dry_run:
+        return
     if journal["status"] == "preparing":
         # Interrupted before any live entry or manifest moved: nothing to put back.
-        print(json.dumps({"restore": display(backup), "targets": []}, indent=2))
-        if not dry_run:
-            journal["status"] = "restored"
-            atomic_json(backup / "restore.json", journal)
-        return
-    operations = restore_operations(backup, state, journal)
-    print(json.dumps({"restore": display(backup), "targets": [display(t) for t, _, _ in operations]}, indent=2))
-    if dry_run:
+        journal["status"] = "restored"
+        atomic_json(backup / "restore.json", journal)
         return
     for target, saved, current in reversed(operations):
         if current is not None:
@@ -1321,6 +1570,13 @@ def storage_path(variable: str, default: Path) -> Path:
     return outside_discovery(safe_absolute(Path(os.environ.get(variable) or default)))
 
 
+def kept_backups() -> int:
+    value = os.environ.get("SKILLS_KEEP_BACKUPS", str(KEEP_BACKUPS))
+    if not value.isdigit():
+        raise InstallError(f"SKILLS_KEEP_BACKUPS must be a non-negative integer: {value!r}")
+    return int(value)
+
+
 def resolve_clients(args, home: Path, storage: list[Path], source: Path | None) -> list[tuple]:
     clients = []
     for client in ["codex"] if args.codex_only else ["claude"] if args.claude_only else ["claude", "codex"]:
@@ -1370,18 +1626,20 @@ def make_plans(args, clients: list, library: Library, home: Path) -> tuple[list,
     return plans, router
 
 
-def report(dry_run: bool, library: Library, plans: list, legacy: list[Path]) -> dict:
-    clients = [
-        {k: v for k, v in p.items() if k not in {"state", "previous_state"}} | {"selection": p["state"]["selection"]}
-        for p in plans
-    ]
-    return {
+def report(dry_run: bool, library: Library, plans: list, legacy: list[Path], pending: Path | None = None) -> dict:
+    hidden = {"state", "previous_state", "managed_before"}
+    clients = [{k: v for k, v in p.items() if k not in hidden} | {"selection": p["state"]["selection"]} for p in plans]
+    result = {
         "dry_run": dry_run,
         "library_entries": len(library.skills),
         "library": library.describe(),
+        "skipped_library_entries": library.skipped,
         "legacy_cache_cleanup": [display(p) for p in legacy],
         "clients": clients,
     }
+    if pending:
+        result["interrupted_transaction"] = display(pending)
+    return result
 
 
 def emit(value: dict):
@@ -1400,6 +1658,7 @@ def guard_source(source: Path, data: Path):
             capture_output=True,
             text=True,
             stdin=subprocess.DEVNULL,
+            env=git_env(),
         )
         if result.stdout.strip() == "true":
             raise InstallError(f"Refusing a sparse checkout as a local source: {display(source)}")
@@ -1421,6 +1680,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--list", action="store_true", help="list full-library metadata and name conflicts")
     parser.add_argument("--search", default="", help="filter --list by ID, name, description or origin")
     parser.add_argument("--restore", type=Path, help="restore a backup, refusing later modifications")
+    parser.add_argument(
+        "--allow-mass-removal",
+        action="store_true",
+        help="let an update without selection flags remove most managed skills at once",
+    )
     parser.add_argument("--delete", action="store_true", help="deprecated: prune only verified managed deselections")
     return parser
 
@@ -1434,6 +1698,7 @@ def main(argv: list[str] | None = None) -> int:
     data_default = default_data(home)
     state = storage_path("SKILLS_STATE_DIR", data_default if WINDOWS else home / ".local/share/awesome-skills")
     legacy_cache = storage_path("SKILLS_CACHE_DIR", home / ".cache/awesome-skills")
+    keep = kept_backups()
     remote, source = args.remote, None
     helper = globals().get("__file__")
     clone = native(Path(helper).resolve().parent.parent) if helper else None
@@ -1461,36 +1726,61 @@ def main(argv: list[str] | None = None) -> int:
         raise InstallError(f"Invalid SKILLS_BRANCH: {branch!r}")
     git = Git() if remote else None  # a missing or old git fails before anything is written
     if args.list:
-        with open_library(git, source, data, url, branch, "list") as library:
-            matches = {i: s for i, s in library.skills.items() if args.search.lower() in json.dumps([i, s]).lower()}
-            emit({"revision": library.revision, "skills": matches, "conflicts": conflict_groups(matches)})
+        library = listed_library(git, source, data)
+        matches = {i: s for i, s in library.skills.items() if args.search.lower() in json.dumps([i, s]).lower()}
+        emit({"revision": library.revision, "skills": matches, "conflicts": conflict_groups(matches)})
         return 0
-    clients = resolve_clients(args, home, [state, data, legacy_cache], source)
-    if args.dry_run:
-        with open_library(git, source, data, url, branch, "dry-run") as library:
-            plans, _ = make_plans(args, clients, library, home)
-            emit(report(True, library, plans, legacy_caches(legacy_cache)))
-        return 0
+    return run_update(args, git, home, state, data, legacy_cache, source, url, branch, keep)
+
+
+def run_update(args, git, home, state, data, legacy_cache, source, url, branch, keep) -> int:
+    storage, remote = [state, data, legacy_cache], git is not None
     with ExitStack() as stack:
-        if remote:
-            # The clone is shared state too: fetch, plan and apply under one lock.
+        # A remote run fetches into the shared clone, and a stale transaction must be undone
+        # before planning: both happen under the lock. A local plan is computed without writes.
+        if remote and args.dry_run:
+            existing_clone(data)  # before the lock: a dry run on a fresh HOME writes nothing
+        locked = remote or (not args.dry_run and interrupted_transaction(state) is not None)
+        if locked:
             stack.enter_context(state_lock(state))
-            if data != state:
+            if remote and data != state:
                 stack.enter_context(state_lock(data))
-            clients = resolve_clients(args, home, [state, data, legacy_cache], source)
-        library = stack.enter_context(open_library(git, source, data, url, branch, "apply"))
+            if not args.dry_run:
+                recover(state)
+        clients = resolve_clients(args, home, storage, source)
+        library = stack.enter_context(
+            open_library(git, source, data, url, branch, "dry-run" if args.dry_run else "apply")
+        )
         plans, router = make_plans(args, clients, library, home)
-        if not remote:
-            stack.enter_context(state_lock(state))  # a planning error leaves HOME untouched
+        blocked = mass_removal(args, plans)
+        if args.dry_run:
+            emit(report(True, library, plans, legacy_caches(legacy_cache), interrupted_transaction(state)))
+            if blocked:
+                warn(blocked)
+            return 0
+        if blocked:
+            raise InstallError(blocked)
+        if not locked:
+            stack.enter_context(state_lock(state))
         backup = apply_plans(plans, state, library, router)
+        if backup:
+            prune_backups(state, keep)
         removed = remove_legacy_caches(legacy_cache) if migrated(state) else []
+    failures = [dict(f, client=p["client"]) for p in plans for f in p["failed"]]
     if backup:
         emit(report(False, library, plans, removed))
         print(f"Recovery backup: {display(backup)}")
-    else:
+    elif not failures:
         print("Already current; selection preserved.")
     if removed:
         print(f"Removed {len(removed)} legacy cache snapshot(s) under {display(legacy_cache)}")
+    if failures:
+        entries = ", ".join(f"{f['client']}:{f['entry']} ({f['error']})" for f in failures)
+        print(
+            f"awesome-skills: {len(failures)} skill(s) were not installed and kept as they were: {entries}",
+            file=sys.stderr,
+        )
+        return 1
     return 0
 
 
@@ -1500,6 +1790,9 @@ if __name__ == "__main__":
     except LockBusy as exc:
         print(f"awesome-skills: {exc}", file=sys.stderr)
         raise SystemExit(LOCK_BUSY) from None
+    except RecoveryRefused as exc:
+        print(f"awesome-skills: {exc}", file=sys.stderr)
+        raise SystemExit(RECOVERY_REFUSED) from None
     except (InstallError, OSError, ValueError) as exc:
         print(f"awesome-skills: {exc}", file=sys.stderr)
         raise SystemExit(1) from None

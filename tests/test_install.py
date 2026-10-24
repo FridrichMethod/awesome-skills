@@ -105,18 +105,20 @@ def test_first_install_and_no_argument_updater(sandbox, capsys):
     assert not (home / ".cache").exists()
 
 
-def test_legacy_migration_exact_content_and_recovery(sandbox):
+def test_unselected_legacy_copies_are_never_adopted_or_removed(sandbox, capsys):
+    # An unmanaged directory identical to a library skill is not ours to remove.
     home, source = sandbox
     codex = home / ".codex/skills"
     shutil.copytree(source, codex)
-    before = installer.fingerprint(codex)
+    legacy = {name: installer.fingerprint(codex / name) for name in ("alpha", "beta")}
     run(source, "--codex-only")
-    assert not (codex / "alpha").exists()
-    recovery = backups(home)[-1]
-    assert installer.fingerprint(recovery / "codex/alpha") == installer.fingerprint(source / "alpha")
-    run(source, "--restore", str(recovery))
-    assert installer.fingerprint(codex) == before
-    assert not (home / ".local/share/awesome-skills/codex.json").exists()
+    assert {name: installer.fingerprint(codex / name) for name in ("alpha", "beta")} == legacy
+    assert set(state(home)["managed"]) == {installer.ROUTER}
+    plan = json.loads(capsys.readouterr().out.split("Recovery backup:")[0])
+    assert {"entry": "alpha", "reason": "not installed by awesome-skills"} in plan["clients"][0]["preserved"]
+    run(source, "--restore", str(backups(home)[-1]))
+    assert sorted(os.listdir(codex)) == ["alpha", "beta"]
+    assert not (state_dir(home) / "codex.json").exists()
 
 
 def test_user_edit_extra_file_mode_and_unknown_are_preserved(sandbox):
@@ -384,14 +386,23 @@ def test_modified_managed_copy_not_pruned_using_historical_dedup_hash(sandbox):
     assert (codex / "user-alpha").exists()
 
 
-def test_duplicate_owned_legacy_copy_is_pruned_for_identical_external(sandbox):
+def test_unmanaged_copy_with_identical_external_is_left_in_place(sandbox):
     home, source = sandbox
     codex = home / ".codex/skills"
     shutil.copytree(source, codex)
     shutil.copytree(source / "alpha", codex / "user-alpha")
     run(source, "--codex-only", "--enable", "alpha")
-    assert not (codex / "alpha").exists()
-    assert (codex / "user-alpha").exists()
+    assert (codex / "alpha").exists() and (codex / "user-alpha").exists()
+    assert "alpha" not in state(home)["managed"]
+
+
+def test_managed_copy_with_identical_external_is_removed(sandbox):
+    home, source = sandbox
+    codex = home / ".codex/skills"
+    run(source, "--codex-only", "--enable", "alpha")
+    shutil.copytree(source / "alpha", codex / "user-alpha")
+    run(source, "--codex-only")
+    assert not (codex / "alpha").exists() and (codex / "user-alpha").exists()
     assert "alpha" not in state(home)["managed"]
 
 
@@ -422,7 +433,7 @@ def test_overlapping_client_destinations_are_rejected(sandbox, monkeypatch):
     assert installer.fingerprint(home) == before
 
 
-def test_interrupted_preparation_keeps_live_entries_and_is_restorable(sandbox, monkeypatch):
+def test_failed_preparation_skips_only_that_entry_and_exits_nonzero(sandbox, monkeypatch, capsys):
     home, source = sandbox
     codex = home / ".codex/skills"
     shutil.copytree(source, codex)
@@ -437,12 +448,37 @@ def test_interrupted_preparation_keeps_live_entries_and_is_restorable(sandbox, m
         return original(entries, target)
 
     monkeypatch.setattr(installer, "write_tree", fail)
-    with pytest.raises(OSError, match="storage failure"):
-        run(source, "--codex-only")
+    assert run(source, "--codex-only") == 1
+    assert "simulated storage failure" in capsys.readouterr().err
     assert installer.fingerprint(codex) == before
+    assert not [
+        f for f in backups(home)[-1].rglob("*") if f.is_file() and f.name != "restore.json"
+    ], "partial copy left"
     monkeypatch.setattr(installer, "write_tree", original)
-    run(source, "--restore", str(backups(home)[-1]))
-    assert installer.fingerprint(codex) == before
+    assert run(source) == 0
+    assert (codex / installer.ROUTER / "SKILL.md").is_file()
+
+
+def test_one_failing_skill_does_not_block_the_others(sandbox, monkeypatch, capsys):
+    home, source = sandbox
+    original = installer.DirLibrary.materialize
+
+    def fail_alpha(self, skill_id, target):
+        if skill_id == "alpha":
+            raise OSError("simulated unwritable path")
+        original(self, skill_id, target)
+
+    monkeypatch.setattr(installer.DirLibrary, "materialize", fail_alpha)
+    assert run(source) == 1
+    err = capsys.readouterr().err
+    assert "claude:alpha" in err and "simulated unwritable path" in err
+    claude = home / ".claude/skills"
+    assert sorted(os.listdir(claude)) == ["beta"]
+    assert set(state(home, "claude")["managed"]) == {"beta"}
+    assert (home / ".codex/skills" / installer.ROUTER).is_dir()
+    monkeypatch.setattr(installer.DirLibrary, "materialize", original)
+    assert run(source) == 0
+    assert sorted(os.listdir(claude)) == ["alpha", "beta"]
 
 
 @STORAGE
@@ -637,3 +673,149 @@ def test_claude_modified_alias_conflict_does_not_abort_no_argument_updater(sandb
     assert installer.fingerprint(alpha) == before
     assert (home / ".claude/skills/alias").exists()
     assert installer.fingerprint(home / ".codex") == codex_before
+
+
+# Stands in for SIGKILL on every platform: the process ends inside apply, no finally runs.
+KILLED_INSIDE_APPLY = """
+import os, sys
+sys.path.insert(0, sys.argv[1])
+from scripts import install_skills as installer
+original, moves = installer.move, []
+def move(source, target):
+    original(source, target)
+    moves.append(target)
+    if len(moves) == int(sys.argv[2]):
+        os._exit(137)
+installer.move = move
+installer.main(sys.argv[3:])
+"""
+
+
+def killed_inside_apply(source, after_moves, *args):
+    command = [sys.executable, "-B", "-c", KILLED_INSIDE_APPLY, str(ROOT), str(after_moves), "--source", str(source)]
+    result = subprocess.run([*command, *args], capture_output=True, text=True)
+    assert result.returncode == 137, result.stderr
+
+
+def revise(source):
+    for skill_id in ("alpha", "beta"):
+        (source / skill_id / "helper.txt").write_text(f"{skill_id} revised\n")
+
+
+def test_update_killed_mid_apply_is_undone_then_completed(sandbox, capsys):
+    home, source = sandbox
+    run(source)
+    revise(source)
+    killed_inside_apply(source, 3)  # alpha replaced, beta moved out, manifest not written
+    claude = home / ".claude/skills"
+    assert not (claude / "beta").exists()
+    assert installer.interrupted_transaction(installer.native(state_dir(home))) is not None
+    capsys.readouterr()
+    assert run(source) == 0
+    assert "Recovered an interrupted update" in capsys.readouterr().out
+    assert all((claude / s / "helper.txt").read_text() == f"{s} revised\n" for s in ("alpha", "beta"))
+    assert installer.interrupted_transaction(installer.native(state_dir(home))) is None
+    assert run(source) == 0
+    assert capsys.readouterr().out == "Already current; selection preserved.\n"
+
+
+def test_interrupted_update_with_a_later_user_edit_needs_a_person(sandbox):
+    home, source = sandbox
+    run(source)
+    revise(source)
+    killed_inside_apply(source, 3)
+    alpha = home / ".claude/skills/alpha"
+    (alpha / "helper.txt").write_text("edited after the crash\n")
+    before = installer.fingerprint(home / ".claude")
+    with pytest.raises(installer.RecoveryRefused, match="could not be undone automatically.*--restore"):
+        run(source)
+    assert installer.fingerprint(home / ".claude") == before
+    result = subprocess.run(
+        [sys.executable, "-B", str(ROOT / "scripts/install_skills.py"), "--source", str(source)],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == installer.RECOVERY_REFUSED, result.stderr
+
+
+def test_exception_mid_apply_rolls_back_at_once(sandbox, monkeypatch):
+    home, source = sandbox
+    run(source)
+    claude = home / ".claude/skills"
+    before, record = installer.fingerprint(claude), state(home, "claude")
+    revise(source)
+    original, calls = installer.move, []
+
+    def flaky(src, dst):
+        calls.append(dst)
+        if len(calls) == 3:
+            raise OSError("simulated rename failure")
+        original(src, dst)
+
+    monkeypatch.setattr(installer, "move", flaky)
+    with pytest.raises(OSError, match="simulated rename failure"):
+        run(source)
+    assert installer.fingerprint(claude) == before and state(home, "claude") == record
+    monkeypatch.setattr(installer, "move", original)
+    assert run(source) == 0
+    assert (claude / "beta/helper.txt").read_text() == "beta revised\n"
+
+
+def test_old_backups_are_pruned_to_the_newest_few(sandbox, monkeypatch):
+    home, source = sandbox
+    monkeypatch.setenv("SKILLS_KEEP_BACKUPS", "2")
+    run(source)
+    for _ in range(2):
+        run(source, "--codex-only", "--enable", "alpha")
+        run(source, "--codex-only", "--disable", "alpha")
+    kept = backups(home)
+    assert len(kept) == 2
+    run(source, "--restore", str(kept[-1]))
+    assert (home / ".codex/skills/alpha").exists()
+
+
+def test_atomic_json_leaves_no_temporary_file_on_failure(tmp_path, monkeypatch):
+    def refuse(*_):
+        raise OSError("simulated replace failure")
+
+    monkeypatch.setattr(installer.os, "replace", refuse)
+    with pytest.raises(OSError, match="simulated"):
+        installer.atomic_json(tmp_path / "state.json", {"a": 1})
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_update_that_would_remove_most_managed_skills_is_refused(sandbox):
+    home, source = sandbox
+    for i in range(23):
+        skill(source, f"extra-{i:02d}")
+    run(source)
+    for i in range(23):
+        shutil.rmtree(source / f"extra-{i:02d}")
+    claude = home / ".claude/skills"
+    before = installer.fingerprint(claude)
+    with pytest.raises(installer.InstallError, match="Refusing to remove 23 of 25 managed claude skills"):
+        run(source)
+    assert installer.fingerprint(claude) == before
+    assert run(source, "--allow-mass-removal") == 0
+    assert sorted(os.listdir(claude)) == ["alpha", "beta"]
+
+
+def test_explicit_selection_change_is_not_a_mass_removal(sandbox):
+    home, source = sandbox
+    for i in range(23):
+        skill(source, f"extra-{i:02d}")
+    run(source)
+    assert run(source, "--claude-only", "--selection", "alpha") == 0
+    assert sorted(os.listdir(home / ".claude/skills")) == ["alpha"]
+
+
+@pytest.mark.skipif(os.name == "nt", reason="these names cannot be created on Windows at all")
+def test_unportable_local_entries_are_skipped_with_a_warning(sandbox, capsys):
+    home, source = sandbox
+    skill(source, "colon")
+    (source / "colon/a:b.txt").write_text("not a Windows name\n")
+    skill(source, "aux")
+    assert run(source) == 0
+    err = capsys.readouterr().err
+    assert "skipping library entry colon" in err and "skipping library entry aux" in err
+    assert sorted(os.listdir(home / ".claude/skills")) == ["alpha", "beta"]

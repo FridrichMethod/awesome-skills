@@ -94,6 +94,16 @@ class Upstream:
         if push:
             git("-C", str(self.work), "push", "-q", "origin", "HEAD:main")
 
+    def raw(self, path: str, text: str):
+        """Stage a path the filesystem may not allow (Windows-invalid or case twin), via the index only."""
+        blob = git("-C", str(self.work), "hash-object", "-w", "--stdin", stdin=text.encode()).strip()
+        unchecked = ["-c", "core.protectNTFS=false", "-c", "core.protectHFS=false", "-c", "core.ignoreCase=false"]
+        git("-C", str(self.work), *unchecked, "update-index", "--add", "--cacheinfo", f"100644,{blob},{path}")
+
+    def commit_index(self, message: str):
+        git("-C", str(self.work), "commit", "-q", "-m", message)
+        git("-C", str(self.work), "push", "-q", "origin", "HEAD:main")
+
     def rev(self, spec: str) -> str:
         return git("-C", str(self.bare), "rev-parse", spec).strip()
 
