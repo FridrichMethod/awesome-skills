@@ -30,15 +30,17 @@ Agent skills are how you give Claude Code or Codex CLI deep, reusable expertise 
 2. **Filters** out things that break installs (Git LFS pointers, files >40 MB, bundled vector DBs, stale `.gitattributes`).
 3. **Auto-syncs** every Sunday so your skill library stays current without manual work.
 
-The result is one URL + one curl command that bootstraps a fresh laptop with **2,200+ vetted skills** available through a searchable cache and independent client selections.
+The result is one URL + one command that bootstraps a fresh laptop with **2,200+ vetted skills** available through a searchable index and independent client selections, and that keeps them current with incremental git transfers.
 
 ---
 
 ## Contents
 
 - [Quick install](#quick-install)
+  - [How updates work](#how-updates-work)
   - [Flags](#flags)
   - [Env overrides](#env-overrides)
+  - [Exit codes](#exit-codes)
   - [Migration and recovery](#migration-and-recovery)
   - [Offline Codex validation](#offline-codex-validation)
   - [From a local clone](#from-a-local-clone)
@@ -57,17 +59,39 @@ The result is one URL + one curl command that bootstraps a fresh laptop with **2
 
 ## Quick install
 
+Linux and macOS:
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/FridrichMethod/awesome-skills/main/install.sh | bash
 ```
 
+Native Windows (PowerShell 7; with Windows PowerShell 5.1 use `powershell` in place of `pwsh`):
+
+```powershell
+$f = Join-Path ([IO.Path]::GetTempPath()) "awesome-skills-$PID.ps1"
+Invoke-WebRequest -UseBasicParsing -Uri https://raw.githubusercontent.com/FridrichMethod/awesome-skills/main/install.ps1 -OutFile $f
+pwsh -NoProfile -ExecutionPolicy Bypass -File $f; Remove-Item -LiteralPath $f
+```
+
+**The same command is the first install and every update**, on each OS; pass flags after it (`| bash -s -- --dry-run`, or `-File $f --dry-run`). When nothing changed it costs one `git fetch`, writes nothing, and prints `Already current; selection preserved.`
+
 The installer keeps a complete library outside skill discovery and installs independent, persistent selections:
 
-- **Codex starts with one `awesome-skills-library` skill**, whose description tells the model how to search the full cache, read a skill directly, or enable its source ID. Built-in, plugin, and user skills stay under their existing owners.
+- **Codex starts with one `awesome-skills-library` skill**, whose description tells the model how to search the full library index or enable a source ID. Built-in, plugin, and user skills stay under their existing owners.
 - **Claude keeps the full collection by default**, including existing paths. Its selection is independent of Codex. Different-content name collisions are reported and all Claude variants remain available; Codex requires an explicit, unambiguous selection.
 - Repeated installs and an updater running `install.sh` **without arguments preserve both clients' choices**. New upstream entries join Claude's default `@all` selection; they do not join Codex's selected collection.
 
-**Requirements:** Bash and Python 3.11+ with PyYAML (`python3 -m pip install 'PyYAML>=6.0'`). Remote bootstrap also needs `curl`; local installs need no network. Use the existing project environment with `SKILLS_PYTHON=/path/to/venv/bin/python` when appropriate. The installer never installs Python dependencies implicitly.
+**Requirements:** Python 3.11+ with PyYAML (`python3 -m pip install 'PyYAML>=6.0'`) and **git 2.29 or newer** (Git for Windows on Windows). The POSIX bootstrap needs Bash and `curl`; the Windows bootstrap needs PowerShell 7 or Windows PowerShell 5.1 and finds Python as `SKILLS_PYTHON`, then `py -3`, then `python`. A missing or older git fails before anything is written, with a message naming the version found. Installs from a local clone need no network and no git. Use the existing project environment with `SKILLS_PYTHON=/path/to/venv/bin/python` when appropriate. The installer never installs Python dependencies implicitly.
+
+### How updates work
+
+The library is a git partial clone (`--filter=blob:none`) with a cone-mode sparse checkout, kept in the data directory: `${XDG_DATA_HOME:-~/.local/share}/awesome-skills/library` on Linux and macOS, `%LOCALAPPDATA%\awesome-skills\library` on Windows. Nothing lives under a cache directory that cleaners purge.
+
+- **An update fetches only new commits and trees** (the clone holds no file contents beyond what was installed). The full-library index that `--list` and the router read is the committed `library_index.json` (IDs, frontmatter names, descriptions) plus `library_sources.json` (origins), so searching never downloads skill bodies.
+- **Change detection is per skill, by git tree id.** Each ownership record stores the tree id it was installed from. A selected skill whose tree id is unchanged and whose directory still exists is skipped after a single `lstat`: nothing is hashed or rewritten. Only skills whose tree changed (or that are missing, newly selected, or deselected) are examined, so destination work is proportional to what changed.
+- **Only the blobs of selected skills that changed are downloaded**: the installer narrows the sparse checkout to exactly those skill directories, lets git batch-fetch their missing blobs, copies and verifies them, and narrows the checkout back to `scripts/` and the root files. Unselected skills are never downloaded. Claude's default `@all` selection downloads the whole library once, on its first install.
+- **One run at a time**: the installer holds its own lock (`flock` on Linux and macOS, `msvcrt` on Windows) across fetch, planning and apply, and exits `75` when another run holds it.
+- **Native Windows** uses `git -c core.longpaths=true`, extended-length (`\\?\`) paths in Python for deeply nested skills, and plain copies (never links). Executable bits are not representable there and are ignored when comparing content.
 
 ### Flags
 
@@ -83,27 +107,34 @@ The installer keeps a complete library outside skill discovery and installs inde
 | `--claude-only`, `--codex-only` | operate on one client |
 | `--enable ID`, `--disable ID` | persistently add/remove a directory source ID; repeatable; requires one client |
 | `--selection ID,ID` | replace one client's selection; `--selection ''` disables all managed skills |
-| `--list`, `--search TEXT` | inspect the complete library's IDs, frontmatter names, descriptions, hashes, origins, and conflicts |
+| `--list`, `--search TEXT` | inspect the complete library's IDs, frontmatter names, descriptions, tree ids, origins, and conflicts; reads the clone offline as of its last update (or a throwaway blobless clone when none exists) |
 | `--source DIR` | use another local `skills/` tree |
-| `--dry-run` | compute an exact plan with **zero filesystem writes**, including no `mkdir` or bootstrap tempdir |
+| `--dry-run` | compute the exact plan against the remote tip with **zero writes to HOME** (state, data, destinations); when the local clone is behind, the plan is computed from a throwaway blobless clone in the system temp directory |
 | `--restore BACKUP` | restore a migration/update transaction; reject later user edits or selection changes |
 | `--delete` | deprecated compatibility flag; only verified managed deselections are pruned |
 | `-h`, `--help` | print usage |
 
-IDs refer to directories, but conflicts are checked using frontmatter `name` and complete tree fingerprints. Codex deduplicates identical selected aliases while retaining all source IDs and origins in its manifest/cache index. Different-content variants are preserved in the cache and cannot be enabled together for Codex. For Codex, an external skill with the same name and different content also blocks installation before changes are made. Claude keeps every selected variant, reports external conflicts, and preserves user edits. Neither skill names nor catalog ordering are changed.
+On PowerShell 5.1, write an empty selection as `--selection=` because that shell drops empty arguments.
+
+IDs refer to directories, but conflicts are checked using frontmatter `name` and git tree ids. Codex deduplicates identical selected aliases while retaining all source IDs and origins in its manifest/cache index. Different-content variants are preserved in the cache and cannot be enabled together for Codex. For Codex, an external skill with the same name and different content also blocks installation before changes are made. Claude keeps every selected variant, reports external conflicts, and preserves user edits. Neither skill names nor catalog ordering are changed.
 
 ### Env overrides
 
 | Variable | Default | Effect |
 |---|---|---|
 | `SKILLS_BRANCH` | `main` | remote branch |
+| `SKILLS_REPOSITORY_URL` | `https://github.com/FridrichMethod/awesome-skills.git` | git remote of the library clone |
+| `SKILLS_INSTALLER_URL` | `https://raw.githubusercontent.com/FridrichMethod/awesome-skills/$SKILLS_BRANCH/scripts/install_skills.py` | installer the bootstraps download |
 | `SKILLS_CLAUDE_DEST` | `$HOME/.claude/skills` | Claude discovery destination |
 | `SKILLS_CODEX_DEST` | `$HOME/.codex/skills` | Codex discovery destination |
-| `SKILLS_STATE_DIR` | `$HOME/.local/share/awesome-skills` | client selections, ownership manifests, recovery journals/backups |
-| `SKILLS_CACHE_DIR` | `$HOME/.cache/awesome-skills` | immutable content snapshots and searchable provenance index |
-| `SKILLS_PYTHON` | `python3` | interpreter containing PyYAML |
+| `SKILLS_DATA_DIR` | `${XDG_DATA_HOME:-$HOME/.local/share}/awesome-skills` (Windows: `%LOCALAPPDATA%\awesome-skills`) | the library clone (`library/`) |
+| `SKILLS_STATE_DIR` | `$HOME/.local/share/awesome-skills` (Windows: `%LOCALAPPDATA%\awesome-skills`) | client selections, ownership manifests, recovery journals/backups, lock |
+| `SKILLS_CACHE_DIR` | `$HOME/.cache/awesome-skills` | where the former tarball installer kept snapshots; read only to remove them |
+| `SKILLS_PYTHON` | `python3` (Windows: `py -3`, then `python`) | interpreter containing PyYAML |
 
-State and cache must stay outside discovery, disjoint from install destinations, with no symlink ancestors. Both client destinations must be disjoint, including when updating only one client. Custom destinations are saved for subsequent no-argument updates. State and destinations must share a filesystem for reversible atomic moves; for a custom mount, set `SKILLS_STATE_DIR` to a directory on that mount. The state directory must persist across updater runs. The installer does not edit Codex/Claude configuration, dotfiles, or `~/.agents` configuration.
+With `XDG_DATA_HOME` unset, data and state share one directory. State, data and the legacy cache must stay outside discovery, disjoint from install destinations, with no symlink ancestors. Both client destinations must be disjoint, including when updating only one client. Custom destinations are saved for subsequent no-argument updates. State and destinations must share a filesystem for reversible atomic moves; for a custom mount, set `SKILLS_STATE_DIR` to a directory on that mount. The state directory must persist across updater runs. The installer does not edit Codex/Claude configuration, dotfiles, or `~/.agents` configuration.
+
+Consumers that need to know whether the skills are installed can check for the ownership manifests `claude.json`/`codex.json` in the state directory, or for the clone in the data directory; both are written only by successful runs.
 
 When using `curl … | bash`, put env vars on **bash**, or export them first:
 
@@ -112,7 +143,18 @@ curl -fsSL https://raw.githubusercontent.com/FridrichMethod/awesome-skills/main/
   | SKILLS_PYTHON=/path/to/venv/bin/python bash -s -- --codex-only --dry-run
 ```
 
+### Exit codes
+
+| Code | Meaning |
+|---|---|
+| `0` | success, including `Already current; selection preserved.` |
+| `1` | error, with one message naming the missing tool or failing step; the previous install is left intact |
+| `2` | usage error |
+| `75` | another installer run holds the lock (callers may ignore it) |
+
 ### Migration and recovery
+
+**From the tarball installer (0.3.x and earlier):** the first run of this version recognizes the existing ownership manifests. A managed copy whose bytes and executable bits equal the library's current tree is recorded with its tree id and **not copied again** (permission differences such as tarball `0664` modes do not count); modified managed copies stay preserved as before. The old router, which pointed into the cache, is replaced. Once no managed router comes from the old installer, the snapshot directories it created under `~/.cache/awesome-skills/libraries/` (recognized by their 64-hex names and exact layout) are removed; nothing else there is touched. The first run downloads the blobs of selected skills once, then later runs are incremental.
 
 Preview a legacy full install before applying it:
 
@@ -125,9 +167,9 @@ Preview a legacy full install before applying it:
 ./install.sh --restore BACKUP
 ```
 
-A legacy install without a manifest is adopted **only when its entire directory matches the current source snapshot**, including support files, extra/missing files, permissions, and symlink targets. A directory name alone is insufficient. Older copies differing from that snapshot remain untouched. Manifested copies are movable only if their recorded fingerprint still matches. Modified managed copies retain their old fingerprint so repeated updates continue to preserve them.
+A legacy install without a manifest is adopted **only when its entire directory matches the current library tree**, including support files, extra/missing files, permissions (`0644`/`0755` files, `0755` directories as this installer writes them), and symlink targets. A directory name alone is insufficient. Older copies differing from that snapshot remain untouched. Manifested copies are movable only if their recorded fingerprint still matches. Modified managed copies retain their old fingerprint so repeated updates continue to preserve them.
 
-Hidden entries such as Codex's own `.system` and every top-level symlink are protected; no skill name is reserved. Unknown and modified entries are reported and preserved. No operation runs `rsync --delete` over a skills root. Removed or replaced owned directories are moved into a transaction backup, with old client state recorded before live changes. Replacements are fully prepared and verified first. Restore preserves unrelated entries and refuses to overwrite later user changes. Backups and cache generations are retained for recovery; prune them deliberately after review.
+Hidden entries such as Codex's own `.system` and every top-level symlink (and, on Windows, junction) are protected; no skill name is reserved. Unknown and modified entries are reported and preserved. No operation runs `rsync --delete` over a skills root. Removed or replaced owned directories are moved into a transaction backup, with old client state recorded before live changes. Replacements are fully prepared and verified first. Restore preserves unrelated entries and refuses to overwrite later user changes. A run interrupted while downloading or preparing copies changes nothing live and does not block later runs. Backups are retained for recovery; prune them deliberately after review.
 
 Preserving unverifiable legacy skills can leave discovery overloaded. Inspect the plan and use your own backups/provenance to resolve those entries; the installer does not infer ownership or silently delete them. External/plugin collections can also exceed Codex limits independently of this repository. Restart Codex after selection changes, then verify its actual model catalog.
 
@@ -142,12 +184,14 @@ The verifier detects the installed version and available debug/protocol features
 
 ### From a local clone
 
-`./install.sh` uses the adjacent library and installer. The cache also includes a standalone helper, so full-library search and selective enablement work after removing the original clone:
+`./install.sh` (or `.\install.ps1`) in a complete checkout installs from the adjacent `skills/` tree and needs neither network nor git; the router then points at that checkout. A sparse checkout, or the managed library clone itself, is refused as a local source. After a remote install, the helper inside the data directory serves the managed clone, offline for `--list`:
 
 ```bash
-python3 -B CACHE/libraries/SNAPSHOT/install_skills.py --list --search protein
-python3 -B CACHE/libraries/SNAPSHOT/install_skills.py --codex-only --enable SOURCE_ID
+python3 -B ~/.local/share/awesome-skills/library/scripts/install_skills.py --list --search protein
+python3 -B ~/.local/share/awesome-skills/library/scripts/install_skills.py --codex-only --enable SOURCE_ID
 ```
+
+To regenerate `library_index.json` after editing `skills/` by hand, run `python scripts/sync_skills.py --index-only`; CI checks that it matches.
 
 ---
 
@@ -239,7 +283,8 @@ flowchart LR
     D --> E[Find skill roots<br/>de-dupe nested]
     E --> F[Filter:<br/>.gitattributes / LFS<br/>>40MB files<br/>vector DBs]
     F --> G[Retain distinct variants<br/>record source provenance]
-    G --> H{Changes?}
+    G --> G2[Regenerate library_index.json]
+    G2 --> H{Changes?}
     H -- yes --> I[Bot commits +<br/>pushes to main]
     H -- no --> J[Exit clean]
 ```
@@ -261,11 +306,14 @@ Each successful run posts a per-source change summary table in the job summary.
 ```
 awesome-skills/
 ├── skills/                          ← 2,233 skill dirs (managed by sync; do not edit directly)
-├── install.sh                       ← one-line installer (curl|bash compatible)
+├── install.sh                       ← one-line installer and updater (curl|bash compatible)
+├── install.ps1                      ← the same for native Windows PowerShell
 ├── scripts/
-│   ├── sync_skills.py               ← aggregation + provenance
-│   ├── install_skills.py            ← selection + ownership + recovery
+│   ├── sync_skills.py               ← aggregation + provenance + library index
+│   ├── install_skills.py            ← git transport + selection + ownership + recovery
 │   └── verify_codex_catalog.py      ← offline model-catalog verification
+├── tests/                           ← temporary-HOME contract tests (file:// git remote)
+├── library_index.json               ← every skill's ID, name and description (generated)
 ├── library_sources.json             ← observed origins and conflicts
 ├── .github/
 │   ├── workflows/sync-skills.yml    ← weekly auto-sync

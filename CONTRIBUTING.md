@@ -59,6 +59,8 @@ bash install.sh --dry-run
 curl -fsSL https://raw.githubusercontent.com/FridrichMethod/awesome-skills/your-branch/install.sh | SKILLS_BRANCH=your-branch bash -s -- --dry-run
 ```
 
+`tests/test_git_transport.py` serves a local bare repository over `file://` (via `SKILLS_REPOSITORY_URL`) and checks the incremental transport by counting the objects each update fetches; `tests/test_bootstrap.py` runs the piped `install.sh` and, when `pwsh` is installed, `install.ps1`. After editing `skills/` by hand, regenerate the index with `python scripts/sync_skills.py --index-only`.
+
 Run the temporary HOME contract tests and optional local Codex integration in the existing Python environment:
 
 ```bash
@@ -72,6 +74,7 @@ The verifier starts no model turn, copies no credentials, and cleans its isolate
 ## Coding style
 
 - Shell: pass `shellcheck -s bash -e SC2155`.
+- PowerShell: keep `install.ps1` ASCII and compatible with Windows PowerShell 5.1.
 - Python: pass `ruff check`. The pre-commit config covers both.
 - Workflows: pass `actionlint`.
 - Markdown: keep tables aligned by column.
