@@ -52,6 +52,9 @@ PROVENANCE = "library_sources.json"
 CLONE = "library"
 MARKER = "awesome-skills-library"  # file in the clone's .git directory
 MIN_GIT = (2, 29, 0)
+# A sparse index keeps every directory outside the cone as one entry, so git on Windows
+# never checks (and refuses) a Windows-invalid path deep inside a skill nobody selected.
+SPARSE_INDEX_GIT = (2, 37, 0)
 LOCK_BUSY = 75
 RECOVERY_REFUSED = 3
 KEEP_BACKUPS = 5
@@ -491,16 +494,22 @@ def git_env() -> dict:
     return env
 
 
+def minimum_git() -> tuple[tuple, str]:
+    version = SPARSE_INDEX_GIT if WINDOWS else MIN_GIT
+    return version, ".".join(map(str, version)) + (" (on Windows)" if WINDOWS else "")
+
+
 class Git:
     def __init__(self):
-        wanted = ".".join(map(str, MIN_GIT))
+        minimum, wanted = minimum_git()
         exe = shutil.which("git")
         if not exe:
             raise InstallError(f"git {wanted} or newer is required; git was not found on PATH")
         self.exe, self.env = exe, git_env()
         found = self.text(None, "--version")
         match = re.search(r"(\d+)\.(\d+)(?:\.(\d+))?", found)
-        if not match or tuple(int(part or 0) for part in match.groups()) < MIN_GIT:
+        self.version = tuple(int(part or 0) for part in match.groups()) if match else (0, 0, 0)
+        if self.version < minimum:
             raise InstallError(f"git {wanted} or newer is required; found {found or 'an unknown version'}")
 
     def run(self, repo: Path | None, *args: str, stdin: str = "", check: bool = True) -> bytes:
@@ -767,7 +776,8 @@ def create_clone(git: Git, data: Path, url: str, branch: str):
             display(temp),
         )
         (temp / ".git" / MARKER).write_bytes(b"awesome-skills library clone, managed by install_skills.py\n")
-        git.run(temp, "sparse-checkout", "init", "--cone")
+        index = ["--sparse-index"] if git.version >= SPARSE_INDEX_GIT else []
+        git.run(temp, "sparse-checkout", "init", "--cone", *index)
         git.run(temp, "sparse-checkout", "set", "--stdin", stdin="scripts\n")
         commit = git.text(temp, "rev-parse", "--verify", "--quiet", f"refs/remotes/origin/{branch}^{{commit}}")
         git.run(temp, "checkout", "--quiet", "--force", "--detach", commit)
@@ -796,6 +806,8 @@ def sweep_clone_leftovers(data: Path):
 
 def heal_clone(git: Git, data: Path, url: str, branch: str, error: Exception) -> bool:
     """A broken clone (not a network failure) is moved aside, keeping one, and cloned again."""
+    if "invalid path" in str(error):
+        return False  # a path this platform cannot check out: a fresh clone fails the same way
     try:
         remote_tip(git, url, branch)
     except GitError:

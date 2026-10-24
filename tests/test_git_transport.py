@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import stat
 import subprocess
@@ -220,7 +221,8 @@ def test_lock_contention_exits_75(remote):
 def test_missing_git_fails_before_writing(remote, monkeypatch):
     home, _ = remote
     monkeypatch.setattr(installer.shutil, "which", lambda name: None)
-    with pytest.raises(installer.InstallError, match=r"git 2\.29\.0 or newer is required; git was not found"):
+    wanted = re.escape(installer.minimum_git()[1])
+    with pytest.raises(installer.InstallError, match=f"git {wanted} or newer is required; git was not found"):
         run()
     assert snapshot(home) == {}
 
@@ -236,7 +238,10 @@ def test_old_git_fails_before_writing(remote, monkeypatch, tmp_path):
         fake.write_text("#!/bin/sh\necho 'git version 2.20.1'\n")
         fake.chmod(0o755)
     monkeypatch.setenv("PATH", str(bin_dir) + os.pathsep + os.environ["PATH"])
-    with pytest.raises(installer.InstallError, match=r"git 2\.29\.0 or newer is required; found git version 2\.20\.1"):
+    wanted = re.escape(installer.minimum_git()[1])
+    with pytest.raises(
+        installer.InstallError, match=f"git {wanted} or newer is required; found git version 2\\.20\\.1"
+    ):
         run()
     assert snapshot(home) == {}
 
