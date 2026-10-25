@@ -1,0 +1,3 @@
+interface:
+  display_name: "Template selector"
+  short_description: "Selects a project instruction or LESSONS.md template"

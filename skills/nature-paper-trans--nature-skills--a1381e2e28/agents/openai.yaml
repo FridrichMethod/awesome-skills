@@ -1,0 +1,4 @@
+interface:
+  display_name: "论文 PDF 翻译"
+  short_description: "将英文论文指定页或全文逐页翻译为中文图片型 PDF，默认保留原页面尺寸和版式"
+  default_prompt: "请使用 $nature-paper-trans 将这篇英文论文的指定页或全文翻译为中文 PDF，默认保留原页面尺寸、方向和版式，只交付中文 PDF。"
