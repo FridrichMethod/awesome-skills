@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 
 from scripts import install_skills as installer
+from tests.gitfixtures import without_pyyaml
 
 ROOT = Path(__file__).resolve().parents[1]
 POSIX_MODES = pytest.mark.skipif(os.name == "nt", reason="native Windows has no POSIX permission bits")
@@ -105,6 +106,27 @@ def test_first_install_and_no_argument_updater(sandbox, capsys):
         installer.local_listing(source / "beta")
     )
     assert not (home / ".cache").exists()
+
+
+def test_pyyaml_is_imported_only_to_parse_whole_frontmatter(monkeypatch):
+    monkeypatch.setitem(sys.modules, "yaml", None)  # import yaml now raises ImportError
+    data = b"---\nname: alpha\ndescription: Use alpha\n---\nbody\n"
+    assert installer.frontmatter_name(data, "alpha") == "alpha"
+    with pytest.raises(installer.InstallError, match="reads every SKILL.md with PyYAML"):
+        installer.metadata(data, "alpha")
+
+
+def test_checkout_install_without_pyyaml_fails_once_with_a_clear_message(sandbox, tmp_path):
+    home, source = sandbox
+    env = without_pyyaml(tmp_path, dict(os.environ))
+    command = [sys.executable, "-B", str(ROOT / "scripts/install_skills.py"), "--source", str(source)]
+    for args in ([], ["--dry-run"], ["--list"]):
+        result = subprocess.run([*command, *args], capture_output=True, text=True, env=env)
+        assert result.returncode == 1, result.stderr
+        assert result.stderr.count("awesome-skills:") == 1, result.stderr
+        assert "Installing from a checkout or --source reads every SKILL.md with PyYAML" in result.stderr
+        assert "needs only the standard library" in result.stderr
+    assert not list(home.iterdir()), "nothing is written before the check"
 
 
 def test_unselected_legacy_copies_are_never_adopted_or_removed(sandbox, capsys):

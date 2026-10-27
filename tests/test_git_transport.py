@@ -28,6 +28,7 @@ from tests.gitfixtures import (
     packed_objects,
     put,
     snapshot,
+    without_pyyaml,
 )
 
 pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="git unavailable")
@@ -205,6 +206,45 @@ def test_tarball_install_is_adopted_without_recopying(remote):
     cache = home / ".cache/awesome-skills"
     assert not legacy.exists()
     assert (cache / "notes.txt").is_file() and (cache / "libraries/keep-me").is_dir()
+
+
+# Shapes from the library that a line-based reader gets wrong: a quoted value whose next line
+# starts at column 0 with `name:`, a flow mapping spanning lines, an indentless sequence.
+SHAPED_SKILL = """---
+name: gamma
+description: "Spans lines; the next one starts at column 0 and is not a key:
+name: still the description"
+allowed-tools: [Read, Write]
+metadata:
+  {
+    "openclaw": {"emoji": "x", "name": "nested"},
+  }
+tags:
+- a
+- name: nested
+---
+body
+"""
+
+
+def test_remote_install_needs_only_the_standard_library(remote, tmp_path):
+    home, upstream = remote
+    put(upstream.work / "skills/gamma/SKILL.md", SHAPED_SKILL)
+    upstream.commit("frontmatter shapes")
+    env = without_pyyaml(tmp_path, subprocess_env())
+    helper = [sys.executable, "-B", str(ROOT / "scripts/install_skills.py"), "--remote"]
+    first = subprocess.run(helper, capture_output=True, text=True, env=env)
+    assert first.returncode == 0, first.stderr
+    assert sorted(os.listdir(home / ".claude/skills")) == ["alpha", "beta", "gamma"]
+    assert manifest(home, "claude")["managed"]["gamma"]["name"] == "gamma"
+    # A user's own skill is matched by its frontmatter name without PyYAML, too.
+    put(home / ".agents/skills/mine/SKILL.md", "---\nname: 'gamma'\ndescription: mine\n---\n")
+    conflict = subprocess.run([*helper, "--codex-only", "--enable", "gamma"], capture_output=True, text=True, env=env)
+    assert conflict.returncode == 1 and "Frontmatter name conflict" in conflict.stderr, conflict.stderr
+    router = [sys.executable, "-B", str(clone(home) / "scripts/install_skills.py"), "--list", "--search", "gamma"]
+    listed = subprocess.run(router, capture_output=True, text=True, env=env)
+    assert listed.returncode == 0, listed.stderr
+    assert list(json.loads(listed.stdout)["skills"]) == ["gamma"]
 
 
 def test_lock_contention_exits_75(remote):

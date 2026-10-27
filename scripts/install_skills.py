@@ -5,11 +5,14 @@ Remote installs keep the library as a blobless, sparse git clone in the data dir
 An update fetches new commits and trees, then downloads only the blobs of selected skills
 whose git tree changed. --list reads that clone; --dry-run fetches into it but never moves
 its checkout or writes state or destinations. Either may lazily fetch objects into the clone.
+A remote install needs only the Python standard library; PyYAML is imported only to read a
+checkout's skills in full.
 """
 
 from __future__ import annotations
 
 import argparse
+import bisect
 import errno
 import hashlib
 import json
@@ -36,12 +39,6 @@ try:
 except ImportError:  # native Windows
     fcntl = None
     import msvcrt
-
-try:
-    import yaml
-except ImportError:
-    print("awesome-skills requires PyYAML; use an existing Python environment or install PyYAML>=6.0.", file=sys.stderr)
-    raise SystemExit(1) from None
 
 REPOSITORY = "https://github.com/FridrichMethod/awesome-skills"
 REPOSITORY_URL = REPOSITORY + ".git"
@@ -436,19 +433,414 @@ def exact_tree(expected: dict, path: Path) -> bool:
 
 # --- Metadata --------------------------------------------------------------------------
 
+# A remote install reads only the top-level `name` of SKILL.md frontmatter (names and
+# descriptions come from library_index.json), with the standard library. NameReader follows
+# PyYAML's scanner (YAML 1.1) wherever it decides which lines are top-level keys and what a
+# name scalar holds, and refuses what it does not follow: anchors, tags, aliases, explicit
+# keys, tabs outside quotes, and any name that is not a one-line plain or quoted string.
+# The sync rejects a library skill it cannot read exactly as PyYAML does. PyYAML itself is
+# imported only to parse whole frontmatter.
+NON_PRINTABLE = re.compile(r"[^\t\n\r\x20-\x7e\x85\xa0-\ud7ff\ue000-\ufffd\U00010000-\U0010ffff]")
+DOCUMENT_MARKER = re.compile(r"(?:---|\.\.\.)(?:[ \t]|$)")
+BLOCK_HEADER = re.compile(r"[|>](?:[+-]([1-9])?|([1-9])[+-]?)?(?: +(?:#.*)?)?")
+ESCAPES = {
+    **{"0": "\0", "a": "\a", "b": "\b", "t": "\t", "\t": "\t", "n": "\n", "v": "\v", "f": "\f", "r": "\r"},
+    **{"e": "\x1b", " ": " ", '"': '"', "\\": "\\", "/": "/", "N": "\x85", "_": "\xa0", "L": "\u2028", "P": "\u2029"},
+}
+HEX_ESCAPES = {"x": 2, "u": 4, "U": 8}
+HEX_DIGITS = frozenset("0123456789abcdefABCDEF")
+# PyYAML's implicit resolvers (yaml/resolver.py) for plain scalars that do not load as str.
+NOT_STRINGS = [
+    (
+        re.compile(
+            r"""^(?:yes|Yes|YES|no|No|NO
+                    |true|True|TRUE|false|False|FALSE
+                    |on|On|ON|off|Off|OFF)$""",
+            re.X,
+        ),
+        "yYnNtTfFoO",
+    ),
+    (
+        re.compile(
+            r"""^(?:[-+]?(?:[0-9][0-9_]*)\.[0-9_]*(?:[eE][-+][0-9]+)?
+                    |\.[0-9][0-9_]*(?:[eE][-+][0-9]+)?
+                    |[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\.[0-9_]*
+                    |[-+]?\.(?:inf|Inf|INF)
+                    |\.(?:nan|NaN|NAN))$""",
+            re.X,
+        ),
+        "-+0123456789.",
+    ),
+    (
+        re.compile(
+            r"""^(?:[-+]?0b[0-1_]+
+                    |[-+]?0[0-7_]+
+                    |[-+]?(?:0|[1-9][0-9_]*)
+                    |[-+]?0x[0-9a-fA-F_]+
+                    |[-+]?[1-9][0-9_]*(?::[0-5]?[0-9])+)$""",
+            re.X,
+        ),
+        "-+0123456789",
+    ),
+    (re.compile(r"^(?:<<)$"), "<"),
+    (re.compile(r"""^(?: ~ |null|Null|NULL | )$""", re.X), "~nN"),
+    (
+        re.compile(
+            r"""^(?:[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]
+                    |[0-9][0-9][0-9][0-9] -[0-9][0-9]? -[0-9][0-9]?
+                     (?:[Tt]|[ \t]+)[0-9][0-9]?
+                     :[0-9][0-9] :[0-9][0-9] (?:\.[0-9]*)?
+                     (?:[ \t]*(?:Z|[-+][0-9][0-9]?(?::[0-9][0-9])?))?)$""",
+            re.X,
+        ),
+        "0123456789",
+    ),
+    (re.compile(r"^(?:=)$"), "="),
+]
 
-def metadata(data: bytes, label: str) -> dict:
+
+def pyyaml():
+    """PyYAML, needed only to parse whole frontmatter: installs from a checkout, and the sync."""
+    try:
+        import yaml
+    except ImportError:
+        raise InstallError(
+            f"Installing from a checkout or --source reads every SKILL.md with PyYAML, which "
+            f"{display(sys.executable)} cannot import; install PyYAML>=6.0 there or set SKILLS_PYTHON to a "
+            "Python that has it. A remote install (install.sh or install.ps1 outside a checkout) needs only "
+            "the standard library."
+        ) from None
+    return yaml
+
+
+def frontmatter(data: bytes, label: str) -> str:
+    """The text between the first two `---` lines: what PyYAML and NameReader both read."""
     try:
         lines = data.decode("utf-8").splitlines()
         if lines[0].strip() != "---":
             raise ValueError("missing frontmatter")
         end = next(i for i in range(1, len(lines)) if lines[i].strip() == "---")
-        fm = yaml.safe_load("\n".join(lines[1:end]))
+    except (ValueError, IndexError, StopIteration) as e:
+        raise InstallError(f"Invalid frontmatter at {label}: {e}") from e
+    return "\n".join(lines[1:end])
+
+
+def metadata(data: bytes, label: str) -> dict:
+    """The whole frontmatter, parsed by PyYAML."""
+    yaml = pyyaml()
+    text = frontmatter(data, label)
+    try:
+        fm = yaml.safe_load(text)
         if not isinstance(fm, dict) or not isinstance(fm.get("name"), str) or not fm["name"].strip():
             raise ValueError("missing string name")
         return fm
-    except (ValueError, IndexError, StopIteration, UnicodeError, yaml.YAMLError) as e:
+    except (ValueError, yaml.YAMLError) as e:
         raise InstallError(f"Invalid frontmatter at {label}: {e}") from e
+
+
+def frontmatter_name(data: bytes, label: str) -> str:
+    """The frontmatter's top-level name as PyYAML would load it, read with the standard library."""
+    try:
+        return NameReader(frontmatter(data, label)).read()
+    except ValueError as e:
+        raise InstallError(f"Unreadable frontmatter name at {label}: {e}") from e
+
+
+def skip_spaces(line: str, k: int) -> int:
+    while k < len(line) and line[k] == " ":
+        k += 1
+    if line[k : k + 1] == "\t":
+        raise ValueError("tab outside a quoted scalar")
+    return k
+
+
+def plain_start(ch: str, after: str) -> bool:
+    """Whether a plain scalar may start here in block context (PyYAML's check_plain)."""
+    return ch not in " \t-?:,[]{}#&*!|>'\"%@`" or (ch in "-?:" and after not in ("", " ", "\t"))
+
+
+def plain_scalar(line: str, k: int, flow: bool = False) -> tuple[int, int]:
+    """PyYAML's plain scalar from line[k] on: (end of its text, index of what stops it on this line)."""
+    stops = ",?[]{}" if flow else ""
+    end = k
+    while True:
+        j = k
+        while j < len(line) and line[j] not in " \t" + stops:
+            if line[j] == ":" and line[j + 1 : j + 2] in ("", " ", "\t", *stops.replace("?", "")):
+                break
+            j += 1
+        if j == k:
+            break
+        end = k = j
+        while k < len(line) and line[k] == " ":
+            k += 1
+        if k == end or k == len(line) or line[k] == "#":
+            break
+    if line[k : k + 1] == "\t":
+        raise ValueError("tab outside a quoted scalar")
+    return end, k
+
+
+def escape(text: str, k: int) -> tuple[str, int]:
+    """The double-quoted escape at text[k] (a backslash): its value and the index after it."""
+    code = text[k + 1 : k + 2]
+    if code in ESCAPES:
+        return ESCAPES[code], k + 2
+    if code == "\n":
+        return "", k + 2  # an escaped line break
+    digits = text[k + 2 : k + 2 + HEX_ESCAPES.get(code, 0)]
+    if code not in HEX_ESCAPES or len(digits) != HEX_ESCAPES[code] or not HEX_DIGITS.issuperset(digits):
+        raise ValueError(f"invalid escape in a double-quoted scalar: \\{code}")
+    return chr(int(digits, 16)), k + 2 + len(digits)
+
+
+def unquote(token: str) -> str:
+    """The value of a one-line quoted scalar, quotes included in token."""
+    if token[0] == "'":
+        return token[1:-1].replace("''", "'")
+    chars, k = [], 1
+    while k < len(token) - 1:
+        if token[k] == "\\":
+            char, k = escape(token, k)
+        else:
+            char, k = token[k], k + 1
+        chars.append(char)
+    return "".join(chars)
+
+
+class NameReader:
+    """Reads the top-level name of frontmatter text exactly as yaml.safe_load would, line by line,
+    or raises ValueError. PyYAML ignores indentation inside quoted scalars and flow collections, so
+    a column-0 line can still belong to a value above it, nested or not; following every multi-line
+    scalar and collection is what makes "a column-0 `name:` line is the top-level key" exact.
+    Block structure is checked as PyYAML's parser checks it; the grammar inside flow collections
+    is not, so one PyYAML rejects (`[a: b: c]`) does not stop the reader."""
+
+    def __init__(self, text: str):
+        self.text, self.lines = text, text.split("\n")
+        self.starts = [0]
+        for line in self.lines[:-1]:
+            self.starts.append(self.starts[-1] + len(line) + 1)
+        self.stack = []  # open block collections: [column, "map" or "seq", value pending, indentless]
+        self.plain = None  # (least column, is the name) of a plain scalar that may continue
+        self.names = []
+
+    def read(self) -> str:
+        if NON_PRINTABLE.search(self.text):
+            raise ValueError("non-printable character")
+        if any(DOCUMENT_MARKER.match(line) for line in self.lines):
+            raise ValueError("document marker")
+        i = 0
+        while i < len(self.lines):
+            i = self.line(i)
+        if not self.names:
+            raise ValueError("no top-level name")
+        if not self.names[0].strip():
+            raise ValueError("empty name")
+        return self.names[0]
+
+    def line(self, i: int) -> int:
+        line = self.lines[i]
+        col = len(line) - len(line.lstrip(" "))
+        if col == len(line):
+            return i + 1
+        if line[col] == "\t":
+            raise ValueError("tab outside a quoted scalar")
+        if self.plain:
+            if line[col] != "#" and col >= self.plain[0]:  # the plain scalar continues here
+                if self.plain[1]:
+                    raise ValueError("multi-line name")
+                stop = plain_scalar(line, col)[1]
+                if stop < len(line) and line[stop] == ":":
+                    raise ValueError("mapping value inside a plain scalar")
+                if stop < len(line):
+                    self.plain = None  # a comment ends it
+                return i + 1
+            self.plain = None
+        return i + 1 if line[col] == "#" else self.structure(i, col)
+
+    def structure(self, i: int, col: int) -> int:
+        line = self.lines[i]
+        while self.stack and self.stack[-1][0] > col:
+            self.stack.pop()
+        pos = col
+        while line.startswith("-", pos) and line[pos + 1 : pos + 2] in ("", " "):
+            self.enter(pos, "seq")
+            pos = skip_spaces(line, pos + 1)
+        if pos == len(line) or line[pos] == "#":
+            return i + 1  # an empty entry; its value may follow on later lines
+        return self.node(i, pos)
+
+    def indent(self) -> int:
+        """PyYAML's current block indentation (an indentless sequence shares its mapping's)."""
+        return self.stack[-1][0] if self.stack else -1
+
+    def enter(self, col: int, kind: str):
+        """Add a key ("map") or a `- ` entry ("seq") at col to its block collection, or open one
+        as the pending value of the key or entry above, as PyYAML's parser allows."""
+        top = self.stack[-1] if self.stack else None
+        if top and top[0] == col and top[1] == "seq" and top[3] and kind == "map":
+            self.stack.pop()  # a key at its mapping's column ends an indentless sequence
+            top = self.stack[-1]
+        if top is None:
+            if col or kind == "seq":
+                raise ValueError("frontmatter does not start with a top-level key")
+        elif top[0] == col and top[1] == kind:
+            top[2] = True
+            return
+        elif not top[2] or top[0] > col or top[0] == col and kind == "map":
+            raise ValueError(f"unexpected {'key' if kind == 'map' else 'sequence entry'} at column {col}")
+        if top:
+            top[2] = False
+        self.stack.append([col, kind, True, top is not None and top[0] == col])
+
+    def scalar(self, col: int):
+        """A value node starting a line or following `- `: the pending value above it."""
+        top = self.stack[-1] if self.stack else None
+        if top is None or top[0] >= col or not top[2]:
+            raise ValueError(f"unexpected value at column {col}")
+        top[2] = False
+
+    def node(self, i: int, pos: int) -> int:
+        """A node at the start of a line or after `- `: a key with its value, or a value."""
+        line, colon, key = self.lines[i], -1, ""
+        if line[pos] in "'\"":
+            row, end = self.quoted(i, pos)
+            if row == i:
+                colon, key = skip_spaces(line, end), unquote(line[pos:end])
+        elif plain_start(line[pos], line[pos + 1 : pos + 2]):
+            end, colon = plain_scalar(line, pos)
+            key = line[pos:end]
+        if line[colon : colon + 1] == ":" and line[colon + 1 : colon + 2] in ("", " ", "\t"):
+            return self.key(i, pos, colon, key)
+        self.scalar(pos)
+        return self.value(i, pos, False)
+
+    def key(self, i: int, pos: int, colon: int, key: str) -> int:
+        if colon - pos > 1024:
+            raise ValueError("key longer than 1024 characters")
+        if key == "<<":
+            raise ValueError("merge key")
+        self.enter(pos, "map")
+        line, is_name = self.lines[i], len(self.stack) == 1 and key == "name"
+        if is_name and self.names:
+            raise ValueError("duplicate top-level name")
+        p = skip_spaces(line, colon + 1)
+        if p == len(line) or line[p] == "#":
+            if is_name:
+                raise ValueError("empty name")
+            return i + 1
+        self.stack[-1][2] = False
+        return self.value(i, p, is_name)
+
+    def value(self, i: int, p: int, is_name: bool) -> int:
+        line = self.lines[i]
+        ch, after = line[p], line[p + 1 : p + 2]
+        if ch in "&!*":
+            raise ValueError("anchor, tag or alias")
+        if ch in "'\"":
+            row, end = self.quoted(i, p)
+            if is_name:
+                if row != i:
+                    raise ValueError("multi-line name")
+                self.names.append(unquote(line[p:end]))
+            return self.end_of_node(row, end)
+        if is_name and not plain_start(ch, after):
+            raise ValueError("name is not a plain or quoted scalar")
+        if ch in "[{":
+            return self.end_of_node(*self.flow(i, p))
+        if ch in "|>":
+            return self.block(i, p)
+        if not plain_start(ch, after):
+            raise ValueError(f"unexpected {ch!r}")
+        end, stop = plain_scalar(line, p)
+        if stop < len(line) and line[stop] == ":":
+            raise ValueError("mapping value inside a plain scalar")
+        text = line[p:end]
+        if text in ("=", "<<"):
+            raise ValueError(f"{text!r} does not load")  # SafeLoader has no constructor for these
+        if is_name:
+            if any(text[0] in first and pattern.match(text) for pattern, first in NOT_STRINGS):
+                raise ValueError(f"name {text!r} does not load as a string")
+            self.names.append(text)
+        if stop == len(line):
+            self.plain = (self.indent() + 1, is_name)
+        return i + 1
+
+    def end_of_node(self, row: int, end: int) -> int:
+        line = self.lines[row]
+        k = skip_spaces(line, end)
+        if k < len(line) and line[k] != "#":
+            raise ValueError(f"unexpected {line[k]!r} after a value")
+        return row + 1
+
+    def quoted(self, i: int, pos: int) -> tuple[int, int]:
+        """(row, column) just past the quoted scalar that opens at row i, column pos."""
+        text, k = self.text, self.starts[i] + pos
+        quote = text[k]
+        k += 1
+        while k < len(text):
+            if text[k] == quote:
+                if quote == "'" and text.startswith("'", k + 1):
+                    k += 2
+                    continue
+                row = bisect.bisect_right(self.starts, k) - 1
+                return row, k + 1 - self.starts[row]
+            k = escape(text, k)[1] if quote == '"' and text[k] == "\\" else k + 1
+        raise ValueError("unterminated quoted scalar")
+
+    def flow(self, i: int, k: int) -> tuple[int, int]:
+        """(row, column) just past the flow collection that opens at row i, column k. Inside it
+        PyYAML ignores indentation, and a plain scalar that reaches the end of a line goes on
+        with the next one unless that starts with a comment."""
+        depth, plain = 0, False
+        while i < len(self.lines):
+            line = self.lines[i]
+            if plain:
+                k = skip_spaces(line, 0)
+                if k < len(line) and line[k] != "#":
+                    k = plain_scalar(line, k, flow=True)[1]
+                plain = k == len(line)
+            while k < len(line) and not plain:
+                ch = line[k]
+                if ch == "#":
+                    break  # a comment to the end of the line
+                if ch in "'\"":
+                    i, k = self.quoted(i, k)
+                    line = self.lines[i]
+                    continue
+                if ch in "[{]}":
+                    depth += 1 if ch in "[{" else -1
+                    if not depth:
+                        return i, k + 1
+                elif ch not in " ,?:":  # in flow context, ? and : are always indicators
+                    if ch in "\t&!*|>%@`" or (ch == "-" and line[k + 1 : k + 2] in ("", " ")):
+                        raise ValueError(f"unexpected {ch!r} in a flow collection")
+                    k = plain_scalar(line, k, flow=True)[1]
+                    plain = k == len(line)
+                    continue
+                k += 1
+            i, k = i + 1, 0
+        raise ValueError("unterminated flow collection")
+
+    def block(self, i: int, p: int) -> int:
+        """The row after a block scalar whose header is at row i, column p (PyYAML's indentation)."""
+        lines = self.lines
+        header = BLOCK_HEADER.fullmatch(lines[i], p)
+        if not header:
+            raise ValueError("invalid block scalar header")
+        indent, step, j = max(self.indent() + 1, 1), header.group(1) or header.group(2), i + 1
+        if step:
+            indent += int(step) - 1
+        else:  # the widest leading blank line or the first content line sets it
+            while j < len(lines) and not lines[j].strip(" "):
+                indent, j = max(indent, len(lines[j])), j + 1
+            if j < len(lines):
+                indent = max(indent, len(lines[j]) - len(lines[j].lstrip(" ")))
+        j = i + 1
+        while j < len(lines) and (not lines[j].strip(" ") or len(lines[j]) - len(lines[j].lstrip(" ")) >= indent):
+            j += 1
+        return j
 
 
 def skill_ids(skills: Path) -> list[str]:
@@ -625,6 +1017,10 @@ class Library:
     def release(self):
         """Drop content prepared for this run."""
 
+    def skill_name(self, data: bytes, label: str) -> str:
+        """A prepared copy's frontmatter name, read the way this library read its own names."""
+        return frontmatter_name(data, label)
+
 
 class DirLibrary(Library):
     """A local skills/ tree, such as a development clone."""
@@ -674,6 +1070,9 @@ class DirLibrary(Library):
 
     def materialize(self, skill_id, target):
         shutil.copytree(self.source / skill_id, target, symlinks=True)
+
+    def skill_name(self, data, label):
+        return metadata(data, label)["name"]  # a local tree's names come from PyYAML
 
     def router_command(self):
         helper = globals().get("__file__")
@@ -1180,7 +1579,7 @@ def external_skills(client: str, dest: Path, kept: list, home: Path) -> dict:
         p = directory / "SKILL.md"
         if p.is_file():
             try:
-                external[entry] = {"name": metadata(p.read_bytes(), display(p))["name"], "path": directory}
+                external[entry] = {"name": frontmatter_name(p.read_bytes(), display(p)), "path": directory}
             except InstallError:
                 pass
     return external
@@ -1524,7 +1923,7 @@ def prepare_one(p: dict, action: dict, backup: Path, library: Library, router: d
             expected = library.listing(action["source"])
         if not same_tree(expected, prepared):
             raise InstallError(f"Prepared copy changed: {display(prepared)}")
-        name = metadata((prepared / "SKILL.md").read_bytes(), entry)["name"]
+        name = library.skill_name((prepared / "SKILL.md").read_bytes(), entry)
         if name != p["state"]["managed"][entry]["name"]:
             raise InstallError(f"Frontmatter name {name!r} differs from {INDEX}")
     except (InstallError, OSError) as exc:
@@ -1848,6 +2247,7 @@ def main(argv: list[str] | None = None) -> int:
         default = adjacent / "skills" if (adjacent / "skills").exists() else adjacent.parent / "skills"
         source = native((args.source or default).resolve())
         guard_source(source, data)
+        pyyaml()  # a checkout's skills are read in full: fail once, before any lock or write
     url = os.environ.get("SKILLS_REPOSITORY_URL") or REPOSITORY_URL
     branch = os.environ.get("SKILLS_BRANCH") or "main"
     if not re.fullmatch(r"[A-Za-z0-9._][A-Za-z0-9._/-]*", branch) or ".." in branch:

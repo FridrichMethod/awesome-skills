@@ -14,7 +14,7 @@ import threading
 import pytest
 
 from scripts import install_skills as installer
-from tests.gitfixtures import ROOT, WINDOWS, Upstream, data_dir, isolate
+from tests.gitfixtures import ROOT, WINDOWS, Upstream, data_dir, isolate, without_pyyaml
 
 PWSH = shutil.which("pwsh")
 ALREADY = "Already current; selection preserved."
@@ -75,6 +75,7 @@ def check_contract(home, env, command):
 @pytest.mark.skipif(WINDOWS or not shutil.which("bash") or not shutil.which("curl"), reason="needs bash and curl")
 def test_piped_install_sh(remote, tmp_path):
     home, env = remote
+    env = without_pyyaml(tmp_path, env)  # as on a fresh host: the bootstraps need no PyYAML
     env["SKILLS_INSTALLER_URL"] = (ROOT / "scripts/install_skills.py").as_uri()
     piped = tmp_path / "pipe.sh"  # stands in for `curl -fsSL .../install.sh | bash -s -- ARGS`
     piped.write_text(f'exec bash -s -- "$@" < {shlex.quote(str(ROOT / "install.sh"))}\n')
@@ -91,6 +92,7 @@ def test_installer_fits_in_one_python_c_argument():
 @NEEDS_PWSH
 def test_downloaded_install_ps1(remote, tmp_path, served_installer):
     home, env = remote
+    env = without_pyyaml(tmp_path, env)
     env["SKILLS_INSTALLER_URL"] = served_installer
     alone = tmp_path / "download/install.ps1"  # no checkout next to it: download mode
     alone.parent.mkdir()

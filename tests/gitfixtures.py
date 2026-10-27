@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 from scripts import install_skills as installer
@@ -28,6 +29,19 @@ def put(path: Path, text: str):
 
 def data_dir(home: Path) -> Path:
     return home / ("AppData/Local" if WINDOWS else ".local/share") / "awesome-skills"
+
+
+def without_pyyaml(root: Path, env: dict) -> dict:
+    """env for a child Python that cannot import PyYAML, as on a fresh host: a failing `yaml`
+    module comes first on PYTHONPATH. Checked here, so a test never passes by accident."""
+    shim = root / "no-pyyaml"
+    put(shim / "yaml.py", 'raise ImportError("PyYAML is hidden from this test")\n')
+    env = {**env, "PYTHONPATH": os.pathsep.join(filter(None, [str(shim), env.get("PYTHONPATH")]))}
+    probe = subprocess.run(
+        [env.get("SKILLS_PYTHON", sys.executable), "-c", "import yaml"], env=env, capture_output=True
+    )
+    assert probe.returncode != 0 and b"PyYAML is hidden" in probe.stderr, probe.stderr
+    return env
 
 
 def snapshot(root: Path) -> dict:
