@@ -73,6 +73,38 @@ def test_unportable_or_unreadable_upstream_skills_are_rejected_and_the_rest_sync
         assert "differs only in case" in err
 
 
+def test_a_skill_whose_name_remote_installs_cannot_verify_is_rejected(pipeline, capsys):
+    library, _, builders = pipeline
+
+    def upstream(dest: Path):
+        write_skill(dest / "skills/good")
+        anchored = dest / "skills/anchored"
+        anchored.mkdir(parents=True)
+        # PyYAML reads the name; the standard-library reader refuses frontmatter with anchors.
+        (anchored / "SKILL.md").write_text(
+            "---\nname: anchored\ndescription: Fixture skill.\nmetadata:\n  base: &defaults {a: 1}\n---\nbody\n"
+        )
+
+    builders.append(upstream)
+    assert sync(pipeline)["rejected"] == 1
+    err = capsys.readouterr().err
+    assert sorted(p.name for p in library.skills_dest.iterdir()) == ["good"]
+    assert "REJECTED skills/anchored: remote installs cannot read the frontmatter name without PyYAML" in err
+    assert "anchor, tag or alias" in err
+
+
+def test_library_problems_report_a_name_read_differently_without_pyyaml(tmp_path, monkeypatch):
+    skills = tmp_path / "skills"
+    write_skill(skills / "good")
+    write_skill(skills / "other")
+    reader = ss._installer()
+    real = reader.frontmatter_name
+    monkeypatch.setattr(
+        reader, "frontmatter_name", lambda data, label: "renamed" if label == "other" else real(data, label)
+    )
+    assert ss.library_problems(skills) == ["other: frontmatter name 'other' reads as 'renamed' without PyYAML"]
+
+
 def test_case_only_id_collision_becomes_a_source_qualified_variant(pipeline):
     library, _, builders = pipeline
     write_skill(library.skills_dest / "pdb", name="pdb")

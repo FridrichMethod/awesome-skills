@@ -825,7 +825,10 @@ class LibrarySources:
 def candidate_problems(prepared: Path, skill_id: str) -> list[str]:
     """Why a filtered, sanitized upstream skill must not enter skills/: the installer's own
     portability rules (Windows names, case-only collisions, links, git metadata files)
-    plus frontmatter it can parse. Checked before anything is copied into the library."""
+    plus frontmatter it can parse. Checked before anything is copied into the library.
+
+    A remote install verifies each copy's name with the installer's standard-library reader
+    against library_index.json, which PyYAML wrote, so both must read the same name."""
     installer = _installer()
     kinds = {}
     for path in sorted(prepared.rglob("*")):
@@ -835,9 +838,18 @@ def candidate_problems(prepared: Path, skill_id: str) -> list[str]:
             kinds[path.relative_to(prepared).as_posix()] = "file"
     problems = installer.skill_problems(skill_id, kinds)
     try:
-        installer.metadata((prepared / "SKILL.md").read_bytes(), skill_id)
+        data = (prepared / "SKILL.md").read_bytes()
+        name = installer.metadata(data, skill_id)["name"]
     except (installer.InstallError, OSError) as error:
         problems.append(str(error))
+        return problems
+    try:
+        plain = installer.frontmatter_name(data, skill_id)
+    except installer.InstallError as error:
+        problems.append(f"remote installs cannot read the frontmatter name without PyYAML ({error})")
+    else:
+        if plain != name:
+            problems.append(f"frontmatter name {name!r} reads as {plain!r} without PyYAML")
     return problems
 
 

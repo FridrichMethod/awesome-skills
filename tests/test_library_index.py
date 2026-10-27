@@ -18,6 +18,21 @@ def test_committed_index_matches_the_skill_tree():
     assert actual == expected, "regenerate it: python scripts/sync_skills.py --index-only"
 
 
+def test_every_library_name_reads_the_same_without_pyyaml():
+    """A remote install checks each copy's name with the standard-library reader against the index."""
+    index = installer.read_json(ROOT / installer.INDEX, {})["skills"]
+    names = {}
+    for skill_id in installer.skill_ids(ROOT / "skills"):
+        try:
+            names[skill_id] = installer.frontmatter_name(
+                (ROOT / "skills" / skill_id / "SKILL.md").read_bytes(), skill_id
+            )
+        except installer.InstallError as error:
+            names[skill_id] = str(error)
+    differing = {skill_id: name for skill_id, name in names.items() if name != index[skill_id]["name"]}
+    assert not differing, list(differing.items())[:20]
+
+
 def test_sync_writes_the_index_only_when_it_changes(tmp_path):
     skills = tmp_path / "skills"
     (skills / "alpha").mkdir(parents=True)
