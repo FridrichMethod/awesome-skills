@@ -45,6 +45,10 @@
       "description": "Scholarly writing and research compliance. Use for CRediT, preregistration, Plan S, Nelson Memo, preprints, ORCID, LLM disclosure.",
       "name": "academic-writing"
     },
+    "academic-writing--journalism--0c1ed18632": {
+      "description": "Scholarly writing and research compliance. Use for CRediT, preregistration, Plan S, Nelson Memo, preprints, ORCID, LLM disclosure.",
+      "name": "academic-writing"
+    },
     "academy-guide": {
       "description": "Stop and check this skill before finishing any reply to a question about how to use Claude or a Claude product — it recommends matching courses, tutorials, and use cases from Claude Academy (academy.claude.com), Anthropic's learning hub. Trigger on: \"how do I\", \"how can I\", \"getting started with\", \"what can Claude do\", \"teach me\", \"learn to use\"; questions about artifacts, projects, skills, plugins, connectors, MCP; requests about rolling Claude out to a team, class, or organization; and any ask for training materials, onboarding content, or learning resources. Use it when the user is learning how to use a feature or product — not when they are mid-task and just want the task done. This skill composes with other skills: after consulting product documentation to answer how a Claude feature works, also check here for a matching course or tutorial — a docs-grounded answer and an Academy recommendation belong together. Only recommend on a strong match; never invent Academy content.",
       "name": "academy-guide"
@@ -149,6 +153,10 @@
       "description": "Eliminates AI-generated writing patterns that erode reader trust. Use when writing or editing articles, docs, or press releases.",
       "name": "ai-writing-detox"
     },
+    "ai-writing-detox--journalism--37b506c647": {
+      "description": "Eliminates AI-generated writing patterns that erode reader trust. Use when writing or editing articles, docs, or press releases.",
+      "name": "ai-writing-detox"
+    },
     "airflow-dag-patterns": {
       "description": "Build production Apache Airflow DAGs with best practices for operators, sensors, testing, and deployment. Use when creating data pipelines, orchestrating workflows, or scheduling batch jobs.",
       "name": "airflow-dag-patterns"
@@ -237,7 +245,15 @@
       "description": "Constructs deep-links and URLs for the AlphaGenome Atlas website. Supports generating single-variant exploration links (1-based chr:pos:ref>alt), genomic locus views (1-based closed chr:start-end), candidate summary tables, and AlphaGenome reference vs. alternate predictions. Use whenever visualizing, exploring, charting, or linking genetic variants and genomic loci on the AlphaGenome Atlas, or when asked to inspect, view, or link predictions for a genomic variant.",
       "name": "alphagenome-atlas-website-links"
     },
+    "alphagenome_atlas_website_links--gdm-science--c2723967c7": {
+      "description": "Constructs deep-links and URLs for the AlphaGenome Atlas website. Supports generating single-variant exploration links (1-based VCF-style coordinates), genomic locus views (1-based closed chr:start-end), candidate summary tables, and AlphaGenome reference vs. alternate predictions. Use when visualizing, exploring, charting, or linking genetic variants and genomic loci on the AlphaGenome Atlas, or when asked to inspect, view, or link predictions for a genomic variant. Don't use for computing raw AlphaGenome variant predictions directly without Atlas URLs (use alphagenome-single-variant-analysis or alphagenome-variant-impact-score).",
+      "name": "alphagenome-atlas-website-links"
+    },
     "alphagenome_single_variant_analysis": {
+      "description": "Analyzes genetic variant effects on gene expression (RNA-seq), chromatin accessibility (DNASE), histone marks (ChIP), and transcription factors using the AlphaGenome API. Use when the user asks about non-coding variant effects, pathogenicity, clinical significance, disease associations, functional effects, gene expression changes, splicing disruption, or regulatory effects in promoters and enhancers. Also use for resolving biological terms to tissue/cell-type ontologies (UBERON/CL) or analyzing variants in chr:pos:ref>alt format.",
+      "name": "alphagenome-single-variant-analysis"
+    },
+    "alphagenome_single_variant_analysis--gdm-science--1348107dd6": {
       "description": "Analyzes genetic variant effects on gene expression (RNA-seq), chromatin accessibility (DNASE), histone marks (ChIP), and transcription factors using the AlphaGenome API. Use when the user asks about non-coding variant effects, pathogenicity, clinical significance, disease associations, functional effects, gene expression changes, splicing disruption, or regulatory effects in promoters and enhancers. Also use for resolving biological terms to tissue/cell-type ontologies (UBERON/CL) or analyzing variants in chr:pos:ref>alt format.",
       "name": "alphagenome-single-variant-analysis"
     },
@@ -2309,6 +2325,10 @@
       "description": "Explores intent and design before implementation. MUST use before creating or modifying any feature, component, or behavior.",
       "name": "brainstorming"
     },
+    "brainstorming--obra-superpowers--b65e614f40": {
+      "description": "You MUST use this before any creative work - creating features, building components, adding functionality, modifying behavior, or planning anything new, in software or out of it (a talk, a business, a renovation).",
+      "name": "brainstorming"
+    },
     "brand-guidelines": {
       "description": "Applies Anthropic's official brand colors and typography to any sort of artifact that may benefit from having Anthropic's look-and-feel. Use it when brand colors or style guidelines, visual formatting, or company design standards apply.",
       "name": "brand-guidelines"
@@ -2453,6 +2473,10 @@
       "description": "Segment single cells from multiplexed IMC/MIBI tissue images using Mesmer/DeepCell, Cellpose, or ilastik+CellProfiler, covering whole-cell vs nuclear segmentation, the summed-membrane-channel decision, nuclear-expansion bias, lateral spillover, resolution-floor parameters, and downstream-proxy evaluation. Use when delineating cells after preprocessing, choosing a segmentation model, building a cell mask for quantification, diagnosing impossible double-positive populations, or troubleshooting over/under-segmentation.",
       "name": "bio-imaging-mass-cytometry-cell-segmentation"
     },
+    "cell-type-annotation": {
+      "description": "scRNA-seq cell type annotation - read before any annotation skills. Chooses and runs the route: name clusters manually from canonical markers (scanpy, runnable code here), transfer labels with CellTypist or a popV/scANVI on a reference, or do both and validate one against other. Covers package availability, tissue- and state-matched references, marker panels, confidence and marker validation of transferred labels, doublets, unresolved clusters. Tool-specific code lives in celltypist/popv-cell-annotation and scvi-tools-single-cell.",
+      "name": "cell-type-annotation"
+    },
     "cell-type-deconvolution": {
       "description": "Estimates cell-type composition from bulk DNA methylation and uses it to defuse the single biggest EWAS confounder. Covers reference-based deconvolution (Houseman constrained-projection, minfi estimateCellCounts2 with FlowSorted.Blood.EPIC + IDOL-optimized libraries, EpiDISH RPC/CBS/CP, 12-cell extended, cord-blood nRBC references, EpiSCORE/hepidish for solid tissue), reference-free correction (ReFACTor, RefFreeEWAS, SVA), using fractions as covariates vs the compositionality/collinearity trap, and cell-type-resolved EWAS (CellDMC, TCA, TOAST, omicwas, HIRE). Use when estimating blood/tissue cell fractions, adjusting an EWAS for composition, choosing a deconvolution reference, or attributing a methylation signal to a cell type. For the EWAS confounder-vs-mediator decision see ewas-design; for the IEAA cell-count adjustment of DNAm age see epigenetic-clocks; for clean beta input see array-preprocessing.",
       "name": "bio-methylation-cell-type-deconvolution"
@@ -2481,6 +2505,10 @@
       "description": "Automated scRNA-seq cell type annotation via pre-trained logistic regression. 45+ models: immune, gut, lung, brain, fetal, cancer microenvironments. Input normalized AnnData; outputs per-cell labels, majority-vote cluster labels, confidence scores. Use for fast, reference-backed annotation without manual marker inspection.",
       "name": "celltypist-cell-annotation"
     },
+    "celltypist-cell-annotation--sciagent--a6bd498693": {
+      "description": "Automated scRNA-seq cell type annotation via pre-trained logistic regression. 45+ models: immune, gut, lung, brain, fetal, cancer microenvironments. Input normalized AnnData; outputs per-cell labels, majority-vote cluster labels, confidence scores. Use for fast, reference-backed annotation without manual marker inspection; read cell-type-annotation first.",
+      "name": "celltypist-cell-annotation"
+    },
     "cellular-senescence-agent": {
       "description": "AI-powered analysis of cellular senescence for aging research, cancer therapy response, and senolytic drug development.",
       "name": "cellular-senescence-agent"
@@ -2504,6 +2532,10 @@
     "changelog-automation": {
       "description": "Automate changelog generation from commits, PRs, and releases following Keep a Changelog format. Use when setting up release workflows, generating release notes, or standardizing commit conventions.",
       "name": "changelog-automation"
+    },
+    "chat-mention-triage": {
+      "description": "Use to classify a team-chat mention, track distinct work, and avoid duplicating the designated live responder.",
+      "name": "chat-mention-triage"
     },
     "chatehr-clinician-assistant": {
       "description": "EHR Chat Assistant",
@@ -2627,6 +2659,10 @@
     },
     "claude-md-updater": {
       "description": "Scans the session for lessons and workflows, then proposes scoped CLAUDE.md edits. Use for save this lesson or add to context.",
+      "name": "claude-md-updater"
+    },
+    "claude-md-updater--journalism--db3612671b": {
+      "description": "Scans the session for durable lessons and workflows, then proposes scoped project instruction updates. Use for save this lesson or add to context.",
       "name": "claude-md-updater"
     },
     "claude-security": {
@@ -3249,6 +3285,10 @@
       "description": "Creates DE-specific diagnostic and result visualizations using DESeq2/edgeR built-in functions and lightweight ggplot2 wrappers. Covers MA plot (with the shrunken-LFC compression effect), volcano (with the apeglm caveat that p-values are unchanged), PCA on VST/rlog (never raw counts), sample distance heatmaps, top-DE-gene heatmaps with the row-scaling trap, dispersion / BCV plot interpretation, p-value histogram diagnostics, plotCounts for individual genes, blind=TRUE vs FALSE rationale, and the n=3 visualization stake. Use when generating DE diagnostic plots, choosing VST vs rlog for visualization, troubleshooting suspicious plot patterns (shifted MA cloud, batch-dominated PCA, anti-conservative p-value histogram), or building a standard QC figure panel.",
       "name": "bio-differential-expression-de-visualization"
     },
+    "deadline-and-reply-tracking": {
+      "description": "Use to track deadlines, acknowledgments, reply windows, and the next owner action across calendars, messages, and task records.",
+      "name": "deadline-and-reply-tracking"
+    },
     "debugging-strategies": {
       "description": "Master systematic debugging techniques, profiling tools, and root cause analysis to efficiently track down bugs across any codebase or technology stack. Use when investigating bugs, performance issues, or unexpected behavior.",
       "name": "debugging-strategies"
@@ -3357,6 +3397,10 @@
       "description": "Use when a superpowers session went wrong and your human partner wants to know why — repeated work, ignored plans, stumbles, poor results, a skill that didn't fire, \"it took too long\", \"why is it so expensive\", \"what is it doing\" — or wants to build a bug report for the superpowers maintainers, for the current session or a past one identified by id or path, on any harness.",
       "name": "diagnosing-superpowers"
     },
+    "diagnosing-superpowers--obra-superpowers--cdb8dda069": {
+      "description": "Use when a superpowers session went wrong and your human partner wants to know why — repeated work, ignored plans, stumbles, poor results, a skill that didn't fire, \"it took too long\", \"why is it so expensive\", \"what is it doing\" — or wants to build a bug report for the superpowers maintainers, for the current session or a past one identified by id or path, on any harness.",
+      "name": "diagnosing-superpowers"
+    },
     "diffdock": {
       "description": "Diffusion-based docking that predicts protein-ligand poses without a predefined site. Use for blind docking, when traditional docking fails, or exploring multiple binding modes. Pipeline: prep protein (PDB) and ligand (SMILES/SDF), run inference, analyze confidence-ranked poses.",
       "name": "diffdock"
@@ -3425,6 +3469,10 @@
       "description": "Digital archiving with AI enrichment and entity extraction. Use when building content archives or knowledge graphs.",
       "name": "digital-archive"
     },
+    "digital-archive--journalism--11e5e02a2b": {
+      "description": "Digital archiving with AI enrichment and entity extraction. Use when building content archives or knowledge graphs.",
+      "name": "digital-archive"
+    },
     "digital-twin-clinical-agent": {
       "description": "AI-powered patient digital twin creation for clinical trial simulation, treatment outcome prediction, and personalized medicine using real-world data and multi-omics integration.",
       "name": "digital-twin-clinical-agent"
@@ -3435,6 +3483,10 @@
     },
     "director": {
       "description": "Directs the current request through configured lower-tier agents. Use only for explicit /director or /dev-toolkit:director invocation.",
+      "name": "director"
+    },
+    "director--journalism--1d338deb7e": {
+      "description": "Directs the current request through configured lower-tier agents. Use only when the user explicitly invokes it.",
       "name": "director"
     },
     "discernment-nudge": {
@@ -3505,7 +3557,15 @@
       "description": "Docker and Docker Compose patterns for local development, container security, networking, volume strategies, and multi-service orchestration.",
       "name": "docker-patterns"
     },
+    "document-delivery": {
+      "description": "Use to prepare, inspect, share, and deliver an editable document or PDF from verified source material.",
+      "name": "document-delivery"
+    },
     "document-design": {
+      "description": "Creates print-ready HTML that exports to PDF. Use to make a proposal, report, one-pager, newsletter, slides, or flyer.",
+      "name": "document-design"
+    },
+    "document-design--journalism--8575eae80a": {
       "description": "Creates print-ready HTML that exports to PDF. Use to make a proposal, report, one-pager, newsletter, slides, or flyer.",
       "name": "document-design"
     },
@@ -3620,6 +3680,10 @@
     "elife-figure-guide": {
       "description": "eLife figure preparation: file formats (TIFF/EPS/PDF), striking image requirements (1800x900 px), figure supplement naming, and image screening policy treating selective enhancement as misconduct.",
       "name": "elife-figure-guide"
+    },
+    "email-request-intake": {
+      "description": "Use to process a concrete request from an allowlisted email intake route while preserving thread context, authority, and delivery evidence.",
+      "name": "email-request-intake"
     },
     "embedding-strategies": {
       "description": "Select and optimize embedding models for semantic search and RAG applications. Use when choosing embedding models, implementing chunking strategies, or optimizing embedding quality for specific domains.",
@@ -3789,6 +3853,10 @@
       "description": "Use when you have a written implementation plan to execute in a separate session with review checkpoints",
       "name": "executing-plans"
     },
+    "executing-plans--obra-superpowers--5a7d6c00a1": {
+      "description": "Use when executing an implementation plan in the current session as the implementer yourself — your human partner chose inline execution, or no subagent tool is available",
+      "name": "executing-plans"
+    },
     "exosome-ev-analysis-agent": {
       "description": "AI-powered extracellular vesicle and exosome analysis for cancer biomarker discovery, liquid biopsy applications, and intercellular communication profiling.",
       "name": "exosome-ev-analysis-agent"
@@ -3946,6 +4014,10 @@
       "name": "bio-copy-number-focal-amplification-ecdna"
     },
     "foia-requests": {
+      "description": "FOIA and public records workflows. Use when drafting requests, tracking submissions, checking exemptions, or appealing denials.",
+      "name": "foia-requests"
+    },
+    "foia-requests--journalism--1bc7e46471": {
       "description": "FOIA and public records workflows. Use when drafting requests, tracking submissions, checking exemptions, or appealing denials.",
       "name": "foia-requests"
     },
@@ -4244,6 +4316,10 @@
     "goal-analyzer": {
       "description": "分析健康目标数据、识别目标模式、评估目标进度,并提供个性化目标管理建议。支持与营养、运动、睡眠等健康数据的关联分析。",
       "name": "goal-analyzer"
+    },
+    "goal-progress-bar": {
+      "description": "Use to show weighted progress for a multi-step task and update it from recorded evidence.",
+      "name": "goal-progress-bar"
     },
     "godot-gdscript-patterns": {
       "description": "Master Godot 4 GDScript patterns including signals, scenes, state machines, and optimization. Use when building Godot games, implementing game systems, or learning GDScript best practices.",
@@ -4613,6 +4689,10 @@
       "description": "Transcription, recording management, and quote extraction. Use when processing audio/video or generating timestamped transcripts.",
       "name": "interview-transcription"
     },
+    "interview-transcription--journalism--6a1ea5cd14": {
+      "description": "Transcription, recording management, and quote extraction. Use when processing audio/video or generating timestamped transcripts.",
+      "name": "interview-transcription"
+    },
     "introgression-detection": {
       "description": "Detect introgression and admixture between species or populations using Dsuite (Malinsky 2021 fast D-statistics), Patterson's D / ABBA-BABA test (Green 2010; Durand 2011), f4-ratio and f-branch statistic (Malinsky 2018), TreeMix (Pickrell & Pritchard 2012), HyDe (Blischak 2018), QuIBL (Edelman 2019), sprime (Browning 2018), Twisst (Martin 2017), PhyloNet (Than 2008) for explicit phylogenetic networks, and qpAdm / qpGraph (Patterson 2012). Distinguish introgression from incomplete lineage sorting (ILS), ancestral structure, ghost-lineage admixture, and rate variation. Use when testing inter-species gene flow, dating admixture events, identifying introgressed segments, building phylogenetic networks for reticulate evolution, or applying the ABBAclustering (Koppetsch-Malinsky-Matschiner 2024) framework for divergent-species gene flow.",
       "name": "bio-comparative-genomics-introgression-detection"
@@ -4652,6 +4732,10 @@
     "isotope-tracing": {
       "description": "Designs and analyzes stable-isotope-resolved metabolomics (SIRM / isotope tracing / fluxomics) experiments that measure metabolic ACTIVITY via 13C/15N/2H tracers, distinct from steady-state pool profiling. Covers tracer choice, isotopologue vs isotopomer, mass-isotopomer distributions (MID), fractional enrichment, the mandatory natural-abundance + tracer-purity correction (IsoCor, AccuCor), and the metabolic/isotopic steady-state vs non-stationary (INST-MFA) distinction. Use when feeding a labeled tracer and interpreting labeling patterns, correcting raw isotopologue intensities, computing or plotting an MID, or deciding tracing vs abundance profiling. For absolute pool concentration and MRM mechanics see metabolomics/targeted-analysis; for constraint-based genome-scale flux (FBA, not empirical tracing) see systems-biology/flux-balance-analysis; for feature detection see metabolomics/xcms-preprocessing; for pathway enrichment that ignores the pool-vs-flux caveat see metabolomics/pathway-mapping.",
       "name": "bio-metabolomics-isotope-tracing"
+    },
+    "issue-pool-progression": {
+      "description": "Use to select and advance one eligible issue from an authorized pool through claim, review, release, and live verification.",
+      "name": "issue-pool-progression"
     },
     "istio-traffic-management": {
       "description": "Configure Istio traffic management including routing, load balancing, circuit breakers, and canary deployments. Use when implementing service mesh traffic policies, progressive delivery, or resilience patterns.",
@@ -4909,11 +4993,19 @@
       "description": "Browse, filter, and download life sciences, biology, and medical preprints from bioRxiv and medRxiv. Supports fetching paper metadata by DOI, and browsing by date range with category and keyword filters. Keyword filtering is local, so date ranges MUST be narrow (1-4 weeks) with a category to prevent timeouts.",
       "name": "literature-search-biorxiv"
     },
+    "literature_search_biorxiv--gdm-science--ba4e4abf03": {
+      "description": "Browse and filter life sciences, biology, and medical preprints from bioRxiv and medRxiv. Supports fetching paper metadata by DOI, and browsing by date range with category and keyword filters. Keyword filtering is local, so date ranges MUST be narrow (1-4 weeks) with a category to prevent timeouts.",
+      "name": "literature-search-biorxiv"
+    },
     "literature_search_europepmc": {
       "description": "Search Europe PMC for scientific literature and download open-access full texts and PDFs. Retrieve full-text XML/plain text by PMCID, get citation lists and bibliography.",
       "name": "literature-search-europepmc"
     },
     "literature_search_openalex": {
+      "description": "Query the OpenAlex scholarly database for research papers, authors, institutions, topics, sources, publishers, funders, geo-locations, and keywords. Use when searching academic papers, resolving DOIs, downloading open-access PDFs, finding an author's publications, aggregating bibliometric data (citation counts, h-index, impact factor), exploring the research taxonomies, or performing DOI lookups.",
+      "name": "literature-search-openalex"
+    },
+    "literature_search_openalex--gdm-science--ab3955e833": {
       "description": "Query the OpenAlex scholarly database for research papers, authors, institutions, topics, sources, publishers, funders, geo-locations, and keywords. Use when searching academic papers, resolving DOIs, downloading open-access PDFs, finding an author's publications, aggregating bibliometric data (citation counts, h-index, impact factor), exploring the research taxonomies, or performing DOI lookups.",
       "name": "literature-search-openalex"
     },
@@ -5152,6 +5244,10 @@
     "medrxiv-search": {
       "description": "Search medRxiv medical preprints with natural language queries. Powered by Valyu semantic search.",
       "name": "medrxiv-search"
+    },
+    "meeting-transcript-actions": {
+      "description": "Use to turn a meeting transcript into verified notes, decisions, commitments, and distinct owner actions.",
+      "name": "meeting-transcript-actions"
     },
     "memory-forensics": {
       "description": "Master memory forensics techniques including memory acquisition, process analysis, and artifact extraction using Volatility and related tools. Use when analyzing memory dumps, investigating incidents, or performing malware analysis from RAM captures.",
@@ -5441,6 +5537,10 @@
       "description": "Configure mutual TLS (mTLS) for zero-trust service-to-service communication. Use when implementing zero-trust networking, certificate management, or securing internal service communication.",
       "name": "mtls-configuration"
     },
+    "multi-agent-coordinator": {
+      "description": "Use to coordinate several long-running workers with durable prompts, event-driven watches, review gates, owner updates, and safe cleanup.",
+      "name": "multi-agent-coordinator"
+    },
     "multi-ancestry-prs-agent": {
       "description": "AI-powered multi-ancestry polygenic risk score calculation and optimization for equitable disease risk prediction across diverse global populations.",
       "name": "multi-ancestry-prs-agent"
@@ -5468,6 +5568,10 @@
     "multimodal-medical-imaging": {
       "description": "Analyzes medical images (X-ray, MRI, CT) using multimodal LLMs to identify anomalies and generate reports.",
       "name": "multimodal-medical-imaging"
+    },
+    "multimodal-omics-integration": {
+      "description": "Multimodal and multi-section integration for spatial and single-cell omics: totalVI joint RNA + protein (Visium CytAssist Gene and Protein, CITE-seq), MultiVI joint RNA + ATAC (10x Multiome, spatial ATAC-RNA), BBKNN integration of several tissue sections, scanpy ingest label transfer between sections, and gene signature scores mapped on tissue. Outputs joint latent spaces, denoised protein maps, integrated clusters, transferred labels. For dissociated CITE-seq and scVI/scANVI use scvi-tools-single-cell; for MOFA+ factor analysis use mofaplus-multi-omics or muon-multiomics-singlecell; for Harmony use harmony-batch-correction.",
+      "name": "multimodal-omics-integration"
     },
     "multimodal-radpath-fusion-agent": {
       "description": "AI-powered multimodal diagnostic fusion integrating radiology imaging (CT/MRI/PET), digital pathology (WSI), genomics, and clinical data for comprehensive cancer diagnosis and treatment planning.",
@@ -5537,7 +5641,15 @@
       "description": "Search literature across sources, verify or manage citations, and build MeSH strategies or citation-impact audits. Use for 文献检索、引文核对、参考文献管理、严格他引 and evidence-backed citer profiles; not for translating a paper or drafting manuscript prose.",
       "name": "nature-academic-search"
     },
+    "nature-academic-search--nature-skills--8a003b5da2": {
+      "description": "Search literature across sources, verify or manage citations, and build MeSH strategies or citation-impact audits. Use for 文献检索、引文核对、参考文献管理、严格他引 and evidence-backed citer profiles; not for translating a paper or drafting manuscript prose.",
+      "name": "nature-academic-search"
+    },
     "nature-citation": {
+      "description": "Find and verify Nature/CNS-family literature supporting manuscript claims, with claim-to-source mapping and reference-manager export. Use for Nature系列引用、CNS支撑文献、分段补引用 when this journal scope is requested; use broader literature search for unrestricted sources.",
+      "name": "nature-citation"
+    },
+    "nature-citation--nature-skills--b84617b94d": {
       "description": "Find and verify Nature/CNS-family literature supporting manuscript claims, with claim-to-source mapping and reference-manager export. Use for Nature系列引用、CNS支撑文献、分段补引用 when this journal scope is requested; use broader literature search for unrestricted sources.",
       "name": "nature-citation"
     },
@@ -5549,11 +5661,19 @@
       "description": "Use when a user needs lawful academic full text, CNKI institutional access, English OA retrieval, publisher API access, institutional browser fallback, or supporting information downloads.",
       "name": "nature-downloader"
     },
+    "nature-downloader--nature-skills--13efc63106": {
+      "description": "Use when a user needs lawful academic full text, CNKI institutional access, English OA retrieval, publisher API access, institutional browser fallback, or supporting information downloads.",
+      "name": "nature-downloader"
+    },
     "nature-experiment-log": {
       "description": "标准化实验日志记录——直接上传或读取本地图片、语音和文字，产出带 YAML frontmatter 的 Markdown；可选集成飞书 CLI 与 Obsidian。",
       "name": "nature-experiment-log"
     },
     "nature-figure": {
+      "description": "Create, revise, audit, and export manuscript scientific figures in Python or R. Use for 论文配图、科研绘图、多面板图 and submission-ready plots, or explicitly requested AI-generated graphical abstracts and mechanism schematics. Not for interactive dashboards, data cleaning, or statistics-only analysis.",
+      "name": "nature-figure"
+    },
+    "nature-figure--nature-skills--494319beac": {
       "description": "Create, revise, audit, and export manuscript scientific figures in Python or R. Use for 论文配图、科研绘图、多面板图 and submission-ready plots, or explicitly requested AI-generated graphical abstracts and mechanism schematics. Not for interactive dashboards, data cleaning, or statistics-only analysis.",
       "name": "nature-figure"
     },
@@ -5565,11 +5685,19 @@
       "description": "Reconstruct slide images, screenshots, scanned PDFs, or image-only PPTX files as object-level editable PowerPoint. Use for 图片转可编辑PPT、截图还原PPT and diagram reconstruction; not authoring a new deck from research notes.",
       "name": "nature-image2ppt"
     },
+    "nature-image2ppt--nature-skills--0c283f3f3f": {
+      "description": "Reconstruct slide images, screenshots, scanned PDFs, or image-only PPTX files as object-level editable PowerPoint. Use for 图片转可编辑PPT、截图还原PPT and diagram reconstruction; not authoring a new deck from research notes.",
+      "name": "nature-image2ppt"
+    },
     "nature-literature-pipeline": {
       "description": "Complete automated literature discovery pipeline: multi-source search → six-dimension scoring → fine reading → formatted delivery → archival. Combines a configurable engine with daily cron-driven application layer. Works with Feishu, Telegram, or any messaging platform.",
       "name": "nature-literature-pipeline"
     },
     "nature-paper-card": {
+      "description": "Build a structured deep-reading Paper Card for one scientific paper, analysing methods, experiment-to-claim evidence, limitations, and research ideas. Use for 论文精读卡、方法拆解、证据链分析; not full-paper bilingual translation or formal peer review.",
+      "name": "nature-paper-card"
+    },
+    "nature-paper-card--nature-skills--32376435f2": {
       "description": "Build a structured deep-reading Paper Card for one scientific paper, analysing methods, experiment-to-claim evidence, limitations, and research ideas. Use for 论文精读卡、方法拆解、证据链分析; not full-paper bilingual translation or formal peer review.",
       "name": "nature-paper-card"
     },
@@ -5581,6 +5709,10 @@
       "description": "将英文论文 PDF 的指定页面或全文逐页翻译为简体中文图片型 PDF，尽量保留原文的版式、分栏、图表和公式；最终仅交付中文 PDF。用于论文阅读翻译，不用于可编辑 Word 重建或逐字审校。",
       "name": "nature-paper-trans"
     },
+    "nature-paper-trans--nature-skills--a1381e2e28": {
+      "description": "将英文论文 PDF 的指定页面或全文逐页翻译为简体中文图片型 PDF，尽量保留原文的版式、分栏、图表和公式；最终仅交付中文 PDF。用于论文阅读翻译，不用于可编辑 Word 重建或逐字审校。",
+      "name": "nature-paper-trans"
+    },
     "nature-paper-xray": {
       "description": "Read one supplied paper closely enough to reconstruct how its authors actually got there, rather than restating what the abstract claims. Use for 精读论文, 讲透这篇论文, 把这篇读懂, 作者为什么这么设计, 这个公式怎么推出来的, paper x-ray, and deep single-paper comprehension before building on, reviewing, presenting, or citing that paper. Recovers the real starting point and the bet the authors placed, separates load-bearing design from decoration, grounds each key formula in a worked micro-example with concrete numbers, and checks how far the evidence actually reaches, including where the authors are confident and where the paper does not report something. Delivers a structured Markdown long-read by default. Not a summary, not a translation, not a peer review.",
       "name": "nature-paper-xray"
@@ -5589,11 +5721,19 @@
       "description": "Create or improve a Chinese academic PPTX from a scientific paper or research reading notes, with source figures and speaker notes. Use for 论文做PPT、文献汇报、组会PPT and paper-based conference or defense presentations.",
       "name": "nature-paper2ppt"
     },
+    "nature-paper2ppt--nature-skills--ff1cde4e01": {
+      "description": "Create or improve a Chinese academic PPTX from a scientific paper or research reading notes, with source figures and speaker notes. Use for 论文做PPT、文献汇报、组会PPT and paper-based conference or defense presentations.",
+      "name": "nature-paper2ppt"
+    },
     "nature-polishing": {
       "description": "Polish, translate, or tighten existing academic prose while preserving facts, terminology, and evidence boundaries. Use for 论文润色、学术翻译、正文精简, or manuscript LaTeX layout fixes. Use nature-writing when the main task is drafting new sections or rebuilding the manuscript argument.",
       "name": "nature-polishing"
     },
     "nature-proposal-writer": {
+      "description": "Compose, revise, or audit research proposals, opening reports, and research plans from supporting evidence. Use for 研究计划、开题报告、科研项目申请书. Invoked as researchwrite for compatibility; use nature-writing for general manuscript sections.",
+      "name": "researchwrite"
+    },
+    "nature-proposal-writer--nature-skills--dcf31d2a8c": {
       "description": "Compose, revise, or audit research proposals, opening reports, and research plans from supporting evidence. Use for 研究计划、开题报告、科研项目申请书. Invoked as researchwrite for compatibility; use nature-writing for general manuscript sections.",
       "name": "researchwrite"
     },
@@ -5805,6 +5945,10 @@
       "description": "Builds an Open Knowledge Format (OKF) knowledge base from existing docs, notes, or a repo. Use to scaffold an OKF wiki.",
       "name": "okf-wiki"
     },
+    "okf-wiki--journalism--71091fe37c": {
+      "description": "Builds an Open Knowledge Format (OKF) knowledge base from existing docs, notes, or a repo. Use to scaffold an OKF wiki.",
+      "name": "okf-wiki"
+    },
     "omero-integration": {
       "description": "Open-source bio-image data management. Use the omero-py client to connect to an OMERO server, retrieve images as numpy arrays, annotate with tags and key-value pairs, manage ROIs, and feed image data into Python analysis pipelines — programmatically, no GUI.",
       "name": "omero-integration"
@@ -5834,6 +5978,10 @@
       "name": "bio-data-visualization-oncoprint-mutation-matrices"
     },
     "one-way-door": {
+      "description": "Flags irreversible decisions before commit. Use for data models, infra, auth boundaries, API contracts, event schemas, CI/CD.",
+      "name": "one-way-door"
+    },
+    "one-way-door--journalism--e79621e195": {
       "description": "Flags irreversible decisions before commit. Use for data models, infra, auth boundaries, API contracts, event schemas, CI/CD.",
       "name": "one-way-door"
     },
@@ -6073,6 +6221,10 @@
       "description": "Designs PDF reports and proposals from HTML with previews and branding. Use to create, export, or securely upload a PDF.",
       "name": "pdf-design"
     },
+    "pdf-design--journalism--d53c8fa7de": {
+      "description": "Designs PDF reports and proposals from HTML with previews and branding. Use to create, export, or securely upload a PDF.",
+      "name": "pdf-design"
+    },
     "pdf-processing": {
       "description": "Extract text and tables from PDF files, fill forms, merge documents. Use when working with PDF files or when the user mentions PDFs, forms, or document extraction.",
       "name": "pdf-processing"
@@ -6257,6 +6409,10 @@
       "description": "Constructs and validates polygenic risk scores using LDpred2-auto, SBayesRC, MegaPRS, PRS-CS, PROSPER, MUSSEL, BridgePRS, JointPRS, PRSmix, or PGS Catalog Calculator with ancestry-aware reference panels (HapMap3, UKB-LD), ancestry-conditional calibration, and PRS-RS reporting standards. Use when computing PRS for cohorts, applying absolute-risk transformation, assessing cross-ancestry portability (Martin 2017 / Ding 2023 continuous ancestry), or auditing PRS manuscripts against the 22-item PRS-RS reviewer checklist.",
       "name": "bio-clinical-databases-polygenic-risk"
     },
+    "ponytail-dev": {
+      "description": "Use to implement or review software with minimal code and proportional checks.",
+      "name": "ponytail-dev"
+    },
     "popeve-variant-predictor-agent": {
       "description": "AI-powered genetic variant pathogenicity prediction using PopEVE deep learning model for population-aware disease variant identification and rare disease diagnosis.",
       "name": "popeve-variant-predictor-agent"
@@ -6267,6 +6423,10 @@
     },
     "popv-cell-annotation": {
       "description": "Consensus cell type annotation: runs 10+ algorithms (KNN-Harmony/BBKNN/Scanorama/scVI, CellTypist, ONCLASS, Random Forest, SCANVI, SVM, XGBoost) on a labeled reference and transfers labels via majority voting. Outputs per-method labels, consensus, agreement score. Use when single-method annotation is insufficient or you need ensemble uncertainty for novel states.",
+      "name": "popv-cell-annotation"
+    },
+    "popv-cell-annotation--sciagent--d4220bf457": {
+      "description": "Consensus cell type annotation: runs 10+ algorithms (KNN-Harmony/BBKNN/Scanorama/scVI, CellTypist, ONCLASS, Random Forest, SCANVI, SVM, XGBoost) on a labeled reference and transfers labels via majority voting. Outputs per-method labels, consensus, agreement score. Use when single-method annotation is insufficient or you need ensemble uncertainty for novel states; to choose between manual markers, CellTypist and popV, read cell-type-annotation first.",
       "name": "popv-cell-annotation"
     },
     "pose-validation": {
@@ -6413,6 +6573,10 @@
       "description": "Local Gitleaks scans for staged changes, push ranges, and full history in private repos, with redacted reports. Use to block committed secrets without GitHub Secret Protection.",
       "name": "private-secret-scanning"
     },
+    "private-secret-scanning--journalism--bd3efa2368": {
+      "description": "Local Gitleaks scans for staged changes, push ranges, and full history in private repos, with redacted reports. Use to block committed secrets without GitHub Secret Protection.",
+      "name": "private-secret-scanning"
+    },
     "production-scheduling": {
       "description": "Codified expertise for production scheduling, job sequencing, line balancing, changeover optimization, and bottleneck resolution in discrete and batch manufacturing. Informed by production schedulers with 15+ years experience. Includes TOC/drum-buffer-rope, SMED, OEE analysis, disruption response frameworks, and ERP/MES interaction patterns. Use when scheduling production, resolving bottlenecks, optimizing changeovers, responding to disruptions, or balancing manufacturing lines.",
       "name": "production-scheduling"
@@ -6431,6 +6595,10 @@
     },
     "project-memory": {
       "description": "Generates CLAUDE.md project memory files that transfer institutional knowledge. Use when setting up projects or onboarding.",
+      "name": "project-memory"
+    },
+    "project-memory--journalism--bb96a1407a": {
+      "description": "Generates project instruction files (AGENTS.md or CLAUDE.md) that transfer institutional knowledge. Use when setting up projects or onboarding. For lessons from a finished project or investigation, use project-retrospective.",
       "name": "project-memory"
     },
     "project-retrospective": {
@@ -6558,6 +6726,10 @@
       "name": "pubchem-database"
     },
     "pubchem_database": {
+      "description": "Query PubChem, search by name/CID/SMILES, retrieve properties, similarity/substructure searches, bioactivity, for cheminformatics. Use when a user asks about a specific chemical, drug, or molecule.",
+      "name": "pubchem-database"
+    },
+    "pubchem_database--gdm-science--d3d4835c11": {
       "description": "Query PubChem, search by name/CID/SMILES, retrieve properties, similarity/substructure searches, bioactivity, for cheminformatics. Use when a user asks about a specific chemical, drug, or molecule.",
       "name": "pubchem-database"
     },
@@ -6718,6 +6890,10 @@
       "name": "python-performance-optimization"
     },
     "python-pipeline": {
+      "description": "Python data pipelines with modular architecture. Use for content workflows, batch jobs, or Google Sheets/Drive integration.",
+      "name": "python-pipeline"
+    },
+    "python-pipeline--journalism--6a8865909b": {
       "description": "Python data pipelines with modular architecture. Use for content workflows, batch jobs, or Google Sheets/Drive integration.",
       "name": "python-pipeline"
     },
@@ -6896,6 +7072,10 @@
     "receiving-code-review--journalism--e661a4c44d": {
       "description": "Verifies review feedback with technical rigor, not blind agreement. Use when receiving review before implementing suggestions.",
       "name": "receiving-code-review"
+    },
+    "record-reconciliation": {
+      "description": "Use to reconcile task, contact, and interaction records when new intake names a person, assignment, source, or status change.",
+      "name": "record-reconciliation"
     },
     "recovery-community-moderator": {
       "description": "Trauma-informed AI moderator for addiction recovery communities. Applies harm reduction principles, honors 12-step traditions, distinguishes healthy conflict from abuse, detects crisis posts. Activate on 'community moderation', 'moderate forum', 'review post', 'check content', 'crisis detection'. NOT for legal documents (use recovery-app-legal-terms), app development (use domain skills), or therapy (use jungian-psychologist).",
@@ -7141,6 +7321,10 @@
       "description": "scRNA-seq with Scanpy: QC, normalization, HVG selection, PCA, neighborhood graph, UMAP/t-SNE, Leiden clustering, markers, cell annotation, trajectory inference. Standard scRNA-seq exploration.",
       "name": "scanpy-scrna-seq"
     },
+    "scanpy-scrna-seq--sciagent--a692ab0f6e": {
+      "description": "scRNA-seq with Scanpy: QC, normalization, HVG selection, PCA, neighborhood graph, UMAP/t-SNE, Leiden clustering, markers, cell annotation, trajectory inference. Standard scRNA-seq exploration.",
+      "name": "scanpy-scrna-seq"
+    },
     "scatac-analysis": {
       "description": "Analyze single-cell ATAC-seq with Signac/ArchR (R) and SnapATAC2 (Python alternative). Use when processing scATAC fragments, choosing a framework, calling consensus peaks, running TF-IDF/LSI while diagnosing the depth component, scoring chromVAR motif deviations against GC-matched backgrounds, detecting homotypic vs heterotypic doublets, or deciding whether to binarize the count matrix.",
       "name": "bio-single-cell-scatac-analysis"
@@ -7152,6 +7336,10 @@
     "scfoundation-model-agent": {
       "description": "Unified agent for leveraging single-cell foundation models (scGPT, scBERT, Geneformer, scFoundation) for cross-species annotation, perturbation prediction, and gene network inference.",
       "name": "scfoundation-model-agent"
+    },
+    "scheduled-briefing": {
+      "description": "Use to create a concise scheduled newsroom briefing from calendars, assignments, inbox items, and current evidence.",
+      "name": "scheduled-briefing"
     },
     "scholar-evaluation": {
       "description": "Provide qualitative-first, evidence-traceable developmental review of scholarly works and audit low-stakes research-assessment rubrics with optional local quality controls. Never use for ranking people or consequential decisions.",
@@ -7354,6 +7542,10 @@
       "name": "secure-auth"
     },
     "security-checklist": {
+      "description": "Pre-deployment security audit organized by OWASP Top 10. Use when reviewing code before shipping or going to production.",
+      "name": "security-checklist"
+    },
+    "security-checklist--journalism--df8d4ae646": {
       "description": "Pre-deployment security audit organized by OWASP Top 10. Use when reviewing code before shipping or going to production.",
       "name": "security-checklist"
     },
@@ -7673,6 +7865,10 @@
       "description": "Estimates per-spot cell type composition of spatial transcriptomics mixtures (Visium, Slide-seq, Stereo-seq) from an scRNA-seq reference with cell2location, RCTD, SPOTlight, stereoscope, SpatialDWLS, or reference-free STdeconvolve. Use when deciding whether a platform even needs deconvolution (the resolution fork -- a 55um Visium spot is a 1-10-cell MIXTURE -> deconvolve, but a Xenium/MERFISH/CosMx cell is already single -> segment instead, and running deconvolution there invents fractions that do not exist); choosing cell2location (absolute abundance) vs RCTD/SPOTlight/stereoscope/SpatialDWLS (proportions only) by output and runtime; matching the scRNA reference to tissue and condition (the reference IS the result -- a missing cell type is silently misassigned to its nearest neighbor with no error flag); and handling compositional outputs that sum to 1 with CLR/ILR rather than naive per-type t-tests.",
       "name": "bio-spatial-transcriptomics-spatial-deconvolution"
     },
+    "spatial-domain-detection": {
+      "description": "Spatial domain detection (tissue regions / niches) for spatial transcriptomics: SpaGCN (expression + spatial graph + H&E histology, Visium/ST), GraphST (self-supervised graph contrastive embedding, spots or cells) and UTAG (spatial message passing for Xenium/MERFISH/CosMx/IMC cells). Outputs a domain label per spot or cell, boundary refinement, cross-method agreement (ARI) and domain marker genes. For niches defined by the cell type composition of annotated cells use Step 7 of spatial-transcriptomics-cell-type-annotation; for neighbourhood enrichment and spatial statistics use spatial-transcriptomics-analysis-squidpy.",
+      "name": "spatial-domain-detection"
+    },
     "spatial-domains": {
       "description": "Identify spatially coherent tissue domains (regions like cortical layers, tumor vs stroma) in Visium, Visium HD, Xenium, MERFISH, Slide-seq, and Stereo-seq data with Squidpy, BANKSY, BayesSpace, STAGATE, and GraphST. Use when distinguishing a domain (a region with many cell types) from a cell type (one cell's identity) and a niche (local cell-type composition); choosing a domain method by tissue geometry (laminar/continuous vs high-resolution imaging vs non-contiguous); tuning the spatial-weight knob (BANKSY lambda, BayesSpace smoothing, SpaGCN histology weight, GNN graph radius) to avoid over-smoothing into blobs or under-smoothing into salt-and-pepper; choosing the number of domains k as a biological decision with k+-1 sensitivity; and reading the Yuan 2024 benchmark with the DLPFC continuous-laminar caveat.",
       "name": "bio-spatial-transcriptomics-spatial-domains"
@@ -7681,6 +7877,10 @@
       "description": "AI-powered spatial epigenomics analysis combining chromatin accessibility, histone modifications, and DNA methylation with spatial coordinates for tissue architecture mapping.",
       "name": "spatial-epigenomics-agent"
     },
+    "spatial-mapping-tangram": {
+      "description": "Tangram (tangram-sc) mapping of scRNA-seq onto spatial transcriptomics (Visium, Slide-seq, MERFISH, Xenium), one skill for every Tangram task: marker training genes, cells/clusters/constrained mode, per-spot cell type proportions, held-out gene validation (training scores, compare_spatial_geneexp, AUC, k-fold CV), imputation of unmeasured or dropout genes (project_genes; gimVI alternative), and Visium deconvolution into segmented nuclei with the tissue image (squidpy watershed, target_count, deconvolve_cell_annotations). Task-specific routes follow the main workflow. For probabilistic spot abundances with uncertainty use spatial-transcriptomics-deconvolution-cell2location.",
+      "name": "spatial-mapping-tangram"
+    },
     "spatial-multiomics": {
       "description": "Integrates spatial RNA with a second modality (protein, ATAC, or histone marks) on spatial CITE-seq, DBiT-seq, spatial-ATAC, or Visium CytAssist data. Use when deciding vertical (same-pixel co-profiling -> WNN/MOFA joint factors) versus diagonal (serial adjacent sections -> registration via PASTE/STalign) integration; recognizing that modalities from serial sections are DIFFERENT cells so joint same-cell methods do not apply; handling a bounded antibody/feature panel where absence is uninformative; or treating a pixel/spot as a multi-cell mixture rather than a single cell.",
       "name": "bio-spatial-transcriptomics-spatial-multiomics"
@@ -7688,6 +7888,10 @@
     "spatial-neighbors": {
       "description": "Build the spatial neighbor graph that every downstream spatial statistic (Moran's I, neighborhood enrichment, co-occurrence, spatial domains) inherits, using Squidpy. Use when choosing the graph type (kNN vs Delaunay vs fixed-radius vs Visium hex grid) and understanding why it silently changes every downstream result; handling variable cell density (kNN fixes neighbor COUNT, fixed-radius fixes physical DISTANCE -- each distorts the other); getting coordinate units right (pixels vs microns; Visium array coords are not distance); pruning Delaunay long edges across tissue gaps; running the graph sensitivity analysis almost nobody runs; and knowing when planar section neighbors misrepresent a 3D tissue.",
       "name": "bio-spatial-transcriptomics-spatial-neighbors"
+    },
+    "spatial-panel-design": {
+      "description": "Spatial transcriptomics gene panel design (Xenium, MERFISH, CosMx custom panels) for cell type identification: rank markers on a tissue-matched CELLxGENE scRNA-seq reference, add PanglaoDB and CellMarker 2.0 marker evidence, build a per-gene evidence table, allocate per-cell-type quotas, and check that the panel separates cell types in the reference. Output: final_gene_panel.csv with N genes, cell type and reason. For annotating data from an existing panel use spatial-transcriptomics-cell-type-annotation.",
+      "name": "spatial-panel-design"
     },
     "spatial-pipeline": {
       "description": "Orchestrates the end-to-end spatial transcriptomics pipeline from Space Ranger / vendor output to spatial domains and statistics, branching FIRST on platform class (imaging in-situ Xenium/MERFISH/CosMx vs sequencing/capture Visium/Visium HD/Slide-seq). Use when deciding segmentation-vs-deconvolution and the QC floors from the platform class, committing the coordinate/image-registration frame and panel identity, deconvolving multi-cell spots against an annotated scRNA reference (never relabeling spot clusters as cell types), building the spatial neighbor graph on PHYSICAL not expression space, gating spatially-variable genes on FDR, or using a real domain method (BANKSY/BayesSpace/STAGATE) rather than clustering the spatial graph alone. Hands off deconvolution and cell-cell communication to the component skills; not a re-teach of any single step.",
@@ -7712,6 +7916,22 @@
     "spatial-transcriptomics-analysis": {
       "description": "Automated analysis pipeline for Spatial Transcriptomics (Visium, Xenium) integrating histology and gene expression.",
       "name": "spatial-transcriptomics-analysis"
+    },
+    "spatial-transcriptomics-analysis-squidpy": {
+      "description": "Squidpy spatial statistics on annotated spatial transcriptomics: build the spatial graph (Visium grid, kNN, radius, Delaunay), neighbourhood enrichment z-scores, distance-resolved co-occurrence, interaction matrix and centrality scores, Ripley's L/F/G point patterns, spatially variable genes by Moran's I / Geary's C, and permutation ligand-receptor tests (ligrec, OmniPath). Works on Visium spots and single-cell-resolution data (Xenium, MERFISH, CosMx, Slide-seq). Needs cluster or cell type labels for all but the spatially variable gene step. For an end-to-end ligand-receptor workflow use spatial-transcriptomics-cell-cell-communication.",
+      "name": "spatial-transcriptomics-analysis-squidpy"
+    },
+    "spatial-transcriptomics-cell-cell-communication": {
+      "description": "Spatial cell-cell communication / ligand-receptor (LR) interaction analysis, one skill for every route: LIANA consensus ranking between annotated cell types, CellPhoneDB v5 permutation p-values, DEG method and spatial microenvironments, squidpy neighbourhood enrichment to keep spatially adjacent sender-receiver pairs, LIANA bivariate local LR scores on the tissue (works on Visium spots without labels), pathway-focused candidate evidence tables (immune checkpoints, chemokines, Notch, Wnt, TGF-beta) with contact vs secreted classes and PubMed co-mentions, and multi-sample Tensor-cell2cell and MISTy models. Xenium/MERFISH/CosMx cells, Visium spots, scRNA-seq. Route-specific steps follow the main workflow. Needs cell type labels first (spatial-transcriptomics-cell-type-annotation or a deconvolution skill).",
+      "name": "spatial-transcriptomics-cell-cell-communication"
+    },
+    "spatial-transcriptomics-cell-type-annotation": {
+      "description": "Spatial transcriptomics cell type annotation for single-cell-resolution platforms (Xenium, MERFISH, CosMx, SeqFISH): CELLxGENE reference download, Harmony label transfer, per-cluster marker evidence naming lineages then subtypes, spatial niches. Visium/Slide-seq spots: GPU -> spatial-transcriptomics-deconvolution-cell2location; CPU -> spatial-mapping-tangram (cell types: per-spot proportions); no reference -> spatial-domain-detection (regions: domains from markers). Beyond labels (microenvironment, arrangement, spatial patterns): read spatial-transcriptomics-analysis-squidpy before asking the user.",
+      "name": "spatial-transcriptomics-cell-type-annotation"
+    },
+    "spatial-transcriptomics-deconvolution-cell2location": {
+      "description": "Visium and other spot-based spatial transcriptomics (Slide-seq, ST) cell type deconvolution with cell2location: load Space Ranger output, get a tissue-matched scRNA-seq reference from CELLxGENE, learn cell type signatures, estimate cell type abundance per spot with posterior uncertainty, and check the maps against marker genes. Default route for 'annotate cell types' on Visium when a GPU is available. Limits: needs a tissue- and state-matched reference; the default 30000 epochs take hours on CPU, so without a GPU it runs only with fewer epochs (exploratory maps) and can exceed one execution call's time limit. For fast per-spot proportions on CPU use spatial-mapping-tangram (clusters mode); for single-cell-resolution data (Xenium, MERFISH, CosMx) use spatial-transcriptomics-cell-type-annotation.",
+      "name": "spatial-transcriptomics-deconvolution-cell2location"
     },
     "spatial-tutorials": {
       "description": "Guide users through omicverse's spatial transcriptomics tutorials covering preprocessing, deconvolution, and downstream modelling workflows across Visium, Visium HD, Stereo-seq, and Slide-seq datasets.",
@@ -7949,6 +8169,10 @@
       "description": "Use when executing implementation plans with independent tasks in the current session",
       "name": "subagent-driven-development"
     },
+    "subagent-driven-development--obra-superpowers--f27d165b8c": {
+      "description": "Use when executing implementation plans with independent tasks in the current session",
+      "name": "subagent-driven-development"
+    },
     "subclonal-copy-number": {
       "description": "Resolve subclonal copy number, whole-genome doubling, and copy-number tumor evolution from bulk sequencing with Battenberg, TITAN, and MEDICC2. Covers clonal versus subclonal copy-number states, haplotype phasing for subclonal resolution, cancer cell fraction, whole-genome-doubling detection and timing relative to mutations, mirrored subclonal allelic imbalance, and copy-number phylogenies. Use when a tumor is heterogeneous and bulk data shows non-integer copy number, when calling subclonal CNAs, detecting or timing whole-genome doubling, reconstructing copy-number evolution, or deciding between Battenberg and TITAN.",
       "name": "bio-copy-number-subclonal-copy-number"
@@ -7972,6 +8196,14 @@
     "supply-chain-hardening": {
       "description": "Install-time cooldowns for npm/bun plus a sandboxed pre-install scan for bypasses. Use for supply-chain attacks or npm security.",
       "name": "supply-chain-hardening"
+    },
+    "supply-chain-hardening--journalism--223101482c": {
+      "description": "Install-time cooldowns for npm/bun plus a sandboxed pre-install scan for bypasses. Use for supply-chain attacks or npm security.",
+      "name": "supply-chain-hardening"
+    },
+    "surface-completeness": {
+      "description": "Use to check UI coverage, design compliance, and docs during frontend changes.",
+      "name": "surface-completeness"
     },
     "survival-analysis": {
       "description": "Builds and validates predictive time-to-event models on clinical and omics data with penalized Cox, random survival forests, gradient-boosted and deep survival models, and prediction-grade evaluation (Uno's C, time-dependent AUC, integrated Brier, calibration, competing risks). Use when building an individualized risk predictor or prognostic omics signature, choosing a survival model, or evaluating one beyond the C-index. For Kaplan-Meier, log-rank, and classical Cox hazard-ratio inference in a trial see clinical-biostatistics/survival-analysis.",
@@ -8103,6 +8335,10 @@
     },
     "template-selector": {
       "description": "Selects the correct CLAUDE.md or LESSONS.md template via decision trees. Use when starting a project or unsure which fits.",
+      "name": "template-selector"
+    },
+    "template-selector--journalism--1ce9098529": {
+      "description": "Selects the correct project instruction or LESSONS.md template via decision trees. Use when starting a project or unsure which fits.",
       "name": "template-selector"
     },
     "temporal-clustering": {
@@ -8425,6 +8661,10 @@
       "description": "Infers developmental trajectories, pseudotime, RNA velocity, and directed fate probabilities from single-cell data using PAGA, Slingshot, Monocle3, DPT, Palantir, scVelo, and CellRank 2. Use when ordering cells along a differentiation continuum, choosing a trajectory method by topology, rooting pseudotime, estimating RNA velocity direction, computing fate probabilities near a bifurcation, or judging whether an inferred trajectory is real.",
       "name": "bio-single-cell-trajectory-inference"
     },
+    "trajectory-inference--sciagent--f141efe747": {
+      "description": "Trajectory inference and cell fate mapping for single-cell and spatial transcriptomics: PAGA graph + diffusion pseudotime (no velocity needed), scVelo RNA velocity (stochastic / dynamical, from spliced/unspliced counts), CellRank 2 terminal states, fate probabilities and lineage drivers, then pseudotime and fates mapped on tissue with a spatial autocorrelation check. Outputs pseudotime, velocity streams, fate probability tables. Imaging panels (Xenium, MERFISH) have no unspliced counts: use PAGA/DPT or the CellRank pseudotime kernel. For a basic PAGA recipe inside a standard scRNA-seq workflow see scanpy-scrna-seq.",
+      "name": "trajectory-inference"
+    },
     "trajectory-modeling": {
       "description": "Models continuous temporal trajectories from BULK or time-resolved omics where the x-axis is measured experimental time: penalized GAMs (mgcv) for smooth trends and changepoint detection (segmented, ruptures) for abrupt regime shifts. Use when deciding between a smooth GAM and a changepoint model; choosing the GAM distribution (nb() plus a library-size offset for raw counts vs Gaussian on vst/log-CPM); setting the basis-dimension ceiling k below the number of timepoints and letting REML pick wiggliness; handling residual autocorrelation across timepoints with corAR1/bam(rho=); testing whether two conditions' trajectories diverge with an ordered-factor difference smooth; and choosing a changepoint search/cost/penalty (Pelt/Binseg, l2/rbf). Not for single-cell pseudotime (see single-cell/trajectory-inference).",
       "name": "bio-temporal-genomics-trajectory-modeling"
@@ -8549,6 +8789,10 @@
       "description": "Extracts UMIs and collapses reads to original molecules with umi_tools (directional dedup) or builds error-corrected single-strand/duplex consensus reads with fgbio. Use when the library has UMIs and accurate molecule counting or below-sequencer-floor error correction is needed - single-cell, low-input RNA-seq, targeted panels, and ctDNA/liquid-biopsy rare-variant detection. For UMI extraction during QC use fastp-workflow; do not dedup non-UMI bulk RNA-seq.",
       "name": "bio-read-qc-umi-processing"
     },
+    "unattended-agent-runs": {
+      "description": "Use to design or operate recurring newsroom agent work without a person watching each run. Covers a simple process-per-run starter and a persistent supervised session.",
+      "name": "unattended-agent-runs"
+    },
     "uncertainty-and-units": {
       "description": "Tracks physical units and propagates measurement uncertainty in scientific calculations using pint and uncertainties. Use for unit conversion and dimensional checking, GUM uncertainty budgets, Type A and Type B evaluation, coverage factors and expanded uncertainty, Monte Carlo propagation, significant-figure and plus-minus reporting, error propagation through curve fits, CODATA constants, auditing Python code for stripped units or broken uncertainty propagation, and order-of-magnitude plausibility checks using dimensionless groups (Reynolds, Peclet, Damkohler, Knudsen, Biot, Womersley), characteristic scales such as diffusion time or Debye length, and observed magnitude ranges. Trigger on \"is this number physically reasonable\", \"sanity check these units\", \"what regime is this flow in\", or a result that looks off by orders of magnitude.",
       "name": "uncertainty-and-units"
@@ -8607,6 +8851,10 @@
     },
     "using-superjawn": {
       "description": "Establishes how to find and use skills, requiring Skill tool invocation before any response. Use when starting any conversation.",
+      "name": "using-superjawn"
+    },
+    "using-superjawn--journalism--d28bc7a095": {
+      "description": "Establishes how to find and use skills before any response or action. Use when starting any conversation.",
       "name": "using-superjawn"
     },
     "using-superpowers": {
@@ -8717,6 +8965,10 @@
       "description": "AI-assisted coding with Claude Code, Cursor, Copilot, Codex, Aider, or Windsurf. Use to build or debug generated code.",
       "name": "vibe-coding"
     },
+    "vibe-coding--journalism--fa334a5d65": {
+      "description": "AI-assisted coding with Claude Code, Cursor, Copilot, Codex, Aider, or Windsurf. Use to build or debug generated code.",
+      "name": "vibe-coding"
+    },
     "video-dashboard": {
       "description": "Aggregates transcript and frame data into an interactive web dashboard. Use for content, topic, or sentiment analysis.",
       "name": "video-dashboard"
@@ -8773,6 +9025,10 @@
       "description": "HTML explainers, diagrams, architecture, timelines, source maps, slide decks, comparison tables, recaps, plan and diff reviews.",
       "name": "visual-explainer"
     },
+    "visual-explainer--journalism--a54dd3d4dc": {
+      "description": "HTML explainers, diagrams, architecture, timelines, source maps, slide decks, comparison tables, recaps, plan and diff reviews.",
+      "name": "visual-explainer"
+    },
     "volcano-and-ma-plots": {
       "description": "Build volcano and MA plots from differential-expression / association results with LFC shrinkage, FDR-adjusted thresholds, sensible label placement, and axis-truncation conventions. Covers EnhancedVolcano, ggplot2, matplotlib, and the apeglm/ashr/normal shrinkage decision. Use when visualizing differential-expression results (RNA-seq, ChIP-seq, ATAC-seq, proteomics) or any per-feature effect-size + p-value table.",
       "name": "bio-data-visualization-volcano-and-ma-plots"
@@ -8813,7 +9069,15 @@
       "description": "Use when creating distinct website directions, a client review picker, asset catalog, previews, and Cloudflare-ready handoffs.",
       "name": "web-design-picker"
     },
+    "web-design-picker--journalism--1a14f78683": {
+      "description": "Use when creating distinct website directions, a client review picker, asset catalog, previews, and Cloudflare-ready handoffs.",
+      "name": "web-design-picker"
+    },
     "web-scraping": {
+      "description": "Authorized web scraping with fallback cascades and access-failure handling. Use for social media, yt-dlp, CAPTCHA or 403 blocks.",
+      "name": "web-scraping"
+    },
+    "web-scraping--journalism--7c4d2353d8": {
       "description": "Authorized web scraping with fallback cascades and access-failure handling. Use for social media, yt-dlp, CAPTCHA or 403 blocks.",
       "name": "web-scraping"
     },
@@ -8894,6 +9158,10 @@
       "name": "writing-skills"
     },
     "writing-skills--journalism--1cbe94b0a4": {
+      "description": "Use when creating new skills, editing existing skills, or verifying skills work before deployment",
+      "name": "writing-skills"
+    },
+    "writing-skills--obra-superpowers--70a15f7d0b": {
       "description": "Use when creating new skills, editing existing skills, or verifying skills work before deployment",
       "name": "writing-skills"
     },

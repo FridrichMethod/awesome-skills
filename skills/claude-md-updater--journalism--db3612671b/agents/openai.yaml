@@ -1,0 +1,3 @@
+interface:
+  display_name: "Project instruction updater"
+  short_description: "Proposes scoped project instruction updates from durable lessons"

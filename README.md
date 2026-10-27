@@ -2,12 +2,12 @@
 
 # 🧬 awesome-skills
 
-**A curated, auto-synced collection of 2,200+ agent skills for Claude Code and Codex CLI** — covering AI4Protein, bioinformatics, academic writing, and general dev/productivity workflows.
+**A curated, auto-synced collection of 2,300+ agent skills for Claude Code and Codex CLI** — covering AI4Protein, bioinformatics, academic writing, and general dev/productivity workflows.
 
 [![Awesome](https://awesome.re/badge.svg)](https://awesome.re)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![sync-skills](https://github.com/FridrichMethod/awesome-skills/actions/workflows/sync-skills.yml/badge.svg)](https://github.com/FridrichMethod/awesome-skills/actions/workflows/sync-skills.yml)
-[![Skills](https://img.shields.io/badge/skills-2200%2B-brightgreen)](#sources)
+[![Skills](https://img.shields.io/badge/skills-2300%2B-brightgreen)](#sources)
 [![Sources](https://img.shields.io/badge/upstream%20sources-17-blue)](#sources)
 [![Last Commit](https://img.shields.io/github/last-commit/FridrichMethod/awesome-skills)](https://github.com/FridrichMethod/awesome-skills/commits/main)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
@@ -30,7 +30,7 @@ Agent skills are how you give Claude Code or Codex CLI deep, reusable expertise 
 2. **Filters** out things that break installs (Git LFS pointers, files >40 MB, bundled vector DBs, stale `.gitattributes`).
 3. **Auto-syncs** every Sunday so your skill library stays current without manual work.
 
-The result is one URL + one command that bootstraps a fresh laptop with **2,200+ vetted skills** available through a searchable index and independent client selections, and that keeps them current with incremental git transfers.
+The result is one URL + one command that bootstraps a fresh laptop with **2,300+ vetted skills** available through a searchable index and independent client selections, and that keeps them current with incremental git transfers.
 
 ---
 
@@ -312,7 +312,7 @@ Each successful run posts a per-source change summary table in the job summary.
 
 ```
 awesome-skills/
-├── skills/                          ← 2,233 skill dirs (managed by sync; do not edit directly)
+├── skills/                          ← 2,300 skill dirs (managed by sync; do not edit directly)
 ├── install.sh                       ← one-line installer and updater (curl|bash compatible)
 ├── install.ps1                      ← the same for native Windows PowerShell
 ├── scripts/
