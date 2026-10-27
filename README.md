@@ -81,7 +81,7 @@ The installer keeps a complete library outside skill discovery and installs inde
 - **Claude keeps the full collection by default**, including existing paths. Its selection is independent of Codex. Different-content name collisions are reported and all Claude variants remain available; Codex requires an explicit, unambiguous selection.
 - Repeated installs and an updater running `install.sh` **without arguments preserve both clients' choices**. New upstream entries join Claude's default `@all` selection; they do not join Codex's selected collection.
 
-**Requirements:** Python 3.11+ with PyYAML (`python3 -m pip install 'PyYAML>=6.0'`) and **git 2.29 or newer** (**2.37 or newer** with Git for Windows, whose sparse index keeps Windows-invalid paths in unselected skills from blocking checkout). The POSIX bootstrap needs Bash and `curl`; the Windows bootstrap needs PowerShell 7 or Windows PowerShell 5.1 and finds Python as `SKILLS_PYTHON`, then `py -3`, then `python`. A missing or older git fails before anything is written, with a message naming the version found. Installs from a local clone need no network and no git. Use the existing project environment with `SKILLS_PYTHON=/path/to/venv/bin/python` when appropriate. The installer never installs Python dependencies implicitly.
+**Requirements:** Python 3.11+, whose standard library is all a remote install or update needs, and **git 2.29 or newer** (**2.37 or newer** with Git for Windows, whose sparse index keeps Windows-invalid paths in unselected skills from blocking checkout). The POSIX bootstrap needs Bash and `curl`; the Windows bootstrap needs PowerShell 7 or Windows PowerShell 5.1 and finds Python as `SKILLS_PYTHON`, then `py -3`, then `python`. A missing or older git fails before anything is written, with a message naming the version found. Installs from a local clone need no network and no git, but read every `SKILL.md` in full with PyYAML (`python3 -m pip install 'PyYAML>=6.0'`), as does `scripts/sync_skills.py`; without it such an install stops before writing anything and says so. Use the existing project environment with `SKILLS_PYTHON=/path/to/venv/bin/python` when appropriate. The installer never installs Python dependencies implicitly.
 
 ### How updates work
 
@@ -134,7 +134,7 @@ IDs refer to directories, but conflicts are checked using frontmatter `name` and
 | `SKILLS_DATA_DIR` | `${XDG_DATA_HOME:-$HOME/.local/share}/awesome-skills` (Windows: `%LOCALAPPDATA%\awesome-skills`) | the library clone (`library/`) |
 | `SKILLS_STATE_DIR` | `$HOME/.local/share/awesome-skills` (Windows: `%LOCALAPPDATA%\awesome-skills`) | client selections, ownership manifests, recovery journals/backups, lock |
 | `SKILLS_CACHE_DIR` | `$HOME/.cache/awesome-skills` | where the former tarball installer kept snapshots; read only to remove them |
-| `SKILLS_PYTHON` | `python3` (Windows: `py -3`, then `python`) | interpreter containing PyYAML |
+| `SKILLS_PYTHON` | `python3` (Windows: `py -3`, then `python`) | Python 3.11+ that runs the installer (with PyYAML for an install from a checkout) |
 | `SKILLS_KEEP_BACKUPS` | `5` | transaction backups kept after each update (ordered by a clock-independent stamp; all kept ones are checked for an interrupted update); `0` keeps all |
 
 With `XDG_DATA_HOME` unset, data and state share one directory. State, data and the legacy cache must stay outside discovery, disjoint from install destinations, with no symlink ancestors. Both client destinations must be disjoint, including when updating only one client. Custom destinations are saved for subsequent no-argument updates. State and destinations must share a filesystem for reversible atomic moves; for a custom mount, set `SKILLS_STATE_DIR` to a directory on that mount. The state directory must persist across updater runs. The installer does not edit Codex/Claude configuration, dotfiles, or `~/.agents` configuration.
@@ -190,7 +190,7 @@ The verifier detects the installed version and available debug/protocol features
 
 ### From a local clone
 
-`./install.sh` (or `.\install.ps1`) in a complete checkout installs from the adjacent `skills/` tree and needs neither network nor git; the router then points at that checkout. A sparse checkout, or the managed library clone itself, is refused as a local source. After a remote install, the helper inside the data directory serves the managed clone, offline for `--list`:
+`./install.sh` (or `.\install.ps1`) in a complete checkout installs from the adjacent `skills/` tree and needs neither network nor git, only PyYAML; the router then points at that checkout. A sparse checkout, or the managed library clone itself, is refused as a local source. After a remote install, the helper inside the data directory serves the managed clone, offline for `--list`:
 
 ```bash
 python3 -B ~/.local/share/awesome-skills/library/scripts/install_skills.py --list --search protein

@@ -61,7 +61,7 @@ curl -fsSL https://raw.githubusercontent.com/FridrichMethod/awesome-skills/your-
 
 `tests/test_git_transport.py` serves a local bare repository over `file://` (via `SKILLS_REPOSITORY_URL`) and checks the incremental transport by counting the objects each update fetches; `tests/test_bootstrap.py` runs the piped `install.sh` and, when `pwsh` is installed, `install.ps1`. After editing `skills/` by hand, regenerate the index with `python scripts/sync_skills.py --index-only`.
 
-Run the temporary HOME contract tests and optional local Codex integration in the existing Python environment:
+Run the temporary HOME contract tests and optional local Codex integration in the existing Python environment (with pytest and PyYAML; the remote-install and bootstrap tests hide PyYAML from the installer to prove it is not needed):
 
 ```bash
 python -B -m pytest tests
@@ -76,6 +76,7 @@ The verifier starts no model turn, copies no credentials, and cleans its isolate
 - Shell: pass `shellcheck -s bash -e SC2155`.
 - PowerShell: keep `install.ps1` ASCII and compatible with Windows PowerShell 5.1.
 - Python: pass `ruff check`. The pre-commit config covers both.
+- `scripts/install_skills.py` imports only the standard library at module level: the bootstraps run it on whatever `python3` a host has. PyYAML stays a lazy import (`pyyaml()`) where whole frontmatter is parsed, and the file stays under 120 KiB because `install.sh` passes it as one `python -c` argument.
 - Workflows: pass `actionlint`.
 - Markdown: keep tables aligned by column.
 
