@@ -210,6 +210,16 @@ def test_a_foreign_codex_skill_keeps_its_name(sandbox, capsys):
         run(source, "--codex-only", "--enable", "alpha")
 
 
+def test_a_bundled_codex_skill_name_is_never_installed_for_codex(sandbox):
+    home, source = sandbox
+    skill(source, "skill-creator")  # a --source tree the weekly sync never produces
+    run(source)
+    assert hidden_from_claude(home / ".claude/skills/skill-creator"), "Claude has no such bundled skill"
+    assert not codex_copy(home, "skill-creator").exists() and "skill-creator" not in state(home, "codex")["managed"]
+    with pytest.raises(installer.InstallError, match="collides with reserved library entry: skill-creator"):
+        run(source, "--codex-only", "--enable", "skill-creator")
+
+
 def test_a_codex_root_that_would_overflow_is_refused_before_writing(sandbox, monkeypatch, capsys):
     home, source = sandbox
     first = [s for s in ("alpha", "beta") if not installer.placement(s)]
