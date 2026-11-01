@@ -864,6 +864,9 @@ def index_text(index: dict) -> str:
 
 # --- Hidden copies ---------------------------------------------------------------------
 
+# Codex's bundled system skills (codex-cli 0.165). A library skill with one of these IDs would
+# make a plain `$ID` ambiguous, so the sync gives such a skill a source-qualified ID instead.
+CODEX_SYSTEM_SKILLS = frozenset({"imagegen", "openai-docs", "review-agent", "skill-creator", "skill-installer"})
 # A skill installed but hidden from the model: Claude Code drops a skill whose frontmatter sets
 # disable-model-invocation from the model's listing (the last duplicate key wins, so every
 # existing top-level line of the key is replaced); Codex leaves a skill whose agents/openai.yaml

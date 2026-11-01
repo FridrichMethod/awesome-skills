@@ -223,6 +223,46 @@ def test_frontmatter_claude_code_cannot_parse_is_a_problem(tmp_path):
     assert ss.library_problems(tmp_path) == [f"raw: {ss.candidate_problems(root, 'raw')[0]}"]
 
 
+def test_reserved_codex_system_names_get_a_source_qualified_id(pipeline):
+    library, _, builders = pipeline
+    builders.append(
+        lambda dest: [write_skill(dest / f"skills/{name}") for name in ("skill-creator", "Imagegen", "fine")]
+    )
+    assert sync(pipeline)["new"] == 3
+    names = sorted(p.name for p in library.skills_dest.iterdir())
+    assert names[0] == "Imagegen--one--" + names[0].rsplit("--", 1)[1]
+    assert names[1] == "fine" and names[2].startswith("skill-creator--one--")
+    assert ss.library_problems(library.skills_dest) == []
+
+
+def test_a_reserved_library_id_breaks_the_rules(tmp_path):
+    write_skill(tmp_path / "openai-docs")
+    write_skill(tmp_path / "docs")
+    assert ss.library_problems(tmp_path) == ["openai-docs: reserved for a bundled Codex system skill"]
+
+
+def test_reserved_library_ids_move_to_their_variant_with_provenance(tmp_path):
+    skills = tmp_path / "skills"
+    write_skill(skills / "review-agent", extra={"notes.md": "kept\n"})
+    write_skill(skills / "legacy-only")
+    library = ss.LibrarySources(skills, tmp_path / "library_sources.json")
+    url = ss.UPSTREAMS[0][0]
+    library.entries["review-agent"]["origins"].append({"repository": url, "path": "x/review-agent", "current": True})
+    digest = library.entries["review-agent"]["digest"]
+    library.save()
+    library = ss.LibrarySources(skills, tmp_path / "library_sources.json")
+    [(old, new)] = library.release_reserved()
+    assert old == "review-agent" and new.startswith(f"review-agent--{ss.UPSTREAMS[0][1]}--")
+    library.save()
+    assert sorted(p.name for p in skills.iterdir()) == ["legacy-only", new]
+    assert (skills / new / "notes.md").read_text() == "kept\n"
+    entries = ss.LibrarySources(skills, tmp_path / "library_sources.json").entries
+    assert "review-agent" not in entries and entries[new]["digest"] == digest
+    assert not entries[new].get("locally_modified")
+    assert [o.get("repository") for o in entries[new]["origins"]] == [None, url]
+    assert ss.LibrarySources(skills, tmp_path / "library_sources.json").release_reserved() == []
+
+
 def library_paths(monkeypatch, tmp_path: Path) -> Path:
     skills = tmp_path / "skills"
     for name, value in [
@@ -254,3 +294,15 @@ def test_sanitize_only_keeps_the_library_records_in_step(tmp_path, monkeypatch):
     snapshot = (tmp_path / "library_sources.json").read_bytes()
     assert ss.sanitize_only(skills) == 0
     assert (tmp_path / "library_sources.json").read_bytes() == snapshot
+
+
+def test_sanitize_only_moves_reserved_ids(tmp_path, monkeypatch, capsys):
+    skills = library_paths(monkeypatch, tmp_path)
+    write_skill(skills / "skill-installer")
+    ss.LibrarySources(skills, tmp_path / "library_sources.json").save()
+    assert ss.sanitize_only(skills) == 0
+    [moved] = [p.name for p in skills.iterdir()]
+    assert moved.startswith("skill-installer--legacy--")
+    assert f"moved: skills/skill-installer -> skills/{moved}" in capsys.readouterr().out
+    assert sorted(installer.read_json(tmp_path / installer.INDEX, {})["skills"]) == [moved]
+    assert sorted(ss.LibrarySources(skills, tmp_path / "library_sources.json").entries) == [moved]

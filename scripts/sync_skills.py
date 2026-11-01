@@ -736,6 +736,12 @@ def _origin_key(origin: dict) -> tuple[str | None, str | None]:
     return origin.get("repository"), origin.get("path")
 
 
+def _reserved(skill_id: str) -> bool:
+    """Library IDs that would shadow a bundled Codex system skill (a plain `$ID` then matches
+    two skills and injects neither); such a skill gets a source-qualified variant ID."""
+    return skill_id.casefold() in _installer().CODEX_SYSTEM_SKILLS
+
+
 class LibrarySources:
     """Protect unproven content and track each observation without guessing.
 
@@ -834,11 +840,31 @@ class LibrarySources:
         return skill_id
 
     def _taken(self, skill_id: str) -> bool:
-        """An ID is taken by an exact or case-only match: Windows and macOS cannot hold both."""
-        if skill_id in self.entries or os.path.lexists(self.skills_dest / skill_id):
+        """An ID is taken by an exact or case-only match: Windows and macOS cannot hold both.
+        The bundled Codex system skill names are always taken."""
+        if skill_id in self.entries or os.path.lexists(self.skills_dest / skill_id) or _reserved(skill_id):
             return True
         folded = skill_id.casefold()
         return any(other.casefold() == folded for other in (*self.entries, *self.actual))
+
+    def release_reserved(self) -> list[tuple[str, str]]:
+        """Move each library skill whose ID is reserved (`_reserved`) to the variant ID its
+        current upstream origin gives it, with its provenance. Returns (old, new) ID pairs."""
+        sources = {url: name for url, name, _ in UPSTREAMS}
+        moved = []
+        for skill_id in sorted(self.actual):
+            root = self.skills_dest / skill_id
+            if not _reserved(skill_id) or root.is_symlink() or skill_id not in self.entries:
+                continue
+            origins = self.entries[skill_id]["origins"] or [{"path": f"skills/{skill_id}"}]
+            current = [o for o in origins if o.get("repository") in sources and o.get("current", True)]
+            origin = (current or origins)[0]
+            new_id = self._variant_id(skill_id, sources.get(origin.get("repository"), "legacy"), origin)
+            root.rename(self.skills_dest / new_id)
+            self.entries[new_id] = self.entries.pop(skill_id)
+            self.actual[new_id] = self.actual.pop(skill_id)
+            moved.append((skill_id, new_id))
+        return moved
 
     def accept_sanitized(self, skill_ids) -> None:
         """Record the sanitizer's own rewrite of unmodified copies: their recorded digest follows
@@ -1046,6 +1072,7 @@ def library_problems(skills: Path) -> list[str]:
     installer = _installer()
     ids = installer.skill_ids(skills)
     problems = [f"{skill_id}: {reason}" for skill_id, reason in installer.case_collisions(ids).items()]
+    problems += [f"{skill_id}: reserved for a bundled Codex system skill" for skill_id in ids if _reserved(skill_id)]
     for skill_id in ids:
         found = candidate_problems(skills / skill_id, skill_id)
         problems += [f"{skill_id}: {p}" for p in found if not p.startswith("Invalid frontmatter")]
@@ -1223,9 +1250,9 @@ def sanitize_only(target: Path) -> int:
     Used both as a one-shot cleanup of the in-tree `skills/` directory and as
     a unit-friendly entry point for tests. Returns the process exit code.
 
-    On the library itself it also leaves what a sync would: provenance
-    digests that follow the sanitizer's rewrites of unmodified copies, and a
-    regenerated index.
+    On the library itself it also leaves what a sync would: skills moved off
+    reserved IDs, provenance digests that follow the sanitizer's rewrites of
+    unmodified copies, and a regenerated index.
     """
     if not target.exists():
         print(f"sanitize-only: {target} does not exist", file=sys.stderr)
@@ -1237,6 +1264,8 @@ def sanitize_only(target: Path) -> int:
         except (OSError, ValueError, yaml.YAMLError) as error:
             print(f"Cannot safely load library provenance: {error}", file=sys.stderr)
             return 1
+        for old, new in library.release_reserved():
+            print(f"  moved: skills/{old} -> skills/{new} ({old} is a bundled Codex system skill)")
 
     total = sanitized = synthesized = invalid = 0
     invalid_files: list[Path] = []
@@ -1276,8 +1305,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--sanitize-only",
         action="store_true",
-        help="skip upstream sync; only normalize/sanitize existing SKILL.md files in ./skills/ (there also keep "
-        "library_sources.json and library_index.json in step)",
+        help="skip upstream sync; only normalize/sanitize existing SKILL.md files in ./skills/ (there also move "
+        "skills off reserved IDs and keep library_sources.json and library_index.json in step)",
     )
     parser.add_argument(
         "--index-only",
@@ -1304,6 +1333,8 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, ValueError, yaml.YAMLError) as error:
         print(f"Cannot safely load library provenance: {error}", file=sys.stderr)
         return 1
+    for old, new in library.release_reserved():
+        print(f"Moved skills/{old} to skills/{new}: {old} is a bundled Codex system skill")
     before = sum(1 for p in SKILLS_DEST.iterdir() if p.is_dir())
     print(f"Skills before: {before}")
     stats: dict = {}

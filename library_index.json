@@ -7733,11 +7733,11 @@
       "description": "Guide to reproducing OmicVerse trajectory workflows spanning PAGA, Palantir, VIA, velocity coupling, and fate scoring notebooks.",
       "name": "single-trajectory-analysis"
     },
-    "skill-creator": {
+    "skill-creator--anthropics-plugins--b00ebd43c5": {
       "description": "Create new skills, modify and improve existing skills, and measure skill performance. Use when users want to create a skill from scratch, edit, or optimize an existing skill, run evals to test a skill, benchmark skill performance with variance analysis, or optimize a skill's description for better triggering accuracy.",
       "name": "skill-creator"
     },
-    "skill-creator--anthropics-plugins--b00ebd43c5": {
+    "skill-creator--anthropics-skills--ad87867d4b": {
       "description": "Create new skills, modify and improve existing skills, and measure skill performance. Use when users want to create a skill from scratch, edit, or optimize an existing skill, run evals to test a skill, benchmark skill performance with variance analysis, or optimize a skill's description for better triggering accuracy.",
       "name": "skill-creator"
     },

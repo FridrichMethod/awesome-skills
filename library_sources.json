@@ -31862,10 +31862,26 @@
       }
     ]
   },
-  "skill-creator": {
+  "skill-creator--anthropics-plugins--b00ebd43c5": {
     "conflicts": [
-      "skill-creator",
-      "skill-creator--anthropics-plugins--b00ebd43c5"
+      "skill-creator--anthropics-plugins--b00ebd43c5",
+      "skill-creator--anthropics-skills--ad87867d4b"
+    ],
+    "digest": "491aecc595601d22ba980eb4463497fcaaa50167da26a535e4720ad44bcc5559",
+    "name": "skill-creator",
+    "origins": [
+      {
+        "current": true,
+        "path": "plugins/skill-creator/skills/skill-creator",
+        "repository": "https://github.com/anthropics/claude-plugins-official.git",
+        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+      }
+    ]
+  },
+  "skill-creator--anthropics-skills--ad87867d4b": {
+    "conflicts": [
+      "skill-creator--anthropics-plugins--b00ebd43c5",
+      "skill-creator--anthropics-skills--ad87867d4b"
     ],
     "digest": "525d6cd864161ff643ffc9325e675a13100e21a4c6dbd300be1579fb507ea028",
     "name": "skill-creator",
@@ -31880,22 +31896,6 @@
         "path": "skills/skill-creator",
         "repository": "https://github.com/anthropics/skills.git",
         "revision": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
-      }
-    ]
-  },
-  "skill-creator--anthropics-plugins--b00ebd43c5": {
-    "conflicts": [
-      "skill-creator",
-      "skill-creator--anthropics-plugins--b00ebd43c5"
-    ],
-    "digest": "491aecc595601d22ba980eb4463497fcaaa50167da26a535e4720ad44bcc5559",
-    "name": "skill-creator",
-    "origins": [
-      {
-        "current": true,
-        "path": "plugins/skill-creator/skills/skill-creator",
-        "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
       }
     ]
   },
