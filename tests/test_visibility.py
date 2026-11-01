@@ -117,6 +117,39 @@ def test_a_local_policy_file_that_cannot_take_the_key_fails_its_skill(sandbox, c
     assert not codex_copy(home, "gamma").exists() and hidden_from_codex(codex_copy(home, "alpha"))
 
 
+# Local shapes the line-by-line edits take but whose copies would not read as hidden: an explicit or
+# escaped key later turns the inserted `true` back to false; Claude Code ignores frontmatter with a
+# column-0 continuation line (PyYAML does not); the policy block lands inside a quoted string.
+LOCAL_SHAPES = {
+    "explicit-key": ("---\nname: gamma\ndescription: g\n? disable-model-invocation\n: false\n---\n", None),
+    "escaped-key": ('---\nname: gamma\ndescription: g\n"disable\\x2dmodel-invocation": false\n---\n', None),
+    "column-0-line": ('---\nname: gamma\ndescription: "Spans lines,\nthe next at column 0"\n---\n', None),
+    "policy-in-a-string": (
+        "---\nname: gamma\ndescription: g\n---\n",
+        'interface:\n  prompt: "Draft a\npolicy:\n  plan"\n',
+    ),
+}
+
+
+@pytest.mark.parametrize("skill_md, policy", LOCAL_SHAPES.values(), ids=list(LOCAL_SHAPES))
+def test_a_local_skill_the_sync_would_reject_gets_no_edited_copy(sandbox, capsys, skill_md, policy):
+    home, source = sandbox
+    gamma = source / "gamma"  # a --source tree, which the sync never checked
+    gamma.mkdir()
+    (gamma / "SKILL.md").write_text(skill_md)
+    if policy:
+        (gamma / "agents").mkdir()
+        (gamma / "agents/openai.yaml").write_text(policy)
+    capsys.readouterr()
+    assert run(source) == 1
+    err = capsys.readouterr().err
+    assert "claude:gamma (Cannot install gamma: " in err and "codex:gamma (Cannot " in err
+    assert not (home / ".claude/skills/gamma").exists() and not codex_copy(home, "gamma").exists()
+    assert hidden_from_claude(home / ".claude/skills/alpha") and hidden_from_codex(codex_copy(home, "alpha"))
+    assert run(source, "--claude-only", "--selection", "@library,gamma") == 0, "a visible Claude copy is not edited"
+    assert (home / ".claude/skills/gamma/SKILL.md").read_text() == skill_md
+
+
 def test_an_upstream_change_is_installed_still_hidden(sandbox):
     home, source = sandbox
     run(source)

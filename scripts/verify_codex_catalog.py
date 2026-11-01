@@ -312,8 +312,9 @@ def prepare_fixture(source: Path, installer: Path, root: Path) -> tuple[Path, di
     if not helper.is_file():
         raise VerificationError(f"Missing new installer helper: {helper}")
     shutil.copyfile(helper, scripts / "install_skills.py")
-    if helper.with_name("search_skills.py").is_file():
-        shutil.copyfile(helper.with_name("search_skills.py"), scripts / "search_skills.py")
+    for name in ("search_skills.py", "sync_skills.py"):  # the installer checks a local tree with the sync
+        if helper.with_name(name).is_file():
+            shutil.copyfile(helper.with_name(name), scripts / name)
     bootstrap = helper.parent.parent / "install.sh"
     if not bootstrap.is_file():
         raise VerificationError(f"Missing local installer bootstrap: {bootstrap}")

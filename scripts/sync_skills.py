@@ -1000,6 +1000,16 @@ def candidate_problems(prepared: Path, skill_id: str) -> list[str]:
     else:
         if plain != name:
             problems.append(f"frontmatter name {name!r} reads as {plain!r} without PyYAML")
+    return problems + copy_problems(prepared, skill_id, data, metadata)
+
+
+def copy_problems(prepared: Path, skill_id: str, data: bytes, metadata: dict | None = None) -> list[str]:
+    """Why the installer could not make this skill's hidden or Codex copies safely: the frontmatter
+    Claude Code cannot parse (it would then ignore disable-model-invocation), then
+    `hidden_copy_problems`. The installer asks this of every skill it edits from a local tree."""
+    installer = _installer()
+    metadata = installer.metadata(data, skill_id) if metadata is None else metadata
+    problems = []
     if _shallow_flow_lines(installer.frontmatter(data, skill_id)):
         problems.append(
             "frontmatter has a multi-line quoted scalar or flow collection with a line not indented past "

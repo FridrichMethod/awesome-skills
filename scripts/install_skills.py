@@ -9,6 +9,7 @@ import argparse
 import bisect
 import errno
 import hashlib
+import importlib.util
 import json
 import os
 import re
@@ -1219,7 +1220,7 @@ class DirLibrary(Library):
             )
             if result.returncode == 0:
                 self.revision = result.stdout.strip()
-        self._fingerprints = {}
+        self._fingerprints, self._problems, self._rules = {}, {}, None
         ids = skill_ids(source)
         self._listings = {skill_id: local_listing(source / skill_id) for skill_id in ids}
         kinds = {
@@ -1240,6 +1241,23 @@ class DirLibrary(Library):
 
     def read(self, skill_id, rel):
         return (self.source / skill_id).joinpath(*rel.split("/")).read_bytes()
+
+    def derived(self, client, skill_id, invocation, local=None):
+        found = super().derived(client, skill_id, invocation, local)
+        # The sync never saw this tree: an edited copy needs its checks (sync_skills.copy_problems).
+        if found[1] and skill_id not in self._problems:
+            if not self._rules:
+                path = Path(globals().get("__file__") or "-").with_name("sync_skills.py")
+                if not path.is_file():
+                    raise InstallError(f"Checking copies of a local tree needs {display(path)}")
+                spec = importlib.util.spec_from_file_location("awesome_skills_sync", path)
+                self._rules = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(self._rules)
+            root = self.source / skill_id
+            self._problems[skill_id] = self._rules.copy_problems(root, skill_id, (root / "SKILL.md").read_bytes())
+        if found[1] and self._problems[skill_id]:
+            raise InstallError(f"Cannot install {skill_id}: {self._problems[skill_id][0]}")
+        return found
 
     def adoptable(self, skill_id, path):
         # Legacy adoption requires an exact whole-tree hash, never a name alone.
