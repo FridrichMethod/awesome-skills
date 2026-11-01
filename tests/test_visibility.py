@@ -374,7 +374,9 @@ def test_a_second_root_linked_into_codexs_first_names_the_fix_that_works(sandbox
         pytest.skip("symlinks unavailable")
     (home / ".codex/skills").mkdir(parents=True)
     (home / ".agents").mkdir()
-    (home / ".agents/skills").symlink_to("../.codex/skills", target_is_directory=True)
+    # A relative link, as `ln -s ../.codex/skills` makes, in this host's separator: Windows does not
+    # resolve a link whose stored target holds forward slashes.
+    (home / ".agents/skills").symlink_to(Path("..", ".codex", "skills"), target_is_directory=True)
     capsys.readouterr()
     assert run(source, "--codex-only") == 0
     err = capsys.readouterr().err
@@ -614,7 +616,8 @@ def test_copies_in_a_second_root_that_became_a_link_stay_owned(sandbox, tmp_path
     before, copies = state(home, "codex"), installer.fingerprint(shared)
     capsys.readouterr()
     assert run(source) == 0
-    fix = f"(set SKILLS_CODEX_DEST2={installer.native((shared / installer.AGENTS_FOLDER).resolve())} to write them"
+    there = installer.display(installer.native((shared / installer.AGENTS_FOLDER).resolve()))  # no \\?\ shown
+    fix = f"(set SKILLS_CODEX_DEST2={there} to write them"
     assert f"Codex's copies there are left as they are {fix}" in capsys.readouterr().err
     assert state(home, "codex") == before, "still owned, not forgotten"
     assert installer.fingerprint(shared) == copies
