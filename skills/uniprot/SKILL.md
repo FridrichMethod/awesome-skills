@@ -2,7 +2,7 @@
 name: uniprot
 description: "Access UniProt for protein sequence and annotation retrieval. Use this skill when: (1) Looking up protein sequences by accession, (2) Finding functional annotations, (3) Getting domain boundaries, (4) Finding homologs and variants, (5) Cross-referencing to PDB structures.
 
-For structure retrieval, use pdb. For sequence design, use proteinmpnn."
+  For structure retrieval, use pdb. For sequence design, use proteinmpnn."
 license: MIT
 category: utilities
 tags: [database, sequence, annotation]

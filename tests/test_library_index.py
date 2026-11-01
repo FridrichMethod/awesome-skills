@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
+
+import yaml
 
 from scripts import install_skills as installer
 from scripts import sync_skills
@@ -61,3 +64,54 @@ def test_skill_paths_check_out_on_windows():
     folded = {}
     collisions = [p for p in paths if folded.setdefault(p.lower(), p) != p]
     assert not collisions, collisions[:20]
+
+
+def test_committed_library_passes_the_sync_rules():
+    """What the weekly sync would refuse to commit: portability, name parity, and frontmatter
+    Claude Code cannot parse."""
+    assert sync_skills.library_problems(ROOT / "skills") == []
+
+
+def test_committed_provenance_digests_match_the_skill_tree():
+    """A recorded digest that drifted from its tree would mark the copy locally modified, and the
+    next sync would add a duplicate variant instead of updating or deduplicating it."""
+    provenance = json.loads((ROOT / installer.PROVENANCE).read_text(encoding="utf-8"))
+    ids = installer.skill_ids(ROOT / "skills")
+    assert sorted(provenance) == ids
+    drifted = [
+        skill_id
+        for skill_id in ids
+        if not provenance[skill_id].get("locally_modified")
+        and provenance[skill_id]["digest"] != sync_skills.skill_tree_digest(ROOT / "skills" / skill_id)
+    ]
+    assert not drifted, drifted[:20]
+
+
+def flush_quoted_lines(text: str) -> str:
+    """The shape canonicalization B repairs: every line of a multi-line quoted scalar at column 0."""
+    lines = text.split("\n")
+    for token in yaml.scan(text):
+        if isinstance(token, yaml.ScalarToken) and token.style in ('"', "'"):
+            for row in range(token.start_mark.line + 1, token.end_mark.line + 1):
+                lines[row] = lines[row].lstrip(" ")
+    return "\n".join(lines)
+
+
+def test_canonicalization_b_reads_every_library_frontmatter_the_same():
+    """For every SKILL.md: PyYAML's whole frontmatter and the standard-library name stay the same
+    when B repairs the column-0 form of each multi-line quoted scalar, and B leaves no line that
+    Claude Code would reject."""
+    checked = 0
+    for skill_id in installer.skill_ids(ROOT / "skills"):
+        text = installer.frontmatter((ROOT / "skills" / skill_id / "SKILL.md").read_bytes(), skill_id)
+        assert sync_skills._indent_flow_lines(text) == text, skill_id
+        flush = flush_quoted_lines(text)
+        if flush == text:
+            continue
+        checked += 1
+        repaired = sync_skills._indent_flow_lines(flush)
+        assert sync_skills._shallow_flow_lines(repaired) == [], skill_id
+        for variant in (flush, repaired):
+            assert yaml.safe_load(variant) == yaml.safe_load(text), skill_id
+            assert installer.NameReader(variant).read() == installer.NameReader(text).read(), skill_id
+    assert checked >= 30  # the 29 repaired files and math-olympiad

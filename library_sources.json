@@ -49,7 +49,7 @@
     ]
   },
   "academic-humanizer": {
-    "digest": "0fd00616b648e6b5937f50e879a32cda64af1cd827874f09d61e710fe8e0e617",
+    "digest": "6764bdc47d36fa960ced4989c5e6064e4d6e0bc73870bfda71b57b48bf991f0f",
     "name": "academic-humanizer",
     "origins": [
       {
@@ -902,7 +902,7 @@
     ]
   },
   "alphafold": {
-    "digest": "4d7fa615692723f93be93a1c34d7572275e747bee308e60231a01ce90c966e3d",
+    "digest": "60213383b4372ebc324d3fe3253610438e59948f4b10b0620efeffaf9012b1bc",
     "name": "alphafold",
     "origins": [
       {
@@ -2533,7 +2533,7 @@
     ]
   },
   "bindcraft": {
-    "digest": "a0508021fe800db3cbd67681602afc00c98138b28234cb9cec3fe837127fa72f",
+    "digest": "cf4f37dfcbe19734126b0f8c0e43ef4f3db835a57086d5708c4f3ba26bf6c3cb",
     "name": "bindcraft",
     "origins": [
       {
@@ -2550,7 +2550,7 @@
     ]
   },
   "binder-design": {
-    "digest": "8fb855238d0a633b9bc7b2dbc88e52292413ea4a7eadc2f905889f336e6daa7e",
+    "digest": "82c3affdbfe5178e35b02e0ae39187e3e0e6f007fb7e799ce1be8ebe7f7cee5e",
     "name": "binder-design",
     "origins": [
       {
@@ -8517,7 +8517,7 @@
     ]
   },
   "biologist-analyst": {
-    "digest": "bdcfda9d391009ba6bc8338fc545e29f9b7974bc1cbd5f0b88edfb5b368d1a58",
+    "digest": "f40a8d3982a432dc6bc5b25977ed964bf2127b5cca10c7d936e03c44f628cfbd",
     "name": "biologist-analyst",
     "origins": [
       {
@@ -8849,7 +8849,7 @@
     ]
   },
   "boltz": {
-    "digest": "0e0c1c6e0f0d70247394dfa523a226169436aab412a6eda4757f6b420c70d2f6",
+    "digest": "b6f459f77f8ea0398ffa5440fe4775fc222bda48f390106a070d482501def89a",
     "name": "boltz",
     "origins": [
       {
@@ -8866,7 +8866,7 @@
     ]
   },
   "boltzgen": {
-    "digest": "f9101a6288f7684f097c088aa1137264fbcea286206fa7ac845bb0410440e872",
+    "digest": "42db16f11d3750eca35932a30ffd40dda9952edc3b4d9ace81914dbca0063f39",
     "name": "boltzgen",
     "origins": [
       {
@@ -9239,7 +9239,7 @@
     ]
   },
   "campaign-manager": {
-    "digest": "e20e83ec75ac11dc83f803d70e3fee02eaa7478300c471f8ce77b3ea793c93f5",
+    "digest": "5014040049e518564504eac6e17dce87eab59a9140ef71fb4e60f38702d58eed",
     "name": "campaign-manager",
     "origins": [
       {
@@ -9741,7 +9741,7 @@
     ]
   },
   "chai": {
-    "digest": "87136f9ebf99cff8604ad7a81dc7ce18a1c673c13edc6d37cd02f8391bf5538c",
+    "digest": "94afcd88cab5f50396628e498db96bbd485fa8787d74cf359713aa050eae294b",
     "name": "chai",
     "origins": [
       {
@@ -9912,7 +9912,7 @@
     ]
   },
   "chemist-analyst": {
-    "digest": "ddb7c7aafb4a481a0b42539b07178d401c20f18bf4df0d6eec9d7718b0d2cea8",
+    "digest": "d73a81bdadaedba6fd73de9dc138807dafac5dcda8f86b32d529caf5d247bb6b",
     "name": "chemist-analyst",
     "origins": [
       {
@@ -10208,7 +10208,7 @@
     ]
   },
   "claude-api": {
-    "digest": "b7232d00a036f0dc86a1350b41d4786f3f2c1028b7cdec37055c22212c600640",
+    "digest": "29c7b015b51872e94c7e241a851c700da4b49d965c83d6af91f27b8ee58f3fdc",
     "name": "claude-api",
     "origins": [
       {
@@ -14850,7 +14850,7 @@
     ]
   },
   "epidemiologist-analyst": {
-    "digest": "3e14e6c840bfebf902abfb8b232a3076766a300bc4e328e2c7e91744c4951a3a",
+    "digest": "d8ceebd36ee935db2d9b77041ab6b7fea51329b5d1ce582644078294c1e60ae3",
     "name": "epidemiologist-analyst",
     "origins": [
       {
@@ -14942,7 +14942,7 @@
       "esm",
       "esm--kdense-sci--419425daeb"
     ],
-    "digest": "bf6479f23390345be346147099aa4fb656ea0c2d26a6de354e14293c72202c75",
+    "digest": "3712bb898a8cb6c39083c6fe93086860aa11809aa7c7f73c0082302134294d25",
     "name": "esm",
     "origins": [
       {
@@ -15931,7 +15931,7 @@
     ]
   },
   "foldseek": {
-    "digest": "d801c803f9be63cf5bacf9a48ea066431f6713da3178c0330f4ebf3c9c7f6733",
+    "digest": "b744aa0a637ffaf3f3b7f5a958528af8c2fb598727b4200049d08cd44905e593",
     "name": "foldseek",
     "origins": [
       {
@@ -16890,7 +16890,7 @@
     ]
   },
   "germinal": {
-    "digest": "0353d435d01747d9acf4f14bed36f25e1bfd2dcf1f750cea983a6c094391f5c2",
+    "digest": "10853fed28c2774d2e3fe00d543397569b27d286390f845a3c8d135e584d82e7",
     "name": "germinal",
     "origins": [
       {
@@ -18925,7 +18925,7 @@
     ]
   },
   "ipsae": {
-    "digest": "01ca25f9b813a4b330f02d3bfc32e9316eccd4b4b2074917b9ecf22eb15cff63",
+    "digest": "e0be554af207593ef5fbff9c9aecec8d0b53022d8f6b50dba98597bed0079614",
     "name": "ipsae",
     "origins": [
       {
@@ -19773,7 +19773,7 @@
     ]
   },
   "ligandmpnn": {
-    "digest": "40dbfe46bed95e0de73cca850098ebc70e924c25d3fe44faf3b0688cbf505e7f",
+    "digest": "1d6116069575580b8800454475a0304f7479ed2d91baa8b6a7ca19d5b8d03b88",
     "name": "ligandmpnn",
     "origins": [
       {
@@ -22247,7 +22247,7 @@
     ]
   },
   "mosaic": {
-    "digest": "f7ea6e37645b1eaeada84485d6f271094f89b6d8dd4cfa9b839eaf4b6db5e7ec",
+    "digest": "871ec7dc6ed1cb496dd49ac07c0c051e97ed2fae2c36bbf10e59460aceecf8d8",
     "name": "mosaic",
     "origins": [
       {
@@ -23117,7 +23117,7 @@
     ]
   },
   "nature-literature-pipeline": {
-    "digest": "39eeceb94d92a65b0cdb28962a3501be58d25faafb0820ab1b833077cf390f5b",
+    "digest": "5e249730c2fbb8066acde79ddd03dd61de1bfb6fa363b5b8fe54d4094c6f72cd",
     "name": "nature-literature-pipeline",
     "origins": [
       {
@@ -25234,7 +25234,7 @@
     ]
   },
   "pdb": {
-    "digest": "784abb4cdc7bdf14ed2377caf3d74527ea7f9b3f43ea293aea5f92b5ad635e5a",
+    "digest": "e39d209ebaf823eea301c1cbf4813fa7f4418bde3807a703f7e9ae0784e3757c",
     "name": "pdb",
     "origins": [
       {
@@ -27149,7 +27149,7 @@
     ]
   },
   "protein-design-workflow": {
-    "digest": "cffe21600ec9b9c52a87191cba6830a60347a85bfe7931f4f62b4629cc0d305e",
+    "digest": "224a69a8688d3502486aad4542be15aca9ca80ee5f9e6cefcd3fb5c05d484bed",
     "name": "protein-design-workflow",
     "origins": [
       {
@@ -27187,7 +27187,7 @@
     ]
   },
   "protein-qc": {
-    "digest": "ba1c32d882719be66115d5041a7195b54a6bc99bceb60d27c9e5e4f017b9071f",
+    "digest": "08f4fa0189d46e39777f20fc10ca10feaea5f3421b7ab61769e9b63ca343029a",
     "name": "protein-qc",
     "origins": [
       {
@@ -27249,7 +27249,7 @@
     ]
   },
   "proteinmpnn": {
-    "digest": "b555f5734ecc9787085b3d3086b9e07bc30ffd22e961ae459a4b8fe1c0b6b0ed",
+    "digest": "613b1536e0788a662e368a1ab236ba3e3de1421d04db4d4d2b433161b59cd538",
     "name": "proteinmpnn",
     "origins": [
       {
@@ -27266,7 +27266,7 @@
     ]
   },
   "protenix": {
-    "digest": "a2aada006e908daf473b0e332c15b3e0e03e9385723f2f45bcdb67beb5133f6c",
+    "digest": "6fe4ad29b6697f8be3fa687a7b03da607dc995b62eeafce650c89cf2e75b9e78",
     "name": "protenix",
     "origins": [
       {
@@ -27442,7 +27442,7 @@
     ]
   },
   "psychologist-analyst": {
-    "digest": "c5d6e87e8d88f1a889b8ec28dd4af237edd72417befe2e738619acc5137198e4",
+    "digest": "f1e32844ceb1da4d51c3e1ce9cf41d6a5aaedf1fb317a9672a73d2c41693b09c",
     "name": "psychologist-analyst",
     "origins": [
       {
@@ -29579,7 +29579,7 @@
     ]
   },
   "rfdiffusion": {
-    "digest": "cd609c08857a2c276ec91f1ef87f4a2353a8c65ab014645ab3deca6921af56f4",
+    "digest": "a5d584266573c21a346974034859ddff0bd5eedaa782ed9693eec090d5b212dd",
     "name": "rfdiffusion",
     "origins": [
       {
@@ -30241,7 +30241,7 @@
     ]
   },
   "sciagent-skill-creator": {
-    "digest": "427e0f85140d79202de5f31579f2f3abde9a80cbc49d537d4f17870ff7cfd7e2",
+    "digest": "3f507dc8dc4178432fcdf1d95a1a7f0c6a1956e94a5cb62f1de87354686f0f9e",
     "name": "sciagent-skill-creator",
     "origins": [
       {
@@ -32178,7 +32178,7 @@
     ]
   },
   "solublempnn": {
-    "digest": "09113784de67efedd3f5ffed59f7dd32316d95bc52456acb71ccaf8909097777",
+    "digest": "cc1af5e6a51e7558a6d2dd76997fa74e5672a59ed72523c6aff74f1a1f52f3f2",
     "name": "solublempnn",
     "origins": [
       {
@@ -36026,7 +36026,7 @@
     ]
   },
   "uniprot": {
-    "digest": "2a0ba90902c4c481b21d1c3ca48c353e9de2bcf19e56ddc278cba56d3c2c2310",
+    "digest": "a37fe72af48184594974defafd4cadef041d5b594c50370ab443838d9873ef9b",
     "name": "uniprot",
     "origins": [
       {

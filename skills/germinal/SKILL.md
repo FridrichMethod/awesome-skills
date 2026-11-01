@@ -2,7 +2,7 @@
 name: germinal
 description: "De novo antibody and nanobody (VHH) design with Germinal. Use this skill when: (1) Designing epitope-targeted nanobodies or scFvs, (2) Needing CDR design on a fixed framework, (3) Working on antibody-format binders rather than miniproteins.
 
-For miniprotein binders, use binder-design (BoltzGen, BindCraft, RFdiffusion, Mosaic). For structure validation, use boltz or chai."
+  For miniprotein binders, use binder-design (BoltzGen, BindCraft, RFdiffusion, Mosaic). For structure validation, use boltz or chai."
 license: MIT
 category: design-tools
 tags: [antibody, nanobody, vhh, scfv, binder]

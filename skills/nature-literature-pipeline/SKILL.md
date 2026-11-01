@@ -1,7 +1,7 @@
 ---
 name: nature-literature-pipeline
 description: "Complete automated literature discovery pipeline: multi-source search → six-dimension scoring → fine reading → formatted delivery → archival.
-Combines a configurable engine with daily cron-driven application layer. Works with Feishu, Telegram, or any messaging platform."
+  Combines a configurable engine with daily cron-driven application layer. Works with Feishu, Telegram, or any messaging platform."
 license: MIT
 metadata:
   author: Jiahao8595

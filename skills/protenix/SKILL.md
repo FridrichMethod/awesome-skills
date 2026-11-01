@@ -2,7 +2,7 @@
 name: protenix
 description: "Structure prediction with Protenix, an open AlphaFold3 reproduction. Use this skill when: (1) Predicting complex structures with an AF3-class model, (2) Wanting an open alternative to AF3 alongside Boltz and Chai, (3) Validating designed binder-target complexes.
 
-For QC thresholds, use protein-qc. For ipSAE ranking, use ipsae."
+  For QC thresholds, use protein-qc. For ipSAE ranking, use ipsae."
 license: MIT
 category: design-tools
 tags: [structure-prediction, validation, alphafold3, open-source]

@@ -2,7 +2,7 @@
 name: mosaic
 description: "Multi-objective, gradient-based protein binder design with Mosaic. Use this skill when: (1) Composing several structure or sequence models into one design objective, (2) Optimizing binders against a custom loss rather than a fixed pipeline, (3) Wanting gradient descent over sequence space in the style of ColabDesign, RSO, or BindCraft but with interchangeable predictors, (4) Letting the optimizer choose the epitope instead of fixing hotspots.
 
-For an end-to-end binder pipeline with default filters, use bindcraft. For all-atom diffusion design, use boltzgen. For backbone-only generation, use rfdiffusion."
+  For an end-to-end binder pipeline with default filters, use bindcraft. For all-atom diffusion design, use boltzgen. For backbone-only generation, use rfdiffusion."
 license: MIT
 category: design-tools
 tags: [design, gradient-optimization, multi-objective, jax, binder]

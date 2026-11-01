@@ -59,7 +59,19 @@ _YAML_PROBLEM_PREFIXES = ("{", "[", "!", "&", "*", ">", "|", "%", "@", "`")
 # common upstream typo: the author meant the YAML scalar style indicator,
 # but the quotes turn the marker into the literal value and the body lines
 # below become a nested mapping. We collapse those into one quoted scalar.
+# Valid unquoted block scalars with these headers are collapsed the same way,
+# and that output must stay byte-for-byte what it has been: library_sources.json
+# pins every sanitized tree's digest, and a legacy or shared copy is never
+# replaced in place, so any change to the sanitized form of an upstream skill
+# adds a duplicate variant at the next sync. A multi-line result keeps its raw
+# line breaks; `_indent_flow_lines` then indents its continuation lines, which
+# Claude Code requires and YAML folding ignores.
 _FOLDED_SCALAR_MARKERS = {">", ">-", ">+", "|", "|-", "|+"}
+# Characters a double-quoted YAML scalar must not hold raw: those YAML forbids,
+# a carriage return, and the line breaks only YAML 1.1 (PyYAML) folds. Tabs and
+# line feeds stay raw.
+_DQ_ESCAPE = re.compile("[^\t\n\x20-\x7e\xa0-\u2027\u202a-\ud7ff\ue000-\ufffd\U00010000-\U0010ffff]")
+_DQ_NAMED_ESCAPES = {"\0": "\\0", "\r": "\\r", "\x1b": "\\e", "\x85": "\\N", "\u2028": "\\L", "\u2029": "\\P"}
 
 # (url, local_name, description). Order only determines which new variant gets
 # the plain directory ID; no source wins a frontmatter name conflict.
@@ -195,8 +207,16 @@ def _smart_trim(text: str, target: int = DESCRIPTION_TRIM_TARGET) -> str:
 
 
 def _yaml_double_quote(value: str) -> str:
-    """Wrap `value` in YAML double-quotes, escaping `\\` and `"`."""
-    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+    """Wrap `value` in YAML double-quotes, escaping `\\`, `"` and the characters a quoted scalar
+    must not hold raw (`_DQ_ESCAPE`). Line feeds stay raw line breaks, which YAML folds."""
+
+    def escape(match: re.Match) -> str:
+        char = match.group()
+        if char in _DQ_NAMED_ESCAPES:
+            return _DQ_NAMED_ESCAPES[char]
+        return f"\\x{ord(char):02x}" if ord(char) < 0x100 else f"\\u{ord(char):04x}"
+
+    escaped = _DQ_ESCAPE.sub(escape, value.replace("\\", "\\\\").replace('"', '\\"'))
     return f'"{escaped}"'
 
 
@@ -261,9 +281,18 @@ def _opens_multiline_quoted(value: str) -> bool:
 
 
 def _unquote_yaml(value: str) -> str:
-    """Reverse of `_yaml_double_quote` / single-quote form. Returns raw text."""
+    """Reverse of `_yaml_double_quote` / single-quote form. Returns raw text.
+
+    A double-quoted value is decoded as YAML reads it, so escapes count as the one character
+    they stand for in the length cap and are not escaped a second time when it is re-quoted."""
     stripped = value.strip()
     if stripped.startswith('"') and stripped.endswith('"') and len(stripped) >= 2:
+        try:
+            loaded = yaml.safe_load(stripped)
+        except yaml.YAMLError:
+            loaded = None
+        if isinstance(loaded, str):
+            return loaded
         return stripped[1:-1].replace('\\"', '"').replace("\\\\", "\\")
     if stripped.startswith("'") and stripped.endswith("'") and len(stripped) >= 2:
         return stripped[1:-1].replace("''", "'")
@@ -477,6 +506,54 @@ def _reorder_preamble(lines: list[str]) -> list[str] | None:
     return reordered
 
 
+def _shallow_flow_lines(text: str) -> list[tuple[int, int]]:
+    """(offset, spaces to add) for each line of a multi-line quoted scalar or flow collection in
+    YAML `text` that is not indented deeper than the block collection holding it. PyYAML ignores
+    that indentation, but YAML requires it, and Claude Code rejects such frontmatter as a whole
+    (it then drops every field, disable-model-invocation included). Adding spaces brings the line
+    two columns past its block; YAML folding drops leading whitespace, so values stay the same."""
+    try:
+        tokens = list(yaml.scan(text))
+    except yaml.YAMLError:
+        return []
+    spans, blocks, depth, start = [], [-1], 0, 0
+    for token in tokens:
+        if isinstance(token, yaml.BlockMappingStartToken | yaml.BlockSequenceStartToken):
+            blocks.append(token.start_mark.column)
+        elif isinstance(token, yaml.BlockEndToken):
+            blocks.pop()
+        elif isinstance(token, yaml.FlowSequenceStartToken | yaml.FlowMappingStartToken):
+            start = token.start_mark.index if depth == 0 else start
+            depth += 1
+        elif isinstance(token, yaml.FlowSequenceEndToken | yaml.FlowMappingEndToken):
+            depth -= 1
+            if depth == 0:
+                spans.append((start, token.end_mark.index, blocks[-1]))
+        elif depth == 0 and isinstance(token, yaml.ScalarToken) and token.style in ('"', "'"):
+            spans.append((token.start_mark.index, token.end_mark.index, blocks[-1]))
+    found = []
+    for begin, end, column in spans:
+        k = text.find("\n", begin, end)
+        while k != -1:
+            j = k + 1
+            while text[j : j + 1] == " ":
+                j += 1
+            if text[j : j + 1] not in ("", "\r", "\n") and j - k - 1 <= column:
+                found.append((k + 1, column + 3 - (j - k)))
+            k = text.find("\n", k + 1, end)
+    return found
+
+
+def _indent_flow_lines(text: str) -> str:
+    """Canonicalization B: indent the lines `_shallow_flow_lines` finds, so that a column-0 line
+    under a top-level key gains two spaces. Claude Code then parses what PyYAML always read."""
+    out, last = [], 0
+    for offset, spaces in _shallow_flow_lines(text):
+        out += [text[last:offset], " " * spaces]
+        last = offset
+    return "".join(out) + text[last:]
+
+
 def sanitize_skill_frontmatter(skill_file: Path) -> str:
     """Fix common SKILL.md frontmatter issues that break Codex's strict loader.
 
@@ -492,6 +569,9 @@ def sanitize_skill_frontmatter(skill_file: Path) -> str:
       3. Double-quote any top-level value that contains a bare mid-value `: `
          (which YAML otherwise treats as a nested mapping) or other
          indicator characters.
+      4. Indent the lines of multi-line quoted scalars and flow collections
+         that are not deeper than their block (`_indent_flow_lines`), which
+         Claude Code cannot parse.
     """
     try:
         text = skill_file.read_text(encoding="utf-8")
@@ -556,6 +636,8 @@ def sanitize_skill_frontmatter(skill_file: Path) -> str:
             lines[i] = f"{key}: {new_value}\n"
         i += 1
 
+    frontmatter = "".join(lines[1:end_idx])
+    lines[1:end_idx] = [_indent_flow_lines(frontmatter)]
     new_text = "".join(lines)
     if new_text != text:
         skill_file.write_text(new_text, encoding="utf-8")
@@ -757,6 +839,23 @@ class LibrarySources:
         folded = skill_id.casefold()
         return any(other.casefold() == folded for other in (*self.entries, *self.actual))
 
+    def accept_sanitized(self, skill_ids) -> None:
+        """Record the sanitizer's own rewrite of unmodified copies: their recorded digest follows
+        the new content, as if a sync had installed the newly sanitized upstream tree."""
+        for skill_id in skill_ids:
+            root = self.skills_dest / skill_id
+            if skill_id not in self.actual or root.is_symlink():
+                continue
+            entry = self.entries[skill_id]
+            unmodified = entry.get("digest") == self.actual[skill_id][1] and not entry.get("locally_modified")
+            try:
+                name = skill_frontmatter_name(root)
+            except (OSError, UnicodeError, ValueError, yaml.YAMLError):
+                name = None
+            self.actual[skill_id] = name, skill_tree_digest(root)
+            if unmodified:
+                entry["name"], entry["digest"] = self.actual[skill_id]
+
     def install(self, candidate: Path, source_name: str, origin: dict) -> tuple[str, str]:
         name = skill_frontmatter_name(candidate)
         tree_digest = skill_tree_digest(candidate)
@@ -856,10 +955,11 @@ def candidate_problems(prepared: Path, skill_id: str) -> list[str]:
     problems = installer.skill_problems(skill_id, kinds)
     try:
         data = (prepared / "SKILL.md").read_bytes()
-        name = installer.metadata(data, skill_id)["name"]
+        metadata = installer.metadata(data, skill_id)
     except (installer.InstallError, OSError) as error:
         problems.append(str(error))
         return problems
+    name = metadata["name"]
     try:
         plain = installer.frontmatter_name(data, skill_id)
     except installer.InstallError as error:
@@ -867,6 +967,11 @@ def candidate_problems(prepared: Path, skill_id: str) -> list[str]:
     else:
         if plain != name:
             problems.append(f"frontmatter name {name!r} reads as {plain!r} without PyYAML")
+    if _shallow_flow_lines(installer.frontmatter(data, skill_id)):
+        problems.append(
+            "frontmatter has a multi-line quoted scalar or flow collection with a line not indented past "
+            "its key, which Claude Code cannot parse"
+        )
     return problems
 
 
@@ -1051,16 +1156,30 @@ def sanitize_only(target: Path) -> int:
 
     Used both as a one-shot cleanup of the in-tree `skills/` directory and as
     a unit-friendly entry point for tests. Returns the process exit code.
+
+    On the library itself it also leaves what a sync would: provenance
+    digests that follow the sanitizer's rewrites of unmodified copies, and a
+    regenerated index.
     """
     if not target.exists():
         print(f"sanitize-only: {target} does not exist", file=sys.stderr)
         return 1
+    library = None
+    if target.resolve() == SKILLS_DEST.resolve():
+        try:
+            library = LibrarySources(SKILLS_DEST, LIBRARY_SOURCES_PATH)
+        except (OSError, ValueError, yaml.YAMLError) as error:
+            print(f"Cannot safely load library provenance: {error}", file=sys.stderr)
+            return 1
 
     total = sanitized = synthesized = invalid = 0
     invalid_files: list[Path] = []
+    rewritten: set[str] = set()
     for skill_md in sorted(target.rglob("SKILL.md")):
         total += 1
         status = sanitize_skill_frontmatter(skill_md)
+        if status in ("sanitized", "synthesized"):
+            rewritten.add(skill_md.relative_to(target).parts[0])
         if status == "sanitized":
             sanitized += 1
             print(f"  sanitized: {skill_md.relative_to(target.parent)}")
@@ -1078,8 +1197,11 @@ def sanitize_only(target: Path) -> int:
             print(f"  unrecoverable: {f.relative_to(target.parent)}", file=sys.stderr)
         if len(invalid_files) > 20:
             print(f"  ... and {len(invalid_files) - 20} more", file=sys.stderr)
-    if target.resolve() == SKILLS_DEST.resolve() and write_library_index():
-        print(f"Updated {LIBRARY_INDEX_PATH.name}")
+    if library is not None:
+        library.accept_sanitized(sorted(rewritten))
+        library.save()
+        if write_library_index():
+            print(f"Updated {LIBRARY_INDEX_PATH.name}")
     return 0
 
 
@@ -1088,7 +1210,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--sanitize-only",
         action="store_true",
-        help="skip upstream sync; only normalize/sanitize existing SKILL.md files in ./skills/",
+        help="skip upstream sync; only normalize/sanitize existing SKILL.md files in ./skills/ (there also keep "
+        "library_sources.json and library_index.json in step)",
     )
     parser.add_argument(
         "--index-only",

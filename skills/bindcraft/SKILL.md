@@ -2,7 +2,7 @@
 name: bindcraft
 description: "End-to-end binder design using BindCraft hallucination. Use this skill when: (1) Designing protein binders with built-in AF2 validation, (2) Running production-quality binder campaigns, (3) Using different design protocols (fast, default, slow), (4) Need joint backbone and sequence optimization, (5) Want high experimental success rate.
 
-For backbone-only generation, use rfdiffusion. For QC thresholds, use protein-qc. For tool selection guidance, use binder-design."
+  For backbone-only generation, use rfdiffusion. For QC thresholds, use protein-qc. For tool selection guidance, use binder-design."
 license: MIT
 category: design-tools
 tags: [structure-design, sequence-design, binder, pipeline]

@@ -191,3 +191,66 @@ def test_portability_rules():
     assert problems == ["lib: symbolic link", "vendor: submodule"]
     assert installer.case_collisions(["Pdb", "pdb"], {"pdb"}) == {"Pdb": "differs only in case from pdb"}
     assert set(installer.case_collisions(["Pdb", "pdb"])) == {"Pdb", "pdb"}
+
+
+def test_column_zero_frontmatter_is_indented_not_rejected(pipeline):
+    library, _, builders = pipeline
+
+    def upstream(dest: Path):
+        root = dest / "skills/folded"
+        root.mkdir(parents=True)
+        (root / "SKILL.md").write_text('---\nname: folded\ndescription: "One.\n\nTwo: three."\n---\nbody\n')
+
+    builders.append(upstream)
+    assert sync(pipeline)["rejected"] == 0
+    text = (library.skills_dest / "folded/SKILL.md").read_text()
+    assert text == '---\nname: folded\ndescription: "One.\n\n  Two: three."\n---\nbody\n'
+    assert installer.build_index(library.skills_dest)["skills"]["folded"] == {
+        "name": "folded",
+        "description": "One.\nTwo: three.",
+    }
+
+
+def test_frontmatter_claude_code_cannot_parse_is_a_problem(tmp_path):
+    """The sanitizer fixes this shape before the check runs; the library check still catches
+    content that bypassed it."""
+    root = write_skill(tmp_path / "raw")
+    (root / "SKILL.md").write_text('---\nname: raw\ndescription: "One\nTwo"\n---\n')
+    assert ss.candidate_problems(root, "raw") == [
+        "frontmatter has a multi-line quoted scalar or flow collection with a line not indented past its key, "
+        "which Claude Code cannot parse"
+    ]
+    assert ss.library_problems(tmp_path) == [f"raw: {ss.candidate_problems(root, 'raw')[0]}"]
+
+
+def library_paths(monkeypatch, tmp_path: Path) -> Path:
+    skills = tmp_path / "skills"
+    for name, value in [
+        ("SKILLS_DEST", skills),
+        ("LIBRARY_SOURCES_PATH", tmp_path / "library_sources.json"),
+        ("LIBRARY_INDEX_PATH", tmp_path / installer.INDEX),
+    ]:
+        monkeypatch.setattr(ss, name, value)
+    return skills
+
+
+def test_sanitize_only_keeps_the_library_records_in_step(tmp_path, monkeypatch):
+    skills = library_paths(monkeypatch, tmp_path)
+    for skill_id in ("folded", "edited"):
+        root = write_skill(skills / skill_id)
+        (root / "SKILL.md").write_text(f'---\nname: {skill_id}\ndescription: "One\nTwo"\n---\n')
+    ss.LibrarySources(skills, tmp_path / "library_sources.json").save()
+    (skills / "edited/extra.md").write_text("a local edit\n")  # recorded digest no longer matches
+    assert ss.sanitize_only(skills) == 0
+    assert (skills / "folded/SKILL.md").read_text() == '---\nname: folded\ndescription: "One\n  Two"\n---\n'
+    library = ss.LibrarySources(skills, tmp_path / "library_sources.json")
+    assert library.entries["folded"]["digest"] == ss.skill_tree_digest(skills / "folded")
+    assert not library.entries["folded"].get("locally_modified")
+    assert library.entries["edited"]["locally_modified"] is True
+    assert library.entries["edited"]["digest"] != ss.skill_tree_digest(skills / "edited")
+    assert ss.library_problems(skills) == []
+    index = installer.read_json(tmp_path / installer.INDEX, {})["skills"]
+    assert sorted(index) == ["edited", "folded"]
+    snapshot = (tmp_path / "library_sources.json").read_bytes()
+    assert ss.sanitize_only(skills) == 0
+    assert (tmp_path / "library_sources.json").read_bytes() == snapshot

@@ -2,7 +2,7 @@
 name: binder-design
 description: "Guidance for choosing the right protein binder design tool. Use this skill when: (1) Deciding between BoltzGen, BindCraft, or RFdiffusion, (2) Planning a binder design campaign, (3) Understanding trade-offs between different approaches, (4) Selecting tools for specific target types.
 
-For specific tool parameters, use the individual tool skills (boltzgen, bindcraft, rfdiffusion, etc.)."
+  For specific tool parameters, use the individual tool skills (boltzgen, bindcraft, rfdiffusion, etc.)."
 license: MIT
 category: orchestration
 tags: [guidance, tool-selection, workflow]

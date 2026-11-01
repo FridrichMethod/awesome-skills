@@ -2,7 +2,7 @@
 name: esm
 description: "ESM protein language models for embeddings, sequence scoring, structure prediction, and binder design. Use this skill when: (1) Computing pseudo-log-likelihood (PLL) or mutation-effect scores, (2) Getting protein embeddings for clustering or filtering, (3) Predicting complex structures with ESMFold2, (4) Designing binders by inverting ESMFold2, (5) Filtering designs by sequence plausibility.
 
-For diffusion-based structure prediction, use boltz or chai. For QC thresholds, use protein-qc. For gradient-based multi-objective design, use mosaic."
+  For diffusion-based structure prediction, use boltz or chai. For QC thresholds, use protein-qc. For gradient-based multi-objective design, use mosaic."
 license: MIT
 category: design-tools
 tags: [sequence-design, embeddings, scoring, structure-prediction, binder]

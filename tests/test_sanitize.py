@@ -72,6 +72,28 @@ class TestYamlQuoteHelpers:
     def test_double_quote_escapes_backslash_and_quote(self) -> None:
         assert ss._yaml_double_quote('a"b\\c') == '"a\\"b\\\\c"'
 
+    def test_double_quote_escapes_what_a_quoted_scalar_must_not_hold_raw(self) -> None:
+        value = "a\x07b\rc\x85d\u2028e\u2029f\x7fg\x00h\x1bi\ufffe"
+        assert ss._yaml_double_quote(value) == '"a\\x07b\\rc\\Nd\\Le\\Pf\\x7fg\\0h\\ei\\ufffe"'
+        assert yaml.safe_load(ss._yaml_double_quote(value)) == value
+
+    def test_double_quote_keeps_tabs_line_feeds_and_unicode_raw(self) -> None:
+        assert ss._yaml_double_quote("tab\there\nnext \u00e9 \u2b50") == '"tab\there\nnext \u00e9 \u2b50"'
+
+    @pytest.mark.parametrize(
+        "value, expected",
+        [
+            ('"plain"', "plain"),
+            ('"a \\"quoted\\" b\\\\c"', 'a "quoted" b\\c'),
+            ('"line\\nbreak \\u00e9"', "line\nbreak \u00e9"),
+            ('"a" "b"', 'a" "b'),  # not one scalar: the old textual reading
+            ("'it''s'", "it's"),
+            ("plain: text", "plain: text"),
+        ],
+    )
+    def test_unquote_reads_double_quoted_escapes_as_yaml_does(self, value: str, expected: str) -> None:
+        assert ss._unquote_yaml(value) == expected
+
     @pytest.mark.parametrize(
         "value, expected",
         [
@@ -212,19 +234,28 @@ class TestSanitizeSkillFrontmatter:
         assert "Line A." in doc["description"]
         assert "Line B." in doc["description"]
 
-    def test_multiline_quoted_scalar_left_alone(self, tmp_path: Path) -> None:
-        """Regression: previously double-wrapped multi-line strings."""
-        body = "---\n" "name: foo\n" 'description: "first half ...\n' "\n" 'second half."\n' "license: MIT\n" "---\n"
+    def test_multiline_quoted_scalar_keeps_its_value(self, tmp_path: Path) -> None:
+        """Regression: previously double-wrapped multi-line strings. Its column-0 line is indented
+        (canonicalization B), which YAML folding ignores."""
+        body = '---\nname: foo\ndescription: "first half ...\n\nsecond half."\nlicense: MIT\n---\n'
         f = _write(tmp_path, body)
-        ss.sanitize_skill_frontmatter(f)
+        assert ss.sanitize_skill_frontmatter(f) == "sanitized"
         after = f.read_text()
-        # The sanitizer must not touch the description in this case.
-        assert "first half" in after
-        assert "second half" in after
-        # PyYAML still parses it correctly.
-        doc = _parse_frontmatter(after)
-        assert doc is not None
-        assert "first half" in doc["description"]
+        assert after == '---\nname: foo\ndescription: "first half ...\n\n  second half."\nlicense: MIT\n---\n'
+        assert _parse_frontmatter(after) == _parse_frontmatter(body)
+
+    def test_long_description_with_escapes_is_measured_and_requoted_as_read(self, tmp_path: Path) -> None:
+        """An escape counts as one character and is not escaped a second time when trimmed."""
+        short = "x" * 1000 + "\\u00e9" * 10  # 1060 characters as written, 1010 as read
+        f = _write(tmp_path, f'---\nname: foo\ndescription: "{short}"\n---\n')
+        assert ss.sanitize_skill_frontmatter(f) == "valid"
+        value = ("Sentence with an accent \\u00e9. " * 60).strip()
+        f = _write(tmp_path, f'---\nname: foo\ndescription: "{value}"\n---\n')
+        assert ss.sanitize_skill_frontmatter(f) == "sanitized"
+        trimmed = _parse_frontmatter(f.read_text())["description"]
+        assert len(trimmed) <= ss.DESCRIPTION_MAX
+        assert yaml.safe_load(f'"{value}"').startswith(trimmed)
+        assert ss.sanitize_skill_frontmatter(f) == "valid"
 
     def test_preamble_reordered_below_frontmatter(self, tmp_path: Path) -> None:
         body = (
@@ -317,6 +348,14 @@ class TestIdempotency:
             "---\nname: foo\ndescription: x\ntags: [a, b]\n---\n",
         ),
         (
+            "multiline_quoted_column_zero",
+            '---\nname: foo\ndescription: "first\nsecond: with colon\n\nthird"\n---\n',
+        ),
+        (
+            "real_folded_block",
+            "---\nname: foo\ndescription: >-\n  L1.\n\n  L2.\n---\n",
+        ),
+        (
             "multiline_quoted",
             ("---\n" "name: foo\n" 'description: "first\n' "\n" 'second"\n' "---\n"),
         ),
@@ -331,33 +370,83 @@ class TestIdempotency:
         assert result == "valid"
         assert f.read_text() == snapshot
 
-    def test_full_tree_idempotency(self, tmp_path: Path) -> None:
-        """If a skills/ directory exists, a second --sanitize-only pass must
-        rewrite zero files. This guards against regressions where the
-        sanitizer keeps re-touching the same file forever.
-
-        Operates on a copy in tmp_path so the test never mutates the
-        committed skills/ tree.
-        """
+    def test_committed_library_is_already_sanitized(self, tmp_path: Path) -> None:
+        """Every committed SKILL.md, at any depth, is what the sanitizer writes, so a second
+        --sanitize-only pass (and the sync's own re-copy) rewrites nothing, and the sync
+        reproduces committed bytes instead of drifting from the digests it pinned."""
         import shutil
 
         src = ss.REPO_ROOT / "skills"
         if not src.exists():
             pytest.skip("no skills/ tree to scan in this checkout")
-        dst = tmp_path / "skills"
-        shutil.copytree(src, dst, symlinks=True)
+        rewritten = []
+        for skill_md in sorted(src.rglob("SKILL.md")):
+            copy = tmp_path / skill_md.parent.name / "SKILL.md"
+            copy.parent.mkdir(exist_ok=True)
+            shutil.copyfile(skill_md, copy)
+            if ss.sanitize_skill_frontmatter(copy) != "valid":
+                rewritten.append(skill_md.relative_to(src).as_posix())
+        assert rewritten == []
 
-        # First pass — may rewrite up to a handful of files.
-        ss.sanitize_only(dst)
-        # Second pass — must touch nothing.
-        rewrote_second = 0
-        for skill_md in dst.rglob("SKILL.md"):
-            before = skill_md.read_text(encoding="utf-8", errors="ignore")
-            ss.sanitize_skill_frontmatter(skill_md)
-            after = skill_md.read_text(encoding="utf-8", errors="ignore")
-            if before != after:
-                rewrote_second += 1
-        assert rewrote_second == 0
+
+class TestCanonicalizationB:
+    """Lines of a multi-line quoted scalar or flow collection must be indented deeper than the
+    block that holds them. PyYAML reads them anyway; Claude Code rejects the whole frontmatter."""
+
+    @pytest.mark.parametrize(
+        "body, expected",
+        [
+            (
+                '---\nname: foo\ndescription: "one\n\ntwo\nthree"\n---\nbody\n',
+                '---\nname: foo\ndescription: "one\n\n  two\n  three"\n---\nbody\n',
+            ),
+            (
+                "---\nname: foo\ndescription: 'it''s\nmore'\n---\n",
+                "---\nname: foo\ndescription: 'it''s\n  more'\n---\n",
+            ),
+            ('---\nname: foo\ndescription: "a\n\tb"\n---\n', '---\nname: foo\ndescription: "a\n  \tb"\n---\n'),
+            (
+                '---\nname: foo\nmetadata:\n  desc: "a\n  b\nc"\n---\n',
+                '---\nname: foo\nmetadata:\n  desc: "a\n    b\n    c"\n---\n',
+            ),
+            (
+                '---\nname: foo\nitems:\n- "a\nb"\nnested:\n  - "c\n  d"\n---\n',
+                '---\nname: foo\nitems:\n- "a\n  b"\nnested:\n  - "c\n    d"\n---\n',
+            ),
+        ],
+        ids=["top-level", "single-quoted", "tab", "nested-key", "sequences"],
+    )
+    def test_shallow_lines_go_two_columns_past_their_block(self, tmp_path: Path, body: str, expected: str) -> None:
+        f = _write(tmp_path, body)
+        assert ss.sanitize_skill_frontmatter(f) == "sanitized"
+        assert f.read_text() == expected
+        assert _parse_frontmatter(expected) == _parse_frontmatter(body)
+        assert ss.sanitize_skill_frontmatter(f) == "valid"
+
+    def test_indented_lines_and_blank_lines_are_left_alone(self, tmp_path: Path) -> None:
+        body = '---\nname: foo\ndescription: "a\n\n   b\n \n c"\n---\n'
+        f = _write(tmp_path, body)
+        assert ss.sanitize_skill_frontmatter(f) == "valid"
+        assert ss._shallow_flow_lines('description: "a\n\n   b\n \n c"\ntags: [x,\n y]\n') == []
+
+    def test_detector_reports_offsets_and_padding(self) -> None:
+        text = 'name: foo\ndescription: "a\nb\n c"\nmeta:\n  k: [1,\n  2]\n'
+        assert ss._shallow_flow_lines(text) == [(text.index("b\n"), 2), (text.index("  2]"), 2)]
+        assert ss._indent_flow_lines(text) == 'name: foo\ndescription: "a\n  b\n c"\nmeta:\n  k: [1,\n    2]\n'
+
+    def test_unscannable_text_is_left_to_the_frontmatter_checks(self) -> None:
+        assert ss._shallow_flow_lines('name: "unterminated\n') == []
+
+    def test_collapsed_block_scalar_keeps_its_bytes_apart_from_the_indent(self, tmp_path: Path) -> None:
+        """A valid `>` block is still collapsed into the double-quoted form the library already
+        holds (changing it would duplicate legacy copies at the next sync); only its column-0
+        continuation is indented. YAML reads the paragraph break the same way."""
+        body = "---\nname: foo\ndescription: >\n  First line.\n  Second line.\n\n  Paragraph two.\nlicense: MIT\n---\n"
+        f = _write(tmp_path, body)
+        assert ss.sanitize_skill_frontmatter(f) == "sanitized"
+        out = f.read_text()
+        assert out == '---\nname: foo\ndescription: "First line. Second line.\n\n  Paragraph two."\nlicense: MIT\n---\n'
+        assert _parse_frontmatter(out)["description"] == _parse_frontmatter(body)["description"].rstrip("\n")
 
 
 class TestPostSanitizeInvariants:
