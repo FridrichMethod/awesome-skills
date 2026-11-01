@@ -753,6 +753,37 @@ def test_an_interrupted_migration_is_recovered_and_redone(sandbox, capsys):
     assert json.loads((state_dir(home) / installer.MIGRATIONS).read_text())[installer.MIGRATION]["claude"]
 
 
+def test_a_codex_transaction_beside_a_frozen_second_root_restores_and_recovers(sandbox, tmp_path, capsys):
+    """Once ~/.agents/skills became a link, a Codex journal names one root while its new state keeps
+    the frozen second one: --restore and the next run's recovery must still accept it."""
+    home, source = sandbox
+    if not can_symlink(tmp_path):
+        pytest.skip("symlinks unavailable")
+    for i in range(6):
+        skill(source, f"extra-{i}")
+    run(source)
+    second, shared = home / ".agents/skills", home / "shared-skills"
+    second.rename(shared)
+    second.symlink_to(shared, target_is_directory=True)
+    managed = state(home, "codex")["managed"]
+    first = next(s for s in sorted(managed) if s != ROUTER and not managed[s].get("root"))
+    copy = home / ".codex/skills" / first
+    skill(source, first, body="changed upstream")
+    assert run(source, "--codex-only") == 0 and "changed upstream" in (copy / "SKILL.md").read_text()
+    backup = sorted((state_dir(home) / "backups").iterdir())[-1]
+    (item,) = json.loads((backup / "restore.json").read_text())["clients"]
+    assert "destination2" not in item and "destination2" in item["new_state"], "the shape this test is about"
+    assert installer.main(["--restore", str(backup)]) == 0
+    assert "changed upstream" not in (copy / "SKILL.md").read_text()
+    command = [sys.executable, "-B", "-c", KILLED_INSIDE_APPLY, str(ROOT), "--source", str(source), "--codex-only"]
+    assert subprocess.run(command, capture_output=True).returncode == 137
+    capsys.readouterr()
+    assert run(source) == 0
+    assert "Recovered an interrupted update" in capsys.readouterr().out
+    assert "changed upstream" in (copy / "SKILL.md").read_text() and hidden_from_codex(copy)
+    assert set(state(home, "codex")["managed"]) == set(managed), "the frozen copies are still owned"
+
+
 def test_a_saved_destination_of_the_other_client_still_counts_when_overridden(sandbox, monkeypatch):
     home, source = sandbox
     run(source, "--claude-only")
