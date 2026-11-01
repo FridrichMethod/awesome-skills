@@ -331,21 +331,37 @@ def test_a_linked_second_codex_root_is_never_written_and_blocks_no_update(sandbo
 
 
 @pytest.mark.parametrize("link", [".agents/skills", ".agents"])
-def test_a_second_codex_root_linked_into_claudes_blocks_neither_client(sandbox, tmp_path, link, capsys):
+def test_a_second_codex_root_linked_into_claudes_is_refused_while_both_clients_install(sandbox, tmp_path, link):
+    """Codex reads ~/.agents/skills, so through such a link it would list every hidden Claude copy
+    (it ignores disable-model-invocation) and find most names twice ($ID would load neither)."""
     home, source = sandbox
     if not can_symlink(tmp_path):
         pytest.skip("symlinks unavailable")
     claude = home / ".claude/skills"  # shared with other tools: ~/.agents/skills leads into it
-    claude.mkdir(parents=True)
+    skill(claude, "mine", body="the user's own Claude skill")
     (home / link).parent.mkdir(parents=True, exist_ok=True)
     (home / link).symlink_to(claude if link.endswith("skills") else claude.parent, target_is_directory=True)
-    first = sorted([ROUTER, *(s for s in ("alpha", "beta") if not installer.placement(s))])
-    for args in ([], ["--claude-only"], [], ["--codex-only"]):  # later runs see Claude's copies there
-        assert run(source, *args) == 0, args
-    assert all(hidden_from_claude(claude / s) for s in ("alpha", "beta"))
-    assert sorted(os.listdir(home / ".codex/skills")) == first, "Claude's copies are not other tools' skills"
-    capsys.readouterr()
-    assert run(source) == 0 and "Already current" in capsys.readouterr().out
+    refused = "leads into Claude's skills"
+    before = installer.fingerprint(home)
+    for args in ([], ["--dry-run"]):
+        with pytest.raises(installer.PersonNeeded, match=refused):
+            run(source, *args)
+    assert installer.fingerprint(home) == before, "nothing written"
+    assert run(source, "--codex-only") == 0, "Claude's folder holds no copy of this installer's yet"
+    assert sorted(os.listdir(home / ".codex/skills")) == sorted(
+        [ROUTER, *(s for s in ("alpha", "beta") if not installer.placement(s))]
+    )
+    with pytest.raises(installer.PersonNeeded, match=refused):
+        run(source, "--claude-only")  # Codex, installed, would read these copies
+    assert sorted(os.listdir(claude)) == ["mine"]
+    shutil.rmtree(state_dir(home))
+    shutil.rmtree(home / ".codex/skills")
+    assert run(source, "--claude-only") == 0 and hidden_from_claude(claude / "alpha")
+    with pytest.raises(installer.PersonNeeded, match=refused):
+        run(source, "--codex-only")
+    assert not (home / ".codex/skills").exists()
+    (home / link).unlink()  # the way out: a folder of Codex's own
+    assert run(source) == 0 and hidden_from_codex(codex_copy(home, "alpha"))
 
 
 def test_copies_in_a_second_root_that_became_a_link_stay_owned(sandbox, tmp_path, monkeypatch, capsys):
@@ -416,6 +432,19 @@ def test_a_foreign_codex_skill_keeps_its_name(sandbox, capsys):
     assert (home / ".agents/skills/mine/SKILL.md").read_text().endswith("the user's own\n")
     with pytest.raises(installer.InstallError, match="Frontmatter name conflict"):
         run(source, "--codex-only", "--enable", "alpha")
+
+
+def test_skills_in_agents_count_as_other_tools_when_codex_writes_elsewhere(sandbox, monkeypatch, capsys):
+    """Codex reads ~/.agents/skills whether or not it is a root of this install, also when this
+    run installs Claude first."""
+    home, source = sandbox
+    monkeypatch.setenv("SKILLS_CODEX_DEST2", str(home / "second"))
+    skill(home / ".agents/skills", "mine", name="alpha", body="the user's own")
+    capsys.readouterr()
+    assert run(source) == 0
+    codex = next(client for client in plan(capsys)["clients"] if client["client"] == "codex")
+    assert any(item["entry"] == "alpha" and "is taken by" in item["reason"] for item in codex["preserved"])
+    assert "alpha" not in state(home, "codex")["managed"] and hidden_from_claude(home / ".claude/skills/alpha")
 
 
 def test_a_bundled_codex_skill_name_is_never_installed_for_codex(sandbox):

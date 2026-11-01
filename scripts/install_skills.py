@@ -2500,6 +2500,16 @@ def resolve_clients(args, home: Path, storage: list[Path], source: Path | None) 
             return True
         return False
 
+    # Codex reads ~/.agents/skills: through a link into Claude's skills it lists every hidden Claude copy
+    # (it ignores the Claude key) and finds most names twice, so both clients may not install there.
+    agents, claude = home / ".agents/skills", [configured("claude", 0, False), configured("claude", 0)]
+    if any(overlap(native(agents.resolve()), native(p.expanduser().resolve())) for p in claude) and all(
+        [not args.codex_only or states["claude"].get("managed"), not args.claude_only or states["codex"].get("managed")]
+    ):
+        raise PersonNeeded(
+            f"{display(agents)} leads into Claude's skills, so Codex would list every hidden Claude copy and find "
+            "most names twice; make it a folder of its own, or install --claude-only"
+        )
     clients = []
     for client in ["codex"] if args.codex_only else ["claude"] if args.claude_only else ["claude", "codex"]:
         roots = []
@@ -2521,9 +2531,6 @@ def resolve_clients(args, home: Path, storage: list[Path], source: Path | None) 
         for a, b in [(a, b) for a in roots for b in resolved] + ([tuple(roots)] if len(roots) > 1 else []):
             if overlap(a, b):
                 raise InstallError(f"Client destinations overlap: {display(a)}, {display(b)}")
-        agents = home / ".agents/skills"  # unless it holds Claude's own copies
-        if client == "claude" or any(overlap(native(agents.resolve()), b) for b in resolved):
-            agents = None
         for root in [home / ".codex/skills", home / ".claude/skills", home / ".agents", codex_home / "skills", *roots]:
             root = native(root.resolve())
             for path in storage:
@@ -2533,7 +2540,7 @@ def resolve_clients(args, home: Path, storage: list[Path], source: Path | None) 
                     )
         if source is not None and any(overlap(source, root) for root in roots):
             raise InstallError(f"Source and destination overlap: {display(source)}, {display(roots[0])}")
-        clients.append((client, roots, states[client], agents))
+        clients.append((client, roots, states[client], agents if client == "codex" else None))
     return clients
 
 
