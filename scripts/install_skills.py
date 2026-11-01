@@ -1617,9 +1617,14 @@ def write_launchers(data: Path, state: Path, library: Library):
             atomic_write(path, text.encode(), 0o755)
 
 
-def router_info(client: str, call: str) -> dict:
+def router_info(client: str, data: Path) -> dict:
     """The router skill for one client: search the library through the launcher, then use a skill."""
-    fence, claude = "powershell" if WINDOWS else "bash", client == "claude"
+    call, claude = launcher_call(data), client == "claude"
+    forms = [("powershell" if WINDOWS else "bash", call)]
+    if WINDOWS and claude:  # Claude's Bash tool is Git Bash, which runs the sh launcher; else PowerShell
+        forms.insert(0, ("bash", shlex.quote(display(launcher_path(data)).replace("\\", "/"))))
+    runs = "\n\n   or\n\n".join(f"   ```{f}\n   {c} search --client {client} WORDS\n   ```" for f, c in forms)
+    tools = " ".join(("Bash" if f == "bash" else "PowerShell") + f"({c} search *)" for f, c in forms)
     owner = "Claude Code but hidden from your skill list" if claude else "Codex but not listed here"
     head = (
         f"---\nname: {ROUTER}\ndescription: Find the right skill among the awesome-skills library, installed for "
@@ -1629,15 +1634,13 @@ def router_info(client: str, call: str) -> dict:
     search = f"""1. Search offline with 1-3 distinctive words (all must match; '-', '_' and spaces are the
    same). It prints at most 12 matches{", each with its SKILL.md path" * (not claude)}; exit status 1 means none:
 
-   ```{fence}
-   {call} search --client {client} WORDS
-   ```
+{runs}
 
 """
     show = f"the user runs `{call} --{client}-only --enable ID --no-fetch`"
     if claude:
         body = f"""{head}argument-hint: "[what you need]"
-allowed-tools: Bash({call} search *)
+allowed-tools: {tools}
 ---
 Request: $ARGUMENTS
 
@@ -2522,7 +2525,7 @@ def make_plans(args, clients: list, library: Library, home: Path, state: Path, d
     for client, roots, old in clients:
         base, migration = migrated_state(old, client, bool(marks.get(client, {}).get("undone")))
         visible, manual = selection(args, client, base, library), manual_set(args, client, base, library)
-        router = router_info(client, launcher_call(data))
+        router = router_info(client, data)
         plans.append(plan_client(client, roots, old, base, visible, manual, library, router, home))
         if migration:
             plans[-1]["migration"] = migration

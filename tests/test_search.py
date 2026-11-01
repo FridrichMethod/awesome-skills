@@ -144,10 +144,13 @@ def test_the_launcher_carries_the_install_time_storage_and_dispatches_search(tmp
     assert not (home / ".local/share/awesome-skills/codex.json").exists(), "no second, divergent state"
 
 
+def router(client, data):
+    return installer.router_info(client, data)["entries"]["SKILL.md"][2].decode()
+
+
 def test_routers_differ_per_client_and_quote_for_powershell_on_windows(monkeypatch, tmp_path):
     call = installer.shlex.quote(str(tmp_path / "bin/awesome-skills"))
-    claude = installer.router_info("claude", call)["entries"]["SKILL.md"][2].decode()
-    codex = installer.router_info("codex", call)["entries"]["SKILL.md"][2].decode()
+    claude, codex = router("claude", tmp_path), router("codex", tmp_path)
     head, body = claude.split("\n---\n", 1)
     assert f"allowed-tools: Bash({call} search *)" in head and 'argument-hint: "[what you need]"' in head
     assert installer.HIDDEN_KEY not in head
@@ -157,11 +160,17 @@ def test_routers_differ_per_client_and_quote_for_powershell_on_windows(monkeypat
     assert "/ID" not in codex and "Skill tool" not in codex
     monkeypatch.setattr(installer, "WINDOWS", True)
     data = Path("C:/Users/o'brien/AppData/Local/awesome-skills")
-    assert installer.launcher_call(data).startswith("& 'C:") and "o''brien" in installer.launcher_call(data)
+    ps = installer.launcher_call(data)
+    assert ps.startswith("& 'C:") and "o''brien" in ps
+    codex = router("codex", data)  # Codex runs commands in PowerShell on Windows
+    assert f"```powershell\n   {ps} search --client codex WORDS\n   ```" in codex and "```bash" not in codex
+    # Claude's Bash tool is Git Bash, which runs the sh launcher; without Git Bash it has PowerShell.
+    sh = installer.shlex.quote("C:/Users/o'brien/AppData/Local/awesome-skills/bin/awesome-skills")
+    claude = router("claude", data)
     assert (
-        "```powershell"
-        in installer.router_info("codex", installer.launcher_call(data))["entries"]["SKILL.md"][2].decode()
+        f"```bash\n   {sh} search --client claude WORDS\n   ```\n\n   or\n\n   ```powershell\n   {ps} search" in claude
     )
+    assert f"\nallowed-tools: Bash({sh} search *) PowerShell({ps} search *)\n" in claude
 
 
 class FakeLibrary:

@@ -197,6 +197,8 @@ Each client's router uses it:
 - **Claude** (`/awesome-skills-library what you need`, or picked by the model): searches with the request (`$ARGUMENTS`, never spliced into a shell command; `allowed-tools` permits exactly the launcher's `search`), invokes `[visible]` matches itself, and for hidden ones asks you to start your next message with `/ID`. It never opens a hidden skill's `SKILL.md`. A model-invoked router may need approval once; `permissions.allow` with `Skill(awesome-skills-library)` avoids that.
 - **Codex**: searches, then reads the printed `SKILL.md` and follows it, and tells you that `$ID` loads it directly.
 
+On Windows, Codex's router uses the `.ps1` launcher. Claude Code's Bash tool is Git Bash when that is installed, and Claude has a PowerShell tool when it is not, so Claude's router gives both forms, the POSIX launcher for Git Bash (with `/` in its path) and the `.ps1` launcher, each pre-approved for its tool (`Bash(...)`, `PowerShell(...)`). The `.ps1` launcher runs only where the PowerShell execution policy allows local scripts (PowerShell 7's default `RemoteSigned` does; Windows PowerShell 5.1's client default `Restricted` does not). These forms are not tested on Windows yet.
+
 ### Codex: two skills roots
 
 Codex reads two user skill roots, `$CODEX_HOME/skills` and `~/.agents/skills`, and walks at most 2,000 directories in each (top-level folders first). The whole library does not fit in one, so each Codex copy goes to one of them by a stable hash of its ID (a copy already installed keeps its root; the router stays in the first). `SKILLS_CODEX_DEST` and `SKILLS_CODEX_DEST2` move them.
