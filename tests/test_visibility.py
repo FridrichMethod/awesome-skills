@@ -321,6 +321,22 @@ def test_a_codex_root_that_would_overflow_is_refused_before_writing(sandbox, mon
     assert run(source, "--codex-only", "--manual", "") == 0, "fewer skills fit"
 
 
+def test_the_shared_second_codex_root_is_capped_too(sandbox, monkeypatch):
+    home, source = sandbox
+    second = [s for s in ("alpha", "beta") if installer.placement(s)]
+    monkeypatch.setattr(installer, "ROOT_CAP", 1 + len(second))  # one foreign skill fits, two do not
+    for name in ("foreign-one", "foreign-two"):  # other tools' skills in ~/.agents/skills
+        skill(home / ".agents/skills", name)
+    before = installer.fingerprint(home)
+    with pytest.raises(
+        installer.PersonNeeded, match=rf"Refusing to fill .*\.agents.skills with {2 + len(second)} skill"
+    ):
+        run(source, "--codex-only")
+    assert installer.fingerprint(home) == before
+    shutil.rmtree(home / ".agents/skills/foreign-two")
+    assert run(source, "--codex-only") == 0
+
+
 # --- Migration -------------------------------------------------------------------------------
 
 
