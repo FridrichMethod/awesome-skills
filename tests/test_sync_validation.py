@@ -217,6 +217,35 @@ def test_an_upstream_link_is_followed_only_to_a_file_of_its_own_checkout(pipelin
 
 
 @pytest.mark.skipif(os.name == "nt", reason="the sync runs on Linux; creating links needs privileges on Windows")
+def test_a_skill_with_a_link_is_rejected_without_reading_any_of_its_files(tmp_path, monkeypatch):
+    """A link may lead to any file of the runner: read through, a FIFO would hang the weekly job and
+    /dev/zero exhaust its memory. Here it leads to YAML that would be reported if it were read."""
+    root = write_skill(tmp_path / "piped", extra={"agents/.keep": ""})
+    outside = tmp_path / "outside.yaml"
+    outside.write_text("policy: [\n")
+    (root / "agents/openai.yaml").symlink_to(outside)
+    reads, read_bytes = [], Path.read_bytes
+    monkeypatch.setattr(Path, "read_bytes", lambda self: reads.append(self) or read_bytes(self))
+    assert ss.candidate_problems(root, "piped") == ["agents/openai.yaml: symbolic link"]
+    assert reads == []
+
+
+@pytest.mark.skipif(os.name == "nt", reason="the sync runs on Linux; creating links needs privileges on Windows")
+def test_a_link_inside_the_checkout_to_no_regular_file_is_kept_as_a_link_and_rejected(pipeline, capsys):
+    library, _, builders = pipeline
+
+    def upstream(dest: Path):
+        write_skill(dest / "skills/good")
+        write_skill(dest / "skills/dangling")
+        (dest / "skills/dangling/notes.txt").symlink_to("missing.txt")  # in the checkout, but no file
+
+    builders.append(upstream)
+    assert sync(pipeline)["rejected"] == 1, "never dropped silently with the skill accepted"
+    assert sorted(p.name for p in library.skills_dest.iterdir()) == ["good"]
+    assert "REJECTED skills/dangling: notes.txt: symbolic link" in capsys.readouterr().err
+
+
+@pytest.mark.skipif(os.name == "nt", reason="the sync runs on Linux; creating links needs privileges on Windows")
 def test_a_linked_gitattributes_is_never_read(pipeline, tmp_path):
     """LFS patterns come only from .gitattributes files of the checkout: one linked elsewhere (a FIFO
     would hang the weekly job, /dev/zero exhaust its memory) is not read."""
