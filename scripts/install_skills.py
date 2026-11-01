@@ -42,9 +42,9 @@ SCHEMA = 1
 SELECTION_VERSION = 2
 MIGRATION, MIGRATIONS = "selection-v2", "migrations.json"
 FORM = 1  # of copy_edits: raise it with any change there, so installed copies are derived again
-SHORTCUT = ("tree", "invocation", "name", "root", "form")  # an unchanged record and copy is not rehashed
-ROOT_CAP = 1990  # Codex walks at most 2,000 directories per skills root, top-level folders first
-SUMMARY_ACTIONS = 100  # a larger plan prints one line per client instead of its JSON
+SHORTCUT = ("tree", "invocation", "name", "root", "form")  # an unchanged copy is not rehashed
+ROOT_CAP = 1990  # Codex walks at most 2,000 directories per root, top level first
+SUMMARY_ACTIONS = 100  # a larger plan prints one line per client
 LAUNCHER = "awesome-skills"
 ROUTER = "awesome-skills-library"
 INDEX = "library_index.json"
@@ -56,9 +56,9 @@ MIN_GIT = (2, 29, 0)
 # refuses a Windows-invalid path inside a skill nobody selected.
 SPARSE_INDEX_GIT = (2, 37, 0)
 LOCK_BUSY = 75
-NEEDS_PERSON = 3  # an interrupted update or a mass removal needs a person's decision
+NEEDS_PERSON = 3  # a person must decide
 KEEP_BACKUPS = 5
-STALE_LOCK_SECONDS = 6 * 3600  # a fallback lock this old is stale: far above the longest run
+STALE_LOCK_SECONDS = 6 * 3600  # a fallback lock this old is stale
 LOCK_UNSUPPORTED = {errno.ENOLCK, errno.ENOSYS, errno.EOPNOTSUPP, getattr(errno, "ENOTSUP", errno.EOPNOTSUPP)}
 # A stalled connection never holds the lock: HTTP below 1000 B/s for 60 s aborts
 # (GIT_HTTP_LOW_SPEED_* override), and unconfigured ssh never prompts or waits on a silent peer.
@@ -118,7 +118,7 @@ class GitError(InstallError):
 
 
 class PersonNeeded(InstallError):
-    """Exit 3: an interrupted update cannot be undone, or an update would remove most skills."""
+    """Exit 3: an interrupted update cannot be undone, or a mass removal."""
 
 
 def corrupted(error: GitError) -> bool:
@@ -180,7 +180,7 @@ def rmtree(path: Path):
 
 
 def move(source: Path, target: Path):
-    """Rename, retrying briefly on Windows, where scanners hold fresh files open."""
+    """Rename, retrying on Windows, where scanners hold fresh files open."""
     for attempt in range(6):
         try:
             source.rename(target)
@@ -214,7 +214,7 @@ def name_problem(name: str) -> str | None:
 
 
 def path_problems(paths) -> list[str]:
-    """Paths git cannot check out everywhere: Windows-invalid names and case-only collisions."""
+    """Paths git cannot check out everywhere: Windows-invalid names, case twins."""
     every = set()
     for rel in paths:
         parts = rel.split("/")
@@ -231,7 +231,7 @@ def path_problems(paths) -> list[str]:
 
 
 def skill_problems(skill_id: str, kinds: dict) -> list[str]:
-    """Why a skill (relative path -> "file", "link", ...) cannot be installed on every platform."""
+    """Why a skill (rel -> "file", "link", ...) cannot be installed everywhere."""
     reason = "hidden" if skill_id.startswith(".") else name_problem(skill_id)
     problems = [f"{skill_id}: {reason}"] if reason else []
     for rel, kind in sorted(kinds.items()):
@@ -262,7 +262,7 @@ def case_collisions(ids, preferred=frozenset()) -> dict:
 
 
 def digest(entries: dict) -> str:
-    """Hash every relative path, type, permission, byte and symlink target."""
+    """Hash every path, type, permission, byte and link target."""
     h = hashlib.sha256()
     for path, (kind, mode, data) in sorted(entries.items()):
         h.update(json.dumps([path, kind, mode, len(data)], separators=(",", ":")).encode())
@@ -301,7 +301,7 @@ def blob_id(data: bytes) -> str:
 
 
 def local_entries(path: Path) -> dict:
-    """Every entry below path as relative POSIX path -> (kind, permission bits), from lstat only."""
+    """Every entry below path: relative POSIX path -> (kind, permission bits), by lstat."""
     out = {}
 
     def visit(directory: Path, prefix: str):
@@ -384,7 +384,7 @@ def same_files(expected: dict, actual: dict) -> bool:
 
 
 def same_tree(expected: dict, path: Path) -> bool:
-    """Same paths, bytes, link targets and executable bits; other permission bits are ignored."""
+    """Same paths, bytes, link targets and executable bits; other bits are ignored."""
     if not plain_dir(path):
         return False
     kinds = {rel: kind for rel, kind in listing_kinds(expected).items() if kind != "dir"}
@@ -394,7 +394,7 @@ def same_tree(expected: dict, path: Path) -> bool:
 
 
 def exact_tree(expected: dict, path: Path) -> bool:
-    """The whole directory is what this installer writes: no extra entries, canonical modes."""
+    """Exactly what this installer writes: no extra entries, canonical modes."""
     if not plain_dir(path):
         return False
     entries = local_entries(path)
@@ -451,7 +451,7 @@ NOT_STRINGS = [
 
 
 def pyyaml():
-    """PyYAML, needed only to parse whole frontmatter: installs from a checkout, and the sync."""
+    """PyYAML, for whole frontmatter: installs from a checkout, and the sync."""
     try:
         import yaml
     except ImportError:
@@ -464,7 +464,7 @@ def pyyaml():
 
 
 def frontmatter(data: bytes, label: str) -> str:
-    """The text between the first two `---` lines: what PyYAML and NameReader both read."""
+    """The text between the first two `---` lines, as PyYAML and NameReader read it."""
     try:
         lines = data.decode("utf-8").splitlines()
         if lines[0].strip() != "---":
@@ -489,7 +489,7 @@ def metadata(data: bytes, label: str) -> dict:
 
 
 def frontmatter_name(data: bytes, label: str) -> str:
-    """The frontmatter's top-level name as PyYAML would load it, read with the standard library."""
+    """The top-level name as PyYAML would load it, read with the standard library."""
     try:
         return NameReader(frontmatter(data, label)).read()
     except ValueError as e:
@@ -510,7 +510,7 @@ def plain_start(ch: str, after: str) -> bool:
 
 
 def plain_scalar(line: str, k: int, flow: bool = False) -> tuple[int, int]:
-    """PyYAML's plain scalar from line[k] on: (end of its text, index of what stops it on this line)."""
+    """PyYAML's plain scalar from line[k]: (end of its text, index of what stops it)."""
     stops = ",?[]{}" if flow else ""
     end = k
     while True:
@@ -532,7 +532,7 @@ def plain_scalar(line: str, k: int, flow: bool = False) -> tuple[int, int]:
 
 
 def escape(text: str, k: int) -> tuple[str, int]:
-    """The double-quoted escape at text[k] (a backslash): its value and the index after it."""
+    """The double-quoted escape at text[k]: its value and the index after it."""
     code = text[k + 1 : k + 2]
     if code in ESCAPES:
         return ESCAPES[code], k + 2
@@ -619,7 +619,7 @@ class NameReader:
         return self.node(i, pos)
 
     def indent(self) -> int:
-        """PyYAML's current block indentation (an indentless sequence shares its mapping's)."""
+        """PyYAML's block indentation (an indentless sequence shares its mapping's)."""
         return self.stack[-1][0] if self.stack else -1
 
     def enter(self, col: int, kind: str):
@@ -770,7 +770,7 @@ class NameReader:
         raise ValueError("unterminated flow collection")
 
     def block(self, i: int, p: int) -> int:
-        """The row after a block scalar whose header is at row i, column p (PyYAML's indentation)."""
+        """The row after a block scalar whose header is at row i, column p."""
         lines = self.lines
         header = BLOCK_HEADER.fullmatch(lines[i], p)
         if not header:
@@ -796,7 +796,7 @@ def skill_ids(skills: Path) -> list[str]:
 
 
 def build_index(skills: Path) -> dict:
-    """The committed full-library index: every source ID's frontmatter name and description."""
+    """The committed index: every source ID's frontmatter name and description."""
     index = {}
     for skill_id in skill_ids(skills):
         fm = metadata((skills / skill_id / "SKILL.md").read_bytes(), skill_id)
@@ -839,7 +839,7 @@ def split_text(data: bytes, label: str) -> tuple[bytes, list[str], str]:
 
 
 def frontmatter_end(lines: list[str], label: str) -> int:
-    """The index of the `---` line that closes the frontmatter opening the file."""
+    """The index of the `---` line closing the frontmatter."""
     end = next((i for i in range(1, len(lines)) if lines[i].rstrip("\r").strip() == "---"), None)
     if lines[0].rstrip("\r").strip() != "---" or end is None:
         raise InstallError(f"Invalid frontmatter at {label}: missing frontmatter")
@@ -955,7 +955,7 @@ def renamed_skill_md(data: bytes, name: str, label: str) -> bytes:
 
 
 def nested_name(skill_id: str, rel: str) -> str:
-    """The Codex name of a SKILL.md below the top level: ID--sub-path, at most 64 characters."""
+    """The Codex name of a nested SKILL.md: ID--sub-path, at most 64 characters."""
     name = f"{skill_id}--" + re.sub(r"[^A-Za-z0-9_-]+", "-", rel.rsplit("/", 1)[0])
     return name if len(name) <= 64 else name[:53] + "-" + hashlib.sha256(name.encode()).hexdigest()[:10]
 
@@ -991,14 +991,14 @@ def copy_edits(client: str, skill_id: str, invocation: str, listing: dict, read)
 
 
 def derived_listing(listing: dict, edits: dict) -> dict:
-    """The git listing of a client's copy: plugin manifest folders dropped, edits applied."""
+    """The git listing of a client's copy: plugin folders dropped, edits applied."""
     out = {rel: entry for rel, entry in listing.items() if not plugin_path(rel)}
     out.update({rel: (listing.get(rel, ("100644",))[0], blob_id(data)) for rel, data in edits.items()})
     return out
 
 
 def apply_edits(target: Path, edits: dict):
-    """Turn a verified copy of the library tree into the client's copy (see derived_listing)."""
+    """Turn a verified copy of the library tree into the client's copy."""
     for root, dirs, _ in os.walk(target):
         for name in [d for d in dirs if d in PLUGIN_DIRS]:
             path = Path(root) / name
@@ -1099,7 +1099,7 @@ class Git:
         for item in GIT_CONFIG:
             command += ["-c", item]
         if repo is not None:
-            # Never discover a repository: a broken clone must fail, not fall back to an enclosing one.
+            # Never discover a repository: a broken clone must fail, not use an enclosing one.
             command += ["-C", display(repo), f"--git-dir={display(repo / '.git')}", f"--work-tree={display(repo)}"]
         return [*command, *args]
 
@@ -1144,7 +1144,7 @@ class Library:
         self._derived: dict = {}
 
     def screen(self, ids: list[str], kinds: dict, indexed: set | None = None, links: bool = False) -> list[str]:
-        """The IDs installable on every platform; the others are skipped with a warning."""
+        """The IDs installable everywhere; the others are skipped with a warning."""
         colliding = case_collisions(ids, indexed or frozenset())
         accepted = []
         for skill_id in ids:
@@ -1205,7 +1205,7 @@ class Library:
         """Drop content prepared for this run."""
 
     def skill_name(self, data: bytes, label: str) -> str:
-        """A prepared copy's frontmatter name, read the way this library read its own names."""
+        """A prepared copy's frontmatter name, read as this library reads names."""
         return frontmatter_name(data, label)
 
 
@@ -1274,7 +1274,7 @@ class DirLibrary(Library):
 
 
 class GitLibrary(Library):
-    """One commit of the blobless library clone; a worktree is needed only to install."""
+    """One commit of the blobless clone; a worktree is needed only to install."""
 
     kind = "git"
 
@@ -1330,7 +1330,7 @@ class GitLibrary(Library):
         return self._files[skill_id]
 
     def read(self, skill_id, rel):
-        """A file's bytes from one long-lived `git cat-file --batch` (a missing blob is fetched)."""
+        """A file's bytes from one `git cat-file --batch` (a missing blob is fetched)."""
         oid = self._files[skill_id][rel][1]
         if self._cat is None:
             self._cat = subprocess.Popen(
@@ -1368,7 +1368,7 @@ class GitLibrary(Library):
             self._sparse(["scripts"])
 
     def _sparse(self, directories: list[str]):
-        # Cone mode: git batch-downloads exactly the missing blobs below these directories.
+        # Cone mode: git batch-downloads the missing blobs below these directories.
         self.git.run(self.repo, "sparse-checkout", "set", "--stdin", stdin="\n".join(directories) + "\n")
 
     def materialize(self, skill_id, target):
@@ -1395,7 +1395,7 @@ class GitLibrary(Library):
 
 
 def retried(action):
-    """A failed transfer that is not corruption (a dropped or stalled link) is retried once."""
+    """A failed transfer that is not corruption (a dropped link) is retried once."""
     try:
         return action()
     except GitError as exc:
@@ -1407,7 +1407,7 @@ def retried(action):
 
 
 def create_clone(git: Git, data: Path, url: str, branch: str):
-    """Clone into a temporary sibling, check out scripts/ and root files, then rename it into place."""
+    """Clone into a temporary sibling, check out scripts/ and root files, rename it."""
     data.mkdir(parents=True, exist_ok=True)
     temp, repo = data / f".{CLONE}.tmp-{uuid.uuid4().hex}", data / CLONE
 
@@ -1437,7 +1437,7 @@ def create_clone(git: Git, data: Path, url: str, branch: str):
 
 
 def sweep_clone_leftovers(data: Path):
-    """Under the lock nothing else uses the clone: drop interrupted clones and stale git locks."""
+    """Lock held: drop interrupted clones and stale git locks."""
     if plain_dir(data):
         for leftover in data.glob(f".{CLONE}.tmp-*"):
             if plain_dir(leftover):
@@ -1452,7 +1452,7 @@ def sweep_clone_leftovers(data: Path):
 
 
 def heal_clone(git: Git, data: Path, url: str, branch: str, error: GitError) -> bool:
-    """A corrupted clone is moved aside and cloned again once, if the remote is reachable."""
+    """A corrupted clone is moved aside and cloned again once, if the remote answers."""
     if not corrupted(error):
         return False
     try:
@@ -1488,7 +1488,7 @@ def refresh_clone(git: Git, data: Path, url: str, branch: str, checkout: bool) -
 
 
 def update_clone(git: Git, data: Path, url: str, branch: str) -> tuple[GitLibrary, bool]:
-    """Fetch new commits and trees and check out the tip (writes only if it moved). Lock held."""
+    """Fetch new commits and trees, check out the tip if it moved. Lock held."""
     repo = data / CLONE
     sweep_clone_leftovers(data)
     if not os.path.lexists(repo):
@@ -1571,7 +1571,7 @@ def ps_quote(value: str) -> str:
 
 
 def launcher_call(data: Path) -> str:
-    """How a router runs the launcher: a single-quoted PowerShell literal on Windows."""
+    """How a router runs the launcher (a PowerShell literal on Windows)."""
     if WINDOWS:
         return "& " + ps_quote(display(launcher_path(data, ".ps1")))
     return shlex.quote(display(launcher_path(data)))
@@ -1664,7 +1664,7 @@ Most library skills are not listed here; all of them are installed and usable.
 
 
 def write_tree(entries: dict, target: Path):
-    """Write the generated router: relative path -> (kind, mode, bytes), its folder first."""
+    """Write the router: relative path -> (kind, mode, bytes), its folder first."""
     for rel, (kind, mode, data) in sorted(entries.items()):
         path = target / rel if rel else target
         path.mkdir(parents=True, exist_ok=True) if kind == "dir" else path.write_bytes(data)
@@ -1746,7 +1746,7 @@ def selection(args, client: str, old: dict, library: Library) -> list[str]:
 
 
 def manual_set(args, client: str, old: dict, library: Library) -> list[str]:
-    """The skills installed but hidden from the model, unless shown: @all, IDs, or none."""
+    """The skills installed hidden unless shown: @all, IDs, or none."""
     known = set(library.skills) | set(library.skipped)
     ids = set(stored(old, "manual", client, known) if args.manual is None else args.manual.split(",")) - {""}
     unknown = ids - known - {"@all"}
@@ -1765,7 +1765,7 @@ def stored(old: dict, key: str, client: str, known: set) -> list[str]:
 
 
 def desired_entries(client: str, visible: list, manual: list, library: Library, router: dict) -> tuple:
-    """(entry -> record, name conflicts, entries asked for by name) of one client's install."""
+    """(entry -> record, name conflicts, entries named) of one client's install."""
     reserved = ({ROUTER} if "@library" in visible else set()) | (CODEX_SYSTEM_SKILLS if client == "codex" else set())
     named = (set(visible) | set(manual)) - {"@all", "@library"}
     clashes = sorted(i for i in named if i.casefold() in reserved)
@@ -1796,7 +1796,7 @@ def placement(skill_id: str) -> int:
 
 
 def matches(client: str, want: dict, library: Library, router: dict, path: Path) -> bool:
-    """The directory holds the client's copy (paths, bytes, links and executable bits)."""
+    """The directory holds the client's copy (see same_tree)."""
     try:
         if want["source_ids"] == ["@library"]:
             return same_tree(router["listing"], path)
@@ -1825,7 +1825,7 @@ def kept_entry(entry: str, reason: str = "protected, modified, or unproven owner
 
 
 def roots_of(item: dict) -> list[Path]:
-    """A client's skills roots in a plan or journal: Codex has a second one."""
+    """A client's skills roots in a plan or journal."""
     return [Path(item[key]) for key in ("destination", "destination2") if item.get(key)]
 
 
@@ -1849,7 +1849,7 @@ def plan_entries(client, roots, managed, desired, library, router, named) -> tup
             target, want, rec = dest / entry, wanted.get(entry), records.get(entry)
             present = entry in existing
             if want and rec and present and plain_dir(target) and all(rec.get(k) == want.get(k) for k in SHORTCUT):
-                # Unchanged since this installer recorded it: a cheap existence check, no hashing.
+                # Unchanged since recorded: an existence check, no hashing.
                 new_managed[entry] = dict(want, sha256=rec["sha256"])
                 continue
             if rec and entry in library.skipped:
@@ -1857,7 +1857,7 @@ def plan_entries(client, roots, managed, desired, library, router, named) -> tup
                 kept.append(kept_entry(entry, f"library entry skipped: {library.skipped[entry]}", **where))
                 continue
             if present and not want and not rec:
-                # Never hashed, claimed or removed, even when identical to a library skill.
+                # Never hashed, claimed or removed, even if identical to a library skill.
                 kept.append(kept_entry(entry, "not installed by awesome-skills", **where))
                 continue
             current = fingerprint(target) if present else None
@@ -1978,7 +1978,7 @@ def plan_client(client, roots, old, base, visible, manual, library, router, home
 
 
 def mass_removal(args, plans: list) -> str | None:
-    """A no-argument update that would remove most managed skills is refused unless asked for."""
+    """An update without selection flags may not remove most managed skills."""
     if args.allow_mass_removal or args.selection is not None or args.manual is not None or args.enable or args.disable:
         return None
     for p in plans:
@@ -1993,7 +1993,7 @@ def mass_removal(args, plans: list) -> str | None:
 
 
 def overflow(plans: list) -> str | None:
-    """A Codex root holding more than ROOT_CAP top-level folders (any owner) could lose skills."""
+    """A Codex root with more than ROOT_CAP top-level folders (any owner) loses skills."""
     for p in plans:
         for index, root in enumerate(roots_of(p) if p["client"] == "codex" else []):
             names = {n for n in os.listdir(root) if not n.startswith(".")} if root.is_dir() else set()
@@ -2117,7 +2117,7 @@ def exclusive_file_lock(directory: Path, reason: OSError):
 
 
 def backup_order(path: Path) -> int:
-    """Names carry time.time_ns(); time zones and daylight saving cannot reorder them."""
+    """Names carry time.time_ns(), which time zones cannot reorder."""
     match = re.search(r"-(\d{20})-", path.name)
     return int(match.group(1)) if match else os.lstat(path).st_mtime_ns
 
@@ -2129,7 +2129,7 @@ def backup_dirs(state: Path) -> list[Path]:
 
 
 def interrupted_transaction(state: Path, keep: int = KEEP_BACKUPS) -> Path | None:
-    """The newest unfinished transaction among the kept ones (every run recovers it first)."""
+    """The newest unfinished transaction among the kept ones."""
     for saved in reversed(backup_dirs(state)[-keep:] if keep else backup_dirs(state)):
         if read_json(saved / "restore.json", {}).get("status") == "applying":
             return saved
@@ -2137,7 +2137,7 @@ def interrupted_transaction(state: Path, keep: int = KEEP_BACKUPS) -> Path | Non
 
 
 def recover(state: Path, keep: int = KEEP_BACKUPS) -> Path | None:
-    """Undo an update that was killed mid-apply, so the run can start from the previous install."""
+    """Undo an update killed mid-apply, so the run starts from the previous install."""
     stale = interrupted_transaction(state, keep)
     if stale is None:
         return None
@@ -2153,7 +2153,7 @@ def recover(state: Path, keep: int = KEEP_BACKUPS) -> Path | None:
 
 
 def prune_backups(state: Path, keep: int):
-    """Keep the newest finished transactions; never touch one that is still applying."""
+    """Keep the newest finished transactions, and every one still applying."""
     if keep <= 0:
         return
     for saved in backup_dirs(state)[:-keep]:
@@ -2180,7 +2180,7 @@ def preflight(plans: list, state: Path):
 
 
 def apply_plans(plans: list, state: Path, library: Library, keep: int = KEEP_BACKUPS) -> Path | None:
-    """Apply verified plans as one recoverable transaction. The caller holds the lock."""
+    """Apply verified plans as one recoverable transaction. Lock held."""
     preflight(plans, state)
     changed = [p for p in plans if p["actions"] or read_json(state / f"{p['client']}.json", {}) != p["state"]]
     if not changed:
@@ -2188,7 +2188,7 @@ def apply_plans(plans: list, state: Path, library: Library, keep: int = KEEP_BAC
     pending = interrupted_transaction(state, keep)
     if pending:
         raise InstallError(f"Incomplete transaction; restore it first with --restore {display(pending)}")
-    # Download first: a failed transfer leaves no transaction behind.
+    # Download first: a failed transfer leaves no transaction.
     library.prepare([a["source"] for p in changed for a in p["actions"] if a.get("source") not in (None, "@library")])
     stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime()) + f"-{time.time_ns():020d}-" + uuid.uuid4().hex[:8]
     backup = state / "backups" / stamp
@@ -2256,7 +2256,7 @@ def prepare_copies(changed: list, backup: Path, library: Library):
 
 
 def prepare_one(p: dict, action: dict, backup: Path, library: Library):
-    """Copy the library tree, turn it into the client's copy, and verify both steps."""
+    """Copy the library tree, turn it into the client's copy, verify both."""
     entry, want = action["entry"], p["state"]["managed"][action["entry"]]
     prepared = backup / "prepared" / slot(p["client"], action) / entry
     try:
@@ -2384,7 +2384,7 @@ def restore_operations(backup: Path, state: Path, journal: dict) -> list:
 
 
 def legacy_caches(cache_root: Path) -> list[Path]:
-    """Snapshot directories the tarball installer created, recognized by name and exact layout."""
+    """Snapshot directories of the tarball installer, by name and exact layout."""
     libraries = cache_root / "libraries"
     if not plain_dir(cache_root) or not plain_dir(libraries):
         return []
@@ -2459,7 +2459,7 @@ def kept_backups() -> int:
 
 
 def resolve_clients(args, home: Path, storage: list[Path], source: Path | None) -> list[tuple]:
-    """(client, skills roots, state) for each client run: Claude has one root, Codex two."""
+    """(client, skills roots, state) per client: Claude has one root, Codex two."""
     codex_home = native(Path(os.path.abspath(os.environ.get("CODEX_HOME") or home / ".codex")))
     defaults = {"claude": [home / ".claude/skills"], "codex": [codex_home / "skills", home / ".agents/skills"]}
     states = {client: read_json(storage[0] / f"{client}.json", {}) for client in defaults}
@@ -2535,7 +2535,7 @@ def make_plans(args, clients: list, library: Library, home: Path, state: Path, d
 
 
 def record_migrations(state: Path, plans: list, backup: Path):
-    """Mark migrated clients once their transaction is complete: an interrupted one is redone."""
+    """Mark migrated clients once their transaction is complete."""
     migrated = [p["client"] for p in plans if "migration" in p]
     if migrated:
         marks = read_json(state / MIGRATIONS, {})
@@ -2579,7 +2579,7 @@ def emit(value: dict):
 
 
 def guard_source(source: Path, data: Path):
-    """A local source must be a complete tree, never the sparse library clone."""
+    """A local source must be a complete tree, not the sparse clone."""
     if overlap(source, data) or is_library_clone(source.parent):
         raise InstallError(f"Refusing the managed library clone as a local source: {display(source)}")
     sparse = source.parent / ".git" / "info" / "sparse-checkout"
