@@ -1050,3 +1050,24 @@ def test_hiding_and_renaming_never_write_through_a_link(sandbox, tmp_path, capsy
     with pytest.raises(installer.InstallError, match="write through a link"):
         installer.apply_edits(copy, {"agents/openai.yaml": b"policy:\n  allow_implicit_invocation: false\n"})
     assert installer.fingerprint(shared) == outside
+
+
+def test_a_linked_plugin_folder_is_dropped_without_touching_its_target(sandbox, tmp_path):
+    """A local tree's plugin folder may be a link to the user's own directory: the copies lose the
+    link itself; deleting it as a folder would chmod and empty what it points to."""
+    home, source = sandbox
+    if not can_symlink(tmp_path):
+        pytest.skip("symlinks unavailable")
+    outside = tmp_path / "user-plugin"
+    outside.mkdir()
+    (outside / "plugin.json").write_text("{}\n")
+    (skill(source, "plugged") / ".claude-plugin").symlink_to(outside, target_is_directory=True)
+    before = (os.stat(outside).st_mode, installer.fingerprint(outside))
+    try:
+        assert run(source) == 0
+        assert (os.stat(outside).st_mode, installer.fingerprint(outside)) == before
+    finally:
+        outside.chmod(0o755)  # a regression must not leave pytest an unreadable folder to clean
+    for copy in (home / ".claude/skills/plugged", codex_copy(home, "plugged")):
+        assert not os.path.lexists(copy / ".claude-plugin") and hidden_from_claude(copy)
+    assert installer.is_link(source / "plugged/.claude-plugin")
