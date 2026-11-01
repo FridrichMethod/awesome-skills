@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
-"""Verify a legacy migration against Codex's offline discovery and prompt preview.
+"""Verify a Codex install against Codex's offline discovery and prompt preview.
 
-The fixture copies SKILL.md documents and directory layout, never credentials or
-supporting files. All HOME, discovery, state, cache and working paths are temporary.
-No model turns are started. Missing experimental interfaces produce an explicit
-JSON skip; a supported interface that fails validation produces an error.
+Every installed Codex path must be discovered under its ID with a unique name, and the
+model's catalog may hold only system skills, the router, the visible selection and skills
+outside the library. The fixture copies SKILL.md documents, agents/openai.yaml files,
+plugin manifests and directory layout, never credentials or other supporting files. All
+HOME, discovery, state, cache and working paths are temporary. No model turns are started.
+Missing experimental interfaces produce an explicit JSON skip; a supported interface that
+fails validation produces an error. The traversal-limit error Codex logs for a root of more
+than 2,000 directories is reported, not failed: top-level skills are read first.
 """
 
 from __future__ import annotations
 
 import argparse
+import collections
 import json
 import os
 import queue
@@ -29,6 +34,7 @@ FIXTURES = {
 }
 ROUTER = "awesome-skills-library"
 REMOTE_FEATURES = ("plugins", "apps", "remote_plugin")
+PLUGIN_DIRS = {".claude-plugin", ".codex-plugin", ".cursor-plugin"}
 
 
 class UnsupportedCodex(Exception):
@@ -64,10 +70,14 @@ def isolated_env(home: Path, temporary: Path) -> dict[str, str]:
 
 
 def updater_actions(output: str, client: str) -> list:
-    """A run with nothing to change prints one line; any other run prints its JSON plan first."""
+    """A run with nothing to change prints one line; any other run prints its JSON plan first,
+    or for a large plan one summary line per client."""
     text = output.strip()
     if text == "Already current; selection preserved.":
         return []
+    if not text.startswith("{"):
+        lines = [line for line in text.splitlines() if line.startswith((f"Updated {client}:", f"Migrated {client}:"))]
+        return [line for line in lines if not line.startswith(f"Updated {client}: 0 copied, 0 removed;")]
     plan, _ = json.JSONDecoder().raw_decode(text)
     return next(item for item in plan["clients"] if item["client"] == client)["actions"]
 
@@ -216,7 +226,42 @@ def catalog_entries(prompt: list[dict]) -> list[dict]:
     return entries
 
 
-def measure(codex: str, env: dict[str, str], work: Path, overrides: list[str] | None = None) -> dict:
+def installed_paths(state: dict) -> dict:
+    """Installed SKILL.md (resolved) -> the name it must be discovered under: its ID."""
+    roots = [state["destination"], state.get("destination2")]
+    return {
+        str((Path(roots[record.get("root", 0)]) / entry / "SKILL.md").resolve()): entry
+        for entry, record in state["managed"].items()
+    }
+
+
+def catalog_problems(state: dict, skills: list[dict], entries: list[dict]) -> list[str]:
+    """Installed paths not discovered under their ID, names discovered twice (a plain `$name`
+    then injects neither), and installed skills in the model's catalog that are not in the
+    visible selection: nested skills and hidden ones. Skills outside the library may show."""
+    installed = installed_paths(state)
+    found = {str(Path(skill["path"]).resolve()): skill for skill in skills}
+    problems = []
+    for path, name in installed.items():
+        skill = found.get(path)
+        if skill is None or skill["name"] != name:
+            problems.append(f"{path}: {'not discovered' if skill is None else 'discovered as ' + skill['name']}")
+    names = collections.Counter(skill["name"] for skill in skills if skill.get("enabled", True))
+    problems += [f"{name!r} is discovered {count} times" for name, count in sorted(names.items()) if count > 1]
+    selection = set(state["selection"])
+    visible = set(state["managed"]) if "@all" in selection else selection | ({ROUTER} & set(state["managed"]))
+    folders = {str(Path(path).parent) for path in installed}
+    shown = {}  # name of an installed skill -> whether the model may see it
+    for path, skill in found.items():
+        if path in installed or any(str(parent) in folders for parent in Path(path).parents):
+            shown[skill["name"]] = path in installed and skill["name"] in visible
+    problems += [f"{entry['name']} is in the model's catalog" for entry in entries if shown.get(entry["name"]) is False]
+    return problems
+
+
+def measure(
+    codex: str, env: dict[str, str], work: Path, overrides: list[str] | None = None, state: dict | None = None
+) -> dict:
     skills, errors, stderr = discover(codex, env, work)
     disabled = [arg for feature in REMOTE_FEATURES for arg in ("--disable", feature)]
     prompt = json.loads(
@@ -228,7 +273,8 @@ def measure(codex: str, env: dict[str, str], work: Path, overrides: list[str] | 
     )
     entries = catalog_entries(prompt)
     descriptions = {entry["name"]: entry["description"] for entry in entries}
-    return {
+    problems = {} if state is None else {"catalog_problems": catalog_problems(state, skills, entries)}
+    return problems | {
         "discovered": len(skills),
         "discovered_enabled": sum(skill["enabled"] for skill in skills),
         "discovered_unique_names": len({skill["name"] for skill in skills}),
@@ -254,7 +300,7 @@ def prepare_fixture(source: Path, installer: Path, root: Path) -> tuple[Path, di
         if entry.is_dir() and not entry.is_symlink():
             (library / entry.relative_to(source)).mkdir(parents=True, exist_ok=True)
             directory_count += 1
-        elif entry.name == "SKILL.md" and entry.is_file() and not entry.is_symlink():
+        elif metadata_file(entry.relative_to(source)) and entry.is_file() and not entry.is_symlink():
             destination = library / entry.relative_to(source)
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_bytes(entry.read_bytes())
@@ -266,16 +312,16 @@ def prepare_fixture(source: Path, installer: Path, root: Path) -> tuple[Path, di
     if not helper.is_file():
         raise VerificationError(f"Missing new installer helper: {helper}")
     shutil.copyfile(helper, scripts / "install_skills.py")
+    if helper.with_name("search_skills.py").is_file():
+        shutil.copyfile(helper.with_name("search_skills.py"), scripts / "search_skills.py")
     bootstrap = helper.parent.parent / "install.sh"
     if not bootstrap.is_file():
         raise VerificationError(f"Missing local installer bootstrap: {bootstrap}")
     shutil.copyfile(bootstrap, bundle / "install.sh")
-    provenance = source.parent / "library_sources.json"
-    if provenance.is_file():
-        shutil.copyfile(provenance, bundle / provenance.name)
+    for name in ("library_sources.json", "library_index.json"):
+        if (source.parent / name).is_file():
+            shutil.copyfile(source.parent / name, bundle / name)
     home = root / "home"
-    for client in ("codex", "claude"):
-        shutil.copytree(library, home / f".{client}/skills")
     agents = home / ".agents/skills"
     agents.mkdir(parents=True)
     for name, description in FIXTURES.items():
@@ -289,8 +335,13 @@ def prepare_fixture(source: Path, installer: Path, root: Path) -> tuple[Path, di
     return bundle, {
         "top_level_skill_documents": len(list(library.glob("*/SKILL.md"))),
         "directories": directory_count,
-        "content": "SKILL.md documents and directory layout only",
+        "content": "SKILL.md, agents/openai.yaml, plugin manifests and directory layout only",
     }
+
+
+def metadata_file(rel: Path) -> bool:
+    """What the installer edits or drops: copied into the fixture, unlike other support files."""
+    return rel.name == "SKILL.md" or rel.parts[-2:] == ("agents", "openai.yaml") or bool(PLUGIN_DIRS & set(rel.parts))
 
 
 def verify(codex: str, source: Path, installer: Path, compare_budget: int | None = None) -> dict:
@@ -310,23 +361,24 @@ def verify(codex: str, source: Path, installer: Path, compare_budget: int | None
         fixture_link = home / ".agents/skills/external-linked"
         link_before = os.readlink(fixture_link)
         agents_before = {name: (home / ".agents/skills" / name / "SKILL.md").read_bytes() for name in FIXTURES}
-        run(["bash", str(bundle / "install.sh"), "--codex-only"], env, work, timeout=120)
-        after = measure(codex, env, work)
+        run(["bash", str(bundle / "install.sh"), "--codex-only"], env, work, timeout=900)
         state_path = Path(env["SKILLS_STATE_DIR"]) / "codex.json"
         state_before = json.loads(state_path.read_text())
+        after = measure(codex, env, work, state=state_before)
         # Deliberately no installer flags: this is the updater's invocation.
-        output = run(["bash", str(bundle / "install.sh")], env, work, timeout=120)
+        output = run(["bash", str(bundle / "install.sh")], env, work, timeout=900)
         codex_actions = updater_actions(output, "codex")
         state_after = json.loads(state_path.read_text())
-        updated = measure(codex, env, work)
+        updated = measure(codex, env, work, state=state_after)
         selection_preserved = state_before["selection"] == state_after["selection"]
         agents_after = {name: (home / ".agents/skills" / name / "SKILL.md").read_bytes() for name in FIXTURES}
         protected_fixtures_preserved = (
             fixture_link.is_symlink() and os.readlink(fixture_link) == link_before and agents_before == agents_after
         )
         for label, measurement in (("after", after), ("after_no_argument_update", updated)):
-            if measurement["traversal_limit"] or measurement["load_errors"]:
-                raise VerificationError(f"{label}: discovery still has errors or a traversal limit")
+            if measurement["load_errors"] or measurement["catalog_problems"]:
+                found = measurement["load_errors"][:5] or measurement["catalog_problems"][:5]
+                raise VerificationError(f"{label}: discovery or catalog problems: {found}")
             if (
                 not all(measurement["fixtures_visible_with_description"].values())
                 or not measurement["library_visible_with_description"]
@@ -358,7 +410,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--codex", default="codex", help="local Codex executable (no model API requests)")
     parser.add_argument("--source", type=Path, default=ROOT / "skills")
     parser.add_argument("--installer", type=Path, default=ROOT / "scripts/install_skills.py")
-    parser.add_argument("--compare-budget", type=int, help="also measure the old fixture with this context budget")
+    parser.add_argument(
+        "--compare-budget", type=int, help="also measure the fixture before installing with this budget"
+    )
     args = parser.parse_args(argv)
     codex = shutil.which(args.codex)
     if not codex:

@@ -51,6 +51,42 @@ def test_updater_output_is_one_line_when_current_and_a_plan_otherwise():
     plan = {"clients": [{"client": "claude", "actions": []}, {"client": "codex", "actions": [{"entry": "x"}]}]}
     output = json.dumps(plan, indent=2) + "\nRecovery backup: /tmp/backup\n"
     assert verifier.updater_actions(output, "codex") == [{"entry": "x"}]
+    summary = "Updated claude: 9 copied, 0 removed; 1 visible, 8 hidden\nUpdated codex: 0 copied, 0 removed; 1 visible"
+    assert verifier.updater_actions(summary + "\nRecovery backup: /tmp/b\n", "codex") == []
+    assert verifier.updater_actions(summary, "claude") == [summary.splitlines()[0]]
+
+
+def test_catalog_problems_name_missing_renamed_duplicate_and_leaked_skills(tmp_path):
+    first, second = tmp_path / "codex", tmp_path / "agents"
+    state = {"selection": ["@library", "shown"], "destination": str(first), "destination2": str(second)}
+    state["managed"] = {name: {} for name in ("awesome-skills-library", "shown", "hidden", "renamed", "missing")}
+    state["managed"]["hidden"] = {"root": 1}
+
+    def skill(path, name, scope="user"):
+        return {"path": str(path / "SKILL.md"), "name": name, "scope": scope, "enabled": True}
+
+    skills = [
+        skill(first / "awesome-skills-library", "awesome-skills-library"),
+        skill(first / "shown", "shown"),
+        skill(second / "hidden", "hidden"),
+        skill(first / "renamed", "original-name"),
+        skill(second / "hidden/nested", "hidden--nested"),
+        skill(tmp_path / "system/imagegen", "imagegen", "system"),
+        skill(tmp_path / "mine", "original-name"),
+    ]
+    catalog = [{"name": n} for n in ("awesome-skills-library", "shown", "imagegen", "hidden", "hidden--nested")]
+    problems = verifier.catalog_problems(state, skills, catalog)
+    assert problems == [
+        f"{(first / 'renamed/SKILL.md').resolve()}: discovered as original-name",
+        f"{(first / 'missing/SKILL.md').resolve()}: not discovered",
+        "'original-name' is discovered 2 times",
+        "hidden is in the model's catalog",
+        "hidden--nested is in the model's catalog",
+    ]
+    assert verifier.catalog_problems(state, skills[:3] + skills[5:6], catalog[:3]) == [
+        f"{(first / 'renamed/SKILL.md').resolve()}: not discovered",
+        f"{(first / 'missing/SKILL.md').resolve()}: not discovered",
+    ]
 
 
 def test_isolation_omits_authentication_and_live_home(monkeypatch, tmp_path):
@@ -110,6 +146,9 @@ def test_fixture_copies_documents_and_layout_without_support_files(tmp_path):
     (skill / "references").mkdir(parents=True)
     (skill / "SKILL.md").write_text("---\nname: real-skill\ndescription: Real document.\n---\n")
     (skill / "references/private-data.txt").write_text("never copied")
+    for rel in ("agents/openai.yaml", ".claude-plugin/plugin.json"):
+        (skill / rel).parent.mkdir(parents=True)
+        (skill / rel).write_text("{}\n")
     installer = tmp_path / "installer/scripts/install_skills.py"
     installer.parent.mkdir(parents=True)
     installer.write_text("# installer fixture\n")
@@ -121,6 +160,9 @@ def test_fixture_copies_documents_and_layout_without_support_files(tmp_path):
     assert (bundle / "skills/real-skill/SKILL.md").read_bytes() == (skill / "SKILL.md").read_bytes()
     assert (bundle / "skills/real-skill/references").is_dir()
     assert not (bundle / "skills/real-skill/references/private-data.txt").exists()
+    assert (bundle / "skills/real-skill/agents/openai.yaml").is_file(), "what the installer edits is copied"
+    assert (bundle / "skills/real-skill/.claude-plugin/plugin.json").is_file()
+    assert not (root / "home/.codex/skills").exists(), "no copies outside the installer"
     link = root / "home/.agents/skills/external-linked"
     assert link.is_symlink()
     assert link.resolve().is_relative_to(root / "home")
@@ -197,6 +239,7 @@ def test_local_codex_discovery_and_model_visible_catalog(tmp_path):
     except verifier.UnsupportedCodex as exc:
         pytest.skip(str(exc))
     assert result["status"] == "passed"
+    assert result["after"]["catalog_problems"] == []
     assert result["after"]["library_visible_with_description"]
     assert all(result["after"]["fixtures_visible_with_description"].values())
     assert result["no_argument_update_preserved_selection"]
