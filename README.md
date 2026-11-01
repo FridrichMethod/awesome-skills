@@ -366,7 +366,7 @@ Each successful run posts a per-source change summary table in the job summary.
 
 ```
 awesome-skills/
-├── skills/                          ← 2,300 skill dirs (managed by sync; do not edit directly)
+├── skills/                          ← 2,319 skill dirs (managed by sync; do not edit directly)
 ├── install.sh                       ← one-line installer and updater (curl|bash compatible)
 ├── install.ps1                      ← the same for native Windows PowerShell
 ├── scripts/

@@ -325,6 +325,10 @@
       "description": "Master REST and GraphQL API design principles to build intuitive, scalable, and maintainable APIs that delight developers. Use when designing new APIs, reviewing API specifications, or establishing API design standards.",
       "name": "api-design-principles"
     },
+    "api-design-principles--wshobson-agents--bdd7765e87": {
+      "description": "Master REST and GraphQL API design principles to build intuitive, scalable, and maintainable APIs that delight developers. Use when designing new APIs, reviewing API specifications, or establishing API design standards.",
+      "name": "api-design-principles"
+    },
     "api-hardening": {
       "description": "API hardening for Express, FastAPI, and serverless. Use for rate limiting, CORS, input validation, API keys, or OWASP API Top 10.",
       "name": "api-hardening"
@@ -350,6 +354,10 @@
       "name": "architecture-decision-records"
     },
     "architecture-patterns": {
+      "description": "Implement proven backend architecture patterns including Clean Architecture, Hexagonal Architecture, and Domain-Driven Design. Use this skill when designing clean architecture for a new microservice, when refactoring a monolith to use bounded contexts, when implementing hexagonal or onion architecture patterns, or when debugging dependency cycles between application layers.",
+      "name": "architecture-patterns"
+    },
+    "architecture-patterns--wshobson-agents--0f84049a40": {
       "description": "Implement proven backend architecture patterns including Clean Architecture, Hexagonal Architecture, and Domain-Driven Design. Use this skill when designing clean architecture for a new microservice, when refactoring a monolith to use bounded contexts, when implementing hexagonal or onion architecture patterns, or when debugging dependency cycles between application layers.",
       "name": "architecture-patterns"
     },
@@ -3365,6 +3373,10 @@
       "description": "Design multi-stage CI/CD pipelines with approval gates, security checks, and deployment orchestration. Use this skill when designing zero-downtime deployment pipelines, implementing canary rollout strategies, setting up multi-environment promotion workflows, or debugging failed deployment gates in CI/CD.",
       "name": "deployment-pipeline-design"
     },
+    "deployment-pipeline-design--wshobson-agents--27f84fe542": {
+      "description": "Design multi-stage CI/CD pipelines with approval gates, security checks, and deployment orchestration. Use this skill when designing zero-downtime deployment pipelines, implementing canary rollout strategies, setting up multi-environment promotion workflows, or debugging failed deployment gates in CI/CD.",
+      "name": "deployment-pipeline-design"
+    },
     "depmap": {
       "description": "Retrieves and analyzes Cancer Dependency Map (DepMap) release data, including CRISPR Chronos gene effects, cancer model annotations, omics biomarkers, and PRISM drug sensitivity. Supports cancer-selective dependency, co-essentiality, and candidate synthetic-lethality analyses with release-aware identifiers and statistical checks.",
       "name": "depmap"
@@ -3786,6 +3798,10 @@
       "name": "equity-scorer"
     },
     "error-handling-patterns": {
+      "description": "Master error handling patterns across languages including exceptions, Result types, error propagation, and graceful degradation to build resilient applications. Use when implementing error handling, designing APIs, or improving application reliability.",
+      "name": "error-handling-patterns"
+    },
+    "error-handling-patterns--wshobson-agents--2c5fa93d11": {
       "description": "Master error handling patterns across languages including exceptions, Result types, error propagation, and graceful degradation to build resilient applications. Use when implementing error handling, designing APIs, or improving application reliability.",
       "name": "error-handling-patterns"
     },
@@ -4309,6 +4325,10 @@
       "description": "Master Go concurrency with goroutines, channels, sync primitives, and context. Use when building concurrent Go applications, implementing worker pools, or debugging race conditions.",
       "name": "go-concurrency-patterns"
     },
+    "go-concurrency-patterns--wshobson-agents--5252a38420": {
+      "description": "Master Go concurrency with goroutines, channels, sync primitives, and context. Use when building concurrent Go applications, implementing worker pools, or debugging race conditions.",
+      "name": "go-concurrency-patterns"
+    },
     "go-enrichment": {
       "description": "Runs Gene Ontology over-representation analysis (ORA) on a gene LIST with clusterProfiler enrichGO, the one-sided hypergeometric/Fisher 2x2 test phyper(k-1, M, N-M, n, lower.tail=FALSE). Covers why the BACKGROUND universe (not the gene list) is the null and decides significance, why omitting universe= is a bug, why enrichGO defaults to ont='MF' not 'BP', why pvalueCutoff filters p.adjust not raw p, why ORA discards effect magnitude and inherits GO-DAG true-path redundancy (simplify, topGO), why RNA-seq gene-length bias inflates long-gene terms (GOseq Wallenius), plus GeneRatio/BgRatio, bitr ID mapping, minGSSize/maxGSSize, groupGO. Use when a pre-selected gene list (DE hits, co-expression module, screen, GWAS-mapped) needs GO annotation. For a ranked no-cutoff analysis see gsea; for other databases see kegg-pathways, reactome-pathways, wikipathways; DE source is differential-expression/de-results; plots in enrichment-visualization.",
       "name": "bio-pathway-go-enrichment"
@@ -4785,6 +4805,10 @@
       "description": "Create production-ready Kubernetes manifests for Deployments, Services, ConfigMaps, and Secrets following best practices and security standards. Use when generating Kubernetes YAML manifests, creating K8s resources, or implementing production-grade Kubernetes configurations.",
       "name": "k8s-manifest-generator"
     },
+    "k8s-manifest-generator--wshobson-agents--a173864007": {
+      "description": "Create production-ready Kubernetes manifests for Deployments, Services, ConfigMaps, and Secrets following best practices and security standards. Use when generating Kubernetes YAML manifests, creating K8s resources, or implementing production-grade Kubernetes configurations.",
+      "name": "k8s-manifest-generator"
+    },
     "k8s-security-policies": {
       "description": "Implement Kubernetes security policies including NetworkPolicy, PodSecurityPolicy, and RBAC for production-grade security. Use when securing Kubernetes clusters, implementing network isolation, or enforcing pod security standards.",
       "name": "k8s-security-policies"
@@ -5189,6 +5213,10 @@
       "description": "Guide for creating high-quality MCP (Model Context Protocol) servers that enable LLMs to interact with external services through well-designed tools. Use when building MCP servers to integrate external APIs or services, whether in Python (FastMCP) or Node/TypeScript (MCP SDK).",
       "name": "mcp-builder"
     },
+    "mcp-builder--anthropics-skills--0699d49979": {
+      "description": "Guide for creating high-quality MCP (Model Context Protocol) servers that enable LLMs to interact with external services through well-designed tools. Use when building MCP servers to integrate external APIs or services, whether in Python (FastMCP) or Node/TypeScript (MCP SDK).",
+      "name": "mcp-builder"
+    },
     "mcp-integration": {
       "description": "This skill should be used when the user asks to \"add MCP server\", \"integrate MCP\", \"configure MCP in plugin\", \"use .mcp.json\", \"set up Model Context Protocol\", \"connect external service\", mentions \"${CLAUDE_PLUGIN_ROOT} with MCP\", or discusses MCP server types (SSE, stdio, HTTP, WebSocket). Provides comprehensive guidance for integrating Model Context Protocol servers into Claude Code plugins for external tool and service integration.",
       "name": "mcp-integration"
@@ -5354,6 +5382,10 @@
       "name": "bio-workflows-microbiome-pipeline"
     },
     "microservices-patterns": {
+      "description": "Design microservices architectures with service boundaries, event-driven communication, and resilience patterns. Use when building distributed systems, decomposing monoliths, or implementing microservices.",
+      "name": "microservices-patterns"
+    },
+    "microservices-patterns--wshobson-agents--32cdde4c24": {
       "description": "Design microservices architectures with service boundaries, event-driven communication, and resilience patterns. Use when building distributed systems, decomposing monoliths, or implementing microservices.",
       "name": "microservices-patterns"
     },
@@ -5724,6 +5756,10 @@
     "nature-paper2ppt--nature-skills--ff1cde4e01": {
       "description": "Create or improve a Chinese academic PPTX from a scientific paper or research reading notes, with source figures and speaker notes. Use for 论文做PPT、文献汇报、组会PPT and paper-based conference or defense presentations.",
       "name": "nature-paper2ppt"
+    },
+    "nature-paper2word": {
+      "description": "Compile an academic Markdown manuscript into a journal- or school-compliant Word (.docx): declared typography, native OMML equations, three-line tables, cross-references, per-section page numbers, CSL bibliographies (GB/T 7714, APA, Nature, IEEE), and pre/post-export quality gates. 把学术论文的 Markdown 稿件导出为符合期刊或学位论文规范的 Word：摘要、公式编号、三线表、题注、交叉引用、目录域、参考文献。Use when the user wants a submission-ready .docx — 论文转 Word、学位论文排版、期刊投稿排版、prepare submission docx — or a readable copy of a manuscript. Not for PDF, HTML or LaTeX output, and not for slide decks or grant forms.",
+      "name": "nature-paper2word"
     },
     "nature-polishing": {
       "description": "Polish, translate, or tighten existing academic prose while preserving facts, terminology, and evidence boundaries. Use for 论文润色、学术翻译、正文精简, or manuscript LaTeX layout fixes. Use nature-writing when the main task is drafting new sections or rebuilding the manuscript argument.",
@@ -6461,6 +6497,10 @@
       "description": "Write effective blameless postmortems with root cause analysis, timelines, and action items. Use when conducting incident reviews, writing postmortem documents, or improving incident response processes.",
       "name": "postmortem-writing"
     },
+    "postmortem-writing--wshobson-agents--94db8e0e1a": {
+      "description": "Write effective blameless postmortems with root cause analysis, timelines, and action items. Use when conducting incident reviews, writing postmortem documents, or improving incident response processes.",
+      "name": "postmortem-writing"
+    },
     "power-analysis": {
       "description": "Calculates statistical power for high-dimensional genomics experiments (bulk RNA-seq, scRNA-seq, ATAC-seq, ChIP-seq, methylation, proteomics) under negative-binomial count models using RNASeqPower, PROPER, and simulation via powsimR, distinguishing per-gene from marginal (transcriptome-wide) power, the role of mean expression and dispersion, and the sequencing-depth-versus-replicate tradeoff. Covers simulation as the honest default for overdispersed counts, FDR-aware average power versus single-test power, observed/post-hoc power as an anti-pattern, and the winner's-curse / Type-S / Type-M consequences of underpowering. Use when planning replicate number for a sequencing experiment, deciding whether to add depth or samples, choosing closed-form versus simulation power, estimating power from pilot dispersions, or justifying replication in a grant. For clinical-trial power see clinical-biostatistics/power-and-sample-size; for the inverse sample-size question see experimental-design/sample-size.",
       "name": "bio-experimental-design-power-analysis"
@@ -6865,6 +6905,10 @@
       "description": "Python configuration management via environment variables and typed settings. Use when externalizing config, setting up pydantic-settings, managing secrets, or implementing environment-specific behavior.",
       "name": "python-configuration"
     },
+    "python-configuration--wshobson-agents--c2b033b567": {
+      "description": "Python configuration management via environment variables and typed settings. Use when externalizing config, setting up pydantic-settings, managing secrets, or implementing environment-specific behavior.",
+      "name": "python-configuration"
+    },
     "python-design-patterns": {
       "description": "Python design patterns including KISS, Separation of Concerns, Single Responsibility, and composition over inheritance. Use this skill when designing a new service or component from scratch and choosing how to layer responsibilities, when refactoring a God class or monolithic function that has grown too large, when deciding whether to add a new abstraction or live with duplication, when evaluating a pull request for structural issues like tight coupling or leaking internal types, when choosing between inheritance and composition for a new class hierarchy, or when a codebase is becoming hard to test because of entangled I/O and business logic.",
       "name": "python-design-patterns"
@@ -6877,7 +6921,15 @@
       "description": "Python observability patterns including structured logging, metrics, and distributed tracing. Use when adding logging, implementing metrics collection, setting up tracing, or debugging production systems.",
       "name": "python-observability"
     },
+    "python-observability--wshobson-agents--b1df9da345": {
+      "description": "Python observability patterns including structured logging, metrics, and distributed tracing. Use when adding logging, implementing metrics collection, setting up tracing, or debugging production systems.",
+      "name": "python-observability"
+    },
     "python-packaging": {
+      "description": "Create distributable Python packages with proper project structure, setup.py/pyproject.toml, and publishing to PyPI. Use when packaging Python libraries, creating CLI tools, or distributing Python code.",
+      "name": "python-packaging"
+    },
+    "python-packaging--wshobson-agents--7bbaa19596": {
       "description": "Create distributable Python packages with proper project structure, setup.py/pyproject.toml, and publishing to PyPI. Use when packaging Python libraries, creating CLI tools, or distributing Python code.",
       "name": "python-packaging"
     },
@@ -6886,6 +6938,10 @@
       "name": "python-patterns"
     },
     "python-performance-optimization": {
+      "description": "Profile and optimize Python code using cProfile, memory profilers, and performance best practices. Use when debugging slow Python code, optimizing bottlenecks, or improving application performance.",
+      "name": "python-performance-optimization"
+    },
+    "python-performance-optimization--wshobson-agents--782fefbc58": {
       "description": "Profile and optimize Python code using cProfile, memory profilers, and performance best practices. Use when debugging slow Python code, optimizing bottlenecks, or improving application performance.",
       "name": "python-performance-optimization"
     },
@@ -6909,11 +6965,19 @@
       "description": "Python resource management with context managers, cleanup patterns, and streaming. Use when managing connections, file handles, implementing cleanup logic, or building streaming responses with accumulated state.",
       "name": "python-resource-management"
     },
+    "python-resource-management--wshobson-agents--2796a296b7": {
+      "description": "Python resource management with context managers, cleanup patterns, and streaming. Use when managing connections, file handles, implementing cleanup logic, or building streaming responses with accumulated state.",
+      "name": "python-resource-management"
+    },
     "python-testing": {
       "description": "Python testing strategies using pytest, TDD methodology, fixtures, mocking, parametrization, and coverage requirements.",
       "name": "python-testing"
     },
     "python-testing-patterns": {
+      "description": "Implement comprehensive testing strategies with pytest, fixtures, mocking, and test-driven development. Use when writing Python tests, setting up test suites, or implementing testing best practices.",
+      "name": "python-testing-patterns"
+    },
+    "python-testing-patterns--wshobson-agents--3254c19718": {
       "description": "Implement comprehensive testing strategies with pytest, fixtures, mocking, and test-driven development. Use when writing Python tests, setting up test suites, or implementing testing best practices.",
       "name": "python-testing-patterns"
     },
@@ -7297,6 +7361,10 @@
       "description": "Configure Static Application Security Testing (SAST) tools for automated vulnerability detection in application code. Use when setting up security scanning, implementing DevSecOps practices, or automating code vulnerability detection.",
       "name": "sast-configuration"
     },
+    "sast-configuration--wshobson-agents--0f5d474103": {
+      "description": "Configure Static Application Security Testing (SAST) tools for automated vulnerability detection in application code. Use when setting up security scanning, implementing DevSecOps practices, or automating code vulnerability detection.",
+      "name": "sast-configuration"
+    },
     "scaffold-analysis": {
       "description": "Analyzes chemical libraries by scaffold using Bemis-Murcko scaffolds, generic frameworks, cyclic skeletons, matched molecular pair (MMP) analysis via mmpdb, R-group decomposition, Free-Wilson analysis, scaffold hopping, and chemotype-aware ML train/test splits. Use when identifying chemotype clusters in a library, deriving SAR transformation rules, decomposing series into R-groups, performing scaffold-balanced QSAR splits, or planning analog campaigns.",
       "name": "bio-scaffold-analysis"
@@ -7534,6 +7602,10 @@
       "name": "bio-rna-structure-secondary-structure-prediction"
     },
     "secrets-management": {
+      "description": "Implement secure secrets management for CI/CD pipelines using Vault, AWS Secrets Manager, or native platform solutions. Use when handling sensitive credentials, rotating secrets, or securing CI/CD environments.",
+      "name": "secrets-management"
+    },
+    "secrets-management--wshobson-agents--4a501c52f0": {
       "description": "Implement secure secrets management for CI/CD pipelines using Vault, AWS Secrets Manager, or native platform solutions. Use when handling sensitive credentials, rotating secrets, or securing CI/CD environments.",
       "name": "secrets-management"
     },
@@ -8009,6 +8081,10 @@
       "description": "Master SQL query optimization, indexing strategies, and EXPLAIN analysis to dramatically improve database performance and eliminate slow queries. Use when debugging slow queries, designing database schemas, or optimizing application performance.",
       "name": "sql-optimization-patterns"
     },
+    "sql-optimization-patterns--wshobson-agents--ea4f739887": {
+      "description": "Master SQL query optimization, indexing strategies, and EXPLAIN analysis to dramatically improve database performance and eliminate slow queries. Use when debugging slow queries, designing database schemas, or optimizing application performance.",
+      "name": "sql-optimization-patterns"
+    },
     "sr-screener": {
       "description": "Protocol-driven study screening for systematic, scoping and rapid reviews. Turns a proposal or PROSPERO protocol into confirmed eligibility rules, then screens titles/abstracts and full texts with two blinded AI reviewers and a third-reviewer adjudicator: ordered exclusion codes, no silent defaults, resumable batch runs, QC (seed studies, near-miss rechecks, kappa and PABAK), PRISMA 2020 counts, EndNote/Zotero RIS groups, an Excel log, a methods draft and a literature_corpus handoff to academic-paper. Reads RIS, PubMed .nbib, Web of Science and CSV exports; removes duplicates. 8 modes: protocol, quick, pilot, ta-screen, ft-screen, adjudicate, audit, report. Use it to screen records against eligibility criteria, pilot screening, resolve screening conflicts, audit exclusions or report the selection process. Triggers on: screen these papers, title/abstract screening, full-text screening, screening conflicts, inclusion criteria, PRISMA flow, غربالگری مقالات, اسکرینینگ عنوان و چکیده, معیارهای ورود و خروج.",
       "name": "sr-screener"
@@ -8202,7 +8278,7 @@
       "name": "supply-chain-hardening"
     },
     "surface-completeness": {
-      "description": "Use to check UI coverage, design compliance, and docs during frontend changes.",
+      "description": "Use to verify interface changes across affected surfaces, user states, quality signals, and documentation.",
       "name": "surface-completeness"
     },
     "survival-analysis": {

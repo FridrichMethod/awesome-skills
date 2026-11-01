@@ -12,7 +12,7 @@
         "current": true,
         "path": "skills/13c-metabolic-flux",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -92,7 +92,7 @@
         "current": true,
         "path": "academic-paper",
         "repository": "https://github.com/Imbad0202/academic-research-skills.git",
-        "revision": "77e77e871aeccf5b5740a3086903f914e58c4204"
+        "revision": "f2d109ea815f4b2f68a2eeee1ed9630bfc0cb302"
       }
     ]
   },
@@ -116,14 +116,14 @@
       "academic-paper-reviewer",
       "academic-paper-reviewer--imbad-academic--277487101b"
     ],
-    "digest": "0b85b10e1acf09b2063aeecd73ef3b1052a17f3da52c91949028482ca6e71546",
+    "digest": "a627fa2fb3a65700ee337df911895be6eac18a8dfbcbaaa8bb2b898c1aebdb02",
     "name": "academic-paper-reviewer",
     "origins": [
       {
         "current": true,
         "path": "academic-paper-reviewer",
         "repository": "https://github.com/Imbad0202/academic-research-skills.git",
-        "revision": "77e77e871aeccf5b5740a3086903f914e58c4204"
+        "revision": "f2d109ea815f4b2f68a2eeee1ed9630bfc0cb302"
       }
     ]
   },
@@ -147,14 +147,14 @@
       "academic-pipeline",
       "academic-pipeline--imbad-academic--cbc2ab73c3"
     ],
-    "digest": "c6edf5917ba8c696a3e595ad375183a65aa8d86dd1b96bcdb1dd6d036e41e429",
+    "digest": "4676e42ecdabec7e5d1b19aa4a966f4a38425f7dcc13a6271cc23442697661e5",
     "name": "academic-pipeline",
     "origins": [
       {
         "current": true,
         "path": "academic-pipeline",
         "repository": "https://github.com/Imbad0202/academic-research-skills.git",
-        "revision": "77e77e871aeccf5b5740a3086903f914e58c4204"
+        "revision": "f2d109ea815f4b2f68a2eeee1ed9630bfc0cb302"
       }
     ]
   },
@@ -191,7 +191,7 @@
         "current": true,
         "path": "research-toolkit/skills/academic-writing",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -208,7 +208,7 @@
         "current": true,
         "path": "skills/academy-guide",
         "repository": "https://github.com/anthropics/skills.git",
-        "revision": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+        "revision": "ca45fc496a3436251f191354091d557da31c15b5"
       }
     ]
   },
@@ -230,7 +230,7 @@
         "current": true,
         "path": "external_plugins/discord/skills/access",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -247,7 +247,7 @@
         "current": true,
         "path": "external_plugins/telegram/skills/access",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -264,7 +264,7 @@
         "current": true,
         "path": "external_plugins/imessage/skills/access",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -285,7 +285,7 @@
         "current": true,
         "path": "plugins/ui-design/skills/accessibility-compliance",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -301,7 +301,7 @@
         "current": true,
         "path": "dev-toolkit/skills/accessibility-compliance",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -373,7 +373,7 @@
         "current": true,
         "path": "skills/adaptyv",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -459,7 +459,7 @@
         "current": true,
         "path": "skills/aeon",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -487,7 +487,7 @@
         "current": true,
         "path": "plugins/plugin-dev/skills/agent-development",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -565,7 +565,7 @@
         "current": true,
         "path": "plugins/skill-forge-essentials/skills/ai-debt-detector",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -624,7 +624,7 @@
         "current": true,
         "path": "journalism-core/skills/ai-writing-detox",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -641,7 +641,7 @@
         "current": true,
         "path": "plugins/data-engineering/skills/airflow-dag-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -675,7 +675,7 @@
         "current": true,
         "path": "skills/algorithmic-art",
         "repository": "https://github.com/anthropics/skills.git",
-        "revision": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+        "revision": "ca45fc496a3436251f191354091d557da31c15b5"
       }
     ]
   },
@@ -997,7 +997,7 @@
         "current": true,
         "path": "skills/alphagenome",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -1168,7 +1168,7 @@
         "current": true,
         "path": "skills/analytical-method-validation",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -1234,7 +1234,7 @@
         "current": true,
         "path": "plugins/framework-migration/skills/angular-migration",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -1251,7 +1251,7 @@
         "current": true,
         "path": "skills/anndata",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -1319,7 +1319,7 @@
         "current": true,
         "path": "plugins/reverse-engineering/skills/anti-reversing-techniques",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -1346,6 +1346,10 @@
     ]
   },
   "api-design-principles": {
+    "conflicts": [
+      "api-design-principles",
+      "api-design-principles--wshobson-agents--bdd7765e87"
+    ],
     "digest": "deb59c3c67ef9f93d35c4a0f09be3b90e53a87bf764fbdd16b323effaed64322",
     "name": "api-design-principles",
     "origins": [
@@ -1355,10 +1359,26 @@
         "path": "skills/api-design-principles"
       },
       {
-        "current": true,
+        "current": false,
         "path": "plugins/backend-development/skills/api-design-principles",
         "repository": "https://github.com/wshobson/agents.git",
         "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+      }
+    ]
+  },
+  "api-design-principles--wshobson-agents--bdd7765e87": {
+    "conflicts": [
+      "api-design-principles",
+      "api-design-principles--wshobson-agents--bdd7765e87"
+    ],
+    "digest": "bd00bd8b6c2d05b6b35ea5a6ac25d3484e265e867bfbd920a8543a8cee21f99c",
+    "name": "api-design-principles",
+    "origins": [
+      {
+        "current": true,
+        "path": "plugins/backend-development/skills/api-design-principles",
+        "repository": "https://github.com/wshobson/agents.git",
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -1375,7 +1395,7 @@
         "current": true,
         "path": "security-toolkit/skills/api-hardening",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -1392,7 +1412,7 @@
         "current": true,
         "path": "skills/arbor",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -1409,7 +1429,7 @@
         "current": true,
         "path": "skills/arboreto",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -1457,11 +1477,15 @@
         "current": true,
         "path": "plugins/documentation-generation/skills/architecture-decision-records",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
   "architecture-patterns": {
+    "conflicts": [
+      "architecture-patterns",
+      "architecture-patterns--wshobson-agents--0f84049a40"
+    ],
     "digest": "d323f3fe8196ae78a7362ca01e835456cbc5e7774efbeaf451a49eee13185f4e",
     "name": "architecture-patterns",
     "origins": [
@@ -1471,10 +1495,26 @@
         "path": "skills/architecture-patterns"
       },
       {
-        "current": true,
+        "current": false,
         "path": "plugins/backend-development/skills/architecture-patterns",
         "repository": "https://github.com/wshobson/agents.git",
         "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+      }
+    ]
+  },
+  "architecture-patterns--wshobson-agents--0f84049a40": {
+    "conflicts": [
+      "architecture-patterns",
+      "architecture-patterns--wshobson-agents--0f84049a40"
+    ],
+    "digest": "18c42c56383a5f63289210fc1d0d10d52a6c2be32d2e5620e6c7988093cfb713",
+    "name": "architecture-patterns",
+    "origins": [
+      {
+        "current": true,
+        "path": "plugins/backend-development/skills/architecture-patterns",
+        "repository": "https://github.com/wshobson/agents.git",
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -1649,7 +1689,7 @@
         "current": true,
         "path": "skills/astropy",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -1697,7 +1737,7 @@
         "current": true,
         "path": "plugins/python-development/skills/async-python-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -1798,7 +1838,7 @@
         "current": true,
         "path": "plugins/security-scanning/skills/attack-tree-construction",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -1822,14 +1862,14 @@
       "auth-implementation-patterns",
       "auth-implementation-patterns--wshobson-agents--6df4673752"
     ],
-    "digest": "c6cf23c4fba41fe12898fe04f467225bcc072fca2b135e02b8b57b3608061eee",
+    "digest": "0ec7d6d4dd54395c076947706c756b987b6431c1f60516ae1cca6828a31183d5",
     "name": "auth-implementation-patterns",
     "origins": [
       {
         "current": true,
         "path": "plugins/developer-essentials/skills/auth-implementation-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -1906,7 +1946,7 @@
         "current": true,
         "path": "skills/autoskill",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -1923,7 +1963,7 @@
         "current": true,
         "path": "plugins/avoid-ai-writing/skills/avoid-ai-writing",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -1951,7 +1991,7 @@
         "current": true,
         "path": "plugins/quantitative-trading/skills/backtesting-frameworks",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -2085,14 +2125,14 @@
       "bash-defensive-patterns",
       "bash-defensive-patterns--wshobson-agents--a83ae1bcf9"
     ],
-    "digest": "d643483fdf753f5a7cd642e14d0a1592816043f712a25b1f5f1298cb6b67c080",
+    "digest": "071cb68c661628fdd025a51d29ae34316d7a4a0a242db0b636f75eac55a124bf",
     "name": "bash-defensive-patterns",
     "origins": [
       {
         "current": true,
         "path": "plugins/shell-scripting/skills/bash-defensive-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -2230,7 +2270,7 @@
         "current": true,
         "path": "plugins/shell-scripting/skills/bats-testing-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -2292,7 +2332,7 @@
         "current": true,
         "path": "plugins/developer-essentials/skills/bazel-build-optimization",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -2402,7 +2442,7 @@
         "current": true,
         "path": "plugins/before-you-build/skills/before-you-build",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -2439,7 +2479,7 @@
         "current": true,
         "path": "skills/benchling-integration",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -2456,7 +2496,7 @@
         "current": true,
         "path": "skills/bgpt-paper-search",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -2473,7 +2513,7 @@
         "current": true,
         "path": "skills/bids",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -2511,7 +2551,7 @@
         "current": true,
         "path": "plugins/payment-processing/skills/billing-automation",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -2528,7 +2568,7 @@
         "current": true,
         "path": "plugins/reverse-engineering/skills/binary-analysis-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -8678,7 +8718,7 @@
         "current": true,
         "path": "skills/biopython",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -8746,7 +8786,7 @@
         "current": true,
         "path": "skills/bioservices",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -8833,7 +8873,7 @@
         "current": true,
         "path": "plugins/block-no-verify/skills/block-no-verify-hook",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -8949,7 +8989,7 @@
         "current": true,
         "path": "superjawn/skills/brainstorming",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -8983,7 +9023,7 @@
         "current": true,
         "path": "skills/brand-guidelines",
         "repository": "https://github.com/anthropics/skills.git",
-        "revision": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+        "revision": "ca45fc496a3436251f191354091d557da31c15b5"
       }
     ]
   },
@@ -9000,7 +9040,7 @@
         "current": true,
         "path": "plugins/brand-landingpage/skills/brand-landingpage",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -9017,7 +9057,7 @@
         "current": true,
         "path": "journalism-core/skills/brazil-records-requests",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -9051,7 +9091,7 @@
         "current": true,
         "path": "plugins/mcp-server-dev/skills/build-mcp-app",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -9068,7 +9108,7 @@
         "current": true,
         "path": "plugins/mcp-server-dev/skills/build-mcp-server",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -9085,7 +9125,7 @@
         "current": true,
         "path": "plugins/mcp-server-dev/skills/build-mcpb",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -9135,7 +9175,7 @@
         "current": true,
         "path": "skills/bulk-rnaseq",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -9296,7 +9336,7 @@
         "current": true,
         "path": "skills/cantera",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -9313,7 +9353,7 @@
         "current": true,
         "path": "skills/canvas-design",
         "repository": "https://github.com/anthropics/skills.git",
-        "revision": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+        "revision": "ca45fc496a3436251f191354091d557da31c15b5"
       }
     ]
   },
@@ -9330,7 +9370,7 @@
         "current": true,
         "path": "plugins/cwc-makers/skills/cardputer-buddy",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -9630,7 +9670,7 @@
         "current": true,
         "path": "skills/cellprofiler",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -9715,7 +9755,7 @@
         "current": true,
         "path": "skills/cellxgene-census",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -9770,7 +9810,7 @@
         "current": true,
         "path": "plugins/documentation-generation/skills/changelog-automation",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -9782,7 +9822,7 @@
         "current": true,
         "path": "newsroom-agent-ops/skills/chat-mention-triage",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -9810,7 +9850,7 @@
         "current": true,
         "path": "plugins/llm-finetuning/skills/checkpoint-promotion",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -10103,7 +10143,7 @@
         "current": true,
         "path": "skills/cirq",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -10142,7 +10182,7 @@
         "current": true,
         "path": "skills/citation-management",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -10220,7 +10260,7 @@
         "current": true,
         "path": "skills/claude-api",
         "repository": "https://github.com/anthropics/skills.git",
-        "revision": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+        "revision": "ca45fc496a3436251f191354091d557da31c15b5"
       }
     ]
   },
@@ -10237,7 +10277,7 @@
         "current": true,
         "path": "plugins/claude-code-setup/skills/claude-automation-recommender",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -10265,7 +10305,7 @@
         "current": true,
         "path": "plugins/claude-md-management/skills/claude-md-improver",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -10302,7 +10342,7 @@
         "current": true,
         "path": "dev-toolkit/skills/claude-md-updater",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -10319,7 +10359,7 @@
         "current": true,
         "path": "plugins/claude-security/skills/claude-security",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -10429,7 +10469,7 @@
         "current": true,
         "path": "skills/clinical-decision-support",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -10549,7 +10589,7 @@
         "current": true,
         "path": "skills/clinical-reports",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -11079,7 +11119,7 @@
         "current": true,
         "path": "skills/cobrapy",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -11127,7 +11167,7 @@
         "current": true,
         "path": "plugins/developer-essentials/skills/code-review-excellence",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -11252,7 +11292,7 @@
         "current": true,
         "path": "plugins/plugin-dev/skills/command-development",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -11387,7 +11427,7 @@
         "current": true,
         "path": "plugins/startup-business-analyst/skills/competitive-landscape",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -11469,7 +11509,7 @@
         "current": true,
         "path": "external_plugins/discord/skills/configure",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -11486,7 +11526,7 @@
         "current": true,
         "path": "external_plugins/imessage/skills/configure",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -11503,7 +11543,7 @@
         "current": true,
         "path": "external_plugins/telegram/skills/configure",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -11548,7 +11588,7 @@
         "current": true,
         "path": "plugins/incident-response/skills/connectivity-triage",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -11565,7 +11605,7 @@
         "current": true,
         "path": "skills/consciousness-council",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -11717,7 +11757,7 @@
         "current": true,
         "path": "research-toolkit/skills/content-access",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -11756,7 +11796,7 @@
         "current": true,
         "path": "plugins/conductor/skills/context-driven-development",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -11773,7 +11813,7 @@
         "current": true,
         "path": "dev-toolkit/skills/context-engineering-fundamentals",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -11917,7 +11957,7 @@
         "current": true,
         "path": "plugins/cloud-infrastructure/skills/cost-optimization",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -12053,7 +12093,7 @@
         "current": true,
         "path": "plugins/backend-development/skills/cqrs-implementation",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -12087,7 +12127,7 @@
         "current": true,
         "path": "journalism-core/skills/crisis-communications",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -12401,7 +12441,7 @@
         "current": true,
         "path": "skills/dask",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -12498,7 +12538,7 @@
         "current": true,
         "path": "journalism-core/skills/data-journalism",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -12536,7 +12576,7 @@
         "current": true,
         "path": "plugins/data-engineering/skills/data-quality-frameworks",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -12575,7 +12615,7 @@
         "current": true,
         "path": "plugins/business-analytics/skills/data-storytelling",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -12636,7 +12676,7 @@
         "current": true,
         "path": "skills/database-lookup",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -12653,7 +12693,7 @@
         "current": true,
         "path": "plugins/framework-migration/skills/database-migration",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -12692,7 +12732,7 @@
         "current": true,
         "path": "skills/datalad",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -12709,7 +12749,7 @@
         "current": true,
         "path": "skills/datamol",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -12743,7 +12783,7 @@
         "current": true,
         "path": "plugins/llm-finetuning/skills/dataset-curation",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -12823,7 +12863,7 @@
         "current": true,
         "path": "plugins/data-engineering/skills/dbt-transformation-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -12886,7 +12926,7 @@
         "current": true,
         "path": "newsroom-agent-ops/skills/deadline-and-reply-tracking",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -12917,7 +12957,7 @@
         "current": true,
         "path": "plugins/developer-essentials/skills/debugging-strategies",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -12965,7 +13005,7 @@
         "current": true,
         "path": "deep-research",
         "repository": "https://github.com/Imbad0202/academic-research-skills.git",
-        "revision": "77e77e871aeccf5b5740a3086903f914e58c4204"
+        "revision": "f2d109ea815f4b2f68a2eeee1ed9630bfc0cb302"
       }
     ]
   },
@@ -13024,7 +13064,7 @@
         "current": true,
         "path": "skills/deepchem",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -13041,7 +13081,7 @@
         "current": true,
         "path": "skills/deepspot-m",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -13058,7 +13098,7 @@
         "current": true,
         "path": "skills/deeptools",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -13113,7 +13153,7 @@
         "current": true,
         "path": "plugins/blockchain-web3/skills/defi-protocol-templates",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -13158,7 +13198,7 @@
         "current": true,
         "path": "plugins/framework-migration/skills/dependency-upgrade",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -13174,6 +13214,10 @@
     ]
   },
   "deployment-pipeline-design": {
+    "conflicts": [
+      "deployment-pipeline-design",
+      "deployment-pipeline-design--wshobson-agents--27f84fe542"
+    ],
     "digest": "f210c245d327a5232422ec1a061c5f1ceb3fd2e59f8520e8972f737fddf64bc8",
     "name": "deployment-pipeline-design",
     "origins": [
@@ -13183,10 +13227,26 @@
         "path": "skills/deployment-pipeline-design"
       },
       {
-        "current": true,
+        "current": false,
         "path": "plugins/cicd-automation/skills/deployment-pipeline-design",
         "repository": "https://github.com/wshobson/agents.git",
         "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+      }
+    ]
+  },
+  "deployment-pipeline-design--wshobson-agents--27f84fe542": {
+    "conflicts": [
+      "deployment-pipeline-design",
+      "deployment-pipeline-design--wshobson-agents--27f84fe542"
+    ],
+    "digest": "2b900b4462c4ce5864c5ea6648df5983e3bceb830b55ea1ce1bed9f02d022b26",
+    "name": "deployment-pipeline-design",
+    "origins": [
+      {
+        "current": true,
+        "path": "plugins/cicd-automation/skills/deployment-pipeline-design",
+        "repository": "https://github.com/wshobson/agents.git",
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -13203,7 +13263,7 @@
         "current": true,
         "path": "skills/depmap",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -13271,7 +13331,7 @@
         "current": true,
         "path": "plugins/ui-design/skills/design-system-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -13288,7 +13348,7 @@
         "current": true,
         "path": "skills/dhdna-profiler",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -13383,7 +13443,7 @@
         "current": true,
         "path": "skills/diffdock",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -13665,7 +13725,7 @@
         "current": true,
         "path": "research-toolkit/skills/digital-archive",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -13730,7 +13790,7 @@
         "current": true,
         "path": "dev-toolkit/skills/director",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -13747,7 +13807,7 @@
         "current": true,
         "path": "skills/discernment-nudge",
         "repository": "https://github.com/anthropics/skills.git",
-        "revision": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+        "revision": "ca45fc496a3436251f191354091d557da31c15b5"
       }
     ]
   },
@@ -13784,7 +13844,7 @@
         "current": true,
         "path": "superjawn/skills/dispatching-parallel-agents",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -13822,7 +13882,7 @@
         "current": true,
         "path": "plugins/observability-monitoring/skills/distributed-tracing",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -13970,7 +14030,7 @@
         "current": true,
         "path": "skills/dnanexus-integration",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -13987,7 +14047,7 @@
         "current": true,
         "path": "skills/doc-coauthoring",
         "repository": "https://github.com/anthropics/skills.git",
-        "revision": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+        "revision": "ca45fc496a3436251f191354091d557da31c15b5"
       }
     ]
   },
@@ -14010,7 +14070,7 @@
         "current": true,
         "path": "newsroom-agent-ops/skills/document-delivery",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -14047,7 +14107,7 @@
         "current": true,
         "path": "pdf-playground/skills/document-design",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -14069,7 +14129,7 @@
         "current": true,
         "path": "skills/docx",
         "repository": "https://github.com/anthropics/skills.git",
-        "revision": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+        "revision": "ca45fc496a3436251f191354091d557da31c15b5"
       }
     ]
   },
@@ -14131,7 +14191,7 @@
         "current": true,
         "path": "plugins/dotnet-contribution/skills/dotnet-backend-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -14331,7 +14391,7 @@
         "current": true,
         "path": "plugins/developer-essentials/skills/e2e-testing-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -14376,7 +14436,7 @@
         "current": true,
         "path": "journalism-core/skills/editorial-workflow",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -14472,7 +14532,7 @@
         "current": true,
         "path": "dev-toolkit/skills/electron-dev",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -14501,7 +14561,7 @@
         "current": true,
         "path": "newsroom-agent-ops/skills/email-request-intake",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -14518,7 +14578,7 @@
         "current": true,
         "path": "plugins/llm-application-dev/skills/embedding-strategies",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -14580,7 +14640,7 @@
         "current": true,
         "path": "plugins/hr-legal-compliance/skills/employment-contract-templates",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -14921,6 +14981,10 @@
     ]
   },
   "error-handling-patterns": {
+    "conflicts": [
+      "error-handling-patterns",
+      "error-handling-patterns--wshobson-agents--2c5fa93d11"
+    ],
     "digest": "ed9fbfba4bf001315f659913cfb7b64151ab4910f9a18f9f54c447f5148ceee4",
     "name": "error-handling-patterns",
     "origins": [
@@ -14930,10 +14994,26 @@
         "path": "skills/error-handling-patterns"
       },
       {
-        "current": true,
+        "current": false,
         "path": "plugins/developer-essentials/skills/error-handling-patterns",
         "repository": "https://github.com/wshobson/agents.git",
         "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+      }
+    ]
+  },
+  "error-handling-patterns--wshobson-agents--2c5fa93d11": {
+    "conflicts": [
+      "error-handling-patterns",
+      "error-handling-patterns--wshobson-agents--2c5fa93d11"
+    ],
+    "digest": "d3db9378ccec389280e025fc403f7817d089044569547359ad923f72edefe874",
+    "name": "error-handling-patterns",
+    "origins": [
+      {
+        "current": true,
+        "path": "plugins/developer-essentials/skills/error-handling-patterns",
+        "repository": "https://github.com/wshobson/agents.git",
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -14970,7 +15050,7 @@
         "current": true,
         "path": "skills/esm",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -15024,7 +15104,7 @@
         "current": true,
         "path": "skills/etetoolkit",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -15069,7 +15149,7 @@
         "current": true,
         "path": "plugins/llm-finetuning/skills/eval-harness-first",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -15086,7 +15166,7 @@
         "current": true,
         "path": "plugins/plugin-eval/skills/evaluation-methodology",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -15103,7 +15183,7 @@
         "current": true,
         "path": "plugins/backend-development/skills/event-store-design",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -15137,7 +15217,7 @@
         "current": true,
         "path": "skills/exa-search",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -15154,7 +15234,7 @@
         "current": true,
         "path": "plugins/example-plugin/skills/example-command",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -15171,7 +15251,7 @@
         "current": true,
         "path": "plugins/example-plugin/skills/example-skill",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -15210,7 +15290,7 @@
         "current": true,
         "path": "superjawn/skills/executing-plans",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -15255,7 +15335,7 @@
         "current": true,
         "path": "skills/experimental-design",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -15292,7 +15372,7 @@
         "current": true,
         "path": "skills/exploratory-data-analysis",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -15330,7 +15410,7 @@
         "current": true,
         "path": "journalism-core/skills/fact-check-workflow",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -15383,7 +15463,7 @@
         "current": true,
         "path": "plugins/api-scaffolding/skills/fastapi-templates",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -15589,7 +15669,7 @@
         "current": true,
         "path": "skills/fictiv",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -15627,7 +15707,7 @@
         "current": true,
         "path": "plugins/file-conversion/skills/file-conversion",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -15718,7 +15798,7 @@
         "current": true,
         "path": "plugins/llm-finetuning/skills/finetuning-method-selection",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -15755,7 +15835,7 @@
         "current": true,
         "path": "superjawn/skills/finishing-a-development-branch",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -15800,7 +15880,7 @@
         "current": true,
         "path": "skills/flowio",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -15834,7 +15914,7 @@
         "current": true,
         "path": "skills/flowkit",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -15851,7 +15931,7 @@
         "current": true,
         "path": "skills/fluidsim",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -15926,7 +16006,7 @@
         "current": true,
         "path": "journalism-core/skills/foia-requests",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -15977,7 +16057,7 @@
         "current": true,
         "path": "skills/folklore-variant-evidence",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -16123,7 +16203,7 @@
         "current": true,
         "path": "research-toolkit/skills/free-apis-catalog",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -16157,13 +16237,13 @@
         "current": true,
         "path": "plugins/frontend-design/skills/frontend-design",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       },
       {
         "current": true,
         "path": "skills/frontend-design",
         "repository": "https://github.com/anthropics/skills.git",
-        "revision": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+        "revision": "ca45fc496a3436251f191354091d557da31c15b5"
       }
     ]
   },
@@ -16347,7 +16427,7 @@
         "current": true,
         "path": "plugins/hr-legal-compliance/skills/gdpr-data-handling",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -16517,7 +16597,7 @@
         "current": true,
         "path": "skills/generate-image",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -16588,7 +16668,7 @@
         "current": true,
         "path": "skills/geniml",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -16724,7 +16804,7 @@
         "current": true,
         "path": "skills/genomic-coordinates",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -16741,7 +16821,7 @@
         "current": true,
         "path": "skills/genomic-intelligence",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -16834,7 +16914,7 @@
         "current": true,
         "path": "skills/geomaster",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -16868,7 +16948,7 @@
         "current": true,
         "path": "skills/geopandas",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -16936,7 +17016,7 @@
         "current": true,
         "path": "skills/get-available-resources",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -16953,7 +17033,7 @@
         "current": true,
         "path": "skills/gget",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -17008,7 +17088,7 @@
         "current": true,
         "path": "skills/ginkgo-cloud-lab",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -17039,7 +17119,7 @@
         "current": true,
         "path": "plugins/developer-essentials/skills/git-advanced-workflows",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -17056,7 +17136,7 @@
         "current": true,
         "path": "plugins/cicd-automation/skills/github-actions-templates",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -17073,7 +17153,7 @@
         "current": true,
         "path": "plugins/cicd-automation/skills/gitlab-ci-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -17090,7 +17170,7 @@
         "current": true,
         "path": "plugins/kubernetes-operations/skills/gitops-workflow",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -17107,7 +17187,7 @@
         "current": true,
         "path": "skills/glycoengineering",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -17175,6 +17255,10 @@
     ]
   },
   "go-concurrency-patterns": {
+    "conflicts": [
+      "go-concurrency-patterns",
+      "go-concurrency-patterns--wshobson-agents--5252a38420"
+    ],
     "digest": "2f539549f34afa5adf0b6780887f2d0f1a662d1820b86e33591a637b6130015b",
     "name": "go-concurrency-patterns",
     "origins": [
@@ -17184,10 +17268,26 @@
         "path": "skills/go-concurrency-patterns"
       },
       {
-        "current": true,
+        "current": false,
         "path": "plugins/systems-programming/skills/go-concurrency-patterns",
         "repository": "https://github.com/wshobson/agents.git",
         "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+      }
+    ]
+  },
+  "go-concurrency-patterns--wshobson-agents--5252a38420": {
+    "conflicts": [
+      "go-concurrency-patterns",
+      "go-concurrency-patterns--wshobson-agents--5252a38420"
+    ],
+    "digest": "262de0483b30f10b2874476e90d076ab2b330f2f3197d0cf798c9b64c6dfefe1",
+    "name": "go-concurrency-patterns",
+    "origins": [
+      {
+        "current": true,
+        "path": "plugins/systems-programming/skills/go-concurrency-patterns",
+        "repository": "https://github.com/wshobson/agents.git",
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -17224,14 +17324,14 @@
     ]
   },
   "goal-progress-bar": {
-    "digest": "89a051aa3640b358c52711ec29e31d436f8dfbb5945c4bdaf9d50805fb587652",
+    "digest": "a550b1906dacae30dd9a26040dea893ac1a4c8f97c4d236b4f5fa31213530baa",
     "name": "goal-progress-bar",
     "origins": [
       {
         "current": true,
         "path": "project-templates-toolkit/skills/goal-progress-bar",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -17248,7 +17348,7 @@
         "current": true,
         "path": "plugins/game-development/skills/godot-gdscript-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -17304,7 +17404,7 @@
         "current": true,
         "path": "plugins/observability-monitoring/skills/grafana-dashboards",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -17387,7 +17487,7 @@
         "current": true,
         "path": "plugins/documentation-standards/skills/grounded-vault",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -17404,7 +17504,7 @@
         "current": true,
         "path": "plugins/llm-finetuning/skills/grpo-rlvr-training",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -17490,7 +17590,7 @@
         "current": true,
         "path": "skills/gtars",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -17641,7 +17741,7 @@
         "current": true,
         "path": "plugins/documentation-standards/skills/hads",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -17789,7 +17889,7 @@
         "current": true,
         "path": "plugins/kubernetes-operations/skills/helm-chart-scaffolding",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -17834,7 +17934,7 @@
         "current": true,
         "path": "plugins/hermes-tweet/skills/hermes-tweet",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -18043,7 +18143,7 @@
         "current": true,
         "path": "skills/histolab",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -18153,7 +18253,7 @@
         "current": true,
         "path": "plugins/plugin-dev/skills/hook-development",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -18209,7 +18309,7 @@
         "current": true,
         "path": "skills/hugging-science",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -18243,7 +18343,7 @@
         "current": true,
         "path": "plugins/cloud-infrastructure/skills/hybrid-cloud-networking",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -18260,7 +18360,7 @@
         "current": true,
         "path": "plugins/llm-application-dev/skills/hybrid-search-implementation",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -18277,7 +18377,7 @@
         "current": true,
         "path": "skills/hypogenic",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -18333,7 +18433,7 @@
         "current": true,
         "path": "skills/hypothesis-generation",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -18420,7 +18520,7 @@
         "current": true,
         "path": "skills/imaging-data-commons",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -18549,7 +18649,7 @@
         "current": true,
         "path": "plugins/incident-response/skills/incident-runbook-templates",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -18598,7 +18698,7 @@
         "current": true,
         "path": "skills/infographics",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -18677,7 +18777,7 @@
         "current": true,
         "path": "plugins/ui-design/skills/interaction-design",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -18753,7 +18853,7 @@
         "current": true,
         "path": "skills/internal-comms",
         "repository": "https://github.com/anthropics/skills.git",
-        "revision": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+        "revision": "ca45fc496a3436251f191354091d557da31c15b5"
       }
     ]
   },
@@ -18833,7 +18933,7 @@
         "current": true,
         "path": "journalism-core/skills/interview-prep",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -18870,7 +18970,7 @@
         "current": true,
         "path": "journalism-core/skills/interview-transcription",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -18965,7 +19065,7 @@
         "current": true,
         "path": "skills/iso-standards-readiness",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -19036,7 +19136,7 @@
         "current": true,
         "path": "newsroom-agent-ops/skills/issue-pool-progression",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -19053,7 +19153,7 @@
         "current": true,
         "path": "plugins/cloud-infrastructure/skills/istio-traffic-management",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -19155,7 +19255,7 @@
         "current": true,
         "path": "plugins/javascript-typescript/skills/javascript-testing-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -19224,6 +19324,10 @@
     ]
   },
   "k8s-manifest-generator": {
+    "conflicts": [
+      "k8s-manifest-generator",
+      "k8s-manifest-generator--wshobson-agents--a173864007"
+    ],
     "digest": "e13240e64e602303927226e7fd53c15bf3eb393ebd92088116ebabcd2db723d6",
     "name": "k8s-manifest-generator",
     "origins": [
@@ -19233,10 +19337,26 @@
         "path": "skills/k8s-manifest-generator"
       },
       {
-        "current": true,
+        "current": false,
         "path": "plugins/kubernetes-operations/skills/k8s-manifest-generator",
         "repository": "https://github.com/wshobson/agents.git",
         "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+      }
+    ]
+  },
+  "k8s-manifest-generator--wshobson-agents--a173864007": {
+    "conflicts": [
+      "k8s-manifest-generator",
+      "k8s-manifest-generator--wshobson-agents--a173864007"
+    ],
+    "digest": "eda242ea72925ec8cb2f034637af9e068e3489451d843a5b9109c47ae1cada76",
+    "name": "k8s-manifest-generator",
+    "origins": [
+      {
+        "current": true,
+        "path": "plugins/kubernetes-operations/skills/k8s-manifest-generator",
+        "repository": "https://github.com/wshobson/agents.git",
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -19253,7 +19373,7 @@
         "current": true,
         "path": "plugins/kubernetes-operations/skills/k8s-security-policies",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -19408,7 +19528,7 @@
         "current": true,
         "path": "plugins/business-analytics/skills/kpi-dashboard-design",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -19457,7 +19577,7 @@
         "current": true,
         "path": "skills/lab-hardware-cad",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -19485,7 +19605,7 @@
         "current": true,
         "path": "skills/labarchive-integration",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -19513,7 +19633,7 @@
         "current": true,
         "path": "skills/lamindb",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -19581,7 +19701,7 @@
         "current": true,
         "path": "plugins/llm-application-dev/skills/langchain-architecture",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -19653,7 +19773,7 @@
         "current": true,
         "path": "skills/latchbio-integration",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -19702,7 +19822,7 @@
         "current": true,
         "path": "skills/latex-posters",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -19855,7 +19975,7 @@
         "current": true,
         "path": "plugins/cloud-infrastructure/skills/linkerd-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -19943,7 +20063,7 @@
         "current": true,
         "path": "skills/liteparse",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -19982,7 +20102,7 @@
         "current": true,
         "path": "skills/literature-review",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -20147,7 +20267,7 @@
         "current": true,
         "path": "plugins/llm-application-dev/skills/llm-evaluation",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -20387,7 +20507,7 @@
         "current": true,
         "path": "plugins/llm-finetuning/skills/lora-qlora-recipes",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -20404,7 +20524,7 @@
         "current": true,
         "path": "plugins/cwc-makers/skills/m5-onboard",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -20529,7 +20649,7 @@
         "current": true,
         "path": "skills/mageck",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -20584,7 +20704,7 @@
         "current": true,
         "path": "skills/marine-carbonate-chemistry",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -20601,7 +20721,7 @@
         "current": true,
         "path": "skills/markdown-mermaid-writing",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -20682,7 +20802,7 @@
         "current": true,
         "path": "skills/market-research-reports",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -20699,7 +20819,7 @@
         "current": true,
         "path": "plugins/startup-business-analyst/skills/market-sizing-analysis",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -20748,7 +20868,7 @@
         "current": true,
         "path": "skills/markitdown",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -20765,7 +20885,7 @@
         "current": true,
         "path": "skills/matchms",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -20799,7 +20919,7 @@
         "current": true,
         "path": "plugins/math-olympiad/skills/math-olympiad",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -20816,7 +20936,7 @@
         "current": true,
         "path": "skills/matlab",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -20850,7 +20970,7 @@
         "current": true,
         "path": "skills/matplotlib",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -20927,6 +21047,10 @@
     ]
   },
   "mcp-builder": {
+    "conflicts": [
+      "mcp-builder",
+      "mcp-builder--anthropics-skills--0699d49979"
+    ],
     "digest": "d110ef1dd9cb8bfa9685c6750691bc9b819386463e962071493bb185c188ecd7",
     "name": "mcp-builder",
     "origins": [
@@ -20936,10 +21060,26 @@
         "path": "skills/mcp-builder"
       },
       {
-        "current": true,
+        "current": false,
         "path": "skills/mcp-builder",
         "repository": "https://github.com/anthropics/skills.git",
         "revision": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+      }
+    ]
+  },
+  "mcp-builder--anthropics-skills--0699d49979": {
+    "conflicts": [
+      "mcp-builder",
+      "mcp-builder--anthropics-skills--0699d49979"
+    ],
+    "digest": "03ef27b32069dcd903d440bc825812ecb394013b4a5a20866ea7e8da5d53b23a",
+    "name": "mcp-builder",
+    "origins": [
+      {
+        "current": true,
+        "path": "skills/mcp-builder",
+        "repository": "https://github.com/anthropics/skills.git",
+        "revision": "ca45fc496a3436251f191354091d557da31c15b5"
       }
     ]
   },
@@ -20956,7 +21096,7 @@
         "current": true,
         "path": "plugins/plugin-dev/skills/mcp-integration",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -21066,7 +21206,7 @@
         "current": true,
         "path": "skills/medchem",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -21154,7 +21294,7 @@
         "current": true,
         "path": "journalism-core/skills/meeting-transcript-actions",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -21171,7 +21311,7 @@
         "current": true,
         "path": "plugins/reverse-engineering/skills/memory-forensics",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -21188,7 +21328,7 @@
         "current": true,
         "path": "plugins/systems-programming/skills/memory-safety-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -21659,6 +21799,10 @@
     ]
   },
   "microservices-patterns": {
+    "conflicts": [
+      "microservices-patterns",
+      "microservices-patterns--wshobson-agents--32cdde4c24"
+    ],
     "digest": "8ef6e4ee4fe4a5292932c8b3b2b28c7d3d67f66273d2f9fe26da0669e68a34ed",
     "name": "microservices-patterns",
     "origins": [
@@ -21668,10 +21812,26 @@
         "path": "skills/microservices-patterns"
       },
       {
-        "current": true,
+        "current": false,
         "path": "plugins/backend-development/skills/microservices-patterns",
         "repository": "https://github.com/wshobson/agents.git",
         "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+      }
+    ]
+  },
+  "microservices-patterns--wshobson-agents--32cdde4c24": {
+    "conflicts": [
+      "microservices-patterns",
+      "microservices-patterns--wshobson-agents--32cdde4c24"
+    ],
+    "digest": "6bbdceb9e09b10025f2b696429de9d13ffd243fb43658ddb9911b84c768598b1",
+    "name": "microservices-patterns",
+    "origins": [
+      {
+        "current": true,
+        "path": "plugins/backend-development/skills/microservices-patterns",
+        "repository": "https://github.com/wshobson/agents.git",
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -21806,7 +21966,7 @@
         "current": true,
         "path": "plugins/machine-learning-ops/skills/ml-pipeline-workflow",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -21823,7 +21983,7 @@
         "current": true,
         "path": "plugins/ui-design/skills/mobile-android-design",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -21840,7 +22000,7 @@
         "current": true,
         "path": "dev-toolkit/skills/mobile-debugging",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -21857,7 +22017,7 @@
         "current": true,
         "path": "plugins/ui-design/skills/mobile-ios-design",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -21874,7 +22034,7 @@
         "current": true,
         "path": "skills/modal",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -21944,7 +22104,7 @@
         "current": true,
         "path": "plugins/javascript-typescript/skills/modern-javascript-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -22083,7 +22243,7 @@
         "current": true,
         "path": "skills/molecular-dynamics",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -22177,7 +22337,7 @@
         "current": true,
         "path": "skills/molfeat",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -22242,7 +22402,7 @@
         "current": true,
         "path": "plugins/developer-essentials/skills/monorepo-management",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -22469,7 +22629,7 @@
         "current": true,
         "path": "plugins/cloud-infrastructure/skills/mtls-configuration",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -22481,7 +22641,7 @@
         "current": true,
         "path": "newsroom-agent-ops/skills/multi-agent-coordinator",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -22509,7 +22669,7 @@
         "current": true,
         "path": "plugins/cloud-infrastructure/skills/multi-cloud-architecture",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -22547,7 +22707,7 @@
         "current": true,
         "path": "plugins/agent-teams/skills/multi-reviewer-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -22913,7 +23073,7 @@
         "current": true,
         "path": "skills/nature-academic-search",
         "repository": "https://github.com/Yuan1z0825/nature-skills.git",
-        "revision": "07009f91f99c7108519e7657885f1a89d91099d5"
+        "revision": "c1cee246a489a676e3c80cae9e282da4b58cf19a"
       }
     ]
   },
@@ -22950,7 +23110,7 @@
         "current": true,
         "path": "skills/nature-citation",
         "repository": "https://github.com/Yuan1z0825/nature-skills.git",
-        "revision": "07009f91f99c7108519e7657885f1a89d91099d5"
+        "revision": "c1cee246a489a676e3c80cae9e282da4b58cf19a"
       }
     ]
   },
@@ -22967,7 +23127,7 @@
         "current": true,
         "path": "skills/nature-data",
         "repository": "https://github.com/Yuan1z0825/nature-skills.git",
-        "revision": "07009f91f99c7108519e7657885f1a89d91099d5"
+        "revision": "c1cee246a489a676e3c80cae9e282da4b58cf19a"
       }
     ]
   },
@@ -23004,7 +23164,7 @@
         "current": true,
         "path": "skills/nature-downloader",
         "repository": "https://github.com/Yuan1z0825/nature-skills.git",
-        "revision": "07009f91f99c7108519e7657885f1a89d91099d5"
+        "revision": "c1cee246a489a676e3c80cae9e282da4b58cf19a"
       }
     ]
   },
@@ -23021,7 +23181,7 @@
         "current": true,
         "path": "skills/nature-experiment-log",
         "repository": "https://github.com/Yuan1z0825/nature-skills.git",
-        "revision": "07009f91f99c7108519e7657885f1a89d91099d5"
+        "revision": "c1cee246a489a676e3c80cae9e282da4b58cf19a"
       }
     ]
   },
@@ -23058,7 +23218,7 @@
         "current": true,
         "path": "skills/nature-figure",
         "repository": "https://github.com/Yuan1z0825/nature-skills.git",
-        "revision": "07009f91f99c7108519e7657885f1a89d91099d5"
+        "revision": "c1cee246a489a676e3c80cae9e282da4b58cf19a"
       }
     ]
   },
@@ -23112,7 +23272,7 @@
         "current": true,
         "path": "skills/nature-image2ppt",
         "repository": "https://github.com/Yuan1z0825/nature-skills.git",
-        "revision": "07009f91f99c7108519e7657885f1a89d91099d5"
+        "revision": "c1cee246a489a676e3c80cae9e282da4b58cf19a"
       }
     ]
   },
@@ -23129,7 +23289,7 @@
         "current": true,
         "path": "skills/nature-literature-pipeline",
         "repository": "https://github.com/Yuan1z0825/nature-skills.git",
-        "revision": "07009f91f99c7108519e7657885f1a89d91099d5"
+        "revision": "c1cee246a489a676e3c80cae9e282da4b58cf19a"
       }
     ]
   },
@@ -23166,7 +23326,7 @@
         "current": true,
         "path": "skills/nature-paper-card",
         "repository": "https://github.com/Yuan1z0825/nature-skills.git",
-        "revision": "07009f91f99c7108519e7657885f1a89d91099d5"
+        "revision": "c1cee246a489a676e3c80cae9e282da4b58cf19a"
       }
     ]
   },
@@ -23183,7 +23343,7 @@
         "current": true,
         "path": "skills/nature-paper-to-patent",
         "repository": "https://github.com/Yuan1z0825/nature-skills.git",
-        "revision": "07009f91f99c7108519e7657885f1a89d91099d5"
+        "revision": "c1cee246a489a676e3c80cae9e282da4b58cf19a"
       }
     ]
   },
@@ -23220,7 +23380,7 @@
         "current": true,
         "path": "skills/nature-paper-trans",
         "repository": "https://github.com/Yuan1z0825/nature-skills.git",
-        "revision": "07009f91f99c7108519e7657885f1a89d91099d5"
+        "revision": "c1cee246a489a676e3c80cae9e282da4b58cf19a"
       }
     ]
   },
@@ -23237,7 +23397,7 @@
         "current": true,
         "path": "skills/nature-paper-xray",
         "repository": "https://github.com/Yuan1z0825/nature-skills.git",
-        "revision": "07009f91f99c7108519e7657885f1a89d91099d5"
+        "revision": "c1cee246a489a676e3c80cae9e282da4b58cf19a"
       }
     ]
   },
@@ -23274,7 +23434,19 @@
         "current": true,
         "path": "skills/nature-paper2ppt",
         "repository": "https://github.com/Yuan1z0825/nature-skills.git",
-        "revision": "07009f91f99c7108519e7657885f1a89d91099d5"
+        "revision": "c1cee246a489a676e3c80cae9e282da4b58cf19a"
+      }
+    ]
+  },
+  "nature-paper2word": {
+    "digest": "f5f0e75ee4326632d2496db4094ba8c6e22b532be1e561817b37fe84c2b5fc45",
+    "name": "nature-paper2word",
+    "origins": [
+      {
+        "current": true,
+        "path": "skills/nature-paper2word",
+        "repository": "https://github.com/Yuan1z0825/nature-skills.git",
+        "revision": "c1cee246a489a676e3c80cae9e282da4b58cf19a"
       }
     ]
   },
@@ -23291,7 +23463,7 @@
         "current": true,
         "path": "skills/nature-polishing",
         "repository": "https://github.com/Yuan1z0825/nature-skills.git",
-        "revision": "07009f91f99c7108519e7657885f1a89d91099d5"
+        "revision": "c1cee246a489a676e3c80cae9e282da4b58cf19a"
       }
     ]
   },
@@ -23328,7 +23500,7 @@
         "current": true,
         "path": "skills/nature-proposal-writer",
         "repository": "https://github.com/Yuan1z0825/nature-skills.git",
-        "revision": "07009f91f99c7108519e7657885f1a89d91099d5"
+        "revision": "c1cee246a489a676e3c80cae9e282da4b58cf19a"
       }
     ]
   },
@@ -23345,7 +23517,7 @@
         "current": true,
         "path": "skills/nature-reader",
         "repository": "https://github.com/Yuan1z0825/nature-skills.git",
-        "revision": "07009f91f99c7108519e7657885f1a89d91099d5"
+        "revision": "c1cee246a489a676e3c80cae9e282da4b58cf19a"
       }
     ]
   },
@@ -23362,7 +23534,7 @@
         "current": true,
         "path": "skills/nature-ref-verifier",
         "repository": "https://github.com/Yuan1z0825/nature-skills.git",
-        "revision": "07009f91f99c7108519e7657885f1a89d91099d5"
+        "revision": "c1cee246a489a676e3c80cae9e282da4b58cf19a"
       }
     ]
   },
@@ -23379,7 +23551,7 @@
         "current": true,
         "path": "skills/nature-response",
         "repository": "https://github.com/Yuan1z0825/nature-skills.git",
-        "revision": "07009f91f99c7108519e7657885f1a89d91099d5"
+        "revision": "c1cee246a489a676e3c80cae9e282da4b58cf19a"
       }
     ]
   },
@@ -23396,7 +23568,7 @@
         "current": true,
         "path": "skills/nature-reviewer",
         "repository": "https://github.com/Yuan1z0825/nature-skills.git",
-        "revision": "07009f91f99c7108519e7657885f1a89d91099d5"
+        "revision": "c1cee246a489a676e3c80cae9e282da4b58cf19a"
       }
     ]
   },
@@ -23413,7 +23585,7 @@
         "current": true,
         "path": "skills/nature-shared",
         "repository": "https://github.com/Yuan1z0825/nature-skills.git",
-        "revision": "07009f91f99c7108519e7657885f1a89d91099d5"
+        "revision": "c1cee246a489a676e3c80cae9e282da4b58cf19a"
       }
     ]
   },
@@ -23430,7 +23602,7 @@
         "current": true,
         "path": "skills/nature-social-science",
         "repository": "https://github.com/Yuan1z0825/nature-skills.git",
-        "revision": "07009f91f99c7108519e7657885f1a89d91099d5"
+        "revision": "c1cee246a489a676e3c80cae9e282da4b58cf19a"
       }
     ]
   },
@@ -23447,7 +23619,7 @@
         "current": true,
         "path": "skills/nature-statistics",
         "repository": "https://github.com/Yuan1z0825/nature-skills.git",
-        "revision": "07009f91f99c7108519e7657885f1a89d91099d5"
+        "revision": "c1cee246a489a676e3c80cae9e282da4b58cf19a"
       }
     ]
   },
@@ -23464,7 +23636,7 @@
         "current": true,
         "path": "skills/nature-writing",
         "repository": "https://github.com/Yuan1z0825/nature-skills.git",
-        "revision": "07009f91f99c7108519e7657885f1a89d91099d5"
+        "revision": "c1cee246a489a676e3c80cae9e282da4b58cf19a"
       }
     ]
   },
@@ -23481,7 +23653,7 @@
         "current": true,
         "path": "skills/ncats-arax",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -23659,7 +23831,7 @@
         "current": true,
         "path": "skills/networkx",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -23713,7 +23885,7 @@
         "current": true,
         "path": "skills/neurokit2",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -23750,7 +23922,7 @@
         "current": true,
         "path": "skills/neuropixels-analysis",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -23767,7 +23939,7 @@
         "current": true,
         "path": "journalism-core/skills/newsletter-publishing",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -23784,7 +23956,7 @@
         "current": true,
         "path": "journalism-core/skills/newsroom-style",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -23801,7 +23973,7 @@
         "current": true,
         "path": "skills/nextflow",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -23867,7 +24039,7 @@
         "current": true,
         "path": "plugins/frontend-mobile-development/skills/nextjs-app-router-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -23901,7 +24073,7 @@
         "current": true,
         "path": "plugins/blockchain-web3/skills/nft-standards",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -23951,7 +24123,7 @@
         "current": true,
         "path": "skills/nmrglue",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -23985,7 +24157,7 @@
         "current": true,
         "path": "plugins/javascript-typescript/skills/nodejs-backend-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -24116,7 +24288,7 @@
         "current": true,
         "path": "skills/nwb-conversion",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -24133,7 +24305,7 @@
         "current": true,
         "path": "plugins/developer-essentials/skills/nx-workspace-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -24195,14 +24367,14 @@
       "okf-wiki",
       "okf-wiki--journalism--71091fe37c"
     ],
-    "digest": "6ae7bce59f435258f3d1d8002226bae79a95eeafe6d8061ac4f15aea6bcdf30a",
+    "digest": "43dcf4b613f0b46c4237fb9dc89f534a432c532075de843891fac43810354e4e",
     "name": "okf-wiki",
     "origins": [
       {
         "current": true,
         "path": "okf-wiki",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -24239,7 +24411,7 @@
         "current": true,
         "path": "skills/omero-integration",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -24311,7 +24483,7 @@
         "current": true,
         "path": "plugins/incident-response/skills/on-call-handoff-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -24365,7 +24537,7 @@
         "current": true,
         "path": "dev-toolkit/skills/one-way-door",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -24382,7 +24554,7 @@
         "current": true,
         "path": "skills/onekgpd",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -24421,7 +24593,7 @@
         "current": true,
         "path": "skills/ontology-term-resolution",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -24449,7 +24621,7 @@
         "current": true,
         "path": "skills/open-notebook",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -24494,7 +24666,7 @@
         "current": true,
         "path": "plugins/documentation-generation/skills/openapi-spec-generation",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -24556,7 +24728,7 @@
         "current": true,
         "path": "skills/openpiv",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -24635,7 +24807,7 @@
         "current": true,
         "path": "skills/opentrons-integration",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -24680,7 +24852,7 @@
         "current": true,
         "path": "skills/optimize-for-gpu",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -24817,7 +24989,7 @@
         "current": true,
         "path": "skills/pacsomatic",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -24834,7 +25006,7 @@
         "current": true,
         "path": "research-toolkit/skills/page-monitoring",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -24932,7 +25104,7 @@
         "current": true,
         "path": "skills/paper-lookup",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -24949,7 +25121,7 @@
         "current": true,
         "path": "skills/paperclip",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -24966,7 +25138,7 @@
         "current": true,
         "path": "skills/paperzilla",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -24983,7 +25155,7 @@
         "current": true,
         "path": "plugins/agent-teams/skills/parallel-debugging",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -25000,7 +25172,7 @@
         "current": true,
         "path": "plugins/agent-teams/skills/parallel-feature-development",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -25049,7 +25221,7 @@
         "current": true,
         "path": "skills/parallel-web",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -25108,7 +25280,7 @@
         "current": true,
         "path": "skills/pathml",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -25146,7 +25318,7 @@
         "current": true,
         "path": "skills/pathogen-variant-surveillance",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -25163,7 +25335,7 @@
         "current": true,
         "path": "skills/pathway-enrichment",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -25212,7 +25384,7 @@
         "current": true,
         "path": "plugins/payment-processing/skills/paypal-integration",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -25229,7 +25401,7 @@
         "current": true,
         "path": "plugins/payment-processing/skills/pci-compliance",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -25310,7 +25482,7 @@
         "current": true,
         "path": "skills/pdf",
         "repository": "https://github.com/anthropics/skills.git",
-        "revision": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+        "revision": "ca45fc496a3436251f191354091d557da31c15b5"
       }
     ]
   },
@@ -25392,7 +25564,7 @@
         "current": true,
         "path": "pdf-design",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -25516,7 +25688,7 @@
         "current": true,
         "path": "skills/peer-review",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -25550,7 +25722,7 @@
         "current": true,
         "path": "skills/pennylane",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -25796,7 +25968,7 @@
         "current": true,
         "path": "journalism-core/skills/photo-metadata",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -25834,7 +26006,7 @@
         "current": true,
         "path": "skills/phylogenetics",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -25851,7 +26023,7 @@
         "current": true,
         "path": "skills/pi-agent",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -25889,7 +26061,7 @@
         "current": true,
         "path": "skills/pkpd-modeling",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -25934,7 +26106,7 @@
         "current": true,
         "path": "plugins/playground/skills/playground",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -26055,7 +26227,7 @@
         "current": true,
         "path": "plugins/plugin-dev/skills/plugin-settings",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -26072,7 +26244,7 @@
         "current": true,
         "path": "plugins/plugin-dev/skills/plugin-structure",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -26106,7 +26278,7 @@
         "current": true,
         "path": "skills/polars",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -26123,7 +26295,7 @@
         "current": true,
         "path": "skills/polars-bio",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -26173,7 +26345,7 @@
         "current": true,
         "path": "dev-toolkit/skills/ponytail-dev",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -26349,11 +26521,15 @@
         "current": true,
         "path": "plugins/database-design/skills/postgresql-table-design",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
   "postmortem-writing": {
+    "conflicts": [
+      "postmortem-writing",
+      "postmortem-writing--wshobson-agents--94db8e0e1a"
+    ],
     "digest": "4b25737805ef5249bbd1bfcc7d82423a171c2193e606893ccf39e5142557c7d6",
     "name": "postmortem-writing",
     "origins": [
@@ -26363,10 +26539,26 @@
         "path": "skills/postmortem-writing"
       },
       {
-        "current": true,
+        "current": false,
         "path": "plugins/incident-response/skills/postmortem-writing",
         "repository": "https://github.com/wshobson/agents.git",
         "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+      }
+    ]
+  },
+  "postmortem-writing--wshobson-agents--94db8e0e1a": {
+    "conflicts": [
+      "postmortem-writing",
+      "postmortem-writing--wshobson-agents--94db8e0e1a"
+    ],
+    "digest": "984d2c9baf24eff2f8793600a4be2a9a30e1a206126177dabed6e7d5d3904b27",
+    "name": "postmortem-writing",
+    "origins": [
+      {
+        "current": true,
+        "path": "plugins/incident-response/skills/postmortem-writing",
+        "repository": "https://github.com/wshobson/agents.git",
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -26426,7 +26618,7 @@
         "current": true,
         "path": "skills/pptx",
         "repository": "https://github.com/anthropics/skills.git",
-        "revision": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+        "revision": "ca45fc496a3436251f191354091d557da31c15b5"
       }
     ]
   },
@@ -26472,7 +26664,7 @@
         "current": true,
         "path": "plugins/pptx-deck-creation/skills/pptx-deck-context",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -26537,7 +26729,7 @@
         "current": true,
         "path": "skills/pptx-posters",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -26554,7 +26746,7 @@
         "current": true,
         "path": "plugins/pptx-deck-creation/skills/pptx-quality-gates",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -26571,7 +26763,7 @@
         "current": true,
         "path": "plugins/pptx-deck-creation/skills/pptx-reference-deck-analysis",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -26588,7 +26780,7 @@
         "current": true,
         "path": "plugins/pptx-deck-creation/skills/pptx-slide-specification",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -26605,7 +26797,7 @@
         "current": true,
         "path": "plugins/pptx-deck-creation/skills/pptx-visual-assets",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -26671,7 +26863,7 @@
         "current": true,
         "path": "plugins/llm-finetuning/skills/preference-optimization",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -26764,7 +26956,7 @@
         "current": true,
         "path": "skills/primekg",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -26802,7 +26994,7 @@
         "current": true,
         "path": "skills/primer-design",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -26899,7 +27091,7 @@
         "current": true,
         "path": "security-toolkit/skills/private-secret-scanning",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -26938,7 +27130,7 @@
         "current": true,
         "path": "plugins/project-artifact/skills/project-artifact",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -26986,7 +27178,7 @@
         "current": true,
         "path": "project-templates-toolkit/skills/project-memory",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -27003,7 +27195,7 @@
         "current": true,
         "path": "project-templates-toolkit/skills/project-retrospective",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -27020,7 +27212,7 @@
         "current": true,
         "path": "plugins/backend-development/skills/projection-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -27071,7 +27263,7 @@
         "current": true,
         "path": "plugins/observability-monitoring/skills/prometheus-configuration",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -27088,7 +27280,7 @@
         "current": true,
         "path": "plugins/llm-application-dev/skills/prompt-engineering-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -27144,7 +27336,7 @@
         "current": true,
         "path": "plugins/protect-mcp/skills/protect-mcp-setup",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -27368,7 +27560,7 @@
         "current": true,
         "path": "plugins/reverse-engineering/skills/protocol-reverse-engineering",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -27405,7 +27597,7 @@
         "current": true,
         "path": "skills/protocolsio-integration",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -27628,7 +27820,7 @@
         "current": true,
         "path": "skills/pufferlib",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -27645,7 +27837,7 @@
         "current": true,
         "path": "skills/pybamm",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -27662,7 +27854,7 @@
         "current": true,
         "path": "skills/pycalphad",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -27679,7 +27871,7 @@
         "current": true,
         "path": "skills/pydeseq2",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -27713,7 +27905,7 @@
         "current": true,
         "path": "skills/pydicom",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -27767,7 +27959,7 @@
         "current": true,
         "path": "skills/pyhealth",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -27821,7 +28013,7 @@
         "current": true,
         "path": "skills/pylabrobot",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -27858,7 +28050,7 @@
         "current": true,
         "path": "skills/pymatgen",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -27875,7 +28067,7 @@
         "current": true,
         "path": "skills/pymc",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -27946,7 +28138,7 @@
         "current": true,
         "path": "skills/pymoo",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -27963,7 +28155,7 @@
         "current": true,
         "path": "skills/pyopenms",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -27997,7 +28189,7 @@
         "current": true,
         "path": "skills/pysam",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -28031,7 +28223,7 @@
         "current": true,
         "path": "skills/pytdc",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -28065,7 +28257,7 @@
         "current": true,
         "path": "plugins/python-development/skills/python-anti-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -28082,7 +28274,7 @@
         "current": true,
         "path": "plugins/python-development/skills/python-background-jobs",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -28099,11 +28291,15 @@
         "current": true,
         "path": "plugins/python-development/skills/python-code-style",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
   "python-configuration": {
+    "conflicts": [
+      "python-configuration",
+      "python-configuration--wshobson-agents--c2b033b567"
+    ],
     "digest": "509efe2be7de89353ce1e2e8396e87bcff7ed13b343e0c829042a387ca8bd3a4",
     "name": "python-configuration",
     "origins": [
@@ -28113,10 +28309,26 @@
         "path": "skills/python-configuration"
       },
       {
-        "current": true,
+        "current": false,
         "path": "plugins/python-development/skills/python-configuration",
         "repository": "https://github.com/wshobson/agents.git",
         "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+      }
+    ]
+  },
+  "python-configuration--wshobson-agents--c2b033b567": {
+    "conflicts": [
+      "python-configuration",
+      "python-configuration--wshobson-agents--c2b033b567"
+    ],
+    "digest": "6b1a69a08f45a10104434c665976498208c41b5cce2d98afe35ceaa9e2c2c7c5",
+    "name": "python-configuration",
+    "origins": [
+      {
+        "current": true,
+        "path": "plugins/python-development/skills/python-configuration",
+        "repository": "https://github.com/wshobson/agents.git",
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -28133,7 +28345,7 @@
         "current": true,
         "path": "plugins/python-development/skills/python-design-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -28150,11 +28362,15 @@
         "current": true,
         "path": "plugins/python-development/skills/python-error-handling",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
   "python-observability": {
+    "conflicts": [
+      "python-observability",
+      "python-observability--wshobson-agents--b1df9da345"
+    ],
     "digest": "cdeadcdcde618a2e2f53e774686a177fd6b8de8617f3182f8cd5eaf09f3afe3d",
     "name": "python-observability",
     "origins": [
@@ -28164,14 +28380,34 @@
         "path": "skills/python-observability"
       },
       {
-        "current": true,
+        "current": false,
         "path": "plugins/python-development/skills/python-observability",
         "repository": "https://github.com/wshobson/agents.git",
         "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
       }
     ]
   },
+  "python-observability--wshobson-agents--b1df9da345": {
+    "conflicts": [
+      "python-observability",
+      "python-observability--wshobson-agents--b1df9da345"
+    ],
+    "digest": "3574c0e6ab21fe93aac99d91659754f1b4adb8db070b61d64371ab9639d7b3c3",
+    "name": "python-observability",
+    "origins": [
+      {
+        "current": true,
+        "path": "plugins/python-development/skills/python-observability",
+        "repository": "https://github.com/wshobson/agents.git",
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
+      }
+    ]
+  },
   "python-packaging": {
+    "conflicts": [
+      "python-packaging",
+      "python-packaging--wshobson-agents--7bbaa19596"
+    ],
     "digest": "acef3b60ec90d02556bc62e3897577ba3a67b268f905e66c325a8bf65f51f392",
     "name": "python-packaging",
     "origins": [
@@ -28181,10 +28417,26 @@
         "path": "skills/python-packaging"
       },
       {
-        "current": true,
+        "current": false,
         "path": "plugins/python-development/skills/python-packaging",
         "repository": "https://github.com/wshobson/agents.git",
         "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+      }
+    ]
+  },
+  "python-packaging--wshobson-agents--7bbaa19596": {
+    "conflicts": [
+      "python-packaging",
+      "python-packaging--wshobson-agents--7bbaa19596"
+    ],
+    "digest": "9b6bcf939831e4231fd6bdee83b7b47aeddd3f0d3314588db0742a2fddb5d6d5",
+    "name": "python-packaging",
+    "origins": [
+      {
+        "current": true,
+        "path": "plugins/python-development/skills/python-packaging",
+        "repository": "https://github.com/wshobson/agents.git",
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -28200,6 +28452,10 @@
     ]
   },
   "python-performance-optimization": {
+    "conflicts": [
+      "python-performance-optimization",
+      "python-performance-optimization--wshobson-agents--782fefbc58"
+    ],
     "digest": "1c210f068fd8208fee86e5cc69b838ffc90810b1dc1b5a089fa76f5ab59d4108",
     "name": "python-performance-optimization",
     "origins": [
@@ -28209,10 +28465,26 @@
         "path": "skills/python-performance-optimization"
       },
       {
-        "current": true,
+        "current": false,
         "path": "plugins/python-development/skills/python-performance-optimization",
         "repository": "https://github.com/wshobson/agents.git",
         "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+      }
+    ]
+  },
+  "python-performance-optimization--wshobson-agents--782fefbc58": {
+    "conflicts": [
+      "python-performance-optimization",
+      "python-performance-optimization--wshobson-agents--782fefbc58"
+    ],
+    "digest": "b2d1ddecfed723a0c57aac1be308076fbb38c3b5d9815af7f3c482e68b185111",
+    "name": "python-performance-optimization",
+    "origins": [
+      {
+        "current": true,
+        "path": "plugins/python-development/skills/python-performance-optimization",
+        "repository": "https://github.com/wshobson/agents.git",
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -28249,7 +28521,7 @@
         "current": true,
         "path": "dev-toolkit/skills/python-pipeline",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -28266,7 +28538,7 @@
         "current": true,
         "path": "plugins/python-development/skills/python-project-structure",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -28283,11 +28555,15 @@
         "current": true,
         "path": "plugins/python-development/skills/python-resilience",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
   "python-resource-management": {
+    "conflicts": [
+      "python-resource-management",
+      "python-resource-management--wshobson-agents--2796a296b7"
+    ],
     "digest": "637d5e0881d485c63f6d11a3cced8f75db7299780a29a447084402d93e000ce9",
     "name": "python-resource-management",
     "origins": [
@@ -28297,10 +28573,26 @@
         "path": "skills/python-resource-management"
       },
       {
-        "current": true,
+        "current": false,
         "path": "plugins/python-development/skills/python-resource-management",
         "repository": "https://github.com/wshobson/agents.git",
         "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+      }
+    ]
+  },
+  "python-resource-management--wshobson-agents--2796a296b7": {
+    "conflicts": [
+      "python-resource-management",
+      "python-resource-management--wshobson-agents--2796a296b7"
+    ],
+    "digest": "9c333e697905efbf33061c66b0a67ba50e44a206a2de0c00cc23bb6eb8f80b59",
+    "name": "python-resource-management",
+    "origins": [
+      {
+        "current": true,
+        "path": "plugins/python-development/skills/python-resource-management",
+        "repository": "https://github.com/wshobson/agents.git",
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -28316,6 +28608,10 @@
     ]
   },
   "python-testing-patterns": {
+    "conflicts": [
+      "python-testing-patterns",
+      "python-testing-patterns--wshobson-agents--3254c19718"
+    ],
     "digest": "6bbdedcf163885523c1433ebc051889f86328ca2c6c34818f094725593760fbc",
     "name": "python-testing-patterns",
     "origins": [
@@ -28325,10 +28621,26 @@
         "path": "skills/python-testing-patterns"
       },
       {
-        "current": true,
+        "current": false,
         "path": "plugins/python-development/skills/python-testing-patterns",
         "repository": "https://github.com/wshobson/agents.git",
         "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+      }
+    ]
+  },
+  "python-testing-patterns--wshobson-agents--3254c19718": {
+    "conflicts": [
+      "python-testing-patterns",
+      "python-testing-patterns--wshobson-agents--3254c19718"
+    ],
+    "digest": "f8a164ccabed2ac0402ff7deb311a11ea4c041693325dd87978158a1688d9fd8",
+    "name": "python-testing-patterns",
+    "origins": [
+      {
+        "current": true,
+        "path": "plugins/python-development/skills/python-testing-patterns",
+        "repository": "https://github.com/wshobson/agents.git",
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -28345,7 +28657,7 @@
         "current": true,
         "path": "plugins/python-development/skills/python-type-safety",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -28362,7 +28674,7 @@
         "current": true,
         "path": "skills/pytorch-lightning",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -28379,7 +28691,7 @@
         "current": true,
         "path": "skills/pyzotero",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -28396,7 +28708,7 @@
         "current": true,
         "path": "skills/qiime2-amplicon",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -28434,7 +28746,7 @@
         "current": true,
         "path": "skills/qiskit",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -28584,7 +28896,7 @@
         "current": true,
         "path": "plugins/llm-finetuning/skills/quantized-export",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -28664,7 +28976,7 @@
         "current": true,
         "path": "skills/qutip",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -28703,7 +29015,7 @@
         "current": true,
         "path": "plugins/llm-application-dev/skills/rag-implementation",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -28765,7 +29077,7 @@
         "current": true,
         "path": "skills/rdkit",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -28816,7 +29128,7 @@
         "current": true,
         "path": "plugins/framework-migration/skills/react-modernization",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -28833,7 +29145,7 @@
         "current": true,
         "path": "plugins/frontend-mobile-development/skills/react-native-architecture",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -28850,7 +29162,7 @@
         "current": true,
         "path": "plugins/ui-design/skills/react-native-design",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -28867,7 +29179,7 @@
         "current": true,
         "path": "plugins/frontend-mobile-development/skills/react-state-management",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -28989,7 +29301,7 @@
         "current": true,
         "path": "plugins/receipts/skills/receipts",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -29026,7 +29338,7 @@
         "current": true,
         "path": "superjawn/skills/receiving-code-review",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -29038,7 +29350,7 @@
         "current": true,
         "path": "newsroom-agent-ops/skills/record-reconciliation",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -29066,7 +29378,7 @@
         "current": true,
         "path": "plugins/machine-learning-ops/skills/recsys-pipeline-architect",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -29203,7 +29515,7 @@
         "current": true,
         "path": "skills/relion",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -29220,7 +29532,7 @@
         "current": true,
         "path": "skills/relsa-severity-assessment",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -29340,7 +29652,7 @@
         "current": true,
         "path": "superjawn/skills/requesting-code-review",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -29389,7 +29701,7 @@
         "current": true,
         "path": "skills/research-grants",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -29449,7 +29761,7 @@
         "current": true,
         "path": "skills/research-lookup",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -29466,7 +29778,7 @@
         "current": true,
         "path": "plugins/ui-design/skills/responsive-design",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -29574,7 +29886,7 @@
         "current": true,
         "path": "plugins/review-agent-governance/skills/review-agent-setup",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -29692,7 +30004,7 @@
         "current": true,
         "path": "plugins/quantitative-trading/skills/risk-metrics-calculation",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -29816,7 +30128,7 @@
         "current": true,
         "path": "skills/rowan",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -29833,7 +30145,7 @@
         "current": true,
         "path": "plugins/systems-programming/skills/rust-async-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -29872,7 +30184,7 @@
         "current": true,
         "path": "plugins/backend-development/skills/saga-orchestration",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -29991,6 +30303,10 @@
     ]
   },
   "sast-configuration": {
+    "conflicts": [
+      "sast-configuration",
+      "sast-configuration--wshobson-agents--0f5d474103"
+    ],
     "digest": "a0980b2ac04865a1dcbc86ac7f64d88052f41ab262b5f8e73d933a2584d22d09",
     "name": "sast-configuration",
     "origins": [
@@ -30000,10 +30316,26 @@
         "path": "skills/sast-configuration"
       },
       {
-        "current": true,
+        "current": false,
         "path": "plugins/security-scanning/skills/sast-configuration",
         "repository": "https://github.com/wshobson/agents.git",
         "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+      }
+    ]
+  },
+  "sast-configuration--wshobson-agents--0f5d474103": {
+    "conflicts": [
+      "sast-configuration",
+      "sast-configuration--wshobson-agents--0f5d474103"
+    ],
+    "digest": "433af00a1f0ef01e38c91982fd41b404a5e9cd53aae4e0ffb4437502d0c42b21",
+    "name": "sast-configuration",
+    "origins": [
+      {
+        "current": true,
+        "path": "plugins/security-scanning/skills/sast-configuration",
+        "repository": "https://github.com/wshobson/agents.git",
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -30072,7 +30404,7 @@
         "current": true,
         "path": "plugins/ship-mate/skills/scan",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -30089,7 +30421,7 @@
         "current": true,
         "path": "skills/scanpy",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -30187,7 +30519,7 @@
         "current": true,
         "path": "newsroom-agent-ops/skills/scheduled-briefing",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -30236,7 +30568,7 @@
         "current": true,
         "path": "skills/scholar-evaluation",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -30318,7 +30650,7 @@
         "current": true,
         "path": "skills/scientific-brainstorming",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -30357,7 +30689,7 @@
         "current": true,
         "path": "skills/scientific-critical-thinking",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -30481,7 +30813,7 @@
         "current": true,
         "path": "skills/scientific-schematics",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -30549,7 +30881,7 @@
         "current": true,
         "path": "skills/scientific-slides",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -30615,7 +30947,7 @@
         "current": true,
         "path": "skills/scientific-visualization",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -30664,7 +30996,7 @@
         "current": true,
         "path": "skills/scientific-writing",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -30722,7 +31054,7 @@
         "current": true,
         "path": "skills/scikit-bio",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -30756,7 +31088,7 @@
         "current": true,
         "path": "skills/scikit-learn",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -30790,7 +31122,7 @@
         "current": true,
         "path": "skills/scikit-survival",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -30880,7 +31212,7 @@
         "current": true,
         "path": "plugins/accessibility-compliance/skills/screen-reader-testing",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -30940,7 +31272,7 @@
         "current": true,
         "path": "skills/scvelo",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -30957,7 +31289,7 @@
         "current": true,
         "path": "skills/scvi-tools",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -30991,7 +31323,7 @@
         "current": true,
         "path": "skills/seaborn",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -31069,6 +31401,10 @@
     ]
   },
   "secrets-management": {
+    "conflicts": [
+      "secrets-management",
+      "secrets-management--wshobson-agents--4a501c52f0"
+    ],
     "digest": "3e4f4d73745b0697c9fdfba905227f28351667bcc1338dd1a5c8401f3ad9d0be",
     "name": "secrets-management",
     "origins": [
@@ -31078,10 +31414,26 @@
         "path": "skills/secrets-management"
       },
       {
-        "current": true,
+        "current": false,
         "path": "plugins/cicd-automation/skills/secrets-management",
         "repository": "https://github.com/wshobson/agents.git",
         "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+      }
+    ]
+  },
+  "secrets-management--wshobson-agents--4a501c52f0": {
+    "conflicts": [
+      "secrets-management",
+      "secrets-management--wshobson-agents--4a501c52f0"
+    ],
+    "digest": "e2f982bf74726700393bc8f87d9e260b5ff116889abcd4c246d8078382a77d88",
+    "name": "secrets-management",
+    "origins": [
+      {
+        "current": true,
+        "path": "plugins/cicd-automation/skills/secrets-management",
+        "repository": "https://github.com/wshobson/agents.git",
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -31098,7 +31450,7 @@
         "current": true,
         "path": "security-toolkit/skills/secure-auth",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -31135,7 +31487,7 @@
         "current": true,
         "path": "security-toolkit/skills/security-checklist",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -31152,7 +31504,7 @@
         "current": true,
         "path": "plugins/security-scanning/skills/security-requirement-extraction",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -31339,7 +31691,7 @@
         "current": true,
         "path": "plugins/cloud-infrastructure/skills/service-mesh-observability",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -31356,7 +31708,7 @@
         "current": true,
         "path": "plugins/skill-forge-essentials/skills/session-guard",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -31373,7 +31725,7 @@
         "current": true,
         "path": "plugins/session-report/skills/session-report",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -31424,7 +31776,7 @@
         "current": true,
         "path": "skills/shap",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -31475,7 +31827,7 @@
         "current": true,
         "path": "plugins/shell-scripting/skills/shellcheck-configuration",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -31513,7 +31865,7 @@
         "current": true,
         "path": "plugins/math-proof/skills/siege",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -31544,7 +31896,7 @@
         "current": true,
         "path": "plugins/signed-audit-trails/skills/signed-audit-trails-recipe",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -31582,7 +31934,7 @@
         "current": true,
         "path": "plugins/llm-application-dev/skills/similarity-search-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -31648,7 +32000,7 @@
         "current": true,
         "path": "skills/simpy",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -31874,7 +32226,7 @@
         "current": true,
         "path": "plugins/skill-creator/skills/skill-creator",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -31895,7 +32247,7 @@
         "current": true,
         "path": "skills/skill-creator",
         "repository": "https://github.com/anthropics/skills.git",
-        "revision": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+        "revision": "ca45fc496a3436251f191354091d557da31c15b5"
       }
     ]
   },
@@ -31912,7 +32264,7 @@
         "current": true,
         "path": "plugins/plugin-dev/skills/skill-development",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -31940,7 +32292,7 @@
         "current": true,
         "path": "skills/slack-gif-creator",
         "repository": "https://github.com/anthropics/skills.git",
-        "revision": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+        "revision": "ca45fc496a3436251f191354091d557da31c15b5"
       }
     ]
   },
@@ -31968,7 +32320,7 @@
         "current": true,
         "path": "plugins/observability-monitoring/skills/slo-implementation",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -32105,7 +32457,7 @@
         "current": true,
         "path": "plugins/content-marketing/skills/social-evidence-research",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -32122,7 +32474,7 @@
         "current": true,
         "path": "journalism-core/skills/social-media-intelligence",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -32139,7 +32491,7 @@
         "current": true,
         "path": "plugins/social-publishing/skills/social-publishing",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -32156,7 +32508,7 @@
         "current": true,
         "path": "plugins/blockchain-web3/skills/solidity-security",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -32173,7 +32525,7 @@
         "current": true,
         "path": "plugins/math-proof/skills/solo",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -32249,7 +32601,7 @@
         "current": true,
         "path": "journalism-core/skills/source-verification",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -32266,7 +32618,7 @@
         "current": true,
         "path": "plugins/dgx-spark-ops/skills/spark-environment-setup",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -32283,7 +32635,7 @@
         "current": true,
         "path": "plugins/dgx-spark-ops/skills/spark-memory-thermal-ops",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -32300,7 +32652,7 @@
         "current": true,
         "path": "plugins/data-engineering/skills/spark-optimization",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -32317,7 +32669,7 @@
         "current": true,
         "path": "plugins/dgx-spark-ops/skills/spark-training-gotchas",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -32986,6 +33338,10 @@
     ]
   },
   "sql-optimization-patterns": {
+    "conflicts": [
+      "sql-optimization-patterns",
+      "sql-optimization-patterns--wshobson-agents--ea4f739887"
+    ],
     "digest": "62cd72bfd50e610d48c59df7d1982fb73f6cffb58be93153ce623c4e865c21ce",
     "name": "sql-optimization-patterns",
     "origins": [
@@ -32995,10 +33351,26 @@
         "path": "skills/sql-optimization-patterns"
       },
       {
-        "current": true,
+        "current": false,
         "path": "plugins/developer-essentials/skills/sql-optimization-patterns",
         "repository": "https://github.com/wshobson/agents.git",
         "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+      }
+    ]
+  },
+  "sql-optimization-patterns--wshobson-agents--ea4f739887": {
+    "conflicts": [
+      "sql-optimization-patterns",
+      "sql-optimization-patterns--wshobson-agents--ea4f739887"
+    ],
+    "digest": "7356f98eca417d12daa70881b00d97abd2b9f60c17fa35d539c3fa3101efc197",
+    "name": "sql-optimization-patterns",
+    "origins": [
+      {
+        "current": true,
+        "path": "plugins/developer-essentials/skills/sql-optimization-patterns",
+        "repository": "https://github.com/wshobson/agents.git",
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -33029,7 +33401,7 @@
         "current": true,
         "path": "sr-screener",
         "repository": "https://github.com/Imbad0202/academic-research-skills.git",
-        "revision": "77e77e871aeccf5b5740a3086903f914e58c4204"
+        "revision": "f2d109ea815f4b2f68a2eeee1ed9630bfc0cb302"
       }
     ]
   },
@@ -33067,7 +33439,7 @@
         "current": true,
         "path": "skills/stable-baselines3",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -33139,7 +33511,7 @@
         "current": true,
         "path": "plugins/startup-business-analyst/skills/startup-financial-modeling",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -33170,7 +33542,7 @@
         "current": true,
         "path": "plugins/startup-business-analyst/skills/startup-metrics-framework",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -33223,7 +33595,7 @@
         "current": true,
         "path": "skills/statistical-analysis",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -33257,7 +33629,7 @@
         "current": true,
         "path": "skills/statistical-power",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -33291,7 +33663,7 @@
         "current": true,
         "path": "skills/statsmodels",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -33325,7 +33697,7 @@
         "current": true,
         "path": "journalism-core/skills/story-pitch",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -33408,7 +33780,7 @@
         "current": true,
         "path": "plugins/security-scanning/skills/stride-analysis-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -33478,7 +33850,7 @@
         "current": true,
         "path": "plugins/payment-processing/skills/stripe-integration",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -33685,7 +34057,7 @@
         "current": true,
         "path": "superjawn/skills/subagent-driven-development",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -33795,7 +34167,7 @@
         "current": true,
         "path": "plugins/superself/skills/superself",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -33832,19 +34204,19 @@
         "current": true,
         "path": "security-toolkit/skills/supply-chain-hardening",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
   "surface-completeness": {
-    "digest": "6f26ec6fce1d41d57e5e546e2e8cb25d1c92638ef4a6012bbaec8e8158c8e923",
+    "digest": "a58d870dc424c6ab6e7fb02a33878775416760e072c3fd51f09bf3aee7a2ebf6",
     "name": "surface-completeness",
     "origins": [
       {
         "current": true,
         "path": "dev-toolkit/skills/surface-completeness",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -33938,7 +34310,7 @@
         "current": true,
         "path": "skills/sympy",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -34013,7 +34385,7 @@
         "current": true,
         "path": "superjawn/skills/systematic-debugging",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -34051,7 +34423,7 @@
         "current": true,
         "path": "plugins/frontend-mobile-development/skills/tailwind-design-system",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -34068,7 +34440,7 @@
         "current": true,
         "path": "skills/tamarind",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -34127,7 +34499,7 @@
         "current": true,
         "path": "plugins/agent-teams/skills/task-coordination-strategies",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -34284,7 +34656,7 @@
         "current": true,
         "path": "plugins/agent-teams/skills/team-communication-protocols",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -34301,7 +34673,7 @@
         "current": true,
         "path": "plugins/startup-business-analyst/skills/team-composition-analysis",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -34318,7 +34690,7 @@
         "current": true,
         "path": "plugins/agent-teams/skills/team-composition-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -34335,7 +34707,7 @@
         "current": true,
         "path": "skills/tellurium",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -34352,7 +34724,7 @@
         "current": true,
         "path": "template",
         "repository": "https://github.com/anthropics/skills.git",
-        "revision": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+        "revision": "ca45fc496a3436251f191354091d557da31c15b5"
       }
     ]
   },
@@ -34389,7 +34761,7 @@
         "current": true,
         "path": "project-templates-toolkit/skills/template-selector",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -34440,7 +34812,7 @@
         "current": true,
         "path": "plugins/backend-development/skills/temporal-python-testing",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -34457,7 +34829,7 @@
         "current": true,
         "path": "plugins/cloud-infrastructure/skills/terraform-module-library",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -34502,7 +34874,7 @@
         "current": true,
         "path": "skills/theme-factory",
         "repository": "https://github.com/anthropics/skills.git",
-        "revision": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+        "revision": "ca45fc496a3436251f191354091d557da31c15b5"
       }
     ]
   },
@@ -34519,7 +34891,7 @@
         "current": true,
         "path": "plugins/security-scanning/skills/threat-mitigation-mapping",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -34536,7 +34908,7 @@
         "current": true,
         "path": "skills/tiledbvcf",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -34613,7 +34985,7 @@
         "current": true,
         "path": "skills/timesfm-forecasting",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -35250,7 +35622,7 @@
         "current": true,
         "path": "skills/torch-geometric",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -35319,7 +35691,7 @@
         "current": true,
         "path": "skills/torchdrug",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -35347,7 +35719,7 @@
         "current": true,
         "path": "plugins/llm-finetuning/skills/trace-to-training-data",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -35364,7 +35736,7 @@
         "current": true,
         "path": "plugins/conductor/skills/track-management",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -35486,7 +35858,7 @@
         "current": true,
         "path": "skills/transformers",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -35605,7 +35977,7 @@
         "current": true,
         "path": "skills/treatment-plans",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -35817,7 +36189,7 @@
         "current": true,
         "path": "plugins/developer-essentials/skills/turborepo-caching",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -35855,7 +36227,7 @@
         "current": true,
         "path": "plugins/javascript-typescript/skills/typescript-advanced-types",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -35937,7 +36309,7 @@
         "current": true,
         "path": "skills/umap-learn",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -35970,7 +36342,7 @@
         "current": true,
         "path": "newsroom-agent-ops/skills/unattended-agent-runs",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -35987,7 +36359,7 @@
         "current": true,
         "path": "skills/uncertainty-and-units",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -36129,7 +36501,7 @@
         "current": true,
         "path": "plugins/game-development/skills/unity-ecs-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -36178,7 +36550,7 @@
         "current": true,
         "path": "skills/usfiscaldata",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -36215,7 +36587,7 @@
         "current": true,
         "path": "superjawn/skills/using-git-worktrees",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -36252,7 +36624,7 @@
         "current": true,
         "path": "superjawn/skills/using-superjawn",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -36331,7 +36703,7 @@
         "current": true,
         "path": "plugins/python-development/skills/uv-package-manager",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -36348,7 +36720,7 @@
         "current": true,
         "path": "skills/vaex",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -36621,7 +36993,7 @@
         "current": true,
         "path": "plugins/llm-application-dev/skills/vector-index-tuning",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -36670,7 +37042,7 @@
         "current": true,
         "path": "skills/venue-templates",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -36707,7 +37079,7 @@
         "current": true,
         "path": "superjawn/skills/verification-before-completion",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -36755,7 +37127,7 @@
         "current": true,
         "path": "dev-toolkit/skills/vibe-coding",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -36772,7 +37144,7 @@
         "current": true,
         "path": "video-toolkit/skills/video-dashboard",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -36789,7 +37161,7 @@
         "current": true,
         "path": "video-toolkit/skills/video-download",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -36817,7 +37189,7 @@
         "current": true,
         "path": "video-toolkit/skills/video-frames",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -36834,7 +37206,7 @@
         "current": true,
         "path": "video-toolkit/skills/video-transcribe",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -36922,7 +37294,7 @@
         "current": true,
         "path": "plugins/llm-finetuning/skills/vision-sft",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -36939,7 +37311,7 @@
         "current": true,
         "path": "plugins/ui-design/skills/visual-design-foundations",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -36956,7 +37328,7 @@
         "current": true,
         "path": "plugins/skill-forge-essentials/skills/visual-edit-precision",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -36993,7 +37365,7 @@
         "current": true,
         "path": "visual-explainer",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -37042,7 +37414,7 @@
         "current": true,
         "path": "skills/waypoint-bio",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -37059,7 +37431,7 @@
         "current": true,
         "path": "plugins/accessibility-compliance/skills/wcag-audit-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -37108,7 +37480,7 @@
         "current": true,
         "path": "research-toolkit/skills/web-archiving",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -37125,7 +37497,7 @@
         "current": true,
         "path": "skills/web-artifacts-builder",
         "repository": "https://github.com/anthropics/skills.git",
-        "revision": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+        "revision": "ca45fc496a3436251f191354091d557da31c15b5"
       }
     ]
   },
@@ -37142,7 +37514,7 @@
         "current": true,
         "path": "plugins/ui-design/skills/web-component-design",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -37179,7 +37551,7 @@
         "current": true,
         "path": "web-design-picker",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -37216,7 +37588,7 @@
         "current": true,
         "path": "dev-toolkit/skills/web-scraping",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -37233,7 +37605,7 @@
         "current": true,
         "path": "dev-toolkit/skills/web-ui-best-practices",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -37250,7 +37622,7 @@
         "current": true,
         "path": "plugins/blockchain-web3/skills/web3-testing",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -37267,7 +37639,7 @@
         "current": true,
         "path": "skills/webapp-testing",
         "repository": "https://github.com/anthropics/skills.git",
-        "revision": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+        "revision": "ca45fc496a3436251f191354091d557da31c15b5"
       }
     ]
   },
@@ -37323,7 +37695,7 @@
         "current": true,
         "path": "skills/what-if-oracle",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -37406,7 +37778,7 @@
         "current": true,
         "path": "plugins/backend-development/skills/workflow-orchestration-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -37423,7 +37795,7 @@
         "current": true,
         "path": "plugins/conductor/skills/workflow-patterns",
         "repository": "https://github.com/wshobson/agents.git",
-        "revision": "0874a27b17a22e2b7c2e2bcd725768e0803cad06"
+        "revision": "7e2fb559cf4b824b27f1fec49fe88f7511066d26"
       }
     ]
   },
@@ -37498,7 +37870,7 @@
         "current": true,
         "path": "superjawn/skills/writing-plans",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -37515,7 +37887,7 @@
         "current": true,
         "path": "plugins/hookify/skills/writing-rules",
         "repository": "https://github.com/anthropics/claude-plugins-official.git",
-        "revision": "58267944f92187b7d6a1c822165c96c81c864806"
+        "revision": "a7ba5b93db0c7c8d17f3f1d25853adca79598a1a"
       }
     ]
   },
@@ -37554,7 +37926,7 @@
         "current": true,
         "path": "superjawn/skills/writing-skills",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
@@ -37625,7 +37997,7 @@
         "current": true,
         "path": "skills/xlsx",
         "repository": "https://github.com/anthropics/skills.git",
-        "revision": "dbd4588f9e1033efb41dad4bef2f7947c8993d44"
+        "revision": "ca45fc496a3436251f191354091d557da31c15b5"
       }
     ]
   },
@@ -37707,7 +38079,7 @@
         "current": true,
         "path": "skills/zarr-python",
         "repository": "https://github.com/K-Dense-AI/claude-scientific-skills.git",
-        "revision": "593377bb048752abb0152deab9fbb1083a6087df"
+        "revision": "5f2bc0341354fd5590aef76a533ada1e1e5b4e62"
       }
     ]
   },
@@ -37724,7 +38096,7 @@
         "current": true,
         "path": "dev-toolkit/skills/zero-build-frontend",
         "repository": "https://github.com/jamditis/claude-skills-journalism.git",
-        "revision": "f0fea787072c174adaa6e4dfa3fa7565f169baad"
+        "revision": "a1e2709cea3e6267e8dce286c9ac2239072e8261"
       }
     ]
   },
