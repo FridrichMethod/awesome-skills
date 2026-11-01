@@ -216,6 +216,23 @@ def test_an_upstream_link_is_followed_only_to_a_file_of_its_own_checkout(pipelin
     assert "SECRET" not in err and secret.read_text().count("SECRET") == 1
 
 
+@pytest.mark.skipif(os.name == "nt", reason="the sync runs on Linux; creating links needs privileges on Windows")
+def test_a_linked_gitattributes_is_never_read(pipeline, tmp_path):
+    """LFS patterns come only from .gitattributes files of the checkout: one linked elsewhere (a FIFO
+    would hang the weekly job, /dev/zero exhaust its memory) is not read."""
+    library, _, builders = pipeline
+    outside = tmp_path / "outside.gitattributes"
+    outside.write_text("*.txt filter=lfs diff=lfs merge=lfs -text\n")
+
+    def upstream(dest: Path):
+        write_skill(dest / "skills/good", extra={"notes.txt": "kept\n"})
+        (dest / "skills/good/.gitattributes").symlink_to(outside)
+
+    builders.append(upstream)
+    assert sync(pipeline)["new"] == 1
+    assert (library.skills_dest / "good/notes.txt").read_text() == "kept\n"
+
+
 def test_portability_rules():
     assert installer.name_problem("aux.md") and installer.name_problem("x.") and installer.name_problem("a:b")
     assert not installer.name_problem("console.md")

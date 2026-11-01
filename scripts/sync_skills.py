@@ -147,9 +147,12 @@ def shallow_clone(url: str, dest: Path) -> bool:
 
 
 def find_lfs_pointer_files(repo: Path) -> set[Path]:
-    """Read any .gitattributes inside repo and return files marked as LFS-tracked."""
+    """Read any .gitattributes inside repo and return files marked as LFS-tracked. A linked one is
+    never read: it may lead to any file of the runner (a FIFO, /dev/zero)."""
     lfs_paths: set[Path] = set()
     for gattr in repo.rglob(".gitattributes"):
+        if gattr.is_symlink() or not gattr.resolve().is_relative_to(repo.resolve()) or not gattr.is_file():
+            continue
         try:
             text = gattr.read_text(errors="ignore")
         except OSError:
