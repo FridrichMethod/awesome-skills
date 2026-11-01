@@ -41,9 +41,9 @@ if ($LASTEXITCODE -ne 0) {
 $owned = @'
 import grp, os, pwd, sys
 d = sys.argv[1]
-s = os.path.join(d, 'scripts')
+scripts = os.path.join(d, 'scripts')
 ok = True
-for p in (d, s, *(os.path.join(s, n) for n in sorted(os.listdir(s)) if n.endswith('.py'))):
+for p in (d, scripts, *(os.path.join(scripts, n) for n in sorted(os.listdir(scripts)) if n.endswith('.py'))):
     s = os.stat(p)
     try:
         me, g = pwd.getpwuid(os.geteuid()).pw_name, grp.getgrgid(s.st_gid)

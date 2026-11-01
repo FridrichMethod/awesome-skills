@@ -1007,12 +1007,12 @@ def edited_files(client: str, hide: bool, listing: dict, rename: bool = False) -
     return found
 
 
-def copy_edits(client: str, skill_id: str, invocation: str, listing: dict, read, rename: bool | None = None) -> dict:
+def copy_edits(client: str, skill_id: str, invocation: str, listing: dict, read, rename: bool = False) -> dict:
     """rel -> bytes the client's copy replaces or adds; read(rel) gives the library's. `rename` (see
     named_by_id; always for Codex) names each SKILL.md after the ID. A local tree may link: an edit of
     or below a link would write outside the copy."""
     edits, hide = {}, invocation == "manual"
-    rename = client == "codex" or bool(rename)
+    rename = rename or client == "codex"
     if client == "claude" and not (hide or rename):
         return edits  # read nothing
     if client == "codex" and not CODEX_NAME.fullmatch(skill_id):

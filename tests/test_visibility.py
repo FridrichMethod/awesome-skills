@@ -252,7 +252,7 @@ def test_a_new_form_of_the_copies_reaches_installs_whose_tree_is_unchanged(sandb
     assert state(home, "claude")["managed"]["alpha"]["form"] == installer.FORM
     original = installer.copy_edits
 
-    def revised(client, skill_id, invocation, listing, read, rename=None):  # a later fix of the transforms
+    def revised(client, skill_id, invocation, listing, read, rename=False):  # a later fix of the transforms
         edits = original(client, skill_id, invocation, listing, read, rename)
         return dict(edits, **{"NOTICE.txt": b"revised\n"}) if skill_id == "alpha" else edits
 

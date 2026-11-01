@@ -20,9 +20,9 @@ fi
 # user put beside it.
 trusted='import grp, os, pwd, sys
 d = sys.argv[1]
-s = os.path.join(d, "scripts")
+scripts = os.path.join(d, "scripts")
 ok = os.path.isdir(os.path.join(d, "skills")) or os.path.lexists(os.path.join(d, ".git"))
-for p in (d, s, *(os.path.join(s, n) for n in sorted(os.listdir(s)) if n.endswith(".py"))):
+for p in (d, scripts, *(os.path.join(scripts, n) for n in sorted(os.listdir(scripts)) if n.endswith(".py"))):
     s = os.stat(p)
     try:
         me, g = pwd.getpwuid(os.geteuid()).pw_name, grp.getgrgid(s.st_gid)
