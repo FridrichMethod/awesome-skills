@@ -600,6 +600,22 @@ def test_reserved_router_directory_id_requires_explicit_choice(sandbox):
     assert installer.fingerprint(home) == before
 
 
+def test_a_claude_code_command_name_is_never_a_claude_copy(sandbox):
+    """A personal skill folder takes over /NAME from Claude Code's own command or bundled skill of that
+    name (/init, /security-review, /claude-api), and the model listing still shows the bundled text:
+    such a library ID gets no Claude copy, hidden or not. Codex has no such command, so it keeps one."""
+    home, source = sandbox
+    for skill_id in ("init", "Security-Review"):
+        skill(source, skill_id)
+    run(source)
+    claude = sorted(os.listdir(home / ".claude/skills"))
+    assert claude == ["alpha", installer.ROUTER, "beta"], "no init, no Security-Review"
+    assert codex_copy(home, "init").is_dir() and codex_copy(home, "Security-Review").is_dir()
+    with pytest.raises(installer.InstallError, match="reserved library entry: init"):
+        run(source, "--claude-only", "--enable", "init")
+    assert installer.CODEX_SYSTEM_SKILLS.isdisjoint(installer.CLAUDE_COMMANDS)
+
+
 def test_restore_rejects_path_traversal_entry(sandbox):
     home, source = sandbox
     run(source, "--codex-only", "--enable", "alpha")

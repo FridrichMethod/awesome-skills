@@ -10247,7 +10247,7 @@
       }
     ]
   },
-  "claude-api": {
+  "claude-api--anthropics-skills--a7e8254e41": {
     "digest": "29c7b015b51872e94c7e241a851c700da4b49d965c83d6af91f27b8ee58f3fdc",
     "name": "claude-api",
     "origins": [
@@ -12978,25 +12978,10 @@
       }
     ]
   },
-  "deep-research": {
-    "conflicts": [
-      "deep-research",
-      "deep-research--imbad-academic--849875a301"
-    ],
-    "digest": "ff5ae70b1e37e85dee6d32ad9ba151c3bae251b50e2918f8d4be2aebc9364ad3",
-    "name": "deep-research",
-    "origins": [
-      {
-        "kind": "legacy",
-        "note": "Pre-existing content; upstream provenance is unknown.",
-        "path": "skills/deep-research"
-      }
-    ]
-  },
   "deep-research--imbad-academic--849875a301": {
     "conflicts": [
-      "deep-research",
-      "deep-research--imbad-academic--849875a301"
+      "deep-research--imbad-academic--849875a301",
+      "deep-research--legacy--560424e232"
     ],
     "digest": "36db372c2a7859e32b724f06fd63f99ee7e0ee8d6833ebb36264442402d22904",
     "name": "deep-research",
@@ -13006,6 +12991,21 @@
         "path": "deep-research",
         "repository": "https://github.com/Imbad0202/academic-research-skills.git",
         "revision": "f2d109ea815f4b2f68a2eeee1ed9630bfc0cb302"
+      }
+    ]
+  },
+  "deep-research--legacy--560424e232": {
+    "conflicts": [
+      "deep-research--imbad-academic--849875a301",
+      "deep-research--legacy--560424e232"
+    ],
+    "digest": "ff5ae70b1e37e85dee6d32ad9ba151c3bae251b50e2918f8d4be2aebc9364ad3",
+    "name": "deep-research",
+    "origins": [
+      {
+        "kind": "legacy",
+        "note": "Pre-existing content; upstream provenance is unknown.",
+        "path": "skills/deep-research"
       }
     ]
   },
@@ -31508,7 +31508,7 @@
       }
     ]
   },
-  "security-review": {
+  "security-review--legacy--42f7f2b05f": {
     "digest": "7151f458ccd46b71971c12d858bca57a1fac076fc9b3acfd049d3111bd2746f5",
     "name": "security-review",
     "origins": [

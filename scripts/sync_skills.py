@@ -754,10 +754,14 @@ def _origin_key(origin: dict) -> tuple[str | None, str | None]:
     return origin.get("repository"), origin.get("path")
 
 
-def _reserved(skill_id: str) -> bool:
-    """Library IDs that would shadow a bundled Codex system skill (a plain `$ID` then matches
-    two skills and injects neither); such a skill gets a source-qualified variant ID."""
-    return skill_id.casefold() in _installer().CODEX_SYSTEM_SKILLS
+def _reserved(skill_id: str) -> str | None:
+    """What a library ID would shadow, if anything: a bundled Codex system skill (a plain `$ID` then
+    matches two skills and injects neither) or a Claude Code command or bundled skill (its /ID would
+    run the library copy). Such a skill gets a source-qualified variant ID."""
+    installer, folded = _installer(), skill_id.casefold()
+    if folded in installer.CODEX_SYSTEM_SKILLS:
+        return "a bundled Codex system skill"
+    return "a Claude Code command or bundled skill" if folded in installer.CLAUDE_COMMANDS else None
 
 
 class LibrarySources:
@@ -862,7 +866,7 @@ class LibrarySources:
 
     def _taken(self, skill_id: str) -> bool:
         """An ID is taken by an exact or case-only match: Windows and macOS cannot hold both.
-        The bundled Codex system skill names are always taken."""
+        The reserved names (`_reserved`) are always taken."""
         if skill_id in self.entries or os.path.lexists(self.skills_dest / skill_id) or _reserved(skill_id):
             return True
         folded = skill_id.casefold()
@@ -1214,7 +1218,7 @@ def library_problems(skills: Path) -> list[str]:
     installer = _installer()
     ids = installer.skill_ids(skills)
     problems = [f"{skill_id}: {reason}" for skill_id, reason in installer.case_collisions(ids).items()]
-    problems += [f"{skill_id}: reserved for a bundled Codex system skill" for skill_id in ids if _reserved(skill_id)]
+    problems += [f"{skill_id}: reserved for {why}" for skill_id in ids if (why := _reserved(skill_id))]
     for skill_id in ids:
         found = candidate_problems(skills / skill_id, skill_id)
         problems += [f"{skill_id}: {p}" for p in found if not p.startswith("Invalid frontmatter")]
@@ -1421,7 +1425,7 @@ def sanitize_only(target: Path) -> int:
             print(f"Cannot safely load library provenance: {error}", file=sys.stderr)
             return 1
         for old, new in library.release_reserved():
-            print(f"  moved: skills/{old} -> skills/{new} ({old} is a bundled Codex system skill)")
+            print(f"  moved: skills/{old} -> skills/{new} ({old} is {_reserved(old)})")
 
     total = sanitized = synthesized = invalid = 0
     invalid_files: list[Path] = []
@@ -1490,7 +1494,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Cannot safely load library provenance: {error}", file=sys.stderr)
         return 1
     for old, new in library.release_reserved():
-        print(f"Moved skills/{old} to skills/{new}: {old} is a bundled Codex system skill")
+        print(f"Moved skills/{old} to skills/{new}: {old} is {_reserved(old)}")
     before = sum(1 for p in SKILLS_DEST.iterdir() if p.is_dir())
     print(f"Skills before: {before}")
     stats: dict = {}

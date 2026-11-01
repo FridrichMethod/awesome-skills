@@ -809,6 +809,21 @@ def skill_ids(skills: Path) -> list[str]:
 # Codex's bundled system skills (0.165): the sync gives a library skill of such an ID a
 # source-qualified one, since `$ID` would be ambiguous.
 CODEX_SYSTEM_SKILLS = frozenset({"imagegen", "openai-docs", "review-agent", "skill-creator", "skill-installer"})
+# Claude Code's own commands and bundled skills (2.1.316, listed by `claude -p` and the interactive
+# ones): a personal skill folder of that name takes over /NAME, its allowed-tools and !`...` lines
+# included, while the model listing still shows the bundled text. Never a Claude copy; the sync gives
+# a library skill of such an ID a source-qualified one.
+CLAUDE_COMMANDS = frozenset(
+    "add-dir advisor agents artifact-capabilities artifact-design artifact-diagramming auto-mode-setup autocompact "
+    "bashes batch btw bug chrome claude-api claude-in-chrome clear code-review color compact config context copy "
+    "cost dataviz debug deep-research design design-consent design-revoke design-sync desktop doctor effort exit "
+    "export fast feedback fewer-permission-prompts focus goal heapdump help hooks ide import init insights "
+    "install-github-app keybindings keybindings-help list-agents login logout loop mcp memory mobile model "
+    "output-style permissions plan plugin plugin-authoring pr-comments privacy-settings quit recap release-notes "
+    "reload-plugins reload-skills rename resume review rewind run run-skill-generator sandbox schedule "
+    "security-review simplify skill-doctor skills stats status statusline tasks team-onboarding terminal-setup "
+    "theme todos update-config upgrade usage verify vim workflow-authoring workflow-launch-exec".split()
+)
 # A hidden skill still runs on /ID and $ID: Claude Code lists none whose frontmatter sets
 # disable-model-invocation (the last duplicate wins: every top-level line is replaced), Codex
 # none whose agents/openai.yaml sets policy.allow_implicit_invocation false.
@@ -1868,7 +1883,8 @@ def stored(old: dict, key: str, client: str, known: set) -> list[str]:
 
 def desired_entries(client: str, visible: list, manual: list, library: Library, router: dict) -> tuple:
     """(entry -> record, name conflicts, entries named) of one client's install."""
-    reserved = ({ROUTER} if "@library" in visible else set()) | (CODEX_SYSTEM_SKILLS if client == "codex" else set())
+    builtin = CODEX_SYSTEM_SKILLS if client == "codex" else CLAUDE_COMMANDS
+    reserved = ({ROUTER} if "@library" in visible else set()) | builtin
     named = (set(visible) | set(manual)) - {"@all", "@library"}
     clashes = sorted(i for i in named if i.casefold() in reserved)
     if clashes:

@@ -290,7 +290,21 @@ def test_reserved_codex_system_names_get_a_source_qualified_id(pipeline):
 def test_a_reserved_library_id_breaks_the_rules(tmp_path):
     write_skill(tmp_path / "openai-docs")
     write_skill(tmp_path / "docs")
-    assert ss.library_problems(tmp_path) == ["openai-docs: reserved for a bundled Codex system skill"]
+    write_skill(tmp_path / "security-review")
+    assert ss.library_problems(tmp_path) == [
+        "openai-docs: reserved for a bundled Codex system skill",
+        "security-review: reserved for a Claude Code command or bundled skill",
+    ]
+
+
+def test_claude_code_command_names_get_a_source_qualified_id(pipeline):
+    """With such an ID the library copy would take over Claude Code's own /init or /claude-api."""
+    library, _, builders = pipeline
+    builders.append(lambda dest: [write_skill(dest / f"skills/{name}") for name in ("init", "Claude-API", "fine")])
+    assert sync(pipeline)["new"] == 3
+    names = sorted(p.name for p in library.skills_dest.iterdir())
+    assert names[0].startswith("Claude-API--one--") and names[1] == "fine" and names[2].startswith("init--one--")
+    assert ss.library_problems(library.skills_dest) == []
 
 
 def test_reserved_library_ids_move_to_their_variant_with_provenance(tmp_path):
