@@ -81,7 +81,7 @@ The verifier starts no model turn, copies no credentials, and cleans its isolate
 - PowerShell: keep `install.ps1` ASCII and compatible with Windows PowerShell 5.1.
 - Python: pass `ruff check`. The pre-commit config covers both.
 - `scripts/search_skills.py`, which the routers run, imports only the standard library and never git.
-- `scripts/install_skills.py` imports only the standard library at module level: the bootstraps run it on whatever `python3` a host has. PyYAML stays a lazy import (`pyyaml()`) where whole frontmatter is parsed, and the file stays under 120 KiB because `install.sh` passes it as one `python -c` argument.
+- `scripts/install_skills.py` imports only the standard library at module level: the bootstraps run it on whatever `python3` a host has. PyYAML stays a lazy import (`pyyaml()`) where whole frontmatter is parsed. `install.sh` keeps the downloaded installer in memory and gives it to `python -I -B -` on standard input, so its size is not bound by the 128 KiB limit on one argument; the installer must read nothing from standard input itself, and must not rely on `__file__` there (it is `<stdin>`, see `own_file()`).
 - Workflows: pass `actionlint`.
 - Markdown: keep tables aligned by column.
 

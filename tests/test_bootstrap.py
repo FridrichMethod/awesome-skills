@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 from scripts import install_skills as installer
-from tests.gitfixtures import ROOT, WINDOWS, Upstream, data_dir, isolate, put, without_pyyaml
+from tests.gitfixtures import ROOT, WINDOWS, Upstream, data_dir, isolate, put, snapshot, without_pyyaml
 
 PWSH = shutil.which("pwsh")
 ALREADY = "Already current; selection preserved."
@@ -23,9 +23,9 @@ ALREADY = "Already current; selection preserved."
 NEEDS_PWSH = pytest.mark.skipif(
     PWSH is None and os.environ.get("AWESOME_SKILLS_REQUIRE_PWSH") != "1", reason="PowerShell 7 (pwsh) unavailable"
 )
-# install.sh passes the whole installer as one `python -c` argument; Linux caps a single
-# argument at 128 KiB (MAX_ARG_STRLEN, 131,072 bytes with its NUL), so keep 4 KiB below it.
-ARGUMENT_BUDGET = 124 * 1024
+# Linux caps one argument at 128 KiB (MAX_ARG_STRLEN), so install.sh feeds the downloaded installer
+# to Python on standard input instead of as a `python -c` argument.
+MAX_ARG_STRLEN = 128 * 1024
 
 
 def pwsh():
@@ -41,7 +41,7 @@ def remote(tmp_path, monkeypatch):
     home = isolate(monkeypatch, tmp_path)
     upstream = Upstream(tmp_path)
     env = {**os.environ, "SKILLS_REPOSITORY_URL": upstream.url, "SKILLS_PYTHON": sys.executable}
-    return home, env
+    return home, env, upstream
 
 
 @pytest.fixture
@@ -83,7 +83,7 @@ def check_contract(home, env, command, cwd=None):
 
 @pytest.mark.skipif(WINDOWS or not shutil.which("bash") or not shutil.which("curl"), reason="needs bash and curl")
 def test_piped_install_sh(remote, tmp_path):
-    home, env = remote
+    home, env, _ = remote
     env = without_pyyaml(tmp_path, env)  # as on a fresh host: the bootstraps need no PyYAML
     env["SKILLS_INSTALLER_URL"] = (ROOT / "scripts/install_skills.py").as_uri()
     piped = tmp_path / "pipe.sh"  # stands in for `curl -fsSL .../install.sh | bash -s -- ARGS`
@@ -100,14 +100,42 @@ def test_piped_install_sh(remote, tmp_path):
     assert older.returncode == 1 and b"Python 3.11+ is required" in older.stderr
 
 
-def test_installer_fits_in_one_python_c_argument():
-    size = (ROOT / "scripts/install_skills.py").stat().st_size
-    assert size < ARGUMENT_BUDGET, f"install_skills.py is {size} bytes; curl | bash would break near 128 KiB"
+@pytest.mark.skipif(WINDOWS or not shutil.which("bash") or not shutil.which("curl"), reason="needs bash and curl")
+def test_piped_install_sh_runs_an_installer_of_any_size_and_passes_its_exit_status(remote, tmp_path):
+    """curl | bash keeps the download in memory and gives it to Python on standard input, which has
+    no size limit; the installer reads nothing from it, and its exit status is the bootstrap's."""
+    home, env, _ = remote
+    served = tmp_path / "served/install_skills.py"  # three times what one argument may hold
+    put(served, (ROOT / "scripts/install_skills.py").read_text() + "# padding\n" * (3 * MAX_ARG_STRLEN // 10))
+    assert served.stat().st_size > 3 * MAX_ARG_STRLEN
+    env["SKILLS_INSTALLER_URL"] = served.as_uri()
+    piped = tmp_path / "pipe.sh"
+    piped.write_text(f'exec bash -s -- "$@" < {shlex.quote(str(ROOT / "install.sh"))}\n')
+    # From standard input __file__ is "<stdin>", a name relative to the caller's folder: a library
+    # clone planted around the caller must not be taken for the installer's own.
+    planted = tmp_path / "planted/library"
+    put(planted / ".git" / installer.MARKER, "not a clone\n")
+    (planted / "scripts").mkdir()
+    before = snapshot(planted.parent)
+    check_contract(home, env, ["bash", str(piped)], cwd=planted / "scripts")
+    assert snapshot(planted.parent) == before and (data_dir(home) / installer.CLONE).is_dir()
+    bad = subprocess.run(["bash", str(piped)], env={**env, "SKILLS_BRANCH": "a..b"}, capture_output=True, text=True)
+    assert bad.returncode == 1 and "Invalid SKILLS_BRANCH" in bad.stderr
+    _, _, upstream = remote
+    for i in range(installer.MASS_REMOVAL_MINIMUM):
+        upstream.skill(f"extra-{i:02d}")
+    upstream.commit("more skills")
+    assert subprocess.run(["bash", str(piped)], env=env, capture_output=True).returncode == 0
+    shutil.rmtree(upstream.work / "skills")
+    upstream.skill("alpha")
+    upstream.commit("most skills removed")
+    held = subprocess.run(["bash", str(piped)], env=env, capture_output=True, text=True)
+    assert held.returncode == installer.NEEDS_PERSON and "Refusing to remove" in held.stderr, held.stderr
 
 
 @NEEDS_PWSH
 def test_downloaded_install_ps1(remote, tmp_path, served_installer):
-    home, env = remote
+    home, env, _ = remote
     env = without_pyyaml(tmp_path, env)
     env["SKILLS_INSTALLER_URL"] = served_installer
     alone = tmp_path / "download/install.ps1"  # no checkout next to it: download mode
@@ -135,7 +163,7 @@ def test_downloaded_install_ps1(remote, tmp_path, served_installer):
 
 @NEEDS_PWSH
 def test_install_ps1_from_a_checkout_uses_the_adjacent_installer(remote, tmp_path):
-    home, env = remote
+    home, env, _ = remote
     checkout = tmp_path / "checkout"
     shutil.copytree(ROOT / "scripts", checkout / "scripts")
     shutil.copyfile(ROOT / "install.ps1", checkout / "install.ps1")
@@ -152,7 +180,7 @@ def test_install_ps1_from_a_checkout_uses_the_adjacent_installer(remote, tmp_pat
 
 @pytest.mark.skipif(WINDOWS or not shutil.which("bash"), reason="install.sh is the POSIX bootstrap")
 def test_install_sh_from_a_checkout_keeps_the_script_folder_off_sys_path(remote, tmp_path):
-    home, env = remote
+    home, env, _ = remote
     checkout = tmp_path / "checkout"
     shutil.copytree(ROOT / "scripts", checkout / "scripts")
     shutil.copyfile(ROOT / "install.sh", checkout / "install.sh")

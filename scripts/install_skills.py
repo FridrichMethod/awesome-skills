@@ -128,6 +128,13 @@ def corrupted(error: GitError) -> bool:
     return any(signature in text for signature in CORRUPTION)
 
 
+def own_file() -> Path | None:
+    """This installer's file; None when it runs from standard input or -c (the POSIX bootstrap),
+    where __file__ is "<stdin>" or unset: a relative name would be looked up in the caller's folder."""
+    path = globals().get("__file__")
+    return Path(path) if path and os.path.isabs(path) else None
+
+
 def warn(message: str):
     print(f"awesome-skills: warning: {message}", file=sys.stderr)
 
@@ -1267,8 +1274,8 @@ class DirLibrary(Library):
         # The sync never saw this tree: an edited copy needs its checks (sync_skills.copy_problems).
         if found[1] and skill_id not in self._problems:
             if not self._rules:
-                path = Path(globals().get("__file__") or "-").with_name("sync_skills.py")
-                if not path.is_file():
+                path = (own_file() or Path("-")).with_name("sync_skills.py")
+                if not path.is_absolute() or not path.is_file():
                     raise InstallError(f"Checking copies of a local tree needs {display(path)}")
                 spec = importlib.util.spec_from_file_location("awesome_skills_sync", path)
                 self._rules = importlib.util.module_from_spec(spec)
@@ -1292,8 +1299,8 @@ class DirLibrary(Library):
         return metadata(data, label)["name"]  # a local tree's names come from PyYAML
 
     def router_command(self):
-        helper = globals().get("__file__")
-        helper = display(Path(helper).resolve()) if helper else "install_skills.py"
+        helper = own_file()
+        helper = display(helper.resolve()) if helper else "install_skills.py"
         return helper, ["--source", display(self.source)]
 
     def describe(self):
@@ -2691,8 +2698,8 @@ def main(argv: list[str] | None = None) -> int:
     legacy_cache = storage_path("SKILLS_CACHE_DIR", home / ".cache/awesome-skills")
     keep = kept_backups()
     remote, source = args.remote, None
-    helper = globals().get("__file__")
-    clone = native(Path(helper).resolve().parent.parent) if helper else None
+    helper = own_file()
+    clone = native(helper.resolve().parent.parent) if helper else None
     if args.source is None and clone is not None and is_library_clone(clone):
         # The helper inside the library clone (the router's command) serves that clone.
         remote, data = True, outside_discovery(safe_absolute(clone.parent))
@@ -2710,7 +2717,7 @@ def main(argv: list[str] | None = None) -> int:
                 restore(target, state, False, only=only)
         return 0
     if not remote:
-        adjacent = Path(helper).resolve().parent if helper else Path.cwd()
+        adjacent = helper.resolve().parent if helper else Path.cwd()
         default = adjacent / "skills" if (adjacent / "skills").exists() else adjacent.parent / "skills"
         source = native((args.source or default).resolve())
         guard_source(source, data)
