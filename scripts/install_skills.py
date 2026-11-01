@@ -1738,10 +1738,9 @@ def selection(args, client: str, old: dict, library: Library) -> list[str]:
     blocked = sorted(set(args.enable) & set(library.skipped))
     if blocked:
         raise InstallError(f"Cannot enable {blocked}: {'; '.join(library.skipped[i] for i in blocked)}")
-    ids = old.get("selection", ["@library"])
-    if args.selection is not None:
-        ids = [v for v in args.selection.split(",") if v]
-    ids = set(library.skills) | (set(ids) - {"@all"}) if "@all" in ids and args.disable else set(ids)
+    ids = set(stored(old, "selection", client, known) if args.selection is None else args.selection.split(",")) - {""}
+    if "@all" in ids and args.disable:
+        ids = set(library.skills) | ids - {"@all"}
     ids.update(args.enable)
     unknown_disable = set(args.disable) - known - set(ids) - {"@library", "@all"}
     if unknown_disable:
@@ -1753,13 +1752,23 @@ def selection(args, client: str, old: dict, library: Library) -> list[str]:
     return sorted(ids)
 
 
-def manual_set(args, old: dict, library: Library) -> list[str]:
+def manual_set(args, client: str, old: dict, library: Library) -> list[str]:
     """The skills installed but hidden from the model, unless shown: @all, IDs, or none."""
-    ids = old.get("manual", ["@all"]) if args.manual is None else [v for v in args.manual.split(",") if v]
-    unknown = set(ids) - set(library.skills) - set(library.skipped) - {"@all"}
+    known = set(library.skills) | set(library.skipped)
+    ids = set(stored(old, "manual", client, known) if args.manual is None else args.manual.split(",")) - {""}
+    unknown = ids - known - {"@all"}
     if unknown:
         raise InstallError(f"Unknown source IDs: {sorted(unknown)} (use --list --search)")
-    return sorted(set(ids))
+    return sorted(ids)
+
+
+def stored(old: dict, key: str, client: str, known: set) -> list[str]:
+    """A saved set without the IDs the library no longer has (renamed or removed upstream)."""
+    ids = old.get(key, ["@library"] if key == "selection" else ["@all"])
+    gone = sorted(set(ids) - known - {"@all", "@library"})
+    if gone:
+        warn(f"{client}: dropping saved IDs that left the library (see --list --search): {', '.join(gone)}")
+    return [i for i in ids if i not in gone]
 
 
 def desired_entries(client: str, visible: list, manual: list, library: Library, router: dict) -> tuple:
@@ -2516,7 +2525,7 @@ def make_plans(args, clients: list, library: Library, home: Path, state: Path, d
     plans = []
     for client, roots, old in clients:
         base, migration = migrated_state(old, client, bool(marks.get(client, {}).get("undone")))
-        visible, manual = selection(args, client, base, library), manual_set(args, base, library)
+        visible, manual = selection(args, client, base, library), manual_set(args, client, base, library)
         router = router_info(client, launcher_call(data))
         plans.append(plan_client(client, roots, old, base, visible, manual, library, router, home))
         if migration:

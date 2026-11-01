@@ -322,6 +322,25 @@ def test_other_v1_selections_stay_visible_with_the_rest_hidden(sandbox, capsys):
     assert state(home, "codex")["selection"] == ["@library", "beta"]
 
 
+def test_saved_ids_that_left_the_library_are_dropped_with_a_warning(sandbox, capsys):
+    home, source = sandbox
+    make_v1(home, source, "claude", ["alpha", "beta"])
+    make_v1(home, source, "codex", ["@library", "beta"])
+    shutil.rmtree(source / "beta")  # renamed or removed upstream, as skill-creator was
+    capsys.readouterr()
+    assert run(source) == 0, "neither client is blocked"
+    err = capsys.readouterr().err
+    for client in ("claude", "codex"):
+        assert f"{client}: dropping saved IDs that left the library (see --list --search): beta" in err
+    assert state(home, "claude")["selection"] == ["alpha"] and state(home, "codex")["selection"] == ["@library"]
+    run(source, "--claude-only", "--manual", "alpha")
+    shutil.rmtree(source / "alpha")
+    assert run(source, "--claude-only") == 0
+    assert (state(home, "claude")["selection"], state(home, "claude")["manual"]) == ([], [])
+    with pytest.raises(installer.InstallError, match="Unknown source IDs"):
+        run(source, "--claude-only", "--enable", "alpha")
+
+
 def test_a_dry_run_reports_the_migration_and_writes_nothing(sandbox, capsys):
     home, source = sandbox
     make_v1(home, source, "claude", ["@all"])
