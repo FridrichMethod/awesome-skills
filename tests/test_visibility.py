@@ -271,6 +271,24 @@ def test_a_linked_second_codex_root_is_never_written_and_blocks_no_update(sandbo
         run(source, "--codex-only")
 
 
+@pytest.mark.parametrize("link", [".agents/skills", ".agents"])
+def test_a_second_codex_root_linked_into_claudes_blocks_neither_client(sandbox, tmp_path, link, capsys):
+    home, source = sandbox
+    if not can_symlink(tmp_path):
+        pytest.skip("symlinks unavailable")
+    claude = home / ".claude/skills"  # shared with other tools: ~/.agents/skills leads into it
+    claude.mkdir(parents=True)
+    (home / link).parent.mkdir(parents=True, exist_ok=True)
+    (home / link).symlink_to(claude if link.endswith("skills") else claude.parent, target_is_directory=True)
+    first = sorted([ROUTER, *(s for s in ("alpha", "beta") if not installer.placement(s))])
+    for args in ([], ["--claude-only"], [], ["--codex-only"]):  # later runs see Claude's copies there
+        assert run(source, *args) == 0, args
+    assert all(hidden_from_claude(claude / s) for s in ("alpha", "beta"))
+    assert sorted(os.listdir(home / ".codex/skills")) == first, "Claude's copies are not other tools' skills"
+    capsys.readouterr()
+    assert run(source) == 0 and "Already current" in capsys.readouterr().out
+
+
 def test_codex_copies_drop_plugin_folders_and_neutralize_nested_skills(sandbox):
     home, source = sandbox
     gamma = skill(source, "gamma")

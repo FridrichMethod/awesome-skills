@@ -1877,12 +1877,11 @@ def plan_entries(client, roots, managed, desired, library, router, named) -> tup
     return actions, kept, new_managed
 
 
-def external_skills(client: str, roots: list, kept: list, home: Path) -> dict:
-    """Path -> frontmatter name of preserved skills (even symlinks), and for Codex of everything
-    in ~/.agents/skills unless that is one of its roots."""
+def external_skills(client: str, roots: list, kept: list, agents: Path | None) -> dict:
+    """Path -> frontmatter name of preserved skills (even symlinks), and of everything in `agents`
+    (~/.agents/skills, see resolve_clients) unless that is one of the roots."""
     paths = [roots[item.get("root", 0)] / item["entry"] for item in kept]
-    agents = home / ".agents/skills"
-    if client == "codex" and agents.is_dir() and not any(r.is_dir() and os.path.samefile(r, agents) for r in roots):
+    if agents and agents.is_dir() and not any(r.is_dir() and os.path.samefile(r, agents) for r in roots):
         paths += list(agents.iterdir())
     external = {}
     for directory in paths:
@@ -1921,7 +1920,7 @@ def unclaim(plan: dict, entry: str, info: dict, managed: dict, reason: str):
     plan["preserved"].append(kept_entry(entry, reason, **where))
 
 
-def plan_client(client, roots, old, base, visible, manual, library, router, home) -> dict:
+def plan_client(client, roots, old, base, visible, manual, library, router, agents) -> dict:
     """Plan one client from its state `base` (old, or the migrated form of old)."""
     keys = ("destination", "destination2")
     managed = {
@@ -1943,7 +1942,7 @@ def plan_client(client, roots, old, base, visible, manual, library, router, home
     if len(roots) > 1:
         new["destination2"] = plan["destination2"] = str(roots[1])
     new.update(selection_version=SELECTION_VERSION, managed=new_managed)
-    external = external_skills(client, roots, kept, home)
+    external = external_skills(client, roots, kept, agents)
     plan.update(actions=actions, preserved=kept, conflicts=conflicts, external_conflicts=external_conflicts(external))
     plan.update(failed=[], state=new, previous_state=old, managed_before=managed, router=router)
     preserved = {roots[item.get("root", 0)] / item["entry"] for item in kept}
@@ -2448,7 +2447,7 @@ def kept_backups() -> int:
 
 
 def resolve_clients(args, home: Path, storage: list[Path], source: Path | None) -> list[tuple]:
-    """(client, skills roots, state) per client: Claude has one root, Codex two."""
+    """(client, skills roots, state, foreign ~/.agents/skills or None): Claude has one root, Codex two."""
     codex_home = native(Path(os.path.abspath(os.environ.get("CODEX_HOME") or home / ".codex")))
     defaults = {"claude": [home / ".claude/skills"], "codex": [codex_home / "skills", home / ".agents/skills"]}
     states = {client: read_json(storage[0] / f"{client}.json", {}) for client in defaults}
@@ -2459,6 +2458,14 @@ def resolve_clients(args, home: Path, storage: list[Path], source: Path | None) 
         variable = f"SKILLS_{client.upper()}_DEST" + ("2" if index else "")
         recorded = states[client].get(("destination", "destination2")[index]) if saved else None
         return Path(os.environ.get(variable) or recorded or defaults[client][index])
+
+    def linked(index: int, path: Path) -> bool:  # Codex's second root, unset: never written through a link
+        try:
+            if index and not os.environ.get("SKILLS_CODEX_DEST2"):
+                safe_absolute(path)
+        except InstallError:
+            return True
+        return False
 
     clients = []
     for client in ["codex"] if args.codex_only else ["claude"] if args.claude_only else ["claude", "codex"]:
@@ -2473,12 +2480,17 @@ def resolve_clients(args, home: Path, storage: list[Path], source: Path | None) 
         if roots[0] == home / ".agents" or home / ".agents" in roots[0].parents:
             raise InstallError(f"This installer does not own ~/.agents: {display(roots[0])}")
         other = "claude" if client == "codex" else "codex"
-        saved = [Path(states[other][k]) for k in ("destination", "destination2") if states[other].get(k)]
-        others = [configured(other, i, False) for i in range(len(defaults[other]))] + saved
-        resolved = [native(b.expanduser().resolve()) for b in others]
+        saved = [
+            (i, Path(states[other][k])) for i, k in enumerate(("destination", "destination2")) if states[other].get(k)
+        ]
+        others = [(i, configured(other, i, False)) for i in range(len(defaults[other]))] + saved
+        resolved = [native(b.expanduser().resolve()) for i, b in others if not linked(i, b)]
         for a, b in [(a, b) for a in roots for b in resolved] + ([tuple(roots)] if len(roots) > 1 else []):
             if overlap(a, b):
                 raise InstallError(f"Client destinations overlap: {display(a)}, {display(b)}")
+        agents = home / ".agents/skills"  # unless it holds Claude's own copies
+        if client == "claude" or any(overlap(native(agents.resolve()), b) for b in resolved):
+            agents = None
         for root in [home / ".codex/skills", home / ".claude/skills", home / ".agents", codex_home / "skills", *roots]:
             root = native(root.resolve())
             for path in storage:
@@ -2488,7 +2500,7 @@ def resolve_clients(args, home: Path, storage: list[Path], source: Path | None) 
                     )
         if source is not None and any(overlap(source, root) for root in roots):
             raise InstallError(f"Source and destination overlap: {display(source)}, {display(roots[0])}")
-        clients.append((client, roots, states[client]))
+        clients.append((client, roots, states[client], agents))
     return clients
 
 
@@ -2509,11 +2521,11 @@ def migrated_state(old: dict, client: str, undone: bool, ids: set) -> tuple[dict
 def make_plans(args, clients: list, library: Library, home: Path, state: Path, data: Path) -> list:
     marks = read_json(state / MIGRATIONS, {}).get(MIGRATION, {})
     plans = []
-    for client, roots, old in clients:
+    for client, roots, old, agents in clients:
         base, migration = migrated_state(old, client, bool(marks.get(client, {}).get("undone")), set(library.skills))
         visible, manual = selection(args, client, base, library), manual_set(args, client, base, library)
         router = router_info(client, data)
-        plans.append(plan_client(client, roots, old, base, visible, manual, library, router, home))
+        plans.append(plan_client(client, roots, old, base, visible, manual, library, router, agents))
         if migration:
             plans[-1]["migration"] = migration
     every = [root for p in plans for root in roots_of(p)]
