@@ -46,6 +46,9 @@ MIGRATION, MIGRATIONS = "selection-v2", "migrations.json"
 FORM = 1  # of copy_edits: raise it with any change there, so copies are derived again
 SHORTCUT = ("tree", "invocation", "name", "root", "form")  # an unchanged copy is not rehashed
 ROOT_CAP = 1990  # Codex walks at most 2,000 directories per root, top level first
+# Codex walks ~/.agents/skills six levels deep; Gemini CLI reads only ~/.agents/skills/*/SKILL.md and lists
+# every skill there to its model, which no hiding key stops: Codex's second half goes one folder deeper.
+AGENTS_FOLDER = "awesome-skills"
 SUMMARY_ACTIONS = 100  # a larger plan prints one line per client
 LAUNCHER = "awesome-skills"
 ROUTER = "awesome-skills-library"
@@ -2109,6 +2112,8 @@ def plan_client(client, roots, old, base, visible, manual, library, router, agen
     external = external_skills(client, roots, kept, agents)
     plan.update(actions=actions, preserved=kept, conflicts=conflicts, external_conflicts=external_conflicts(external))
     plan.update(failed=[], state=new, previous_state=old, managed_before=managed, router=router)
+    if client == "codex":
+        plan["walked"] = [walked(agents, root) for root in roots]
     preserved = {roots[item.get("root", 0)] / item["entry"] for item in kept}
     for entry, info in list(new_managed.items()):
         target = roots[info.get("root", 0)] / entry
@@ -2146,8 +2151,26 @@ def mass_removal(args, plans: list) -> str | None:
     return None
 
 
+def walked(outer: Path | None, root: Path) -> int:
+    """The other folders Codex's breadth-first walk of `outer` (~/.agents/skills) reaches by the
+    depth of the skill folders in `root` (AGENTS_FOLDER inside it): outer, root, outer's folders and
+    theirs. None for a root Codex walks itself."""
+
+    def folders(path: Path) -> list[Path]:
+        try:
+            return [c for c in path.iterdir() if not c.name.startswith(".") and c.is_dir()]
+        except OSError:
+            return []
+
+    if outer is None or root.parent != outer:
+        return 0
+    others = [c for c in folders(outer) if c != root]
+    return 2 + len(others) + sum(len(folders(c)) for c in others)
+
+
 def overflow(plans: list) -> str | None:
-    """A Codex root with more than ROOT_CAP top-level folders (any owner) loses skills."""
+    """A Codex root whose skill folders (any owner) Codex would not all reach, as it walks at most
+    2,000 folders per root, loses skills."""
     for p in plans:
         for index, root in enumerate(roots_of(p) if p["client"] == "codex" else []):
             names = {n for n in os.listdir(root) if not n.startswith(".")} if root.is_dir() else set()
@@ -2156,10 +2179,13 @@ def overflow(plans: list) -> str | None:
                     names.add(action["entry"])
                 else:
                     names.discard(action["entry"])
-            if len(names) > ROOT_CAP:
+            extra = p.get("walked", [0, 0])[index]
+            if len(names) + extra > ROOT_CAP:
+                around = f" and {extra} other folders it walks first in {display(root.parent)}" if extra else ""
                 return (
-                    f"Refusing to fill {display(root)} with {len(names)} skill folders: Codex finds at most "
-                    f"about 2,000 per root (limit {ROOT_CAP}); remove skills there or install fewer (--codex-only --manual)"
+                    f"Refusing to fill {display(root)} with {len(names)} skill folders{around}: Codex walks at most "
+                    f"about 2,000 folders per root (limit {ROOT_CAP}); remove skills there or install fewer "
+                    "(--codex-only --manual)"
                 )
     return None
 
@@ -2625,7 +2651,8 @@ def resolve_clients(args, home: Path, storage: list[Path], source: Path | None) 
     """(client, skills roots, state, foreign ~/.agents/skills or None, why Codex is held or None):
     Claude has one root, Codex two."""
     codex_home = native(Path(os.path.abspath(os.environ.get("CODEX_HOME") or home / ".codex")))
-    defaults = {"claude": [home / ".claude/skills"], "codex": [codex_home / "skills", home / ".agents/skills"]}
+    agents = home / ".agents/skills"
+    defaults = {"claude": [home / ".claude/skills"], "codex": [codex_home / "skills", agents / AGENTS_FOLDER]}
     states = {client: read_json(storage[0] / f"{client}.json", {}) for client in defaults}
     for client, value in states.items():
         validate_state(value, client)
@@ -2646,7 +2673,6 @@ def resolve_clients(args, home: Path, storage: list[Path], source: Path | None) 
     # Codex reads ~/.agents/skills. Led into the Claude root that holds this installer's copies (or that
     # this run fills), it would list every hidden Claude copy (it ignores the Claude key) and find most
     # names twice: Codex then installs nothing (make_plans), and Claude is never held for it.
-    agents = home / ".agents/skills"
     claude = [] if args.codex_only else [configured("claude", 0)]
     claude += [Path(states["claude"]["destination"])] if states["claude"].get("managed") else []
     into = next((p for p in claude if overlap(native(agents.resolve()), native(p.expanduser().resolve()))), None)
@@ -2774,7 +2800,7 @@ def summary(p: dict, backup: Path) -> str:
 
 
 def report(dry_run: bool, library: Library, plans: list, legacy: list[Path], pending: Path | None = None) -> dict:
-    hidden = {"state", "previous_state", "managed_before", "router"}
+    hidden = {"state", "previous_state", "managed_before", "router", "walked"}
     clients = [{k: v for k, v in p.items() if k not in hidden} | {"selection": p["state"]["selection"]} for p in plans]
     result = {
         "dry_run": dry_run,

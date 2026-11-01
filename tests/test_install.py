@@ -96,7 +96,8 @@ def hidden_from_codex(path) -> bool:
 
 def codex_copy(home, skill_id):
     """Where a new Codex copy lands: sha256(ID) mod 2 picks the first or the second root."""
-    return home / (".agents/skills" if installer.placement(skill_id) else ".codex/skills") / skill_id
+    second = f".agents/skills/{installer.AGENTS_FOLDER}"  # one folder below where other tools look
+    return home / (second if installer.placement(skill_id) else ".codex/skills") / skill_id
 
 
 def test_first_install_and_no_argument_updater(sandbox, capsys):
@@ -909,7 +910,7 @@ def test_explicit_selection_change_is_not_a_mass_removal(sandbox):
     run(source)
     assert run(source, "--codex-only", "--manual", "") == 0, "the undo a migration prints removes every hidden copy"
     assert sorted(os.listdir(home / ".codex/skills")) == [installer.ROUTER]
-    assert not os.listdir(home / ".agents/skills")
+    assert not os.listdir(home / ".agents/skills" / installer.AGENTS_FOLDER)
     assert run(source, "--claude-only", "--selection", "alpha", "--manual", "") == 0
     assert sorted(os.listdir(home / ".claude/skills")) == ["alpha"]
 

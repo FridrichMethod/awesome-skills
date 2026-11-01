@@ -18,6 +18,7 @@ from tests.test_install import can_symlink, codex_copy, hidden_from_claude, hidd
 
 ROOT = Path(__file__).resolve().parents[1]
 ROUTER = installer.ROUTER
+SECOND = f".agents/skills/{installer.AGENTS_FOLDER}"  # Codex's second root, below where other tools look
 
 
 @pytest.fixture
@@ -226,7 +227,7 @@ def test_exact_client_copies_are_adopted_and_raw_trees_only_when_named(sandbox, 
 def test_only_this_installers_copies_are_claimed_in_the_shared_agents_root(sandbox, capsys):
     home, source = sandbox
     run(source, "--codex-only")
-    second = home / ".agents/skills"
+    second = home / SECOND
     assert installer.placement("beta") and hidden_from_codex(second / "beta")
     (state_dir(home) / "codex.json").unlink()
     run(source, "--codex-only")
@@ -307,13 +308,29 @@ def test_codex_copies_split_between_two_roots_by_a_stable_hash(sandbox, monkeypa
     assert installer.fingerprint(home) == before, "the saved second root is kept"
 
 
+def test_no_codex_copy_lies_where_other_tools_list_skills(sandbox):
+    """Gemini CLI reads ~/.agents/skills/SKILL.md and ~/.agents/skills/*/SKILL.md only (0.63's glob),
+    and lists every skill there to its model, which neither hiding key stops; Codex walks six levels
+    deep. So Codex's second half sits one folder deeper, where only Codex finds it."""
+    home, source = sandbox
+    for i in range(6):
+        skill(source, f"extra-{i}")
+    run(source)
+    agents = home / ".agents/skills"
+    assert not list(agents.glob("SKILL.md")) and not list(agents.glob("*/SKILL.md"))
+    managed = state(home, "codex")["managed"]
+    second = [entry for entry, record in managed.items() if record.get("root") == 1]
+    assert second and all((agents / installer.AGENTS_FOLDER / entry / "SKILL.md").is_file() for entry in second)
+    assert state(home, "codex")["destination2"] == str(installer.native(agents / installer.AGENTS_FOLDER))
+
+
 def test_codex_finds_its_second_root_however_home_is_spelled(sandbox, monkeypatch, capsys):
     home, source = sandbox
     monkeypatch.setenv("HOME", str(home / "../home"))
     skill(source, "delta")
     run(source, "--codex-only")
     second = [s for s in ("alpha", "beta", "delta") if installer.placement(s)]
-    assert second and all((home / ".agents/skills" / s).is_dir() for s in second)
+    assert second and all((home / SECOND / s).is_dir() for s in second)
     capsys.readouterr()
     assert run(source, "--codex-only") == 0
     assert capsys.readouterr().out == "Already current; selection preserved.\n", "its own copies are not foreign"
@@ -491,11 +508,12 @@ def test_copies_in_a_second_root_that_became_a_link_stay_owned(sandbox, tmp_path
     for i in range(6):
         skill(source, f"extra-{i}")
     run(source)
-    second, shared = home / ".agents/skills", home / "shared-skills"
+    agents, shared = home / ".agents/skills", home / "shared-skills"
+    second = agents / installer.AGENTS_FOLDER
     placed = sorted(os.listdir(second))
     assert placed and set(placed) <= set(state(home, "codex")["managed"])
-    second.rename(shared)  # shared with other tools from now on
-    second.symlink_to(shared, target_is_directory=True)
+    agents.rename(shared)  # shared with other tools from now on
+    agents.symlink_to(shared, target_is_directory=True)
     before, copies = state(home, "codex"), installer.fingerprint(shared)
     capsys.readouterr()
     assert run(source) == 0
@@ -505,27 +523,32 @@ def test_copies_in_a_second_root_that_became_a_link_stay_owned(sandbox, tmp_path
     assert run(source, "--codex-only", "--enable", "alpha") == 0, "a visibility change still works"
     assert state(home, "codex")["managed"].keys() == before["managed"].keys()
     skill(source, placed[0], body="changed upstream")
-    monkeypatch.setenv("SKILLS_CODEX_DEST2", str(shared))  # the README's way to update them again
+    target = shared / installer.AGENTS_FOLDER
+    monkeypatch.setenv("SKILLS_CODEX_DEST2", str(target))  # the README's way to update them again
     assert run(source, "--codex-only") == 0
-    assert "changed upstream" in (shared / placed[0] / "SKILL.md").read_text() and hidden_from_codex(shared / placed[0])
+    assert "changed upstream" in (target / placed[0] / "SKILL.md").read_text() and hidden_from_codex(target / placed[0])
     value = state(home, "codex")
-    assert value["destination2"] == str(installer.native(shared)) and set(placed) <= set(value["managed"])
+    assert value["destination2"] == str(installer.native(target)) and set(placed) <= set(value["managed"])
 
 
-def test_a_visible_copy_another_tool_left_in_the_shared_root_is_never_claimed(sandbox, capsys):
+@pytest.mark.parametrize("where", [".agents/skills", SECOND])
+def test_a_visible_copy_another_tool_left_in_the_shared_root_is_never_claimed(sandbox, capsys, where):
+    """Another tool's copy of a library tree in ~/.agents/skills (or, oddly, in this installer's own
+    folder there) is never claimed or rewritten: Codex reads it already, so none of ours joins it."""
     home, source = sandbox
-    second = home / ".agents/skills"
+    theirs = home / where / "beta"
     assert installer.placement("beta"), "beta belongs in the second root"
-    shutil.copytree(source / "beta", second / "beta")  # identical to beta's visible Codex copy
-    raw = installer.fingerprint(second / "beta")
+    shutil.copytree(source / "beta", theirs)  # identical to beta's visible Codex copy
+    raw = installer.fingerprint(theirs)
     assert installer.DirLibrary(source).derived("codex", "beta", "auto")[1] == {}, "nothing tells it apart"
     capsys.readouterr()
     assert run(source, "--codex-only", "--manual", "", "--selection", "@library,beta") == 0
-    assert "beta" not in state(home, "codex")["managed"] and installer.fingerprint(second / "beta") == raw
+    assert "beta" not in state(home, "codex")["managed"] and installer.fingerprint(theirs) == raw
     assert any(item["entry"] == "beta" and item.get("root") == 1 for item in plan(capsys)["clients"][0]["preserved"])
-    with pytest.raises(installer.InstallError, match="preserved destination differs"):
+    expected = "preserved destination differs" if where == SECOND else "Frontmatter name conflict"
+    with pytest.raises(installer.InstallError, match=expected):
         run(source, "--codex-only", "--selection", "@library", "--manual", "beta")
-    assert installer.fingerprint(second / "beta") == raw, "never rewritten as a hidden copy"
+    assert installer.fingerprint(theirs) == raw, "never rewritten as a hidden copy"
 
 
 def test_codex_copies_drop_plugin_folders_and_neutralize_nested_skills(sandbox):
@@ -620,15 +643,16 @@ def test_a_mass_removal_holds_back_only_its_client(sandbox):
 
 
 def test_the_shared_second_codex_root_is_capped_too(sandbox, monkeypatch):
+    """Codex walks ~/.agents/skills breadth first: the folder itself, its folders (other tools' skills
+    and this installer's), then theirs, where the copies are. Every folder it reaches first counts."""
     home, source = sandbox
     second = [s for s in ("alpha", "beta") if installer.placement(s)]
-    monkeypatch.setattr(installer, "ROOT_CAP", 1 + len(second))  # one foreign skill fits, two do not
+    monkeypatch.setattr(installer, "ROOT_CAP", 4 + len(second))  # one foreign skill fits, two do not
     for name in ("foreign-one", "foreign-two"):  # other tools' skills in ~/.agents/skills
-        skill(home / ".agents/skills", name)
+        (skill(home / ".agents/skills", name) / "references").mkdir()
     before = installer.fingerprint(home)
-    with pytest.raises(
-        installer.PersonNeeded, match=rf"Refusing to fill .*\.agents.skills with {2 + len(second)} skill"
-    ):
+    message = rf"Refusing to fill .*{installer.AGENTS_FOLDER} with {len(second)} skill folders and 6 other folders"
+    with pytest.raises(installer.PersonNeeded, match=message):
         run(source, "--codex-only")
     assert installer.fingerprint(home) == before
     shutil.rmtree(home / ".agents/skills/foreign-two")

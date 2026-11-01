@@ -59,7 +59,8 @@ def codex_path(state: dict, skill_id: str) -> Path | None:
     """The installed Codex SKILL.md: in the root its record names, else in either root."""
     roots = [state.get("destination"), state.get("destination2")]
     home = Path.home()
-    roots += [str(Path(os.environ.get("CODEX_HOME") or home / ".codex") / "skills"), str(home / ".agents/skills")]
+    codex_home = Path(os.environ.get("CODEX_HOME") or home / ".codex")
+    roots += [str(codex_home / "skills"), str(home / ".agents/skills/awesome-skills")]  # the installer's defaults
     record = state.get("managed", {}).get(skill_id)
     if isinstance(record, dict) and record.get("root") in (0, 1):
         roots.insert(0, roots[record["root"]])
