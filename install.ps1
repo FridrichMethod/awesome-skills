@@ -33,10 +33,37 @@ if ($LASTEXITCODE -ne 0) {
 
 # Python never imports from a folder it was not given: a checkout's installer runs with -P (its own
 # folder stays off sys.path; PyYAML may live in the user's site-packages), a download with -I.
+# The installer beside this script runs only from a checkout (skills or .git), and off Windows only
+# from one this user owns and no one else may write to, scripts and the file included (group write
+# only for the user's own private group): a copy of this script staged in a shared temporary folder
+# such as /tmp must never run what another user put beside it. Windows' temporary folder is per user.
+$owned = @'
+import grp, os, pwd, sys
+d = sys.argv[1]
+ok = True
+for p in (d, os.path.join(d, 'scripts'), os.path.join(d, 'scripts', 'install_skills.py')):
+    s = os.stat(p)
+    try:
+        me, g = pwd.getpwuid(os.geteuid()).pw_name, grp.getgrgid(s.st_gid)
+        private = g.gr_name == me and set(g.gr_mem) <= {me}
+    except KeyError:
+        private = False
+    ok = ok and s.st_uid == os.geteuid() and not s.st_mode & 0o002 and (private or not s.st_mode & 0o020)
+sys.exit(not ok)
+'@
 $local = if ($PSScriptRoot) { Join-Path (Join-Path $PSScriptRoot 'scripts') 'install_skills.py' } else { '' }
 if ($local -and (Test-Path -LiteralPath $local -PathType Leaf)) {
-    & $exe @prefix -P -B $local @args
-    exit $LASTEXITCODE
+    $checkout = (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'skills') -PathType Container) -or
+        (Test-Path -LiteralPath (Join-Path $PSScriptRoot '.git'))
+    if ($checkout -and $env:OS -ne 'Windows_NT') {
+        & $exe @prefix -I -c $owned $PSScriptRoot
+        $checkout = $LASTEXITCODE -eq 0
+    }
+    if ($checkout) {
+        & $exe @prefix -P -B $local @args
+        exit $LASTEXITCODE
+    }
+    [Console]::Error.WriteLine("awesome-skills: not using ${local}: not in a checkout only you can write to; downloading the installer")
 }
 
 $branch = if ($env:SKILLS_BRANCH) { $env:SKILLS_BRANCH } else { 'main' }

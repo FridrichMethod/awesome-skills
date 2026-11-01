@@ -191,3 +191,55 @@ def test_install_sh_from_a_checkout_keeps_the_script_folder_off_sys_path(remote,
     assert result.returncode == 0, result.stderr
     assert sorted(os.listdir(home / ".claude/skills")) == ["beta"]
     assert not planted.exists(), "-P: the installer's own folder is not on sys.path"
+
+
+def plant_installer(folder: Path) -> Path:
+    """A scripts/install_skills.py beside a staged bootstrap, with the skills/ folder a checkout has:
+    run, it writes a marker. Returns the marker's path."""
+    marker = folder.parent / f"{folder.name}-planted-installer-ran"
+    put(folder / "scripts/install_skills.py", f"open({str(marker)!r}, 'w').close()\n")
+    (folder / "skills").mkdir(exist_ok=True)
+    return marker
+
+
+@pytest.mark.skipif(WINDOWS or not shutil.which("bash") or not shutil.which("curl"), reason="needs bash and curl")
+@pytest.mark.parametrize("writable", ["shared temporary folder", "world-writable scripts", "no checkout"])
+def test_install_sh_staged_where_others_can_write_downloads_the_installer(remote, tmp_path, writable):
+    """The dotfiles hook stages install.sh in $TMPDIR, often the shared /tmp: a scripts/install_skills.py
+    another user put beside it must never run as the owner. Only a folder this user owns that no one
+    else may write to is taken for a checkout."""
+    home, env, _ = remote
+    staging = tmp_path / "staging"
+    marker = plant_installer(staging)
+    if writable == "shared temporary folder":
+        staging.chmod(0o1777)  # as /tmp
+    elif writable == "world-writable scripts":
+        (staging / "scripts").chmod(0o777)
+    else:
+        (staging / "skills").rmdir()  # a private folder holding no checkout
+    download = staging / "dotfiles-payload.Ab12Cd"  # the hook's mktemp "$TMPDIR/dotfiles-payload.XXXXXX"
+    shutil.copyfile(ROOT / "install.sh", download)
+    env = {**env, "TMPDIR": str(staging), "SKILLS_INSTALLER_URL": (ROOT / "scripts/install_skills.py").as_uri()}
+    result = subprocess.run(["bash", str(download)], env=env, cwd="/", stdin=subprocess.DEVNULL, capture_output=True)
+    staging.chmod(0o755)
+    assert result.returncode == 0, result.stderr
+    assert not marker.exists(), "the planted installer ran"
+    assert b"not using" in result.stderr and (home / ".claude/skills/alpha/SKILL.md").is_file()
+
+
+@NEEDS_PWSH
+@pytest.mark.skipif(WINDOWS, reason="Windows' temporary folder is per user; the ownership check is POSIX")
+def test_install_ps1_staged_where_others_can_write_downloads_the_installer(remote, tmp_path, served_installer):
+    home, env, _ = remote
+    staging = tmp_path / "staging"
+    marker = plant_installer(staging)
+    staging.chmod(0o1777)
+    alone = staging / "awesome-skills-4242.ps1"  # install.ps1's own advice: save it in the temporary folder
+    shutil.copyfile(ROOT / "install.ps1", alone)
+    env = {**env, "TMPDIR": str(staging), "SKILLS_INSTALLER_URL": served_installer}
+    command = [pwsh(), "-NoProfile", "-NonInteractive", "-File", str(alone)]
+    result = subprocess.run(command, env=env, cwd="/", stdin=subprocess.DEVNULL, capture_output=True, text=True)
+    staging.chmod(0o755)
+    assert result.returncode == 0, result.stderr
+    assert not marker.exists(), "the planted installer ran"
+    assert "not using" in result.stderr and (home / ".claude/skills/alpha/SKILL.md").is_file()
