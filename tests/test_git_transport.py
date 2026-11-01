@@ -824,8 +824,14 @@ def test_a_lost_data_folder_is_adopted_back_in_one_run(remote, capsys, monkeypat
     capsys.readouterr()
     batches, fetch = [], installer.GitLibrary.fetch_wanted
     monkeypatch.setattr(installer.GitLibrary, "fetch_wanted", lambda self: batches.append(fetch(self)) or batches[-1])
+    calls, git_run = [], installer.Git.run
+    monkeypatch.setattr(
+        installer.Git, "run", lambda self, repo, *a, **k: calls.append(a) or git_run(self, repo, *a, **k)
+    )
     assert run() == 0
     assert batches == [True, False], "every file the comparisons needed came in one batch"
+    [batch] = [a for a in calls if "--stdin" in a and "fetch" in a]
+    assert batch[:3] == ("-c", "fetch.negotiationAlgorithm=noop", "fetch"), "sent as git's own lazy fetch, no haves"
     after = {client: manifest(home, client)["managed"] for client in ("claude", "codex")}
     assert {c: sorted(m) for c, m in after.items()} == {c: sorted(m) for c, m in before.items()}
     assert all(after[c][e]["sha256"] == before[c][e]["sha256"] for c in after for e in after[c])
@@ -834,6 +840,28 @@ def test_a_lost_data_folder_is_adopted_back_in_one_run(remote, capsys, monkeypat
     assert [item["preserved"] for item in plan["clients"]] == [[], []], "every copy adopted, the routers too"
     assert run() == 0
     assert capsys.readouterr().out.strip().endswith("Already current; selection preserved.")
+
+
+def test_a_folder_with_a_file_no_copy_has_is_rejected_without_fetching(remote, monkeypatch):
+    """may_hold judges by stat alone: a folder named like a library ID that holds one of this
+    installer's copies plus a file of its own (as another tool might leave) can be no copy of ours,
+    so planning fetches none of its library files, on --dry-run or later."""
+    home, _ = remote
+    assert run("--codex-only") == 0
+    alpha = codex_copy(home, "alpha")
+    for entry in os.listdir(alpha.parent):
+        if entry not in ("alpha", installer.ROUTER):
+            shutil.rmtree(alpha.parent / entry)
+    for other in (home / ".codex/skills", home / ".agents/skills"):
+        for entry in os.listdir(other) if other != alpha.parent and other.is_dir() else []:
+            shutil.rmtree(other / entry)
+    put(alpha / "notes-of-another-tool.txt", "theirs\n")
+    shutil.rmtree(data_dir(home))  # state and clone: the copy is unmanaged, the new clone has no blobs
+    assert run("--claude-only", "--selection", "", "--manual", "") == 0
+    batches, fetch = [], installer.GitLibrary.fetch_wanted
+    monkeypatch.setattr(installer.GitLibrary, "fetch_wanted", lambda self: batches.append(fetch(self)) or batches[-1])
+    assert run("--codex-only", "--dry-run") == 0
+    assert batches == [False], "nothing was fetched to compare a folder that cannot be a copy"
 
 
 def test_planning_reads_installed_copies_instead_of_fetching_their_blobs(remote):
