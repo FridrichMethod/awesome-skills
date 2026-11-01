@@ -683,7 +683,7 @@ def test_state_lock_prevents_concurrent_apply(sandbox):
 
 def test_installation_does_not_require_git(sandbox, monkeypatch):
     home, source = sandbox
-    monkeypatch.setattr(installer.shutil, "which", lambda _: None)
+    monkeypatch.setattr(installer, "find_git", lambda: None)
     run(source, "--codex-only")
     assert (home / ".codex/skills" / installer.ROUTER).exists()
 

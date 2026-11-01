@@ -1087,12 +1087,24 @@ def private_cwd() -> Path:
     return PRIVATE[0]
 
 
+def find_git() -> str | None:
+    """git from PATH's absolute folders only: Windows looks a bare name up in the current folder first
+    (as an empty PATH entry does on POSIX), which may be the project a session runs the launcher in."""
+    names = [f"git{ext}" for ext in os.environ.get("PATHEXT", ".EXE").split(os.pathsep) if ext] if WINDOWS else ["git"]
+    for folder in os.environ.get("PATH", os.defpath).split(os.pathsep):
+        for name in names if os.path.isabs(folder) else []:
+            path = os.path.join(folder, name)
+            if os.path.isfile(path) and os.access(path, os.X_OK):
+                return path
+    return None
+
+
 def checkout_git(directory: Path, *args: str) -> str:
     """A git command's output in a local checkout, from its own .git, never one found above it."""
-    dot = directory / ".git"
-    if not os.path.lexists(dot) or not shutil.which("git"):
+    dot, exe = directory / ".git", find_git()
+    if not os.path.lexists(dot) or not exe:
         return ""
-    command = ["git", f"--git-dir={display(dot)}", f"--work-tree={display(directory)}", *args]
+    command = [exe, f"--git-dir={display(dot)}", f"--work-tree={display(directory)}", *args]
     result = subprocess.run(command, capture_output=True, text=True, stdin=subprocess.DEVNULL, env=git_env())
     return result.stdout.strip() if result.returncode == 0 else ""
 
@@ -1105,7 +1117,7 @@ def minimum_git() -> tuple[tuple, str]:
 class Git:
     def __init__(self):
         minimum, wanted = minimum_git()
-        exe = shutil.which("git")
+        exe = find_git()
         if not exe:
             raise InstallError(f"git {wanted} or newer is required; git was not found on PATH")
         self.exe, self.env, self.cwd = exe, git_env(), private_cwd()

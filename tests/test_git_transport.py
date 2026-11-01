@@ -346,7 +346,7 @@ def test_lock_contention_exits_75(remote):
 
 def test_missing_git_fails_before_writing(remote, monkeypatch):
     home, _ = remote
-    monkeypatch.setattr(installer.shutil, "which", lambda name: None)
+    monkeypatch.setattr(installer, "find_git", lambda: None)
     wanted = re.escape(installer.minimum_git()[1])
     with pytest.raises(installer.InstallError, match=f"git {wanted} or newer is required; git was not found"):
         run()
@@ -845,3 +845,42 @@ def test_no_fetch_changes_visibility_offline_without_downloading(remote, monkeyp
     assert run("--claude-only", "--enable", "beta", "--no-fetch") == 0
     assert packed_objects(repo) == packs, "the blobs were already in the clone"
     assert run("--no-fetch", "--dry-run") == 0
+
+
+def test_git_is_found_only_in_absolute_path_folders(tmp_path, monkeypatch):
+    """On Windows a bare `git` is looked up in the current folder first, as an empty PATH entry is on
+    POSIX. The routers have the user run the launcher in a session, so from a project folder: a git,
+    git.bat or git.cmd there must never run, in the installer or in a local checkout's revision check."""
+    real = shutil.which("git")
+    project, marker = tmp_path / "project", tmp_path / "planted-git-ran"
+    for name in ("git", "git.bat", "git.cmd"):
+        script = f'@echo off\r\ntype nul > "{marker}"\r\n' if name != "git" else f"#!/bin/sh\ntouch '{marker}'\n"
+        put(project / name, script)
+        (project / name).chmod(0o755)
+    checkout = tmp_path / "checkout"
+    git("init", "-q", str(checkout))
+    monkeypatch.chdir(project)
+    monkeypatch.setenv("PATH", os.pathsep.join(["", ".", os.path.dirname(real)]))
+    found = installer.find_git()
+    assert found and os.path.isabs(found) and os.path.samefile(os.path.dirname(found), os.path.dirname(real))
+    assert installer.Git().exe == found
+    assert installer.checkout_git(checkout, "rev-parse", "--git-dir").endswith(".git")
+    assert not marker.exists()
+    monkeypatch.setenv("PATH", os.pathsep.join(["", "."]))
+    assert installer.find_git() is None and installer.checkout_git(checkout, "rev-parse", "--git-dir") == ""
+    with pytest.raises(installer.InstallError, match="git was not found on PATH"):
+        installer.Git()
+    assert not marker.exists()
+
+
+@pytest.mark.skipif(WINDOWS, reason="simulates Windows' PATHEXT lookup on POSIX")
+def test_on_windows_git_is_found_by_its_pathext_suffix(tmp_path, monkeypatch):
+    project, tools = tmp_path / "project", tmp_path / "tools"
+    for path in (project / "git.EXE", tools / "git.CMD"):
+        put(path, "")
+        path.chmod(0o755)
+    monkeypatch.setattr(installer, "WINDOWS", True)
+    monkeypatch.setenv("PATHEXT", os.pathsep.join([".EXE", ".CMD"]))
+    monkeypatch.chdir(project)
+    monkeypatch.setenv("PATH", os.pathsep.join([".", str(tools)]))
+    assert installer.find_git() == str(tools / "git.CMD")
