@@ -2740,9 +2740,8 @@ def resolve_clients(args, home: Path, storage: list[Path], source: Path | None) 
     hold = shared and {
         "codex": f"Codex is left as it is: {how} every Claude copy and find most names twice. Replace the link with "
         "a folder of its own, or stop installing for Codex: --codex-only --selection '' --manual ''",
-        "claude": f"Claude gets no hidden copies: {how} every one. Replace the link with a folder of its own, or "
-        "keep Claude to the skills the model sees: --claude-only --manual ''",
-    }
+        "claude": f"Claude gets no hidden copies: {how} every one. Replace the link with a folder of its own, or ",
+    }  # the Claude way out that keeps the link: kept_link_remedy
     clients = []
     for client in ["codex"] if args.codex_only else ["claude"] if args.claude_only else ["claude", "codex"]:
         roots = []
@@ -2799,6 +2798,16 @@ def migrated_state(old: dict, client: str, undone: bool, ids: set) -> tuple[dict
     return base, None if undone else {"from": old["selection"], "selection": visible, "manual": manual}
 
 
+def kept_link_remedy(base: dict, migration: dict | None) -> str:
+    """How Claude keeps a link through which Codex reads its folder (see resolve_clients): with nothing
+    hidden. A migration to the router alone would then remove the library Claude lists now."""
+    if migration and migration["selection"] != migration["from"]:
+        return "keep Claude's copies as they are, all listed to the model: --claude-only --selection @all --manual ''"
+    hidden = sum(r.get("invocation") == "manual" for r in base.get("managed", {}).values())
+    removes = f", which removes its {hidden} hidden copies" if hidden else ""
+    return f"keep Claude to the skills the model sees{removes}: --claude-only --manual ''"
+
+
 def make_plans(args, clients: list, library: Library, state: Path, data: Path) -> tuple[list, dict]:
     """(plans, client -> why it is held unplanned)."""
     marks = read_json(state / MIGRATIONS, {}).get(MIGRATION, {})
@@ -2807,7 +2816,7 @@ def make_plans(args, clients: list, library: Library, state: Path, data: Path) -
         base, migration = migrated_state(old, client, bool(marks.get(client, {}).get("undone")), set(library.skills))
         visible, manual = selection(args, client, base, library), manual_set(args, client, base, library)
         if hold and (manual if client == "claude" else visible or manual):  # never an uninstall
-            held[client] = hold
+            held[client] = hold + (kept_link_remedy(base, migration) if client == "claude" else "")
             continue
         router = router_info(client, data)
         plans.append(plan_client(client, roots, old, base, visible, manual, library, router, agents))

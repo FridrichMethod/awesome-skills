@@ -498,18 +498,40 @@ def test_a_v1_host_with_the_link_is_left_as_it_is_until_a_person_decides(sandbox
     claude, codex = home / ".claude/skills", home / ".codex/skills"
     link_agents_into(home, ".agents/skills", claude)
     v1, before = {c: state(home, c) for c in ("claude", "codex")}, installer.fingerprint(home)
-    with pytest.raises(installer.PersonNeeded, match=INTO_CLAUDE):
+    with pytest.raises(installer.PersonNeeded, match=INTO_CLAUDE) as held:
         run(source)
     assert installer.fingerprint(home) == before and {c: state(home, c) for c in v1} == v1
-    assert run(source, *SEEN_ONLY) == 0, "the migration with nothing hidden, so no mass-removal guard"
-    assert os.listdir(claude) == [ROUTER] and state(home, "claude")["selection"] == ["@library"]
+    # `--manual ''` would migrate Claude to the router alone and remove the library it lists now.
+    assert "keep Claude's copies as they are, all listed to the model: --claude-only --selection @all --manual ''" in (
+        str(held.value)
+    )
+    assert "--claude-only --manual ''" not in str(held.value)
+    copies = sorted(os.listdir(claude))
+    assert run(source, "--claude-only", "--selection", "@all", "--manual", "") == 0
+    assert sorted(os.listdir(claude)) == copies and not any(hidden_from_claude(claude / s) for s in copies)
+    assert (state(home, "claude")["selection"], state(home, "claude")["manual"]) == (["@all"], [])
     assert run(source, *NO_CODEX) == 0 and not os.listdir(codex), "the v1 Codex router is removed"
     assert run(source) == 0
     backup = Path(
         json.loads((state_dir(home) / installer.MIGRATIONS).read_text())[installer.MIGRATION]["claude"]["backup"]
     )
     assert run(source, "--claude-only", "--restore", str(backup)) == 0, "--restore is never held"
-    assert state(home, "claude")["selection"] == ["@all"]
+    assert state(home, "claude") == v1["claude"]
+
+
+def test_the_claude_way_out_that_keeps_the_link_says_what_it_removes(sandbox, tmp_path):
+    """Once Claude has hidden copies, the link makes Codex list them; `--manual ''` removes them."""
+    home, source = sandbox
+    if not can_symlink(tmp_path):
+        pytest.skip("symlinks unavailable")
+    assert run(source, "--claude-only") == 0 and hidden_from_claude(home / ".claude/skills/alpha")
+    link_agents_into(home, ".agents/skills", home / ".claude/skills")
+    with pytest.raises(installer.PersonNeeded, match=INTO_CLAUDE) as held:
+        run(source)
+    assert "keep Claude to the skills the model sees, which removes its 2 hidden copies: --claude-only --manual ''" in (
+        str(held.value)
+    )
+    assert run(source, *SEEN_ONLY) == 0 and os.listdir(home / ".claude/skills") == [ROUTER]
 
 
 def test_replacing_the_link_with_a_folder_lets_codex_install(sandbox, tmp_path):
