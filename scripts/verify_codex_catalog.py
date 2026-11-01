@@ -352,7 +352,12 @@ def verify(codex: str, source: Path, installer: Path, compare_budget: int | None
         for path in (home, work, scratch):
             path.mkdir()
         (home / ".codex").mkdir()
-        env = isolated_env(home, scratch)
+        # Codex takes the nearest .git above its working folder as the project root and reads that
+        # project's .agents/skills, and git honors that repository's config: a shared temporary
+        # directory may hold another user's .git. The working folder is a project of its own, and
+        # git (run by Codex or the installer) looks no higher than this root.
+        (work / ".git").mkdir()
+        env = dict(isolated_env(home, scratch), GIT_CEILING_DIRECTORIES=str(root.resolve()))
         capabilities = detect_capabilities(codex, env, work, root)
         bundle, fixture = prepare_fixture(source, installer, root)
         before = measure(codex, env, work)

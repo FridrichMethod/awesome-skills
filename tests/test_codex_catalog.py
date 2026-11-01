@@ -219,11 +219,28 @@ def test_temporary_home_is_removed_when_interface_is_unsupported(monkeypatch, tm
     assert not paths[0].exists()
 
 
+def test_codex_and_git_read_no_repository_above_the_temporary_root(monkeypatch, tmp_path):
+    """Codex takes the nearest .git above its working folder as the project root and reads that
+    project's .agents/skills; git, which Codex and the installer run, honors that repository's config.
+    A shared temporary directory may hold another user's .git, so both stop at the verifier's root."""
+    seen = {}
+
+    def unsupported(codex, env, work, temporary):
+        seen.update(env=env, root=temporary, project=(work / ".git").is_dir())
+        raise verifier.UnsupportedCodex("fixture unsupported interface")
+
+    monkeypatch.setattr(verifier, "detect_capabilities", unsupported)
+    with pytest.raises(verifier.UnsupportedCodex):
+        verifier.verify("fixture-codex", tmp_path, tmp_path / "installer.py")
+    assert seen["project"], "the working folder is a project of its own"
+    assert seen["env"]["GIT_CEILING_DIRECTORIES"] == str(Path(seen["root"]).resolve())
+
+
 @pytest.mark.skipif(
     os.environ.get("AWESOME_SKILLS_CODEX_INTEGRATION") != "1",
     reason="Set AWESOME_SKILLS_CODEX_INTEGRATION=1 for local offline Codex integration",
 )
-def test_local_codex_discovery_and_model_visible_catalog(tmp_path):
+def test_local_codex_discovery_and_model_visible_catalog(tmp_path, monkeypatch):
     codex = shutil.which("codex")
     if not codex:
         pytest.skip("Local Codex unavailable")
@@ -234,6 +251,12 @@ def test_local_codex_discovery_and_model_visible_catalog(tmp_path):
         "---\nname: fixture-repository-skill\ndescription: Fixture repository skill.\n---\n"
     )
     installer = Path(os.environ.get("AWESOME_SKILLS_INSTALLER", str(verifier.ROOT / "scripts/install_skills.py")))
+    shared = tmp_path / "shared-tmp"  # another user's project above the verifier's temporary root
+    (shared / ".git").mkdir(parents=True)
+    planted = shared / ".agents/skills/planted-project-skill"
+    planted.mkdir(parents=True)
+    (planted / "SKILL.md").write_text("---\nname: planted-project-skill\ndescription: Planted.\n---\n")
+    monkeypatch.setattr(verifier.tempfile, "tempdir", str(shared))
     try:
         result = verifier.verify(codex, source, installer)
     except verifier.UnsupportedCodex as exc:
