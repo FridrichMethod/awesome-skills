@@ -145,6 +145,27 @@ def test_the_launcher_carries_the_install_time_storage_and_dispatches_search(tmp
     assert not (home / ".local/share/awesome-skills/codex.json").exists(), "no second, divergent state"
 
 
+@POSIX
+def test_the_launcher_keeps_working_when_the_second_codex_root_becomes_a_link(tmp_path):
+    checkout = tmp_path / "repo"
+    for skill_id in ("alpha", "beta", *(f"extra-{i}" for i in range(6))):
+        skill(checkout / "skills", skill_id)
+    shutil.copytree(ROOT / "scripts", checkout / "scripts")
+    home, env = sandbox_env(tmp_path)
+    assert subprocess.run([sys.executable, "-B", str(checkout / "scripts/install_skills.py")], env=env).returncode == 0
+    launcher = home / ".local/share/awesome-skills/bin/awesome-skills"
+    assert "SKILLS_CODEX_DEST" not in launcher.read_text(), "the state saves the destinations"
+    second, shared = home / ".agents/skills", home / "shared-skills"
+    assert any(second.iterdir())
+    second.rename(shared)  # shared with other tools from now on
+    second.symlink_to(shared, target_is_directory=True)
+    bare = {"HOME": str(home), "PATH": os.environ["PATH"]}
+    for args in (["--codex-only", "--enable", "alpha", "--no-fetch"], []):  # what the routers and updates run
+        result = subprocess.run([str(launcher), *args], env=bare, capture_output=True, text=True)
+        assert result.returncode == 0, result.stderr
+        assert "Codex's copies there are left as they are" in result.stderr
+
+
 def router(client, data):
     return installer.router_info(client, data)["entries"]["SKILL.md"][2].decode()
 

@@ -1564,16 +1564,11 @@ def launcher_call(data: Path) -> str:
 
 
 def launchers(data: Path, state: Path, library: Library) -> dict:
-    """Path -> text of the launchers: this install's installer with its storage, saved
-    destinations and remote unless set, or (`search ...`) the read-only search."""
+    """Path -> text of the launchers: this install's installer with its storage (the state has
+    the destinations) and remote unless set, or (`search ...`) the read-only search."""
     helper, extra = library.router_command()
     search, python = str(Path(helper).with_name("search_skills.py")), sys.executable
     env = {"SKILLS_STATE_DIR": display(state), "SKILLS_DATA_DIR": display(data)}
-    for client in ("claude", "codex"):
-        saved = read_json(state / f"{client}.json", {})
-        for key, variable in (("destination", ""), ("destination2", "2")):
-            if saved.get(key):
-                env[f"SKILLS_{client.upper()}_DEST{variable}"] = display(saved[key])
     env.update({key: os.environ[key] for key in ("SKILLS_REPOSITORY_URL", "SKILLS_BRANCH") if os.environ.get(key)})
     note = "# Written by the awesome-skills installer on every run; edits are overwritten."
     q = shlex.quote
