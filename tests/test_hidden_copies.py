@@ -189,6 +189,8 @@ def test_skills_the_installer_can_hide_pass(tmp_path, lines, files):
         (f'"{HIDDEN}": false\n', {}, "is not a plain one-line true or false"),
         ("user-invocable: false\n", {}, "user-invocable is not true: its hidden copy could not be run at all"),
         ("user-invocable: maybe\n", {}, "user-invocable is not true"),
+        ('summary: "split notes on --- lines"\n', {}, "frontmatter holds `---` before its closing line"),
+        ("notes: |\n  ----\n  a rule\n", {}, "frontmatter holds `---` before its closing line"),
         ("", {"agents/openai.yaml": "policy: {allow_implicit_invocation: true}\n"}, "not a block-style mapping"),
         ("", {"agents/openai.yaml": "- a\n- b\n"}, "agents/openai.yaml is not a block-style mapping"),
         ("", {"agents/openai.yaml": "{interface: {display_name: A}}\n"}, "is not a block-style mapping"),

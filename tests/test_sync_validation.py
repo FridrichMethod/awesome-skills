@@ -221,6 +221,25 @@ def test_frontmatter_claude_code_cannot_parse_is_a_problem(tmp_path):
     assert ss.library_problems(tmp_path) == [f"raw: {ss.candidate_problems(root, 'raw')[0]}"]
 
 
+def test_a_value_holding_three_dashes_is_rejected_after_sanitizing(pipeline, capsys):
+    """Claude Code ends the frontmatter at the first `---` anywhere, then cannot parse the rest and
+    drops every field, disable-model-invocation included; the sanitizer quotes this description."""
+    library, _, builders = pipeline
+
+    def upstream(dest: Path):
+        write_skill(dest / "skills/good")
+        dashed = dest / "skills/dashed"
+        dashed.mkdir(parents=True)
+        (dashed / "SKILL.md").write_text(
+            "---\nname: dashed\ndescription: Format: split notes on --- lines, then summarize each part\n---\n"
+        )
+
+    builders.append(upstream)
+    assert sync(pipeline)["rejected"] == 1
+    assert sorted(p.name for p in library.skills_dest.iterdir()) == ["good"]
+    assert "REJECTED skills/dashed: frontmatter holds `---` before its closing line" in capsys.readouterr().err
+
+
 def test_reserved_codex_system_names_get_a_source_qualified_id(pipeline):
     library, _, builders = pipeline
     builders.append(

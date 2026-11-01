@@ -120,11 +120,13 @@ def test_a_local_policy_file_that_cannot_take_the_key_fails_its_skill(sandbox, c
 
 # Local shapes the line-by-line edits take but whose copies would not read as hidden: an explicit or
 # escaped key later turns the inserted `true` back to false; Claude Code ignores frontmatter with a
-# column-0 continuation line (PyYAML does not); the policy block lands inside a quoted string.
+# column-0 continuation line (PyYAML does not) or with `---` before its closing line (Claude ends it
+# there); the policy block lands inside a quoted string.
 LOCAL_SHAPES = {
     "explicit-key": ("---\nname: gamma\ndescription: g\n? disable-model-invocation\n: false\n---\n", None),
     "escaped-key": ('---\nname: gamma\ndescription: g\n"disable\\x2dmodel-invocation": false\n---\n', None),
     "column-0-line": ('---\nname: gamma\ndescription: "Spans lines,\nthe next at column 0"\n---\n', None),
+    "dashes-in-a-value": ('---\nname: gamma\ndescription: "Format: split notes on --- lines"\n---\n', None),
     "policy-in-a-string": (
         "---\nname: gamma\ndescription: g\n---\n",
         'interface:\n  prompt: "Draft a\npolicy:\n  plan"\n',

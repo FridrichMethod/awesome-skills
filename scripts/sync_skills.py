@@ -1010,10 +1010,18 @@ def copy_problems(prepared: Path, skill_id: str, data: bytes, metadata: dict | N
     installer = _installer()
     metadata = installer.metadata(data, skill_id) if metadata is None else metadata
     problems = []
-    if _shallow_flow_lines(installer.frontmatter(data, skill_id)):
+    text = installer.frontmatter(data, skill_id)
+    if _shallow_flow_lines(text):
         problems.append(
             "frontmatter has a multi-line quoted scalar or flow collection with a line not indented past "
             "its key, which Claude Code cannot parse"
+        )
+    # Claude Code 2.1.316 takes the frontmatter as /^---\s*\n([\s\S]*?)---\s*\n?/: it ends at the
+    # first `---` anywhere, even inside a value, and what is left rarely parses.
+    if "---" in text:
+        problems.append(
+            "frontmatter holds `---` before its closing line, where Claude Code ends it and then drops "
+            "every field, disable-model-invocation included"
         )
     return problems + hidden_copy_problems(prepared, skill_id, data, metadata)
 
