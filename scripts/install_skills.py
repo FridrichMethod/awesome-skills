@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
-"""Install the skill library for Claude Code and Codex: every skill can be run by hand, only
-each client's selection (by default the library router) is shown to the model.
-
-Remote installs keep the library as a blobless, sparse git clone in the data directory; an
-update fetches new commits and trees, then only the blobs of skills whose tree changed. Only
-the standard library is needed; PyYAML is imported only to read a checkout's skills in full.
-"""
+"""Install the skill library for Claude Code and Codex: every skill runs by hand, the model sees
+only each client's selection (by default the router). Remote installs keep a blobless sparse
+git clone and need only the standard library; PyYAML reads a checkout's skills in full."""
 
 from __future__ import annotations
 
@@ -63,9 +59,8 @@ NEEDS_PERSON = 3  # an interrupted update or a mass removal needs a person's dec
 KEEP_BACKUPS = 5
 STALE_LOCK_SECONDS = 6 * 3600  # a fallback lock this old is stale: far above the longest run
 LOCK_UNSUPPORTED = {errno.ENOLCK, errno.ENOSYS, errno.EOPNOTSUPP, getattr(errno, "ENOTSUP", errno.EOPNOTSUPP)}
-# A stalled connection is abandoned instead of holding the lock forever: HTTP transfers
-# slower than 1000 B/s for 60 s abort (GIT_HTTP_LOW_SPEED_* override), and ssh, unless
-# configured by the user, never prompts and gives up on a silent peer.
+# A stalled connection never holds the lock: HTTP below 1000 B/s for 60 s aborts
+# (GIT_HTTP_LOW_SPEED_* override), and unconfigured ssh never prompts or waits on a silent peer.
 SSH_COMMAND = "ssh -o BatchMode=yes -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4"
 MASS_REMOVAL_SHARE, MASS_REMOVAL_MINIMUM = 0.5, 20
 WINDOWS = os.name == "nt"
@@ -84,16 +79,15 @@ GIT_CONFIG = (
     "http.lowSpeedLimit=1000",
     "http.lowSpeedTime=60",
 )
-# Inherited GIT_* variables (a hook's GIT_DIR, GIT_INDEX_FILE, injected GIT_CONFIG_COUNT
-# and so on) are dropped; only ssh, proxy, TLS, config-file selection and the low-speed
-# overrides pass.
+# Inherited GIT_* variables (a hook's GIT_DIR, injected GIT_CONFIG_COUNT, ...) are dropped but
+# for ssh, proxy, TLS, config-file selection and the low-speed overrides.
 GIT_ENV_KEEP = frozenset(
     "GIT_SSH GIT_SSH_COMMAND GIT_SSH_VARIANT GIT_PROXY_COMMAND GIT_SSL_CAINFO GIT_SSL_CAPATH GIT_SSL_CERT "
     "GIT_SSL_KEY GIT_CONFIG_GLOBAL GIT_CONFIG_SYSTEM GIT_CONFIG_NOSYSTEM GIT_HTTP_LOW_SPEED_LIMIT "
     "GIT_HTTP_LOW_SPEED_TIME".split()
 )
-# Only these mean the clone itself is damaged; anything else (a slow or dropped link, a
-# full disk) is retried or reported, never answered by deleting and re-cloning.
+# Only these mean the clone is damaged; anything else (a dropped link, a full disk) is retried
+# or reported, never answered by re-cloning.
 CORRUPTION = (
     *("not a git repository", "bad object", "invalid object", "unable to read", "corrupt", "could not parse"),
     *("needed a single revision", "bad revision", "unknown revision", "bad index"),
@@ -135,11 +129,11 @@ def warn(message: str):
     print(f"awesome-skills: warning: {message}", file=sys.stderr)
 
 
-# --- Paths -----------------------------------------------------------------------------
+# --- Paths
 
 
 def native(path: Path) -> Path:
-    """Use extended-length paths on Windows so deep skill trees need no registry change."""
+    """Extended-length paths on Windows: deep skill trees need no registry change."""
     if not WINDOWS:
         return path
     text = str(path)
@@ -248,8 +242,8 @@ def skill_problems(skill_id: str, kinds: dict) -> list[str]:
 
 
 def case_collisions(ids, preferred=frozenset()) -> dict:
-    """IDs that differ only in case cannot coexist on Windows or macOS checkouts. When exactly
-    one member of a group is preferred (it has a valid index entry), only the others are reported."""
+    """IDs that differ only in case cannot coexist on Windows or macOS. When exactly one of a
+    group is preferred (it has a valid index entry), only the others are reported."""
     groups = defaultdict(list)
     for skill_id in ids:
         groups[skill_id.casefold()].append(skill_id)
@@ -263,7 +257,7 @@ def case_collisions(ids, preferred=frozenset()) -> dict:
     return found
 
 
-# --- Content identity ------------------------------------------------------------------
+# --- Content identity
 
 
 def digest(entries: dict) -> str:
@@ -329,11 +323,8 @@ def local_entries(path: Path) -> dict:
 
 
 def local_listing(path: Path) -> dict:
-    """Git's view of a directory: relative POSIX path -> (mode, object id).
-
-    Directories are implicit, so empty ones vanish as they do in git. Native Windows
-    cannot store the executable bit; every file reads as 100644 there.
-    """
+    """Git's view of a directory: relative POSIX path -> (mode, object id). Directories are
+    implicit (empty ones vanish); native Windows has no executable bit, every file is 100644."""
     out = {}
     for rel, (kind, bits) in local_entries(path).items():
         p = path.joinpath(*rel.split("/"))
@@ -417,11 +408,10 @@ def exact_tree(expected: dict, path: Path) -> bool:
     return same_files(expected, local_listing(path))
 
 
-# --- Metadata --------------------------------------------------------------------------
+# --- Metadata
 
-# A remote install reads only the top-level `name` of SKILL.md frontmatter, with NameReader
-# (names and descriptions come from library_index.json). The sync rejects a library skill it
-# cannot read exactly as PyYAML does; PyYAML is imported only to parse whole frontmatter.
+# A remote install reads only the top-level `name` of SKILL.md, with NameReader (the rest comes
+# from library_index.json); the sync rejects a skill it cannot read exactly as PyYAML does.
 NON_PRINTABLE = re.compile(r"[^\t\n\r\x20-\x7e\x85\xa0-\ud7ff\ue000-\ufffd\U00010000-\U0010ffff]")
 DOCUMENT_MARKER = re.compile(r"(?:---|\.\.\.)(?:[ \t]|$)")
 BLOCK_HEADER = re.compile(r"[|>](?:[+-]([1-9])?|([1-9])[+-]?)?(?: +(?:#.*)?)?")
@@ -489,8 +479,7 @@ def pyyaml():
         raise InstallError(
             f"Installing from a checkout or --source reads every SKILL.md with PyYAML, which "
             f"{display(sys.executable)} cannot import; install PyYAML>=6.0 there or set SKILLS_PYTHON to a "
-            "Python that has it. A remote install (install.sh or install.ps1 outside a checkout) needs only "
-            "the standard library."
+            "Python that has it. A remote install needs only the standard library."
         ) from None
     return yaml
 
@@ -591,12 +580,9 @@ def unquote(token: str) -> str:
 
 
 class NameReader:
-    """Reads the top-level name of frontmatter text exactly as yaml.safe_load would, line by line,
-    or raises ValueError. PyYAML ignores indentation inside quoted scalars and flow collections, so
-    a column-0 line can still belong to a value above it, nested or not; following every multi-line
-    scalar and collection is what makes "a column-0 `name:` line is the top-level key" exact.
-    Block structure is checked as PyYAML's parser checks it; the grammar inside flow collections
-    is not, so one PyYAML rejects (`[a: b: c]`) does not stop the reader."""
+    """The top-level name of frontmatter text exactly as yaml.safe_load reads it, or ValueError.
+    A column-0 line can belong to a quoted scalar or flow collection above it, so every multi-line
+    value is followed. Block structure is checked as PyYAML does; flow grammar (`[a: b: c]`) is not."""
 
     def __init__(self, text: str):
         self.text, self.lines = text, text.split("\n")
@@ -844,10 +830,10 @@ def index_text(index: dict) -> str:
     return json.dumps(index, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
 
 
-# --- Hidden copies ---------------------------------------------------------------------
+# --- Hidden copies
 
-# Codex's bundled system skills (codex-cli 0.165). A library skill with one of these IDs would
-# make a plain `$ID` ambiguous, so the sync gives such a skill a source-qualified ID instead.
+# Codex's bundled system skills (codex-cli 0.165): the sync gives a library skill with such an
+# ID a source-qualified one, since a plain `$ID` would be ambiguous.
 CODEX_SYSTEM_SKILLS = frozenset({"imagegen", "openai-docs", "review-agent", "skill-creator", "skill-installer"})
 # A hidden skill still runs on /ID and $ID: Claude Code leaves one whose frontmatter sets
 # disable-model-invocation out of the model's listing (the last duplicate key wins, so every
@@ -944,13 +930,13 @@ def hidden_policy(data: bytes | None, label: str) -> bytes:
     return bom + "\n".join(lines).encode("utf-8")
 
 
-# --- Client copies ---------------------------------------------------------------------
+# --- Client copies
 
-# A copy depends only on the library tree, the client and whether the model sees it. Plugin
-# manifest folders go (Claude lists their commands; Codex names the skill `plugin:ID`). Codex
-# matches $NAME against the frontmatter name, which 500+ skills share, so each Codex copy is
-# named after its ID, and a nested SKILL.md gets a unique name and the policy. Hidden Codex
-# copies also get the Claude key, for Cursor, which reads Codex's folders.
+# A copy depends only on the library tree, the client and the visibility. Plugin manifest
+# folders go (Claude lists their commands; Codex names the skill `plugin:ID`). Codex matches $NAME
+# against the frontmatter name, which 500+ skills share, so each Codex copy is named after its
+# ID and a nested SKILL.md gets a unique name and the policy. Hidden Codex copies also get the
+# Claude key, for Cursor.
 PLUGIN_DIRS = frozenset({".claude-plugin", ".codex-plugin", ".cursor-plugin"})
 NAME_KEY_LINE = re.compile(r"""(["']?)name\1[ \t]*:(?=[ \t\r]|$)""")
 
@@ -1085,7 +1071,7 @@ def atomic_write(path: Path, data: bytes, mode: int | None = None):
         raise
 
 
-# --- Git -------------------------------------------------------------------------------
+# --- Git
 
 
 def git_env() -> dict:
@@ -1152,7 +1138,7 @@ def is_library_clone(path: Path) -> bool:
     return plain_dir(path) and (path / ".git" / MARKER).is_file()
 
 
-# --- Libraries -------------------------------------------------------------------------
+# --- Libraries
 
 
 class Library:
@@ -1529,8 +1515,8 @@ def existing_clone(data: Path) -> Path:
 
 @contextmanager
 def open_library(git: Git | None, source: Path | None, data: Path, url: str, branch: str, mode: str, fetch: bool):
-    """mode "apply" updates and checks out the clone; "dry-run" only fetches into it; without
-    fetch either one plans against the clone's current checkout. Lock held."""
+    """Mode "apply" updates and checks out the clone, "dry-run" only fetches into it; without
+    fetch both plan against its checkout. Lock held."""
     if git is None:
         yield DirLibrary(source)
         return
@@ -1573,7 +1559,7 @@ def remote_tip(git: Git, url: str, branch: str) -> str:
     return ""
 
 
-# --- Router and launcher ---------------------------------------------------------------
+# --- Router and launcher
 
 
 def launcher_path(data: Path, suffix: str = "") -> Path:
@@ -1592,8 +1578,8 @@ def launcher_call(data: Path) -> str:
 
 
 def launchers(data: Path, state: Path, library: Library) -> dict:
-    """Path -> text of the launchers: the installer that made this install, with its storage,
-    saved destinations and remote unless set, or (`search ...`) the read-only library search."""
+    """Path -> text of the launchers: this install's installer with its storage, saved
+    destinations and remote unless set, or (`search ...`) the read-only search."""
     helper, extra = library.router_command()
     search, python = str(Path(helper).with_name("search_skills.py")), sys.executable
     env = {"SKILLS_STATE_DIR": display(state), "SKILLS_DATA_DIR": display(data)}
@@ -1685,7 +1671,7 @@ def write_tree(entries: dict, target: Path):
         path.chmod(mode)
 
 
-# --- Planning --------------------------------------------------------------------------
+# --- Planning
 
 
 def conflict_groups(skills: dict) -> dict:
@@ -1891,8 +1877,8 @@ def plan_entries(client, roots, managed, desired, library, router, named) -> tup
 
 
 def external_skills(client: str, roots: list, kept: list, home: Path) -> dict:
-    """Path -> frontmatter name of preserved skills (even symlinks), and for Codex of everything in
-    ~/.agents/skills when that is not one of its roots."""
+    """Path -> frontmatter name of preserved skills (even symlinks), and for Codex of everything
+    in ~/.agents/skills unless that is one of its roots."""
     paths = [roots[item.get("root", 0)] / item["entry"] for item in kept]
     agents = home / ".agents/skills"
     if client == "codex" and agents.is_dir() and not any(r.is_dir() and os.path.samefile(r, agents) for r in roots):
@@ -1920,8 +1906,8 @@ def external_conflicts(external: dict) -> dict:
 
 
 def unclaim(plan: dict, entry: str, info: dict, managed: dict, reason: str):
-    """Leave a Codex name to a preserved skill (two skills with one name make `$name` inject
-    neither): our unmodified copy goes, a modified one stays."""
+    """Leave a Codex name to a preserved skill (two make `$name` inject neither): our unmodified
+    copy goes, a modified one stays."""
     where = {"root": 1} if info.get("root") else {}
     target, rec = roots_of(plan)[info.get("root", 0)] / entry, managed.get(entry)
     current = fingerprint(target)
@@ -2009,7 +1995,7 @@ def overflow(plans: list) -> str | None:
     return None
 
 
-# --- Locking, applying and restoring ---------------------------------------------------
+# --- Locking, applying and restoring
 
 
 def kernel_lock(fd: int):
@@ -2028,9 +2014,8 @@ def kernel_unlock(fd: int):
 
 @contextmanager
 def state_lock(directory: Path):
-    """An exclusive, non-blocking lock owned by this installer (flock, or msvcrt on Windows).
-    Where the filesystem has no working flock (some NFS or Lustre homes), an atomic mkdir
-    lock that records host and pid takes its place."""
+    """An exclusive, non-blocking lock (flock, or msvcrt on Windows); where flock does not
+    work (some NFS or Lustre homes), exclusive_file_lock takes its place."""
     path = directory / ".lock"
     no_symlink_ancestors(path)
     directory.mkdir(parents=True, exist_ok=True)
@@ -2068,9 +2053,8 @@ def busy(lock: Path) -> LockBusy:
 
 @contextmanager
 def exclusive_file_lock(directory: Path, reason: OSError):
-    """Where flock is unsupported (some NFS or Lustre homes): an O_EXCL file holding a random
-    token and start time. It is stale only by age, and is taken over by an atomic rename to a
-    unique name, after which the moved file must be exactly the one judged stale."""
+    """An O_EXCL file holding a random token and start time, stale only by age, taken over by
+    an atomic rename after which the moved file must be exactly the one judged stale."""
     lock = directory / ".lock.excl"
     mine = json.dumps({"token": uuid.uuid4().hex, "started": time.time()}).encode()
     for _ in range(3):
@@ -2241,7 +2225,7 @@ def move_live_entries(changed: list, state: Path, backup: Path):
 
 def prepare_copies(changed: list, backup: Path, library: Library):
     """Prepare and verify replacements before any live entry moves. A skill that fails is
-    skipped (its live copy and record stay as they were) and reported; the others proceed."""
+    reported and skipped (its copy and record stay); the others proceed."""
     try:
         for p in changed:
             for action in list(p["actions"]):
@@ -2381,7 +2365,7 @@ def restore_operations(backup: Path, state: Path, journal: dict) -> list:
     return operations
 
 
-# --- Legacy tarball-installer cache ----------------------------------------------------
+# --- Legacy tarball-installer cache
 
 
 def legacy_caches(cache_root: Path) -> list[Path]:
@@ -2426,7 +2410,7 @@ def migrated(state: Path) -> bool:
     return True
 
 
-# --- Command line ----------------------------------------------------------------------
+# --- Command line
 
 
 def default_data(home: Path) -> Path:
@@ -2663,8 +2647,8 @@ def main(argv: list[str] | None = None) -> int:
 def run_update(args, git, home, state, data, legacy_cache, source, url, branch, keep) -> int:
     storage, remote = [state, data, legacy_cache], git is not None
     with ExitStack() as stack:
-        # A remote run fetches into the shared clone, and a stale transaction must be undone
-        # before planning: both happen under the lock. A local plan is computed without writes.
+        # A remote run fetches into the shared clone and a stale transaction is undone before
+        # planning, both under the lock. A local plan is computed without writes.
         if remote and (args.dry_run or args.no_fetch):
             existing_clone(data)  # before the lock: a dry run on a fresh HOME writes nothing
         locked = remote or (not args.dry_run and interrupted_transaction(state, keep) is not None)
