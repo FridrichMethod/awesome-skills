@@ -1028,6 +1028,13 @@ def copy_problems(prepared: Path, skill_id: str, data: bytes, metadata: dict | N
     """Why the installer could not make this skill's hidden or Codex copies safely: the frontmatter
     Claude Code cannot parse (it would then ignore disable-model-invocation), then
     `hidden_copy_problems`. The installer asks this of every skill it edits from a local tree."""
+    try:
+        return _copy_problems(prepared, skill_id, data, metadata)
+    except RecursionError:  # PyYAML loads a node that is its own child; comparing it never ends
+        return [f"frontmatter or {_installer().POLICY_FILE} holds a recursive YAML alias (or nests too deep)"]
+
+
+def _copy_problems(prepared: Path, skill_id: str, data: bytes, metadata: dict | None) -> list[str]:
     installer = _installer()
     metadata = installer.metadata(data, skill_id) if metadata is None else metadata
     problems = []
@@ -1110,12 +1117,11 @@ def codex_copy_problems(prepared: Path, skill_id: str) -> list[str]:
     return problems
 
 
-def _duplicate_keys(node, path: str = "", depth: int = 0) -> list[str]:
-    """Each key repeated within one mapping, at any depth, as a dotted path (`a.b[0].c`)."""
-    if depth > 32:  # an alias may make the node graph cyclic
-        return []
+def _duplicate_keys(node, path: str = "") -> list[str]:
+    """Each key repeated within one mapping, at any depth, as a dotted path (`a.b[0].c`). A cyclic
+    node graph (a recursive alias) raises RecursionError, which copy_problems reports."""
     if isinstance(node, yaml.SequenceNode):
-        return [d for i, item in enumerate(node.value) for d in _duplicate_keys(item, f"{path}[{i}]", depth + 1)]
+        return [d for i, item in enumerate(node.value) for d in _duplicate_keys(item, f"{path}[{i}]")]
     if not isinstance(node, yaml.MappingNode):
         return []
     prefix = f"{path}." if path else ""
@@ -1123,7 +1129,7 @@ def _duplicate_keys(node, path: str = "", depth: int = 0) -> list[str]:
     found = [prefix + key for key in sorted({key for key in keys if keys.count(key) > 1})]
     for key, value in node.value:
         if isinstance(key, yaml.ScalarNode):
-            found += _duplicate_keys(value, prefix + key.value, depth + 1)
+            found += _duplicate_keys(value, prefix + key.value)
     return found
 
 

@@ -295,6 +295,23 @@ def test_a_line_break_claude_code_does_not_see_is_rejected(pipeline, capsys):
     assert "REJECTED skills/sneaky: Frontmatter at sneaky holds U+2028" in capsys.readouterr().err
 
 
+def test_a_recursive_alias_rejects_its_skill_and_the_sync_goes_on(pipeline, capsys):
+    library, _, builders = pipeline
+
+    def upstream(dest: Path):
+        write_skill(dest / "skills/good")
+        write_skill(
+            dest / "skills/loopy", extra={"agents/openai.yaml": "interface: &x\n  display_name: a\n  self: *x\n"}
+        )
+
+    builders.append(upstream)
+    assert sync(pipeline)["rejected"] == 1
+    assert sorted(p.name for p in library.skills_dest.iterdir()) == ["good"]
+    assert "REJECTED skills/loopy: frontmatter or agents/openai.yaml holds a recursive YAML alias" in (
+        capsys.readouterr().err
+    )
+
+
 def test_reserved_codex_system_names_get_a_source_qualified_id(pipeline):
     library, _, builders = pipeline
     builders.append(

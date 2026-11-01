@@ -146,6 +146,7 @@ LOCAL_SHAPES = {
         "---\nname: gamma\ndescription: g\n---\n",
         'interface:\n  prompt: "Draft a\npolicy:\n  plan"\n',
     ),
+    "recursive-alias": ("---\nname: gamma\ndescription: g\n---\n", "interface: &x\n  self: *x\n"),
 }
 
 

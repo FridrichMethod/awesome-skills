@@ -277,6 +277,14 @@ def test_skills_the_installer_can_hide_pass(tmp_path, lines, files):
         ("note: x\x85y: z\n", {}, "holds U+0085"),
         ("", {"agents/openai.yaml": "interface:\n  display_name: a\u2028b: c\n"}, "holds U+2028"),
         ("", {"sub/SKILL.md": "---\nname: sub\ndescription: x\u2029y: z\n---\n"}, "holds U+2029"),
+        # An alias that makes a node its own child: PyYAML loads it, and comparing it never ends.
+        ("", {"agents/openai.yaml": "interface: &x\n  display_name: a\n  self: *x\n"}, "recursive YAML alias"),
+        ("meta: &m\n  self: *m\n", {}, "recursive YAML alias"),
+        (
+            "",
+            {"sub/SKILL.md": "---\nname: sub\ndescription: x\n---\n", "sub/agents/openai.yaml": "a: &x\n  b: *x\n"},
+            "recursive YAML alias",
+        ),
     ],
 )
 def test_skills_the_installer_could_not_hide_are_rejected(tmp_path, lines, files, expected):
