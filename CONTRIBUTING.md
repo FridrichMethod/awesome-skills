@@ -41,6 +41,8 @@ python scripts/sync_skills.py
 git status --porcelain skills/ library_sources.json README.md
 ```
 
+`python scripts/sync_skills.py --sanitize-only` re-applies the sanitizer to the committed library offline, moves skills off reserved IDs, and keeps `library_sources.json` and `library_index.json` in step. The tests require the committed library to be a fixed point of the sanitizer and to pass every rule the sync enforces (`library_problems`), including that the installer can hide each skill from the model.
+
 ## Testing install.sh
 
 ```bash
@@ -66,6 +68,7 @@ Run the temporary HOME contract tests and optional local Codex integration in th
 ```bash
 python -B -m pytest tests
 AWESOME_SKILLS_CODEX_INTEGRATION=1 python -B -m pytest tests/test_codex_catalog.py
+AWESOME_SKILLS_CLAUDE_VALIDATE=1 python -B -m pytest tests/test_claude_validate.py
 python -B scripts/verify_codex_catalog.py
 ```
 

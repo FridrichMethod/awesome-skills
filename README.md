@@ -237,7 +237,7 @@ Skills are aggregated from these upstream repositories — credit and gratitude 
 | [anthropics/skills](https://github.com/anthropics/skills) | 136.1k | 18 | **Official Anthropic** skills — algorithmic-art, brand-guidelines, canvas-design, claude-api, doc-coauthoring, mcp-builder, pdf, pptx, xlsx, etc. |
 | [obra/superpowers](https://github.com/obra/superpowers) | 194.6k | 14 | Anthropic-blessed methodology framework — brainstorming, TDD, debugging, planning, code review, subagent-driven dev |
 
-> Sync preserves different-content same-name variants under source-qualified directory IDs, records their origins and conflicts, and never changes their frontmatter names. Identical variants can share content with all observed origins retained. Legacy entries have unknown upstream provenance until observed; historical variants lost by the former overwrite policy cannot be reconstructed from this checkout.
+> Sync preserves different-content same-name variants under source-qualified directory IDs, records their origins and conflicts, and never changes their frontmatter names. A library ID never takes the name of a bundled Codex system skill (`imagegen`, `openai-docs`, `review-agent`, `skill-creator`, `skill-installer`); such a skill gets a source-qualified ID too. Identical variants can share content with all observed origins retained. Legacy entries have unknown upstream provenance until observed; historical variants lost by the former overwrite policy cannot be reconstructed from this checkout.
 
 ---
 
@@ -289,7 +289,7 @@ flowchart LR
     D --> E[Find skill roots<br/>de-dupe nested]
     E --> F[Filter:<br/>.gitattributes / LFS<br/>>40MB files<br/>vector DBs]
     F --> G[Retain distinct variants<br/>record source provenance]
-    G --> G1[Reject skills the installer<br/>could not install everywhere]
+    G --> G1[Reject skills the installer<br/>could not install everywhere<br/>or hide from the model]
     G1 --> G2[Regenerate library_index.json]
     G2 --> H{Changes?}
     H -- yes --> I[Bot commits +<br/>pushes to main]
