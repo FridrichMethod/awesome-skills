@@ -1994,7 +1994,7 @@ def overflow(plans: list) -> str | None:
             if len(names) > ROOT_CAP:
                 return (
                     f"Refusing to fill {display(root)} with {len(names)} skill folders: Codex finds at most "
-                    f"about 2,000 per root (limit {ROOT_CAP}); remove skills there or install fewer (--manual)"
+                    f"about 2,000 per root (limit {ROOT_CAP}); remove skills there or install fewer (--codex-only --manual)"
                 )
     return None
 
@@ -2519,7 +2519,7 @@ def migrated_state(old: dict, client: str, undone: bool, ids: set) -> tuple[dict
     return base, None if undone else {"from": old["selection"], "selection": visible, "manual": manual}
 
 
-def make_plans(args, clients: list, library: Library, home: Path, state: Path, data: Path) -> list:
+def make_plans(args, clients: list, library: Library, state: Path, data: Path) -> list:
     marks = read_json(state / MIGRATIONS, {}).get(MIGRATION, {})
     plans = []
     for client, roots, old, agents in clients:
@@ -2691,15 +2691,17 @@ def run_update(args, git, home, state, data, legacy_cache, source, url, branch, 
         clients = resolve_clients(args, home, storage, source)
         mode = "dry-run" if args.dry_run else "apply"
         library = stack.enter_context(open_library(git, source, data, url, branch, mode, not args.no_fetch))
-        plans = make_plans(args, clients, library, home, state, data)
-        blocked = mass_removal(args, plans) or overflow(plans)
+        plans = make_plans(args, clients, library, state, data)
+        # A client a person must see to is left as it is; the other still updates.
+        held = {p["client"]: r for p in plans if (r := mass_removal(args, [p]) or overflow([p]))}
         if args.dry_run:
             emit(report(True, library, plans, legacy_caches(legacy_cache), interrupted_transaction(state, keep)))
-            if blocked:
-                warn(blocked)
+            for reason in held.values():
+                warn(reason)
             return 0
-        if blocked:
-            raise PersonNeeded(blocked)
+        if len(held) == len(plans):
+            raise PersonNeeded("; ".join(held.values()))
+        plans = [p for p in plans if p["client"] not in held]
         if not locked:
             stack.enter_context(state_lock(state))
         backup = apply_plans(plans, state, library, keep)
@@ -2715,7 +2717,7 @@ def run_update(args, git, home, state, data, legacy_cache, source, url, branch, 
         emit(report(False, library, plans, removed))
     if backup:
         print(f"Recovery backup: {display(backup)}")
-    elif not failures:
+    elif not failures and not held:
         print("Already current; selection preserved.")
     if removed:
         print(f"Removed {len(removed)} legacy cache snapshot(s) under {display(legacy_cache)}")
@@ -2725,8 +2727,9 @@ def run_update(args, git, home, state, data, legacy_cache, source, url, branch, 
             f"awesome-skills: {len(failures)} skill(s) were not installed and kept as they were: {entries}",
             file=sys.stderr,
         )
-        return 1
-    return 0
+    if held:
+        raise PersonNeeded("; ".join(held.values()))
+    return 1 if failures else 0
 
 
 if __name__ == "__main__":

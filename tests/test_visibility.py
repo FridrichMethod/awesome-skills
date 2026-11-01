@@ -367,6 +367,34 @@ def test_a_codex_root_that_would_overflow_is_refused_before_writing(sandbox, mon
     assert run(source, "--codex-only", "--manual", "") == 0, "fewer skills fit"
 
 
+def test_an_overflowing_codex_root_holds_back_codex_alone(sandbox, monkeypatch):
+    home, source = sandbox
+    first = [s for s in ("alpha", "beta") if not installer.placement(s)]
+    monkeypatch.setattr(installer, "ROOT_CAP", 1 + len(first))
+    skill(home / ".codex/skills", "foreign")  # say, many skills another tool put there
+    codex = installer.fingerprint(home / ".codex/skills")
+    with pytest.raises(installer.PersonNeeded, match=r"Refusing to fill .*\(--codex-only --manual\)"):
+        run(source)
+    assert installer.fingerprint(home / ".codex/skills") == codex and not (state_dir(home) / "codex.json").exists()
+    assert all(hidden_from_claude(home / ".claude/skills" / s) for s in ("alpha", "beta")), "Claude still updates"
+
+
+def test_a_mass_removal_holds_back_only_its_client(sandbox):
+    home, source = sandbox
+    for i in range(23):
+        skill(source, f"extra-{i:02d}")
+    run(source)
+    run(source, "--codex-only", "--manual", "alpha")
+    for i in range(23):
+        shutil.rmtree(source / f"extra-{i:02d}")  # a broken library, as far as Claude can tell
+    skill(source, "alpha", body="changed upstream")
+    claude = installer.fingerprint(home / ".claude/skills")
+    with pytest.raises(installer.PersonNeeded, match="Refusing to remove 23 of 26 managed claude skills"):
+        run(source)
+    assert installer.fingerprint(home / ".claude/skills") == claude
+    assert "changed upstream" in (codex_copy(home, "alpha") / "SKILL.md").read_text(), "Codex still updates"
+
+
 def test_the_shared_second_codex_root_is_capped_too(sandbox, monkeypatch):
     home, source = sandbox
     second = [s for s in ("alpha", "beta") if installer.placement(s)]
