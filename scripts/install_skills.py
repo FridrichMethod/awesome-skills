@@ -41,7 +41,8 @@ SCHEMA = 1
 # `invocation`. SCHEMA also gates the index and journals, so it stays 1.
 SELECTION_VERSION = 2
 MIGRATION, MIGRATIONS = "selection-v2", "migrations.json"
-SHORTCUT = ("tree", "invocation", "name", "root")  # an unchanged record and copy is not rehashed
+FORM = 1  # of copy_edits: raise it with any change there, so installed copies are derived again
+SHORTCUT = ("tree", "invocation", "name", "root", "form")  # an unchanged record and copy is not rehashed
 ROOT_CAP = 1990  # Codex walks at most 2,000 directories per skills root, top-level folders first
 SUMMARY_ACTIONS = 100  # a larger plan prints one line per client instead of its JSON
 LAUNCHER = "awesome-skills"
@@ -1769,7 +1770,7 @@ def desired_entries(client: str, visible: list, manual: list, library: Library, 
     shown = every if "@all" in visible else set(visible)
     desired = {}
     for skill_id in sorted(installed):
-        info = dict(library.skills[skill_id], source_ids=[skill_id])
+        info = dict(library.skills[skill_id], source_ids=[skill_id], form=FORM)
         info["invocation"] = "auto" if skill_id in shown else "manual"
         if client == "codex":
             info["name"] = skill_id  # every Codex copy is renamed to its ID, so names never collide

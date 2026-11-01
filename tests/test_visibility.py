@@ -158,6 +158,27 @@ def test_only_this_installers_copies_are_claimed_in_the_shared_agents_root(sandb
     assert installer.fingerprint(second / "beta") == raw
 
 
+def test_a_new_form_of_the_copies_reaches_installs_whose_tree_is_unchanged(sandbox, monkeypatch, capsys):
+    home, source = sandbox
+    run(source)
+    assert state(home, "claude")["managed"]["alpha"]["form"] == installer.FORM
+    original = installer.copy_edits
+
+    def revised(client, skill_id, invocation, listing, read):  # a later fix of the transforms
+        edits = original(client, skill_id, invocation, listing, read)
+        return dict(edits, **{"NOTICE.txt": b"revised\n"}) if skill_id == "alpha" else edits
+
+    monkeypatch.setattr(installer, "copy_edits", revised)
+    run(source)
+    assert not (home / ".claude/skills/alpha/NOTICE.txt").exists(), "the same form keeps the unchanged shortcut"
+    monkeypatch.setattr(installer, "FORM", installer.FORM + 1)
+    capsys.readouterr()
+    run(source)
+    assert [a["entry"] for c in plan(capsys)["clients"] for a in c["actions"]] == ["alpha", "alpha"]
+    assert all((copy / "NOTICE.txt").is_file() for copy in (home / ".claude/skills/alpha", codex_copy(home, "alpha")))
+    assert state(home, "codex")["managed"]["beta"]["form"] == installer.FORM, "recorded, not copied again"
+
+
 def test_state_versions_and_records_are_validated():
     v1 = {"schema": 1, "client": "codex", "destination": "/x", "selection": ["@library"], "managed": {}}
     installer.validate_state(v1, "codex")
