@@ -16,7 +16,7 @@ WINDOWS_INVALID = re.compile(r'[<>:"|?*\x00-\x1f\\]|[. ]$|^(con|prn|aux|nul|com[
 
 
 def test_committed_index_matches_the_skill_tree():
-    expected = installer.index_text(installer.build_index(ROOT / "skills"))
+    expected = sync_skills.index_text(sync_skills.build_index(ROOT / "skills"))
     actual = (ROOT / installer.INDEX).read_text(encoding="utf-8")
     assert actual == expected, "regenerate it: python scripts/sync_skills.py --index-only"
 
@@ -49,11 +49,11 @@ def test_sync_writes_the_index_only_when_it_changes(tmp_path):
     (skills / "beta").mkdir()
     (skills / "beta/SKILL.md").write_text("---\nname: beta\ndescription: Second.\n---\n")
     assert sync_skills.write_library_index(skills, index)
-    assert installer.build_index(skills)["skills"] == {
+    assert sync_skills.build_index(skills)["skills"] == {
         "alpha": {"name": "alpha", "description": "First."},
         "beta": {"name": "beta", "description": "Second."},
     }
-    assert index.read_text(encoding="utf-8") == installer.index_text(installer.build_index(skills))
+    assert index.read_text(encoding="utf-8") == sync_skills.index_text(sync_skills.build_index(skills))
 
 
 def test_skill_paths_check_out_on_windows():

@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 from scripts import install_skills as installer
+from scripts import sync_skills
 
 ROOT = Path(__file__).resolve().parents[1]
 WINDOWS = os.name == "nt"
@@ -102,7 +103,7 @@ class Upstream:
 
     def commit(self, message: str = "update", push: bool = True, index: bool = True):
         if index:
-            put(self.work / installer.INDEX, installer.index_text(installer.build_index(self.work / "skills")))
+            put(self.work / installer.INDEX, sync_skills.index_text(sync_skills.build_index(self.work / "skills")))
         git("-C", str(self.work), "add", "-A")
         git("-C", str(self.work), "commit", "-q", "-m", message)
         if push:
@@ -117,7 +118,7 @@ class Upstream:
     def commit_with_links(self, message: str, links: dict):
         """Commit the worktree plus symlink entries (path -> target) staged through the index only,
         so the test needs no symlink support on the host."""
-        put(self.work / installer.INDEX, installer.index_text(installer.build_index(self.work / "skills")))
+        put(self.work / installer.INDEX, sync_skills.index_text(sync_skills.build_index(self.work / "skills")))
         git("-C", str(self.work), "add", "-A")
         for path, target in links.items():
             blob = git("-C", str(self.work), "hash-object", "-w", "--stdin", stdin=target.encode()).strip()

@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 
 from scripts import install_skills as installer
+from scripts import sync_skills
 from tests.test_install import skill
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -122,7 +123,7 @@ def test_the_launcher_carries_the_install_time_storage_and_dispatches_search(tmp
     for skill_id in ("alpha", "beta"):
         skill(checkout / "skills", skill_id)
     shutil.copytree(ROOT / "scripts", checkout / "scripts")
-    index = installer.index_text(installer.build_index(checkout / "skills"))
+    index = sync_skills.index_text(sync_skills.build_index(checkout / "skills"))
     (checkout / installer.INDEX).write_text(index)
     custom = tmp_path / "custom-state"
     home, env = sandbox_env(tmp_path, SKILLS_STATE_DIR=str(custom), SKILLS_CODEX_DEST=str(tmp_path / "cx/skills"))

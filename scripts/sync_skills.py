@@ -1252,12 +1252,26 @@ def _installer():
     return module
 
 
+def build_index(skills: Path) -> dict:
+    """The committed index (`installer.INDEX`): every source ID's frontmatter name and description,
+    as PyYAML reads them."""
+    installer = _installer()
+    index = {}
+    for skill_id in installer.skill_ids(skills):
+        fm = installer.metadata((skills / skill_id / "SKILL.md").read_bytes(), skill_id)
+        index[skill_id] = {"name": fm["name"], "description": fm.get("description", "")}
+    return {"schema": installer.SCHEMA, "skills": index}
+
+
+def index_text(index: dict) -> str:
+    return json.dumps(index, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+
+
 def write_library_index(skills: Path | None = None, path: Path | None = None) -> bool:
     """Regenerate the committed full-library index (names and descriptions) the installer
     reads instead of downloading every skill body. Returns True when the file changed."""
     skills, path = skills or SKILLS_DEST, path or LIBRARY_INDEX_PATH
-    installer = _installer()
-    content = installer.index_text(installer.build_index(skills))
+    content = index_text(build_index(skills))
     if path.exists() and path.read_text(encoding="utf-8") == content:
         return False
     with tempfile.NamedTemporaryFile(

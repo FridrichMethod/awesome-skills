@@ -795,19 +795,6 @@ def skill_ids(skills: Path) -> list[str]:
     )
 
 
-def build_index(skills: Path) -> dict:
-    """The committed index: every source ID's frontmatter name and description."""
-    index = {}
-    for skill_id in skill_ids(skills):
-        fm = metadata((skills / skill_id / "SKILL.md").read_bytes(), skill_id)
-        index[skill_id] = {"name": fm["name"], "description": fm.get("description", "")}
-    return {"schema": SCHEMA, "skills": index}
-
-
-def index_text(index: dict) -> str:
-    return json.dumps(index, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
-
-
 # --- Hidden copies
 
 # Codex's bundled system skills (codex-cli 0.165): the sync gives a library skill with such an

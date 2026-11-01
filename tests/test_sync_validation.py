@@ -139,10 +139,8 @@ def test_sync_exits_3_after_writing_the_valid_rest(tmp_path, monkeypatch):
     monkeypatch.setattr(ss, "run", lambda *_a, **_k: SimpleNamespace(stdout="fixture-revision\n"))
     assert ss.main([]) == ss.REJECTED_EXIT
     assert sorted(p.name for p in skills.iterdir()) == ["good"]
-    assert set(installer.build_index(skills)["skills"]) == {"good"}
-    assert (tmp_path / installer.INDEX).read_text(encoding="utf-8") == installer.index_text(
-        installer.build_index(skills)
-    )
+    assert set(ss.build_index(skills)["skills"]) == {"good"}
+    assert (tmp_path / installer.INDEX).read_text(encoding="utf-8") == ss.index_text(ss.build_index(skills))
 
 
 def test_sync_fails_without_writing_the_index_when_the_tree_breaks_the_rules(tmp_path, monkeypatch, capsys):
@@ -205,7 +203,7 @@ def test_column_zero_frontmatter_is_indented_not_rejected(pipeline):
     assert sync(pipeline)["rejected"] == 0
     text = (library.skills_dest / "folded/SKILL.md").read_text()
     assert text == '---\nname: folded\ndescription: "One.\n\n  Two: three."\n---\nbody\n'
-    assert installer.build_index(library.skills_dest)["skills"]["folded"] == {
+    assert ss.build_index(library.skills_dest)["skills"]["folded"] == {
         "name": "folded",
         "description": "One.\nTwo: three.",
     }
