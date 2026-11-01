@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Install the skill library for Claude Code and Codex: every skill runs by hand, the model sees
-only each client's selection (by default the router). Remote installs keep a blobless sparse
-git clone and need only the standard library; PyYAML reads a checkout's skills in full."""
+each client's selection (the router by default). Remote installs keep a blobless sparse git clone
+and need only the standard library; a checkout's skills are read with PyYAML."""
 
 from __future__ import annotations
 
@@ -37,11 +37,11 @@ except ImportError:  # native Windows
 REPOSITORY = "https://github.com/FridrichMethod/awesome-skills"
 REPOSITORY_URL = REPOSITORY + ".git"
 SCHEMA = 1
-# v2 states: `selection` is shown to the model, `manual` installed hidden besides; records carry
-# `invocation`. SCHEMA also gates the index and journals, so it stays 1.
+# v2 states: `selection` is shown to the model, `manual` installed hidden; records carry
+# `invocation`. SCHEMA also gates the index and journals: it stays 1.
 SELECTION_VERSION = 2
 MIGRATION, MIGRATIONS = "selection-v2", "migrations.json"
-FORM = 1  # of copy_edits: raise it with any change there, so installed copies are derived again
+FORM = 1  # of copy_edits: raise it with any change there, so copies are derived again
 SHORTCUT = ("tree", "invocation", "name", "root", "form")  # an unchanged copy is not rehashed
 ROOT_CAP = 1990  # Codex walks at most 2,000 directories per root, top level first
 SUMMARY_ACTIONS = 100  # a larger plan prints one line per client
@@ -52,16 +52,16 @@ PROVENANCE = "library_sources.json"
 CLONE = "library"
 MARKER = "awesome-skills-library"  # file in the clone's .git directory
 MIN_GIT = (2, 29, 0)
-# A sparse index keeps each directory outside the cone as one entry: git on Windows never
-# refuses a Windows-invalid path inside a skill nobody selected.
+# A sparse index keeps each directory outside the cone as one entry: git on Windows then
+# never refuses a Windows-invalid path in a skill nobody selected.
 SPARSE_INDEX_GIT = (2, 37, 0)
 LOCK_BUSY = 75
 NEEDS_PERSON = 3  # a person must decide
 KEEP_BACKUPS = 5
 STALE_LOCK_SECONDS = 6 * 3600  # a fallback lock this old is stale
 LOCK_UNSUPPORTED = {errno.ENOLCK, errno.ENOSYS, errno.EOPNOTSUPP, getattr(errno, "ENOTSUP", errno.EOPNOTSUPP)}
-# A stalled connection never holds the lock: HTTP below 1000 B/s for 60 s aborts
-# (GIT_HTTP_LOW_SPEED_* override), and unconfigured ssh never prompts or waits on a silent peer.
+# A stalled connection never holds the lock: HTTP under 1000 B/s for 60 s aborts
+# (GIT_HTTP_LOW_SPEED_* override); unconfigured ssh never prompts or waits on a silent peer.
 SSH_COMMAND = "ssh -o BatchMode=yes -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4"
 MASS_REMOVAL_SHARE, MASS_REMOVAL_MINIMUM = 0.5, 20
 WINDOWS = os.name == "nt"
@@ -80,8 +80,8 @@ GIT_CONFIG = (
     "http.lowSpeedLimit=1000",
     "http.lowSpeedTime=60",
 )
-# Inherited GIT_* variables (a hook's GIT_DIR, injected GIT_CONFIG_COUNT, ...) are dropped but
-# for ssh, proxy, TLS, config-file selection and the low-speed overrides.
+# Inherited GIT_* variables (a hook's GIT_DIR, GIT_CONFIG_COUNT, ...) are dropped but for ssh,
+# proxy, TLS, config-file selection and the low-speed overrides.
 GIT_ENV_KEEP = frozenset(
     "GIT_SSH GIT_SSH_COMMAND GIT_SSH_VARIANT GIT_PROXY_COMMAND GIT_SSL_CAINFO GIT_SSL_CAPATH GIT_SSL_CERT "
     "GIT_SSL_KEY GIT_CONFIG_GLOBAL GIT_CONFIG_SYSTEM GIT_CONFIG_NOSYSTEM GIT_HTTP_LOW_SPEED_LIMIT "
@@ -118,7 +118,7 @@ class GitError(InstallError):
 
 
 class PersonNeeded(InstallError):
-    """Exit 3: an interrupted update cannot be undone, or a mass removal."""
+    """Exit 3: a person must decide."""
 
 
 def corrupted(error: GitError) -> bool:
@@ -134,7 +134,7 @@ def warn(message: str):
 
 
 def native(path: Path) -> Path:
-    """Extended-length paths on Windows: deep skill trees need no registry change."""
+    """Extended-length paths on Windows, for deep skill trees."""
     if not WINDOWS:
         return path
     text = str(path)
@@ -243,8 +243,8 @@ def skill_problems(skill_id: str, kinds: dict) -> list[str]:
 
 
 def case_collisions(ids, preferred=frozenset()) -> dict:
-    """IDs that differ only in case cannot coexist on Windows or macOS. When exactly one of a
-    group is preferred (it has a valid index entry), only the others are reported."""
+    """IDs differing only in case, which Windows and macOS cannot hold together; if one of a
+    group is preferred (has a valid index entry), only the others."""
     groups = defaultdict(list)
     for skill_id in ids:
         groups[skill_id.casefold()].append(skill_id)
@@ -324,8 +324,8 @@ def local_entries(path: Path) -> dict:
 
 
 def local_listing(path: Path) -> dict:
-    """Git's view of a directory: relative POSIX path -> (mode, object id). Directories are
-    implicit (empty ones vanish); native Windows has no executable bit, every file is 100644."""
+    """Git's view of a directory: relative POSIX path -> (mode, object id); no directories, and
+    every file 100644 on native Windows (no executable bit)."""
     out = {}
     for rel, (kind, bits) in local_entries(path).items():
         p = path.joinpath(*rel.split("/"))
@@ -411,8 +411,8 @@ def exact_tree(expected: dict, path: Path) -> bool:
 
 # --- Metadata
 
-# A remote install reads only the top-level `name` of SKILL.md, with NameReader (the rest comes
-# from library_index.json); the sync rejects a skill it cannot read exactly as PyYAML does.
+# A remote install reads only SKILL.md's top-level `name`, with NameReader (the rest comes from
+# library_index.json); the sync rejects a skill it reads differently from PyYAML.
 NON_PRINTABLE = re.compile(r"[^\t\n\r\x20-\x7e\x85\xa0-\ud7ff\ue000-\ufffd\U00010000-\U0010ffff]")
 DOCUMENT_MARKER = re.compile(r"(?:---|\.\.\.)(?:[ \t]|$)")
 BLOCK_HEADER = re.compile(r"[|>](?:[+-]([1-9])?|([1-9])[+-]?)?(?: +(?:#.*)?)?")
@@ -559,9 +559,9 @@ def unquote(token: str) -> str:
 
 
 class NameReader:
-    """The top-level name of frontmatter text exactly as yaml.safe_load reads it, or ValueError.
-    A column-0 line can belong to a quoted scalar or flow collection above it, so every multi-line
-    value is followed. Block structure is checked as PyYAML does; flow grammar (`[a: b: c]`) is not."""
+    """The top-level name of frontmatter exactly as yaml.safe_load reads it, or ValueError. Every
+    multi-line value is followed (a column-0 line may belong to one); block structure is checked
+    as PyYAML does, flow grammar (`[a: b: c]`) is not."""
 
     def __init__(self, text: str):
         self.text, self.lines = text, text.split("\n")
@@ -623,8 +623,8 @@ class NameReader:
         return self.stack[-1][0] if self.stack else -1
 
     def enter(self, col: int, kind: str):
-        """Add a key ("map") or `- ` entry ("seq") at col to its block collection, or open one as
-        the pending value above, as PyYAML's parser allows."""
+        """Add a key ("map") or `- ` entry ("seq") at col to its block collection, or open one
+        as the pending value above, as PyYAML allows."""
         top = self.stack[-1] if self.stack else None
         if top and top[0] == col and top[1] == "seq" and top[3] and kind == "map":
             self.stack.pop()  # a key at its mapping's column ends an indentless sequence
@@ -737,8 +737,8 @@ class NameReader:
         raise ValueError("unterminated quoted scalar")
 
     def flow(self, i: int, k: int) -> tuple[int, int]:
-        """(row, column) just past the flow collection opening at row i, column k. Indentation is
-        ignored there; a plain scalar at the end of a line goes on unless the next starts a comment."""
+        """(row, column) just past the flow collection opening at row i, column k; indentation is
+        ignored, a plain scalar ending a line goes on unless the next starts a comment."""
         depth, plain = 0, False
         while i < len(self.lines):
             line = self.lines[i]
@@ -797,12 +797,12 @@ def skill_ids(skills: Path) -> list[str]:
 
 # --- Hidden copies
 
-# Codex's bundled system skills (codex-cli 0.165): the sync gives a library skill with such an
-# ID a source-qualified one, since a plain `$ID` would be ambiguous.
+# Codex's bundled system skills (0.165): the sync gives a library skill of such an ID a
+# source-qualified one, since `$ID` would be ambiguous.
 CODEX_SYSTEM_SKILLS = frozenset({"imagegen", "openai-docs", "review-agent", "skill-creator", "skill-installer"})
-# A hidden skill still runs on /ID and $ID: Claude Code lists no skill whose frontmatter sets
-# disable-model-invocation (the last duplicate key wins, so every top-level line is replaced),
-# Codex none whose agents/openai.yaml sets policy.allow_implicit_invocation false.
+# A hidden skill still runs on /ID and $ID: Claude Code lists none whose frontmatter sets
+# disable-model-invocation (the last duplicate wins: every top-level line is replaced), Codex
+# none whose agents/openai.yaml sets policy.allow_implicit_invocation false.
 HIDDEN_KEY = "disable-model-invocation"
 HIDDEN_KEY_LINE = re.compile(r"""(["']?)disable-model-invocation\1[ \t]*:""")
 HIDDEN_PLAIN_LINE = re.compile(r"disable-model-invocation:[ \t]+(?:true|True|TRUE|false|False|FALSE)[ \t]*(?:#.*)?")
@@ -834,7 +834,7 @@ def frontmatter_end(lines: list[str], label: str) -> int:
 
 
 def hidden_skill_md(data: bytes, label: str) -> bytes:
-    """SKILL.md with each top-level disable-model-invocation line replaced by one `true` line after
+    """SKILL.md with its top-level disable-model-invocation lines replaced by a `true` one after
     the opening `---`, BOM and line endings kept; InstallError unless each is a one-line boolean."""
     bom, lines, cr = split_text(data, label)
     end = frontmatter_end(lines, label)
@@ -850,8 +850,8 @@ def hidden_skill_md(data: bytes, label: str) -> bytes:
 
 def hidden_policy(data: bytes | None, label: str) -> bytes:
     """agents/openai.yaml with policy.allow_implicit_invocation false: the file or a `policy:` block
-    is added if missing, else the key is set in that block mapping. BOM and line endings stay; any
-    other shape raises InstallError."""
+    is added if missing, else the key set in that block mapping, BOM and line endings kept; any other
+    shape raises InstallError."""
     if data is None:
         return b"policy:\n  allow_implicit_invocation: false\n"
     bom, lines, cr = split_text(data, label)
@@ -901,11 +901,10 @@ def hidden_policy(data: bytes | None, label: str) -> bytes:
 
 # --- Client copies
 
-# A copy depends only on the library tree, the client and the visibility. Plugin manifest
-# folders go (Claude lists their commands; Codex names the skill `plugin:ID`). Codex matches $NAME
-# against the frontmatter name, which 500+ skills share, so each Codex copy is named after its
-# ID and a nested SKILL.md gets a unique name and the policy. Hidden Codex copies also get the
-# Claude key, for Cursor.
+# A copy depends only on the library tree, the client and the visibility. Plugin manifest folders
+# go (Claude lists their commands; Codex names the skill `plugin:ID`). Codex matches $NAME against
+# the frontmatter name, which 500+ skills share: each Codex copy is named after its ID, a nested
+# SKILL.md gets a unique name and the policy. Hidden Codex copies get the Claude key, for Cursor.
 PLUGIN_DIRS = frozenset({".claude-plugin", ".codex-plugin", ".cursor-plugin"})
 NAME_KEY_LINE = re.compile(r"""(["']?)name\1[ \t]*:(?=[ \t\r]|$)""")
 
@@ -948,8 +947,8 @@ def nested_name(skill_id: str, rel: str) -> str:
 
 
 def copy_edits(client: str, skill_id: str, invocation: str, listing: dict, read) -> dict:
-    """rel -> bytes the client's copy replaces or adds; read(rel) gives the library's bytes. A
-    local tree may link: an edit of a link, or below a linked folder, would write outside the copy."""
+    """rel -> bytes the client's copy replaces or adds; read(rel) gives the library's. A local tree
+    may link: an edit of or below a link would write outside the copy."""
     edits, hide = {}, invocation == "manual"
     if client == "claude" and not hide:
         return edits  # read nothing
@@ -1156,9 +1155,9 @@ class Library:
         raise NotImplementedError
 
     def derived(self, client: str, skill_id: str, invocation: str, local: Path | None = None) -> tuple[dict, dict]:
-        """(listing, edits) of a client's copy (see copy_edits); InstallError if it cannot be made.
-        A file of `local`, an installed copy, holding the library's bytes is read there: in a
-        blobless clone each blob read alone is a fetch of its own."""
+        """(listing, edits) of a client's copy (see copy_edits), or InstallError. A file is read from
+        the installed copy `local` when it holds the library's bytes: in a blobless clone each blob
+        read alone is a fetch."""
         key = (client, skill_id, invocation)
         if key not in self._derived:
             listing = self.listing(skill_id)
@@ -1502,8 +1501,8 @@ def existing_clone(data: Path) -> Path:
 
 @contextmanager
 def open_library(git: Git | None, source: Path | None, data: Path, url: str, branch: str, mode: str, fetch: bool):
-    """Mode "apply" updates and checks out the clone, "dry-run" only fetches into it; without
-    fetch both plan against its checkout. Lock held."""
+    """Mode "apply" updates and checks out the clone, "dry-run" only fetches; without fetch both
+    use its checkout. Lock held."""
     if git is None:
         yield DirLibrary(source)
         return
@@ -1797,7 +1796,7 @@ def matches(client: str, want: dict, library: Library, router: dict, path: Path)
 
 def adoptable(client: str, want: dict, library: Library, path: Path, raw: bool) -> bool:
     """An unmanaged directory is claimed as an exact client copy in a form only this installer
-    writes, or, if `raw` (named, not in ~/.agents), as an exact library tree, then copied again."""
+    writes, or if `raw` (named, not in ~/.agents) as an exact library tree, then copied again."""
     skill_id = want["source_ids"][0]
     if skill_id not in library.skills:
         return False
@@ -2019,8 +2018,8 @@ def kernel_unlock(fd: int):
 
 @contextmanager
 def state_lock(directory: Path):
-    """An exclusive, non-blocking lock (flock, or msvcrt on Windows); where flock does not
-    work (some NFS or Lustre homes), exclusive_file_lock takes its place."""
+    """An exclusive, non-blocking lock (flock, msvcrt on Windows), or exclusive_file_lock where
+    flock does not work (some NFS or Lustre homes)."""
     path = directory / ".lock"
     no_symlink_ancestors(path)
     directory.mkdir(parents=True, exist_ok=True)
@@ -2058,8 +2057,8 @@ def busy(lock: Path) -> LockBusy:
 
 @contextmanager
 def exclusive_file_lock(directory: Path, reason: OSError):
-    """An O_EXCL file holding a random token and start time, stale only by age, taken over by
-    an atomic rename after which the moved file must be exactly the one judged stale."""
+    """An O_EXCL file with a random token and start time, stale only by age, taken over by an
+    atomic rename after which the moved file must be the one judged stale."""
     lock = directory / ".lock.excl"
     mine = json.dumps({"token": uuid.uuid4().hex, "started": time.time()}).encode()
     for _ in range(3):
@@ -2229,8 +2228,8 @@ def move_live_entries(changed: list, state: Path, backup: Path):
 
 
 def prepare_copies(changed: list, backup: Path, library: Library):
-    """Prepare and verify replacements before any live entry moves. A skill that fails is
-    reported and skipped (its copy and record stay); the others proceed."""
+    """Prepare and verify replacements before any live entry moves; a skill that fails is
+    reported and skipped (its copy and record stay)."""
     try:
         for p in changed:
             for action in list(p["actions"]):
@@ -2494,9 +2493,9 @@ def resolve_clients(args, home: Path, storage: list[Path], source: Path | None) 
 
 
 def migrated_state(old: dict, client: str, undone: bool, ids: set) -> tuple[dict, dict | None]:
-    """(state, migration) for a v1 state, once: Claude's old default @all (after a --disable, v1 kept
-    it as a list of the other IDs: over 99 and most of the library) shows only the router, any other
-    selection stays visible, the rest is installed hidden. Undone with --restore, it is an opt-out."""
+    """(state, migration) for a v1 state, once: Claude's old default @all (or, after a --disable,
+    v1's list of the rest: over 99 and most of the library) shows only the router, any other
+    selection stays visible, the rest is hidden. Undone with --restore, it is an opt-out."""
     if not old or old.get("selection_version") == SELECTION_VERSION:
         return old, None
     visible, manual = old["selection"], [] if undone else ["@all"]
