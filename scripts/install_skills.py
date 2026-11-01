@@ -1168,6 +1168,7 @@ class Library:
         self.skipped: dict = {}  # source ID -> why it cannot be installed here
         self.revision = "unversioned"
         self._derived: dict = {}
+        self.planning, self.wanted = False, set()  # see GitLibrary.read
 
     def screen(self, ids: list[str], kinds: dict, indexed: set | None = None, links: bool = False) -> list[str]:
         """The IDs installable everywhere; the others are skipped with a warning."""
@@ -1229,6 +1230,10 @@ class Library:
 
     def release(self):
         """Drop content prepared for this run."""
+
+    def fetch_wanted(self) -> bool:
+        """Download what planning asked for (see GitLibrary.read); False when there was nothing."""
+        return False
 
     def skill_name(self, data: bytes, label: str) -> str:
         """A prepared copy's frontmatter name, read as this library reads names."""
@@ -1317,7 +1322,7 @@ class GitLibrary(Library):
         if not re.fullmatch(r"[0-9a-f]{40}", commit):
             raise InstallError(f"Unsupported library object format at {display(repo)} (SHA-1 is required)")
         self.git, self.repo, self.worktree, self.revision = git, repo, worktree, commit
-        self._prepared, self._cat = False, None
+        self._prepared, self._cat, self._missing = False, None, None
         trees, files, kinds = {}, defaultdict(dict), defaultdict(dict)
         for record in git.run(repo, "ls-tree", "-r", "-t", "-z", commit, "--", "skills").split(b"\0"):
             if not record:
@@ -1364,8 +1369,12 @@ class GitLibrary(Library):
         return self._files[skill_id]
 
     def read(self, skill_id, rel):
-        """A file's bytes from one `git cat-file --batch` (a missing blob is fetched)."""
+        """A file's bytes from one `git cat-file --batch` (a missing blob is fetched). While planning, a
+        blob the clone lacks is not fetched alone: it is noted for fetch_wanted and the read fails."""
         oid = self._files[skill_id][rel][1]
+        if self.planning and oid in self.missing():
+            self.wanted.add(oid)
+            raise InstallError(f"Library object {oid} ({skill_id}/{rel}) is not in the clone yet")
         if self._cat is None:
             self._cat = subprocess.Popen(
                 self.git.command(self.repo, "cat-file", "--batch"),
@@ -1380,6 +1389,26 @@ class GitLibrary(Library):
         if header[1:2] != [b"blob"]:
             raise InstallError(f"Library object {oid} ({skill_id}/{rel}) is not available")
         return self._cat.stdout.read(int(header[2]) + 1)[:-1]
+
+    def missing(self) -> set:
+        """The blobs of this commit's skills that the clone lacks, listed without fetching any."""
+        if self._missing is None:
+            tree = self.git.text(self.repo, "rev-parse", "--verify", f"{self.revision}:skills")
+            out = self.git.run(self.repo, "rev-list", "--objects", "--missing=print", tree)
+            self._missing = {line[1:].decode() for line in out.split() if line.startswith(b"?")}
+        return self._missing
+
+    def fetch_wanted(self):
+        """The blobs planning asked for, in one request, as git's lazy fetch gets one at a time."""
+        wanted, self.wanted = sorted(self.wanted), set()
+        if not wanted:
+            return False
+        fetch = ["fetch", "--quiet", "--no-tags", "--no-write-fetch-head", "--recurse-submodules=no"]
+        fetch += ["--filter=blob:none", "--stdin", "origin"]
+        noop = ("-c", "fetch.negotiationAlgorithm=noop")
+        retried(lambda: self.git.run(self.repo, *noop, *fetch, stdin="\n".join(wanted) + "\n"))
+        self._missing.difference_update(wanted)
+        return True
 
     def adoptable(self, skill_id, path):
         return exact_tree(self._files[skill_id], path)
@@ -1827,11 +1856,34 @@ def placement(skill_id: str) -> int:
     return int.from_bytes(hashlib.sha256(skill_id.encode()).digest(), "big") % 2
 
 
+def may_hold(client: str, want: dict, library: Library, path: Path) -> bool:
+    """Whether the directory could hold the client's copy, judged without the library's bytes: each
+    file a copy keeps as it is has the library's blob, and nothing else is there. In a blobless clone
+    a skill's files may be missing, and a file read alone is a fetch of its own."""
+    listing, hide = library.listing(want["source_ids"][0]), want["invocation"] == "manual"
+    edited = set()
+    for rel in (r for r in listing if r.rsplit("/", 1)[-1] == "SKILL.md" and not plugin_path(r)):
+        if client == "codex" or hide and rel == "SKILL.md":
+            edited.add(rel)
+        if client == "codex" and (hide or rel != "SKILL.md"):
+            edited.add(rel[: -len("SKILL.md")] + POLICY_FILE)
+    kept = {rel: entry for rel, entry in listing.items() if not plugin_path(rel) and rel not in edited}
+    if not plain_dir(path):
+        return False
+    files = {rel for rel, (kind, _) in local_entries(path).items() if kind != "dir"}
+    if not set(kept) <= files <= set(kept) | edited:
+        return False  # stat only, before any file is read
+    local = local_listing(path)
+    return all(local[rel][1] == oid for rel, (_, oid) in kept.items())
+
+
 def matches(client: str, want: dict, library: Library, router: dict, path: Path) -> bool:
     """The directory holds the client's copy (see same_tree)."""
     try:
         if want["source_ids"] == ["@library"]:
             return same_tree(router["listing"], path)
+        if not may_hold(client, want, library, path):
+            return False
         return same_tree(library.derived(client, want["source_ids"][0], want["invocation"], path)[0], path)
     except InstallError:
         return False  # the copy cannot be made; preparing it reports why
@@ -1844,9 +1896,10 @@ def adoptable(client: str, want: dict, library: Library, path: Path, raw: bool) 
     if skill_id not in library.skills:
         return False
     try:
-        listing = library.derived(client, skill_id, want["invocation"], path)[0]
-        if listing != library.listing(skill_id) and exact_tree(listing, path):
-            return True
+        if may_hold(client, want, library, path):
+            listing = library.derived(client, skill_id, want["invocation"], path)[0]
+            if listing != library.listing(skill_id) and exact_tree(listing, path):
+                return True
     except InstallError:
         pass
     return raw and library.adoptable(skill_id, path)
@@ -2612,6 +2665,23 @@ def make_plans(args, clients: list, library: Library, state: Path, data: Path) -
     return plans, held
 
 
+def planned(args, clients: list, library: Library, state: Path, data: Path) -> tuple[list, dict]:
+    """make_plans, reading no library file the clone lacks; if it needed some, they are downloaded
+    in one batch (not with --no-fetch) and the plan is made again."""
+    library.planning = True
+    try:
+        try:
+            result = make_plans(args, clients, library, state, data)
+        except InstallError:
+            if not library.wanted or args.no_fetch:
+                raise
+        if not args.no_fetch and library.fetch_wanted():
+            result = make_plans(args, clients, library, state, data)
+        return result
+    finally:
+        library.planning = False
+
+
 def record_migrations(state: Path, plans: list, backup: Path):
     """Mark migrated clients once their transaction is complete."""
     migrated = [p["client"] for p in plans if "migration" in p]
@@ -2761,7 +2831,7 @@ def run_update(args, git, home, state, data, legacy_cache, source, url, branch, 
         clients = resolve_clients(args, home, storage, source)
         mode = "dry-run" if args.dry_run else "apply"
         library = stack.enter_context(open_library(git, source, data, url, branch, mode, not args.no_fetch))
-        plans, held = make_plans(args, clients, library, state, data)
+        plans, held = planned(args, clients, library, state, data)
         # A client a person must see to is left as it is; the other still updates.
         held.update({p["client"]: r for p in plans if (r := mass_removal(args, [p]) or overflow([p]))})
         if args.dry_run:

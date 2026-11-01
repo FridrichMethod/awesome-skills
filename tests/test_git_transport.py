@@ -774,6 +774,37 @@ def test_symlinks_from_the_remote_library_are_never_installed(remote, capsys):
         run("--codex-only", "--enable", "evil")
 
 
+def test_planning_downloads_one_batch_at_most_however_many_folders_it_compares(remote):
+    """Planning compares other folders with the copies it would make: a skill named like one (a
+    name twin) and a folder named like a library ID. In a blobless clone a library file read alone
+    is a fetch of its own, so planning reads none while a folder's other files already differ, and
+    gets all the files it still needs in one batch (none without fetching)."""
+    home, upstream = remote
+    ids = ["alpha", "beta", "gamma", "delta"]
+    for skill_id in ids[2:]:
+        upstream.skill(skill_id, files={"helper.txt": f"{skill_id} support\n"})
+    upstream.commit("more skills")
+    run("--claude-only", "--selection", "", "--manual", "")  # the clone holds no skill's files yet
+    repo = clone(home)
+    assert all(upstream.blobs(skill_id) <= missing_objects(repo) for skill_id in ids)
+    put(home / ".claude/skills/mine/SKILL.md", "---\nname: alpha\ndescription: the user's own\n---\n")
+    put(home / ".claude/skills/gamma/SKILL.md", "---\nname: gamma\ndescription: the user's own\n---\n")
+    put(home / ".agents/skills/theirs/SKILL.md", "---\nname: beta\ndescription: another tool's\n---\n")
+    for skill_id in ids:  # another tool's copies of a library skill, under names of their own
+        near = home / ".agents/skills" / f"near-{skill_id}"
+        shutil.copytree(upstream.work / "skills" / skill_id, near)
+        put(near / "SKILL.md", f"---\nname: {skill_id}\ndescription: an older {skill_id}\n---\nolder body\n")
+    packs = set(packed_objects(repo))
+    assert run("--claude-only", "--manual", "@all", "--dry-run") == 0
+    assert run("--codex-only", "--no-fetch", "--dry-run") == 0
+    assert set(packed_objects(repo)) == packs, "nothing needed bytes, or nothing may be fetched"
+    assert run("--codex-only", "--dry-run") == 0
+    assert len(set(packed_objects(repo)) - packs) == 1, "four folders' files came in one batch"
+    assert upstream.blobs("beta") & missing_objects(repo), "and only the files a comparison needs"
+    assert run() == 0
+    assert all(f"near-{skill_id}" in os.listdir(home / ".agents/skills") for skill_id in ids)
+
+
 def test_planning_reads_installed_copies_instead_of_fetching_their_blobs(remote):
     home, upstream = remote
     run("--claude-only", "--selection", "", "--manual", "")
