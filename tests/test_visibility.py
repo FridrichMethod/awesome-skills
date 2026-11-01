@@ -433,20 +433,29 @@ def test_a_second_codex_root_linked_into_claudes_holds_back_codex_and_hidden_cla
 
 
 @pytest.mark.parametrize(
-    "where", [".agents/skills/shared", ".codex/skills/shared", ".agents/skills"], ids=["in-agents", "in-codex", "root"]
+    "where, above",
+    [
+        (".agents/skills/shared", False),
+        (".codex/skills/shared", False),
+        (".agents/skills", False),
+        (".agents/skills/shared", True),
+        (".codex/skills/shared", True),
+    ],
+    ids=["in-agents", "in-codex", "root", "above-in-agents", "above-in-codex"],
 )
-def test_a_folder_codex_reads_that_leads_into_claudes_gets_no_hidden_claude_copy(sandbox, tmp_path, where):
-    """Codex follows links in the folders it reads. Through one onto Claude's skills folder (the folder
-    itself, or a link in a real ~/.agents/skills or ~/.codex/skills) it would list every Claude copy,
-    which carries no Codex policy, and with the whole library hidden that is the overflow this design
-    prevents. So Claude writes no hidden copy there and Codex nothing: nothing is written at all."""
+def test_a_folder_codex_reads_that_leads_into_claudes_gets_no_hidden_claude_copy(sandbox, tmp_path, where, above):
+    """Codex follows links in the folders it reads. Through one onto Claude's skills folder or above it
+    (the folder itself, or a link in a real ~/.agents/skills or ~/.codex/skills; Codex walks several
+    levels) it would list every Claude copy, which carries no Codex policy, and with the whole library
+    hidden that is the overflow this design prevents. So Claude writes no hidden copy there and Codex
+    nothing: nothing is written at all."""
     home, source = sandbox
     if not can_symlink(tmp_path):
         pytest.skip("symlinks unavailable")
     claude = home / ".claude/skills"
     skill(claude, "mine", body="the user's own Claude skill")
     (home / where).parent.mkdir(parents=True, exist_ok=True)
-    (home / where).symlink_to(claude, target_is_directory=True)
+    (home / where).symlink_to(claude.parent if above else claude, target_is_directory=True)
     before = installer.fingerprint(home)
     with pytest.raises(installer.PersonNeeded, match=INTO_CLAUDE) as held:
         run(source)
@@ -651,6 +660,21 @@ def test_codex_copies_drop_plugin_folders_and_neutralize_nested_skills(sandbox):
     assert not (codex / ".claude-plugin").exists() and not (claude / ".claude-plugin").exists()
     assert name_of(codex / "tools/inner") == "gamma--tools-inner" and hidden_from_codex(codex / "tools/inner")
     assert name_of(claude / "tools/inner") == "beta", "Claude reads only top-level skills"
+
+
+def test_a_visible_codex_copy_gives_a_nested_skill_the_policy_in_its_own_file(sandbox):
+    """A visible copy reads its top-level SKILL.md alone, but each nested one's agents/openai.yaml too."""
+    home, source = sandbox
+    nest = skill(source, "nest")
+    skill(nest, "sub")
+    (nest / "sub/agents").mkdir()
+    (nest / "sub/agents/openai.yaml").write_text("interface:\n  display_name: Sub\n")
+    assert run(source, "--codex-only", "--selection", "nest", "--manual", "") == 0
+    copy = codex_copy(home, "nest")
+    assert not hidden_from_codex(copy) and name_of(copy) == "nest"
+    assert (copy / "sub/agents/openai.yaml").read_text() == (
+        "interface:\n  display_name: Sub\npolicy:\n  allow_implicit_invocation: false\n"
+    )
 
 
 def test_a_foreign_codex_skill_keeps_its_name(sandbox, capsys):
@@ -879,6 +903,31 @@ def test_restoring_the_migration_after_a_later_update_names_what_to_restore_firs
     assert installer.display(later) in str(error.value)
     assert run(source, "--restore", str(later)) == 0 and run(source, "--restore", str(migration)) == 0
     assert state(home, "claude")["selection"] == ["@all"] and not hidden_from_claude(home / ".claude/skills/alpha")
+
+
+def test_the_restore_order_names_each_later_claude_transaction_newest_first(sandbox):
+    """Only the later transactions that still hold a part of this client's, newest first: not one of
+    the other client's alone, not one already restored, not the refused transaction itself."""
+    home, source = sandbox
+    make_v1(home, source, "claude", ["@all"])
+    assert run(source, "--claude-only") == 0
+    backups = lambda: installer.backup_dirs(installer.native(state_dir(home)))  # noqa: E731
+    [migration] = backups()
+    skill(source, "alpha", body="changed upstream")
+    assert run(source, "--claude-only") == 0
+    assert run(source, "--codex-only") == 0, "Codex's first install: no part of Claude's"
+    skill(source, "beta", body="changed upstream")
+    assert run(source, "--claude-only") == 0
+    first, codex, last = backups()[1:]
+    with pytest.raises(installer.InstallError) as error:
+        run(source, "--restore", str(migration), "--dry-run")
+    assert str(error.value).endswith(f"newest first: {installer.display(last)}, {installer.display(first)}")
+    assert run(source, "--claude-only", "--restore", str(last)) == 0
+    with pytest.raises(installer.InstallError) as error:
+        run(source, "--restore", str(migration), "--dry-run")
+    assert str(error.value).endswith(f"newest first: {installer.display(first)}"), "a restored one is done"
+    assert run(source, "--restore", str(first)) == 0 and run(source, "--claude-only", "--restore", str(migration)) == 0
+    assert state(home, "claude")["selection"] == ["@all"]
 
 
 def test_a_claude_v1_list_of_most_of_the_library_migrates_like_all(sandbox, monkeypatch, capsys):

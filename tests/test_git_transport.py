@@ -918,6 +918,27 @@ def test_a_folder_with_a_file_no_copy_has_is_rejected_without_fetching(remote, m
     assert batches == [False], "nothing was fetched to compare a folder that cannot be a copy"
 
 
+def test_a_folder_whose_files_differ_from_the_library_is_rejected_without_fetching(remote, monkeypatch):
+    """may_hold compares the blob ids of the files a copy keeps as they are before any file is read: a
+    folder named like a library ID with the same files but other content is no copy of ours."""
+    home, _ = remote
+    assert run("--codex-only") == 0
+    alpha = codex_copy(home, "alpha")
+    for entry in os.listdir(alpha.parent):
+        if entry not in ("alpha", installer.ROUTER):
+            shutil.rmtree(alpha.parent / entry)
+    for other in (home / ".codex/skills", home / ".agents/skills"):
+        for entry in os.listdir(other) if other != alpha.parent and other.is_dir() else []:
+            shutil.rmtree(other / entry)
+    put(alpha / "helper.txt", "another tool's version\n")  # the same files, one of them different
+    shutil.rmtree(data_dir(home))
+    assert run("--claude-only", "--selection", "", "--manual", "") == 0
+    batches, fetch = [], installer.GitLibrary.fetch_wanted
+    monkeypatch.setattr(installer.GitLibrary, "fetch_wanted", lambda self: batches.append(fetch(self)) or batches[-1])
+    assert run("--codex-only", "--dry-run") == 0
+    assert batches == [False], "nothing was fetched to compare a folder that cannot be a copy"
+
+
 def test_planning_reads_installed_copies_instead_of_fetching_their_blobs(remote):
     home, upstream = remote
     run("--claude-only", "--selection", "", "--manual", "")
@@ -984,6 +1005,16 @@ def test_git_is_found_only_in_absolute_path_folders(tmp_path, monkeypatch):
     with pytest.raises(installer.InstallError, match="git was not found on PATH"):
         installer.Git()
     assert not marker.exists()
+
+
+@pytest.mark.skipif(WINDOWS, reason="Windows has no executable bit")
+def test_a_git_file_that_cannot_run_is_passed_over(tmp_path, monkeypatch):
+    real = shutil.which("git")
+    stale = tmp_path / "stale/git"  # say, a leftover text file in an earlier PATH folder
+    put(stale, "not a program\n")
+    stale.chmod(0o644)
+    monkeypatch.setenv("PATH", os.pathsep.join([str(stale.parent), os.path.dirname(real)]))
+    assert os.path.samefile(installer.find_git(), real)
 
 
 @pytest.mark.skipif(WINDOWS, reason="simulates Windows' PATHEXT lookup on POSIX")
