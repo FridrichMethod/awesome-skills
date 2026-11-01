@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -337,3 +339,20 @@ def test_sanitize_only_moves_reserved_ids(tmp_path, monkeypatch, capsys):
     assert f"moved: skills/skill-installer -> skills/{moved}" in capsys.readouterr().out
     assert sorted(installer.read_json(tmp_path / installer.INDEX, {})["skills"]) == [moved]
     assert sorted(ss.LibrarySources(skills, tmp_path / "library_sources.json").entries) == [moved]
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="git unavailable")
+def test_git_reads_no_repository_above_the_folder_it_runs_in(tmp_path, monkeypatch):
+    """The sync's git commands run with discovery stopped above their folder: a temporary directory
+    may hold another user's .git, whose configuration git would otherwise honor."""
+    commit = ["-c", "user.name=t", "-c", "user.email=t@example.invalid", "commit", "-q", "--allow-empty", "-m", "x"]
+    planted, staging = tmp_path / "shared", tmp_path / "shared/staging"
+    subprocess.run(["git", "init", "-q", str(planted)], check=True)
+    subprocess.run(["git", "-C", str(planted), *commit], check=True)
+    (staging / "one").mkdir(parents=True)  # a clone that left no repository
+    assert ss.run(["git", "rev-parse", "HEAD"], cwd=staging / "one", check=False).returncode != 0
+    calls = []
+    monkeypatch.setattr(ss.subprocess, "run", lambda command, **options: calls.append(options) or SimpleNamespace())
+    assert ss.shallow_clone("https://example.test/one.git", staging / "two")
+    assert calls[0]["cwd"] == staging, "the clone runs in the private staging folder"
+    assert calls[0]["env"]["GIT_CEILING_DIRECTORIES"] == str(planted.resolve())

@@ -131,12 +131,15 @@ SKIP_TOPLEVEL_NAMES = {"agents", "scripts", "docs", "examples", "tests", "node_m
 
 
 def run(cmd: list[str], cwd: Path | None = None, check: bool = True) -> subprocess.CompletedProcess:
-    return subprocess.run(cmd, cwd=cwd, check=check, capture_output=True, text=True)
+    """A command in `cwd`; git finds no repository above that folder (a shared temporary directory may
+    hold another user's .git, whose url.*.insteadOf or core.sshCommand git would honor)."""
+    env = None if cwd is None else {**os.environ, "GIT_CEILING_DIRECTORIES": str(Path(cwd).resolve().parent)}
+    return subprocess.run(cmd, cwd=cwd, check=check, capture_output=True, text=True, env=env)
 
 
 def shallow_clone(url: str, dest: Path) -> bool:
     try:
-        run(["git", "clone", "--depth", "1", "--single-branch", url, str(dest)])
+        run(["git", "clone", "--depth", "1", "--single-branch", url, str(dest)], cwd=dest.parent)
         return True
     except subprocess.CalledProcessError as e:
         print(f"  clone failed for {url}: {e.stderr.strip()}", file=sys.stderr)
