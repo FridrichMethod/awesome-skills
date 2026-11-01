@@ -2507,7 +2507,8 @@ def kept_backups() -> int:
 
 
 def resolve_clients(args, home: Path, storage: list[Path], source: Path | None) -> list[tuple]:
-    """(client, skills roots, state, foreign ~/.agents/skills or None): Claude has one root, Codex two."""
+    """(client, skills roots, state, foreign ~/.agents/skills or None, why Codex is held or None):
+    Claude has one root, Codex two."""
     codex_home = native(Path(os.path.abspath(os.environ.get("CODEX_HOME") or home / ".codex")))
     defaults = {"claude": [home / ".claude/skills"], "codex": [codex_home / "skills", home / ".agents/skills"]}
     states = {client: read_json(storage[0] / f"{client}.json", {}) for client in defaults}
@@ -2527,16 +2528,18 @@ def resolve_clients(args, home: Path, storage: list[Path], source: Path | None) 
             return True
         return False
 
-    # Codex reads ~/.agents/skills: through a link into Claude's skills it lists every hidden Claude copy
-    # (it ignores the Claude key) and finds most names twice, so both clients may not install there.
-    agents, claude = home / ".agents/skills", [configured("claude", 0, False), configured("claude", 0)]
-    if any(overlap(native(agents.resolve()), native(p.expanduser().resolve())) for p in claude) and all(
-        [not args.codex_only or states["claude"].get("managed"), not args.claude_only or states["codex"].get("managed")]
-    ):
-        raise PersonNeeded(
-            f"{display(agents)} leads into Claude's skills, so Codex would list every hidden Claude copy and find "
-            "most names twice; make it a folder of its own, or install --claude-only"
-        )
+    # Codex reads ~/.agents/skills. Led into the Claude root that holds this installer's copies (or that
+    # this run fills), it would list every hidden Claude copy (it ignores the Claude key) and find most
+    # names twice: Codex then installs nothing (make_plans), and Claude is never held for it.
+    agents = home / ".agents/skills"
+    claude = [] if args.codex_only else [configured("claude", 0)]
+    claude += [Path(states["claude"]["destination"])] if states["claude"].get("managed") else []
+    into = next((p for p in claude if overlap(native(agents.resolve()), native(p.expanduser().resolve()))), None)
+    hold = into and (
+        f"Codex is left as it is: {display(agents)} leads into Claude's skills ({display(into)}), so Codex would "
+        "list every hidden Claude copy and find most names twice. Replace the link with a folder of its own, "
+        "or stop installing for Codex: --codex-only --selection '' --manual ''"
+    )
     clients = []
     for client in ["codex"] if args.codex_only else ["claude"] if args.claude_only else ["claude", "codex"]:
         roots = []
@@ -2546,7 +2549,8 @@ def resolve_clients(args, home: Path, storage: list[Path], source: Path | None) 
             except InstallError as exc:  # a linked ~/.agents/skills is never written through
                 if not i or os.environ.get("SKILLS_CODEX_DEST2"):
                     raise
-                warn(f"{exc}; Codex's copies there are left as they are (see SKILLS_CODEX_DEST2)")
+                if not hold:
+                    warn(f"{exc}; Codex's copies there are left as they are (see SKILLS_CODEX_DEST2)")
         if roots[0] == home / ".agents" or home / ".agents" in roots[0].parents:
             raise InstallError(f"This installer does not own ~/.agents: {display(roots[0])}")
         other = "claude" if client == "codex" else "codex"
@@ -2567,7 +2571,8 @@ def resolve_clients(args, home: Path, storage: list[Path], source: Path | None) 
                     )
         if source is not None and any(overlap(source, root) for root in roots):
             raise InstallError(f"Source and destination overlap: {display(source)}, {display(roots[0])}")
-        clients.append((client, roots, states[client], agents if client == "codex" else None))
+        codex = client == "codex"
+        clients.append((client, roots, states[client], agents if codex and not hold else None, hold if codex else None))
     return clients
 
 
@@ -2585,12 +2590,16 @@ def migrated_state(old: dict, client: str, undone: bool, ids: set) -> tuple[dict
     return base, None if undone else {"from": old["selection"], "selection": visible, "manual": manual}
 
 
-def make_plans(args, clients: list, library: Library, state: Path, data: Path) -> list:
+def make_plans(args, clients: list, library: Library, state: Path, data: Path) -> tuple[list, dict]:
+    """(plans, client -> why it is held unplanned)."""
     marks = read_json(state / MIGRATIONS, {}).get(MIGRATION, {})
-    plans = []
-    for client, roots, old, agents in clients:
+    plans, held = [], {}
+    for client, roots, old, agents, hold in clients:
         base, migration = migrated_state(old, client, bool(marks.get(client, {}).get("undone")), set(library.skills))
         visible, manual = selection(args, client, base, library), manual_set(args, client, base, library)
+        if hold and (visible or manual):  # an uninstall is never held
+            held[client] = hold
+            continue
         router = router_info(client, data)
         plans.append(plan_client(client, roots, old, base, visible, manual, library, router, agents))
         if migration:
@@ -2600,7 +2609,7 @@ def make_plans(args, clients: list, library: Library, state: Path, data: Path) -
         for b in every[i + 1 :]:
             if overlap(a, b):
                 raise InstallError(f"Client destinations overlap: {display(a)}, {display(b)}")
-    return plans
+    return plans, held
 
 
 def record_migrations(state: Path, plans: list, backup: Path):
@@ -2752,17 +2761,17 @@ def run_update(args, git, home, state, data, legacy_cache, source, url, branch, 
         clients = resolve_clients(args, home, storage, source)
         mode = "dry-run" if args.dry_run else "apply"
         library = stack.enter_context(open_library(git, source, data, url, branch, mode, not args.no_fetch))
-        plans = make_plans(args, clients, library, state, data)
+        plans, held = make_plans(args, clients, library, state, data)
         # A client a person must see to is left as it is; the other still updates.
-        held = {p["client"]: r for p in plans if (r := mass_removal(args, [p]) or overflow([p]))}
+        held.update({p["client"]: r for p in plans if (r := mass_removal(args, [p]) or overflow([p]))})
         if args.dry_run:
             emit(report(True, library, plans, legacy_caches(legacy_cache), interrupted_transaction(state, keep)))
             for reason in held.values():
                 warn(reason)
             return 0
-        if len(held) == len(plans):
-            raise PersonNeeded("; ".join(held.values()))
         plans = [p for p in plans if p["client"] not in held]
+        if not plans:
+            raise PersonNeeded("; ".join(held.values()))
         if not locked:
             stack.enter_context(state_lock(state))
         backup = apply_plans(plans, state, library, keep)

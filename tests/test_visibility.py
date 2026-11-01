@@ -346,38 +346,141 @@ def test_a_linked_second_codex_root_is_never_written_and_blocks_no_update(sandbo
         run(source, "--codex-only")
 
 
+INTO_CLAUDE = "leads into Claude's skills"
+NO_CODEX = ["--codex-only", "--selection", "", "--manual", ""]  # the remedy that keeps the link
+
+
+def link_agents_into(home, link: str, target: Path):
+    """~/.agents/skills (or ~/.agents) made a link into Claude's skills folder (or its parent)."""
+    (home / link).parent.mkdir(parents=True, exist_ok=True)
+    (home / link).symlink_to(target if link.endswith("skills") else target.parent, target_is_directory=True)
+
+
 @pytest.mark.parametrize("link", [".agents/skills", ".agents"])
-def test_a_second_codex_root_linked_into_claudes_is_refused_while_both_clients_install(sandbox, tmp_path, link):
-    """Codex reads ~/.agents/skills, so through such a link it would list every hidden Claude copy
-    (it ignores disable-model-invocation) and find most names twice ($ID would load neither)."""
+def test_a_second_codex_root_linked_into_claudes_holds_back_only_codex(sandbox, tmp_path, capsys, link):
+    """Codex reads ~/.agents/skills, so through a link into Claude's skills it would list every hidden
+    Claude copy (it ignores disable-model-invocation) and find most names twice ($ID would load
+    neither). Codex installs nothing then, and exits 3 naming the remedies; Claude is never held."""
     home, source = sandbox
     if not can_symlink(tmp_path):
         pytest.skip("symlinks unavailable")
-    claude = home / ".claude/skills"  # shared with other tools: ~/.agents/skills leads into it
+    claude = home / ".claude/skills"
     skill(claude, "mine", body="the user's own Claude skill")
-    (home / link).parent.mkdir(parents=True, exist_ok=True)
-    (home / link).symlink_to(claude if link.endswith("skills") else claude.parent, target_is_directory=True)
-    refused = "leads into Claude's skills"
+    link_agents_into(home, link, claude)
+    capsys.readouterr()
+    with pytest.raises(installer.PersonNeeded, match=INTO_CLAUDE) as held:
+        run(source)
+    assert "Replace the link with a folder" in str(held.value) and " ".join(NO_CODEX[:2]) in str(held.value)
+    assert "--selection '' --manual ''" in str(held.value)
+    assert hidden_from_claude(claude / "alpha") and state(home, "claude")["managed"], "Claude was installed"
+    assert not (home / ".codex/skills").exists() and not (state_dir(home) / "codex.json").exists()
+    assert "SKILLS_CODEX_DEST2" not in capsys.readouterr().err, "no advice that would not help here"
+    assert run(source, "--claude-only") == 0
+    assert run(source, "--dry-run") == 0
     before = installer.fingerprint(home)
-    for args in ([], ["--dry-run"]):
-        with pytest.raises(installer.PersonNeeded, match=refused):
-            run(source, *args)
-    assert installer.fingerprint(home) == before, "nothing written"
-    assert run(source, "--codex-only") == 0, "Claude's folder holds no copy of this installer's yet"
+    with pytest.raises(installer.PersonNeeded, match=INTO_CLAUDE):
+        run(source, "--codex-only")
+    assert installer.fingerprint(home) == before, "Codex alone: nothing written"
+    assert run(source, "--claude-only", "--enable", "alpha") == 0 and not hidden_from_claude(claude / "alpha")
+    assert run(source, "--claude-only", "--selection", "", "--manual", "") == 0, "an uninstall is never held"
+    assert sorted(os.listdir(claude)) == ["mine"]
+
+
+def test_the_way_out_that_keeps_the_link_stops_installing_for_codex(sandbox, tmp_path, capsys):
+    home, source = sandbox
+    if not can_symlink(tmp_path):
+        pytest.skip("symlinks unavailable")
+    claude = home / ".claude/skills"
+    link_agents_into(home, ".agents/skills", claude)
+    with pytest.raises(installer.PersonNeeded, match=INTO_CLAUDE):
+        run(source)
+    assert run(source, *NO_CODEX) == 0
+    capsys.readouterr()
+    assert run(source) == 0, "the no-argument update is not held any more"
+    assert capsys.readouterr().out == "Already current; selection preserved.\n"
+    assert not (home / ".codex/skills").exists() and hidden_from_claude(claude / "alpha")
+
+
+def test_a_v1_host_with_the_link_migrates_claude_and_can_leave_codex(sandbox, tmp_path, capsys):
+    """A v1 install of both clients' defaults (Claude @all; Codex @library, its router managed in
+    ~/.codex/skills) that origin/main updated with the link: Claude migrates at once; Codex waits."""
+    home, source = sandbox
+    if not can_symlink(tmp_path):
+        pytest.skip("symlinks unavailable")
+    for i in range(25):
+        skill(source, f"extra-{i:02d}")
+    make_v1(home, source, "claude", ["@all"])
+    make_v1(home, source, "codex", ["@library"])
+    claude, codex = home / ".claude/skills", home / ".codex/skills"
+    link_agents_into(home, ".agents/skills", claude)
+    v1_codex = state(home, "codex")
+    with pytest.raises(installer.PersonNeeded, match=INTO_CLAUDE):
+        run(source)
+    assert state(home, "claude")["selection"] == ["@library"], "Claude's listing no longer overflows"
+    assert all(hidden_from_claude(claude / s) for s in os.listdir(claude) if s != ROUTER)
+    assert state(home, "codex") == v1_codex and os.listdir(codex) == [ROUTER], "Codex is left as it was"
+    for args in (["--claude-only"], ["--claude-only", "--dry-run"]):
+        assert run(source, *args) == 0
+    assert run(source, *NO_CODEX) == 0 and not os.listdir(codex), "the v1 Codex router is removed"
+    assert run(source) == 0
+    backup = Path(
+        json.loads((state_dir(home) / installer.MIGRATIONS).read_text())[installer.MIGRATION]["claude"]["backup"]
+    )
+    assert run(source, "--claude-only", "--restore", str(backup)) == 0, "--restore is never held"
+    assert state(home, "claude")["selection"] == ["@all"]
+
+
+def test_replacing_the_link_with_a_folder_lets_codex_install(sandbox, tmp_path):
+    home, source = sandbox
+    if not can_symlink(tmp_path):
+        pytest.skip("symlinks unavailable")
+    link_agents_into(home, ".agents/skills", home / ".claude/skills")
+    with pytest.raises(installer.PersonNeeded, match=INTO_CLAUDE):
+        run(source)
+    (home / ".agents/skills").unlink()
+    (home / ".agents/skills").mkdir()  # a folder of Codex's own
+    assert run(source) == 0
+    assert all(hidden_from_codex(codex_copy(home, s)) for s in ("alpha", "beta"))
+    assert {installer.placement(s) for s in state(home, "codex")["managed"] if s != ROUTER} == {0, 1}
+
+
+def test_codex_alone_installs_while_claude_has_no_copy_of_this_installer_there(sandbox, tmp_path):
+    """--codex-only while Claude's folder, which the link leads into, holds only the user's own skills:
+    Codex sees them as other tools' skills, and nothing of this installer's is listed twice."""
+    home, source = sandbox
+    if not can_symlink(tmp_path):
+        pytest.skip("symlinks unavailable")
+    claude = home / ".claude/skills"
+    skill(claude, "mine", body="the user's own Claude skill")
+    link_agents_into(home, ".agents/skills", claude)
+    assert run(source, "--codex-only") == 0
     assert sorted(os.listdir(home / ".codex/skills")) == sorted(
         [ROUTER, *(s for s in ("alpha", "beta") if not installer.placement(s))]
     )
-    with pytest.raises(installer.PersonNeeded, match=refused):
-        run(source, "--claude-only")  # Codex, installed, would read these copies
     assert sorted(os.listdir(claude)) == ["mine"]
-    shutil.rmtree(state_dir(home))
-    shutil.rmtree(home / ".codex/skills")
-    assert run(source, "--claude-only") == 0 and hidden_from_claude(claude / "alpha")
-    with pytest.raises(installer.PersonNeeded, match=refused):
-        run(source, "--codex-only")
-    assert not (home / ".codex/skills").exists()
-    (home / link).unlink()  # the way out: a folder of Codex's own
+
+
+def test_only_claudes_own_root_counts_for_the_link(sandbox, tmp_path, monkeypatch):
+    """Claude installed at a custom root, which the state saves: ~/.agents/skills leading into
+    ~/.claude/skills (only the user's own skill there) holds nothing back, while a link into the
+    saved root holds Codex back even when Claude is not part of the run."""
+    home, source = sandbox
+    if not can_symlink(tmp_path):
+        pytest.skip("symlinks unavailable")
+    custom = home / "claude-config/skills"
+    monkeypatch.setenv("SKILLS_CLAUDE_DEST", str(custom))
+    assert run(source, "--claude-only") == 0
+    monkeypatch.delenv("SKILLS_CLAUDE_DEST")
+    skill(home / ".claude/skills", "mine")
+    link_agents_into(home, ".agents/skills", home / ".claude/skills")
     assert run(source) == 0 and hidden_from_codex(codex_copy(home, "alpha"))
+    (home / ".agents/skills").unlink()
+    link_agents_into(home, ".agents/skills", custom)
+    before = installer.fingerprint(home / ".codex")
+    for args in ([], ["--codex-only"], ["--codex-only", "--enable", "alpha"]):
+        with pytest.raises(installer.PersonNeeded, match=INTO_CLAUDE):
+            run(source, *args)
+    assert installer.fingerprint(home / ".codex") == before
 
 
 def test_copies_in_a_second_root_that_became_a_link_stay_owned(sandbox, tmp_path, monkeypatch, capsys):
