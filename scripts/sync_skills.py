@@ -1089,7 +1089,14 @@ def _duplicate_keys(node) -> list[str]:
 # The typed fields Codex 0.165 reads from agents/openai.yaml (probed: an unknown key is ignored, any
 # scalar reads as a string). A known field of another shape, or a product it does not know, makes
 # Codex ignore the whole file, the policy included, so the skill would stay in the model's catalog.
-CODEX_INTERFACE_FIELDS = ("display_name", "short_description", "icon_small", "icon_large", "brand_color", "default_prompt")
+CODEX_INTERFACE_FIELDS = (
+    "display_name",
+    "short_description",
+    "icon_small",
+    "icon_large",
+    "brand_color",
+    "default_prompt",
+)
 CODEX_TOOL_FIELDS = ("type", "value", "description", "transport", "command", "url")
 CODEX_PRODUCTS = frozenset({"atlas", "chatgpt", "codex", "ATLAS", "CHATGPT", "CODEX"})
 
@@ -1104,7 +1111,9 @@ def codex_metadata_problems(value: dict) -> list[str]:
         return node if isinstance(node, dict) else {}
 
     def scalars(node: dict, where: str, keys: tuple):
-        problems.extend(f"{where}.{key} is not a single value" for key in keys if isinstance(node.get(key), dict | list))
+        problems.extend(
+            f"{where}.{key} is not a single value" for key in keys if isinstance(node.get(key), dict | list)
+        )
 
     scalars(section(value.get("interface"), "interface"), "interface", CODEX_INTERFACE_FIELDS)
     tools = section(value.get("dependencies"), "dependencies").get("tools")
