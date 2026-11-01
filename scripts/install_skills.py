@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-"""Install independent persistent client selections with conservative ownership.
+"""Install the skill library for Claude Code and Codex: every skill can be run by hand, only
+each client's selection (by default the library router) is shown to the model.
 
-Remote installs keep the library as a blobless, sparse git clone in the data directory.
-An update fetches new commits and trees, then downloads only the blobs of selected skills
-whose git tree changed. --list reads that clone; --dry-run fetches into it but never moves
-its checkout or writes state or destinations. Either may lazily fetch objects into the clone.
-A remote install needs only the Python standard library; PyYAML is imported only to read a
-checkout's skills in full.
+Remote installs keep the library as a blobless, sparse git clone in the data directory; an
+update fetches new commits and trees, then only the blobs of skills whose tree changed. Only
+the standard library is needed; PyYAML is imported only to read a checkout's skills in full.
 """
 
 from __future__ import annotations
@@ -43,6 +41,14 @@ except ImportError:  # native Windows
 REPOSITORY = "https://github.com/FridrichMethod/awesome-skills"
 REPOSITORY_URL = REPOSITORY + ".git"
 SCHEMA = 1
+# v2 states: `selection` is what the model sees, `manual` what is installed hidden besides, and
+# records carry `invocation` (SCHEMA also gates the index and journals, so it stays 1).
+SELECTION_VERSION = 2
+MIGRATION, MIGRATIONS = "selection-v2", "migrations.json"
+SHORTCUT = ("tree", "invocation", "name", "root")  # an unchanged record and copy is not rehashed
+ROOT_CAP = 1990  # Codex walks at most 2,000 directories per skills root, top-level folders first
+SUMMARY_ACTIONS = 100  # a larger plan prints one line per client instead of its JSON
+LAUNCHER = "awesome-skills"
 ROUTER = "awesome-skills-library"
 INDEX = "library_index.json"
 PROVENANCE = "library_sources.json"
@@ -82,35 +88,15 @@ GIT_CONFIG = (
 # and so on) are dropped; only ssh, proxy, TLS, config-file selection and the low-speed
 # overrides pass.
 GIT_ENV_KEEP = frozenset(
-    {
-        "GIT_SSH",
-        "GIT_SSH_COMMAND",
-        "GIT_SSH_VARIANT",
-        "GIT_PROXY_COMMAND",
-        "GIT_SSL_CAINFO",
-        "GIT_SSL_CAPATH",
-        "GIT_SSL_CERT",
-        "GIT_SSL_KEY",
-        "GIT_CONFIG_GLOBAL",
-        "GIT_CONFIG_SYSTEM",
-        "GIT_CONFIG_NOSYSTEM",
-        "GIT_HTTP_LOW_SPEED_LIMIT",
-        "GIT_HTTP_LOW_SPEED_TIME",
-    }
+    "GIT_SSH GIT_SSH_COMMAND GIT_SSH_VARIANT GIT_PROXY_COMMAND GIT_SSL_CAINFO GIT_SSL_CAPATH GIT_SSL_CERT "
+    "GIT_SSL_KEY GIT_CONFIG_GLOBAL GIT_CONFIG_SYSTEM GIT_CONFIG_NOSYSTEM GIT_HTTP_LOW_SPEED_LIMIT "
+    "GIT_HTTP_LOW_SPEED_TIME".split()
 )
 # Only these mean the clone itself is damaged; anything else (a slow or dropped link, a
 # full disk) is retried or reported, never answered by deleting and re-cloning.
 CORRUPTION = (
-    "not a git repository",
-    "bad object",
-    "invalid object",
-    "unable to read",
-    "corrupt",
-    "could not parse",
-    "needed a single revision",
-    "bad revision",
-    "unknown revision",
-    "bad index",
+    *("not a git repository", "bad object", "invalid object", "unable to read", "corrupt", "could not parse"),
+    *("needed a single revision", "bad revision", "unknown revision", "bad index"),
 )
 WINDOWS_INVALID = re.compile(r'[<>:"|?*\x00-\x1f\\]|[. ]$|^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$', re.IGNORECASE)
 GIT_METADATA_FILES = {".gitattributes", ".gitmodules"}
@@ -433,13 +419,9 @@ def exact_tree(expected: dict, path: Path) -> bool:
 
 # --- Metadata --------------------------------------------------------------------------
 
-# A remote install reads only the top-level `name` of SKILL.md frontmatter (names and
-# descriptions come from library_index.json), with the standard library. NameReader follows
-# PyYAML's scanner (YAML 1.1) wherever it decides which lines are top-level keys and what a
-# name scalar holds, and refuses what it does not follow: anchors, tags, aliases, explicit
-# keys, tabs outside quotes, and any name that is not a one-line plain or quoted string.
-# The sync rejects a library skill it cannot read exactly as PyYAML does. PyYAML itself is
-# imported only to parse whole frontmatter.
+# A remote install reads only the top-level `name` of SKILL.md frontmatter, with NameReader
+# (names and descriptions come from library_index.json). The sync rejects a library skill it
+# cannot read exactly as PyYAML does; PyYAML is imported only to parse whole frontmatter.
 NON_PRINTABLE = re.compile(r"[^\t\n\r\x20-\x7e\x85\xa0-\ud7ff\ue000-\ufffd\U00010000-\U0010ffff]")
 DOCUMENT_MARKER = re.compile(r"(?:---|\.\.\.)(?:[ \t]|$)")
 BLOCK_HEADER = re.compile(r"[|>](?:[+-]([1-9])?|([1-9])[+-]?)?(?: +(?:#.*)?)?")
@@ -867,12 +849,10 @@ def index_text(index: dict) -> str:
 # Codex's bundled system skills (codex-cli 0.165). A library skill with one of these IDs would
 # make a plain `$ID` ambiguous, so the sync gives such a skill a source-qualified ID instead.
 CODEX_SYSTEM_SKILLS = frozenset({"imagegen", "openai-docs", "review-agent", "skill-creator", "skill-installer"})
-# A skill installed but hidden from the model: Claude Code drops a skill whose frontmatter sets
-# disable-model-invocation from the model's listing (the last duplicate key wins, so every
-# existing top-level line of the key is replaced); Codex leaves a skill whose agents/openai.yaml
-# sets policy.allow_implicit_invocation to false out of the prompt catalog. Both still run on
-# /ID and $ID. Either transform refuses a shape it cannot edit line by line, and the sync rejects
-# a library skill that either one refuses or that PyYAML would then read differently.
+# A hidden skill still runs on /ID and $ID: Claude Code leaves one whose frontmatter sets
+# disable-model-invocation out of the model's listing (the last duplicate key wins, so every
+# top-level line of it is replaced), Codex one whose agents/openai.yaml sets
+# policy.allow_implicit_invocation false. The sync rejects skills these line edits cannot hide.
 HIDDEN_KEY = "disable-model-invocation"
 HIDDEN_KEY_LINE = re.compile(r"""(["']?)disable-model-invocation\1[ \t]*:""")
 HIDDEN_PLAIN_LINE = re.compile(r"disable-model-invocation:[ \t]+(?:true|True|TRUE|false|False|FALSE)[ \t]*(?:#.*)?")
@@ -904,9 +884,9 @@ def frontmatter_end(lines: list[str], label: str) -> int:
 
 
 def hidden_skill_md(data: bytes, label: str) -> bytes:
-    """SKILL.md as a hidden copy: every top-level disable-model-invocation line removed, then
-    `disable-model-invocation: true` right after the opening `---`. BOM and line endings stay.
-    A top-level line of the key that is not a plain one-line true or false raises InstallError."""
+    """SKILL.md with every top-level disable-model-invocation line replaced by one `true` line
+    right after the opening `---`; BOM and line endings stay. A line of the key that is not a
+    plain one-line boolean raises InstallError."""
     bom, lines, cr = split_text(data, label)
     end = frontmatter_end(lines, label)
     kept = []
@@ -920,10 +900,9 @@ def hidden_skill_md(data: bytes, label: str) -> bytes:
 
 
 def hidden_policy(data: bytes | None, label: str) -> bytes:
-    """agents/openai.yaml as a hidden copy: a new file when there is none, a `policy:` block
-    appended when the file has no top-level policy key, otherwise allow_implicit_invocation set
-    to false (or added) inside the block-style `policy:` mapping. BOM and line endings stay.
-    Any other shape raises InstallError."""
+    """agents/openai.yaml with policy.allow_implicit_invocation false: the file or a `policy:`
+    block is added if missing, else the key is set inside the block-style mapping. BOM and line
+    endings stay; any other shape raises InstallError."""
     if data is None:
         return b"policy:\n  allow_implicit_invocation: false\n"
     bom, lines, cr = split_text(data, label)
@@ -967,14 +946,11 @@ def hidden_policy(data: bytes | None, label: str) -> bytes:
 
 # --- Client copies ---------------------------------------------------------------------
 
-# An installed copy is a pure function of the library tree, the client and whether the skill is
-# visible to the model. Both clients drop plugin manifest folders: Claude Code loads a skill
-# folder holding one as a plugin whose commands stay listed, and Codex then names the skill
-# `plugin:ID`. A hidden Claude copy carries disable-model-invocation. Every Codex copy is named
-# after its ID (Codex matches $NAME against the frontmatter name, which 500+ library skills
-# share); a SKILL.md below the top level gets a unique name and stays out of the catalog; a
-# hidden Codex copy also gets policy.allow_implicit_invocation false, plus the Claude key for
-# Cursor, which reads Codex's folders.
+# A copy depends only on the library tree, the client and whether the model sees it. Plugin
+# manifest folders go (Claude lists their commands; Codex names the skill `plugin:ID`). Codex
+# matches $NAME against the frontmatter name, which 500+ skills share, so each Codex copy is
+# named after its ID, and a nested SKILL.md gets a unique name and the policy. Hidden Codex
+# copies also get the Claude key, for Cursor, which reads Codex's folders.
 PLUGIN_DIRS = frozenset({".claude-plugin", ".codex-plugin", ".cursor-plugin"})
 NAME_KEY_LINE = re.compile(r"""(["']?)name\1[ \t]*:(?=[ \t\r]|$)""")
 
@@ -984,9 +960,8 @@ def plugin_path(rel: str) -> bool:
 
 
 def renamed_skill_md(data: bytes, name: str, label: str) -> bytes:
-    """SKILL.md whose top-level name reads as `name`: its one top-level name line becomes
-    `name: "NAME"` (or that line is added after the opening `---`). The result must read as
-    `name` without PyYAML, or InstallError is raised."""
+    """SKILL.md whose one top-level name line (added if missing) is `name: "NAME"`; the result
+    must read as NAME without PyYAML, or InstallError is raised."""
 
     def reads_as_name(text: bytes) -> bool:
         try:
@@ -1018,8 +993,7 @@ def nested_name(skill_id: str, rel: str) -> str:
 
 
 def copy_edits(client: str, skill_id: str, invocation: str, listing: dict, read) -> dict:
-    """rel -> bytes: the files a client's copy of a skill replaces or adds (read(rel) returns the
-    library's bytes). Raises InstallError when a file cannot be edited safely."""
+    """rel -> bytes the client's copy replaces or adds; read(rel) gives the library's bytes."""
     edits, hide = {}, invocation == "manual"
     for rel in sorted(listing):
         top = rel == "SKILL.md"
@@ -1092,10 +1066,16 @@ def read_json(path: Path, default: dict) -> dict:
 
 
 def atomic_json(path: Path, value: dict):
+    atomic_write(path, (json.dumps(value, indent=2, sort_keys=True) + "\n").encode())
+
+
+def atomic_write(path: Path, data: bytes, mode: int | None = None):
     path.parent.mkdir(parents=True, exist_ok=True)
     temp = path.with_name(path.name + ".tmp-" + uuid.uuid4().hex)
     try:
-        temp.write_bytes((json.dumps(value, indent=2, sort_keys=True) + "\n").encode())
+        temp.write_bytes(data)
+        if mode is not None and not WINDOWS:
+            temp.chmod(mode)
         os.replace(temp, path)
     except BaseException:
         try:
@@ -1137,15 +1117,18 @@ class Git:
         ):
             self.env["GIT_SSH_COMMAND"] = SSH_COMMAND
 
-    def run(self, repo: Path | None, *args: str, stdin: str = "", check: bool = True) -> bytes:
+    def command(self, repo: Path | None, *args: str) -> list[str]:
         command = [self.exe]
         for item in GIT_CONFIG:
             command += ["-c", item]
         if repo is not None:
             # Never discover a repository: a broken clone must fail, not fall back to an enclosing one.
             command += ["-C", display(repo), f"--git-dir={display(repo / '.git')}", f"--work-tree={display(repo)}"]
+        return [*command, *args]
+
+    def run(self, repo: Path | None, *args: str, stdin: str = "", check: bool = True) -> bytes:
         result = subprocess.run(
-            [*command, *args],
+            self.command(repo, *args),
             input=stdin.encode(),
             capture_output=True,
             env=self.env,
@@ -1181,6 +1164,7 @@ class Library:
         self.skills: dict = {}
         self.skipped: dict = {}  # source ID -> why it cannot be installed here
         self.revision = "unversioned"
+        self._derived: dict = {}
 
     def screen(self, ids: list[str], kinds: dict, indexed: set | None = None, links: bool = False) -> list[str]:
         """The IDs installable on every platform; the others are skipped with a warning."""
@@ -1203,6 +1187,18 @@ class Library:
 
     def listing(self, skill_id: str) -> dict:
         raise NotImplementedError
+
+    def read(self, skill_id: str, rel: str) -> bytes:
+        raise NotImplementedError
+
+    def derived(self, client: str, skill_id: str, invocation: str) -> tuple[dict, dict]:
+        """(listing, edits) of a client's copy (see copy_edits); InstallError if it cannot be made."""
+        key = (client, skill_id, invocation)
+        if key not in self._derived:
+            listing = self.listing(skill_id)
+            edits = copy_edits(client, skill_id, invocation, listing, lambda rel: self.read(skill_id, rel))
+            self._derived[key] = derived_listing(listing, edits), edits
+        return self._derived[key]
 
     def adoptable(self, skill_id: str, path: Path) -> bool:
         raise NotImplementedError
@@ -1267,6 +1263,9 @@ class DirLibrary(Library):
     def listing(self, skill_id):
         return self._listings[skill_id]
 
+    def read(self, skill_id, rel):
+        return (self.source / skill_id).joinpath(*rel.split("/")).read_bytes()
+
     def adoptable(self, skill_id, path):
         # Legacy adoption requires an exact whole-tree hash, never a name alone.
         if skill_id not in self._fingerprints:
@@ -1298,7 +1297,7 @@ class GitLibrary(Library):
         if not re.fullmatch(r"[0-9a-f]{40}", commit):
             raise InstallError(f"Unsupported library object format at {display(repo)} (SHA-1 is required)")
         self.git, self.repo, self.worktree, self.revision = git, repo, worktree, commit
-        self._prepared = False
+        self._prepared, self._cat = False, None
         trees, files, kinds = {}, defaultdict(dict), defaultdict(dict)
         for record in git.run(repo, "ls-tree", "-r", "-t", "-z", commit, "--", "skills").split(b"\0"):
             if not record:
@@ -1344,6 +1343,24 @@ class GitLibrary(Library):
     def listing(self, skill_id):
         return self._files[skill_id]
 
+    def read(self, skill_id, rel):
+        """A file's bytes from one long-lived `git cat-file --batch` (a missing blob is fetched)."""
+        oid = self._files[skill_id][rel][1]
+        if self._cat is None:
+            self._cat = subprocess.Popen(
+                self.git.command(self.repo, "cat-file", "--batch"),
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                env=self.git.env,
+            )
+        self._cat.stdin.write(oid.encode() + b"\n")
+        self._cat.stdin.flush()
+        header = self._cat.stdout.readline().split()
+        if header[1:2] != [b"blob"]:
+            raise InstallError(f"Library object {oid} ({skill_id}/{rel}) is not available")
+        return self._cat.stdout.read(int(header[2]) + 1)[:-1]
+
     def adoptable(self, skill_id, path):
         return exact_tree(self._files[skill_id], path)
 
@@ -1356,6 +1373,10 @@ class GitLibrary(Library):
         self._sparse(["scripts", *(f"skills/{skill_id}" for skill_id in sorted(set(ids)))])
 
     def release(self):
+        if self._cat is not None:
+            self._cat.stdin.close()
+            self._cat.wait()
+            self._cat = None
         if self._prepared:
             self._prepared = False
             self._sparse(["scripts"])
@@ -1507,17 +1528,23 @@ def existing_clone(data: Path) -> Path:
 
 
 @contextmanager
-def open_library(git: Git | None, source: Path | None, data: Path, url: str, branch: str, mode: str):
-    """mode "apply" updates and checks out the clone; "dry-run" only fetches into it. Lock held."""
+def open_library(git: Git | None, source: Path | None, data: Path, url: str, branch: str, mode: str, fetch: bool):
+    """mode "apply" updates and checks out the clone; "dry-run" only fetches into it; without
+    fetch either one plans against the clone's current checkout. Lock held."""
     if git is None:
         yield DirLibrary(source)
         return
-    if mode == "dry-run":
-        existing_clone(data)
+    moved = False
+    if mode == "dry-run" or not fetch:
+        repo = existing_clone(data)
         sweep_clone_leftovers(data)
-        yield refresh_clone(git, data, url, branch, checkout=False)[0]
-        return
-    library, moved = update_clone(git, data, url, branch)
+    if not fetch:
+        head = git.text(repo, "rev-parse", "--verify", "HEAD^{commit}")
+        library = GitLibrary(git, repo, head, worktree=mode == "apply")
+    elif mode == "dry-run":
+        library = refresh_clone(git, data, url, branch, checkout=False)[0]
+    else:
+        library, moved = update_clone(git, data, url, branch)
     try:
         yield library
     finally:
@@ -1546,46 +1573,104 @@ def remote_tip(git: Git, url: str, branch: str) -> str:
     return ""
 
 
-# --- Router ----------------------------------------------------------------------------
+# --- Router and launcher ---------------------------------------------------------------
 
 
-def router_info(library: Library) -> dict:
-    helper, extra = library.router_command()
-    python = sys.executable
+def launcher_path(data: Path, suffix: str = "") -> Path:
+    return data / "bin" / (LAUNCHER + suffix)
+
+
+def ps_quote(value: str) -> str:
+    return "'" + value.replace("'", "''") + "'"
+
+
+def launcher_call(data: Path) -> str:
+    """How a router runs the launcher: a single-quoted PowerShell literal on Windows."""
     if WINDOWS:
+        return "& " + ps_quote(display(launcher_path(data, ".ps1")))
+    return shlex.quote(display(launcher_path(data)))
 
-        def quote(value: str) -> str:
-            return '"' + value.replace("`", "``").replace('"', '`"') + '"'
 
-        fence, call = "powershell", f"& {quote(python)} -B {quote(helper)}"
-    else:
-        quote = shlex.quote
-        fence, call = "bash", f"{quote(python)} -B {quote(helper)}"
-    call += "".join(" " + quote(arg) for arg in extra)
-    body = f"""---
-name: {ROUTER}
-description: Search the complete awesome-skills library and enable only the skills needed for a task, with source provenance.
+def launchers(data: Path, state: Path, library: Library) -> dict:
+    """Path -> text of the launchers: the installer that made this install, with its storage,
+    saved destinations and remote unless set, or (`search ...`) the read-only library search."""
+    helper, extra = library.router_command()
+    search, python = str(Path(helper).with_name("search_skills.py")), sys.executable
+    env = {"SKILLS_STATE_DIR": display(state), "SKILLS_DATA_DIR": display(data)}
+    for client in ("claude", "codex"):
+        saved = read_json(state / f"{client}.json", {})
+        for key, variable in (("destination", ""), ("destination2", "2")):
+            if saved.get(key):
+                env[f"SKILLS_{client.upper()}_DEST{variable}"] = display(saved[key])
+    env.update({key: os.environ[key] for key in ("SKILLS_REPOSITORY_URL", "SKILLS_BRANCH") if os.environ.get(key)})
+    note = "# Written by the awesome-skills installer on every run; edits are overwritten."
+    q = shlex.quote
+    sh = ["#!/bin/sh", note, *(f"{k}=${{{k}:-{q(v)}}}\nexport {k}" for k, v in sorted(env.items()))]
+    sh.append(
+        f'if [ "${{1-}}" = search ]; then\n    shift\n    exec {q(python)} -I -B {q(search)} --state "$SKILLS_STATE_DIR" "$@"\nfi'
+    )
+    sh.append(f'exec {q(python)} -B {" ".join(map(q, [helper, *extra]))} "$@"')
+    files = {launcher_path(data): "\n".join(sh) + "\n"}
+    if WINDOWS:
+        p = ps_quote
+        ps = [note, *(f"if (-not $env:{k}) {{ $env:{k} = {p(v)} }}" for k, v in sorted(env.items()))]
+        ps.append(
+            f"if ($args.Count -and $args[0] -eq 'search') {{\n    & {p(python)} -I -B {p(search)} --state $env:SKILLS_STATE_DIR @($args | Select-Object -Skip 1)"
+        )
+        ps.append(
+            f"}} else {{\n    & {p(python)} -B {' '.join(map(p, [helper, *extra]))} @args\n}}\nexit $LASTEXITCODE"
+        )
+        files[launcher_path(data, ".ps1")] = "\ufeff" + "\n".join(ps) + "\n"  # a BOM: Windows PowerShell reads UTF-8
+    return files
+
+
+def write_launchers(data: Path, state: Path, library: Library):
+    for path, text in launchers(data, state, library).items():
+        no_symlink_ancestors(path)
+        if not path.is_file() or path.read_bytes() != text.encode():
+            atomic_write(path, text.encode(), 0o755)
+
+
+def router_info(client: str, call: str) -> dict:
+    """The router skill for one client: search the library through the launcher, then use a skill."""
+    fence, claude = "powershell" if WINDOWS else "bash", client == "claude"
+    owner = "Claude Code but hidden from your skill list" if claude else "Codex but not listed here"
+    head = (
+        f"---\nname: {ROUTER}\ndescription: Find the right skill among the awesome-skills library, installed for "
+        f"{owner} (biology, chemistry, protein design, ML, data, software, writing). Use when no listed skill fits "
+        "the task or the user asks which skill to use.\n"
+    )
+    search = f"""1. Search offline with 1-3 distinctive words (all must match; '-', '_' and spaces are the
+   same). It prints at most 12 matches{", each with its SKILL.md path" * (not claude)}; exit status 1 means none:
+
+   ```{fence}
+   {call} search --client {client} WORDS
+   ```
+
+"""
+    show = f"the user runs `{call} --{client}-only --enable ID --no-fetch`"
+    if claude:
+        body = f"""{head}argument-hint: "[what you need]"
+allowed-tools: Bash({call} search *)
 ---
+Request: $ARGUMENTS
 
-The full library index is kept outside automatic discovery. Search it (IDs,
-frontmatter names, descriptions, tree ids, and origins):
+Most library skills are hidden from you, and the Skill tool refuses them. If the request is
+empty, ask the user what they need.
 
-```{fence}
-{call} --list --search protein
-```
+{search}2. Reply with the 1-5 best IDs the search printed, one line each on why; never guess one.
+3. Invoke an ID marked [visible] with the Skill tool. For any other, ask the user to start their
+   next message with /ID and the task; do not open its SKILL.md or do its work yourself.
+4. To list an ID in every session, {show}; do not run it unasked.
+"""
+    else:
+        body = f"""{head}---
+Most library skills are not listed here; all of them are installed and usable.
 
-Enable a source ID for Codex, persist it across updates, then restart the session:
-
-```{fence}
-{call} --codex-only --enable SOURCE_ID
-```
-
-Enabling installs the skill into the Codex skills directory at once. Read its
-`SKILL.md` there directly when a session restart is inconvenient, and use its
-relative supporting files from that same directory. Do not invent provenance
-or silently choose between different same-name variants. `--disable SOURCE_ID`
-reversibly removes an unmodified managed copy. `--dry-run` previews all actions
-without writing. `--list` reports conflicts. Selection changes require a client flag.
+{search}2. Say in one line which ID you use and why; never guess an ID or a path.
+3. Read that SKILL.md completely at the printed path and follow it, resolving relative paths
+   from its directory. Tell the user that typing $ID loads it directly.
+4. Nothing needs enabling or downloading. To list an ID in every session, {show}.
 """
     entries = {"": ("dir", 0o755, b""), "SKILL.md": ("file", 0o644, body.encode())}
     listing = {"SKILL.md": ("100644", blob_id(body.encode()))}
@@ -1593,19 +1678,11 @@ without writing. `--list` reports conflicts. Selection changes require a client 
 
 
 def write_tree(entries: dict, target: Path):
+    """Write the generated router: relative path -> (kind, mode, bytes), its folder first."""
     for rel, (kind, mode, data) in sorted(entries.items()):
-        p = target / rel if rel else target
-        if kind == "dir":
-            p.mkdir(parents=True, exist_ok=True)
-        elif kind == "file":
-            p.parent.mkdir(parents=True, exist_ok=True)
-            p.write_bytes(data)
-            p.chmod(mode)
-        else:
-            raise InstallError(f"Unsupported generated entry: {rel}")
-    for rel, (kind, mode, _) in sorted(entries.items(), reverse=True):
-        if kind == "dir":
-            (target / rel if rel else target).chmod(mode)
+        path = target / rel if rel else target
+        path.mkdir(parents=True, exist_ok=True) if kind == "dir" else path.write_bytes(data)
+        path.chmod(mode)
 
 
 # --- Planning --------------------------------------------------------------------------
@@ -1615,7 +1692,7 @@ def conflict_groups(skills: dict) -> dict:
     by_name = defaultdict(list)
     for skill_id, info in skills.items():
         by_name[info["name"]].append(skill_id)
-    return {name: ids for name, ids in sorted(by_name.items()) if len({skills[i]["tree"] for i in ids}) > 1}
+    return {name: sorted(ids) for name, ids in sorted(by_name.items()) if len({skills[i]["tree"] for i in ids}) > 1}
 
 
 def protected(path: Path) -> bool:
@@ -1642,26 +1719,33 @@ def validate_state(value: dict, client: str):
         return
     if value.get("schema") != SCHEMA or value.get("client") != client:
         raise InstallError(f"Unsupported or invalid state: {client}")
-    if not isinstance(value.get("destination"), str) or not Path(value["destination"]).is_absolute():
+    if value.get("selection_version", SELECTION_VERSION) != SELECTION_VERSION:
+        raise InstallError(f"Unsupported state selection version: {client}")
+    roots = [value.get("destination"), *([value["destination2"]] if "destination2" in value else [])]
+    if not all(isinstance(root, str) and Path(root).is_absolute() for root in roots):
         raise InstallError(f"Invalid state destination: {client}")
-    if not isinstance(value.get("selection"), list) or not all(isinstance(i, str) for i in value["selection"]):
-        raise InstallError(f"Invalid state selection: {client}")
+    for key in ("selection", *(["manual"] if "manual" in value else [])):
+        if not isinstance(value.get(key), list) or not all(isinstance(i, str) for i in value[key]):
+            raise InstallError(f"Invalid state {key}: {client}")
     if not isinstance(value.get("managed"), dict):
         raise InstallError(f"Invalid ownership manifest: {client}")
-    for entry, info in value["managed"].items():
+    for entry, info in value["managed"].items():  # v1 records have no invocation
         valid_entry(entry)
-        if not isinstance(info, dict) or info.get("sha256") is None:
+        if not isinstance(info, dict) or info.get("sha256") is None or info.get("root", 0) not in range(len(roots)):
+            raise InstallError(f"Invalid ownership record: {client}:{entry}")
+        if info.get("invocation", "auto") not in ("auto", "manual"):
             raise InstallError(f"Invalid ownership record: {client}:{entry}")
         valid_hash(info["sha256"])
         valid_tree(info.get("tree"))
 
 
 def selection(args, client: str, old: dict, library: Library) -> list[str]:
+    """The skills shown to the model: IDs, @library (the router) or @all."""
     known = set(library.skills) | set(library.skipped)
     blocked = sorted(set(args.enable) & set(library.skipped))
     if blocked:
         raise InstallError(f"Cannot enable {blocked}: {'; '.join(library.skipped[i] for i in blocked)}")
-    ids = old.get("selection", ["@library"] if client == "codex" else ["@all"])
+    ids = old.get("selection", ["@library"])
     if args.selection is not None:
         ids = [v for v in args.selection.split(",") if v]
     ids = set(library.skills) | (set(ids) - {"@all"}) if "@all" in ids and args.disable else set(ids)
@@ -1676,115 +1760,149 @@ def selection(args, client: str, old: dict, library: Library) -> list[str]:
     return sorted(ids)
 
 
-def desired_entries(client: str, ids: list[str], library: Library, router: dict) -> tuple[dict, dict]:
-    selected = set(library.skills) if "@all" in ids else set(ids) & set(library.skills)
-    if "@library" in ids and ROUTER in selected:
-        raise InstallError(f"Source ID collides with reserved library entry: {ROUTER}")
-    selected_info = {i: library.skills[i] for i in selected}
-    if "@library" in ids:
-        selected_info["@library"] = {"name": ROUTER, "tree": router["tree"]}
-    conflicts = conflict_groups(selected_info)
-    if conflicts and client == "codex":
-        raise InstallError(
-            f"Codex selection has different-content frontmatter name conflicts: {json.dumps(conflicts)}. "
-            "Select one explicit source ID per name; all variants remain in the library."
-        )
-    # Preserve Claude's full paths. Codex deduplicates identical trees and records aliases.
-    desired, seen = {}, {}
-    for skill_id in sorted(selected):
+def manual_set(args, old: dict, library: Library) -> list[str]:
+    """The skills installed but hidden from the model, unless shown: @all, IDs, or none."""
+    ids = old.get("manual", ["@all"]) if args.manual is None else [v for v in args.manual.split(",") if v]
+    unknown = set(ids) - set(library.skills) - set(library.skipped) - {"@all"}
+    if unknown:
+        raise InstallError(f"Unknown source IDs: {sorted(unknown)} (use --list --search)")
+    return sorted(set(ids))
+
+
+def desired_entries(client: str, visible: list, manual: list, library: Library, router: dict) -> tuple:
+    """(entry -> record, name conflicts, entries asked for by name) of one client's install."""
+    reserved = ({ROUTER} if "@library" in visible else set()) | (CODEX_SYSTEM_SKILLS if client == "codex" else set())
+    named = (set(visible) | set(manual)) - {"@all", "@library"}
+    clashes = sorted(i for i in named if i.casefold() in reserved)
+    if clashes:
+        raise InstallError(f"Source ID collides with reserved library entry: {', '.join(clashes)}")
+    every = {i for i in library.skills if i.casefold() not in reserved}
+    installed = every if "@all" in visible or "@all" in manual else named & set(library.skills)
+    shown = every if "@all" in visible else set(visible)
+    desired = {}
+    for skill_id in sorted(installed):
         info = dict(library.skills[skill_id], source_ids=[skill_id])
-        key = (info["name"], info["tree"])
-        if client == "codex" and key in seen:
-            desired[seen[key]]["source_ids"].append(skill_id)
-        else:
-            seen[key] = skill_id
-            desired[skill_id] = info
-    if "@library" in ids:
-        desired[ROUTER] = {
-            "name": ROUTER,
-            "tree": router["tree"],
-            "source_ids": ["@library"],
-            "origins": [{"repository": REPOSITORY, "path": "scripts/install_skills.py"}],
-        }
-    return desired, conflicts
+        info["invocation"] = "auto" if skill_id in shown else "manual"
+        if client == "codex":
+            info["name"] = skill_id  # every Codex copy is renamed to its ID, so names never collide
+        desired[skill_id] = info
+    if "@library" in visible:
+        origin = {"repository": REPOSITORY, "path": "scripts/install_skills.py"}
+        desired[ROUTER] = {"name": ROUTER, "tree": router["tree"], "source_ids": ["@library"], "origins": [origin]}
+        desired[ROUTER]["invocation"] = "auto"
+        named.add(ROUTER)
+    # Claude keeps every variant: same-name skills differ only in their /name alias.
+    return desired, conflict_groups(desired) if client == "claude" else {}, named
 
 
-def expected_listing(want: dict, library: Library, router: dict) -> dict:
-    return router["listing"] if want["source_ids"] == ["@library"] else library.listing(want["source_ids"][0])
+def placement(skill_id: str) -> int:
+    """The Codex root of a new copy, by a stable hash of the ID."""
+    return hashlib.sha256(skill_id.encode()).digest()[0] % 2
 
 
-def kept_entry(entry: str, reason: str = "protected, modified, or unproven ownership") -> dict:
-    return {"entry": entry, "reason": reason}
+def matches(client: str, want: dict, library: Library, router: dict, path: Path) -> bool:
+    """The directory holds the client's copy (paths, bytes, links and executable bits)."""
+    try:
+        if want["source_ids"] == ["@library"]:
+            return same_tree(router["listing"], path)
+        return same_tree(library.derived(client, want["source_ids"][0], want["invocation"])[0], path)
+    except InstallError:
+        return False  # the copy cannot be made; preparing it reports why
 
 
-def plan_entries(client, dest, managed, desired, library, router) -> tuple[list, list, dict]:
+def adoptable(client: str, want: dict, library: Library, path: Path) -> bool:
+    """An unmanaged directory is claimed only as an exact client copy, or as an exact library tree
+    (which is then copied again in the client's form)."""
+    skill_id = want["source_ids"][0]
+    if skill_id not in library.skills:
+        return False
+    try:
+        if exact_tree(library.derived(client, skill_id, want["invocation"])[0], path):
+            return True
+    except InstallError:
+        pass
+    return library.adoptable(skill_id, path)
+
+
+def kept_entry(entry: str, reason: str = "protected, modified, or unproven ownership", **where) -> dict:
+    return {"entry": entry, "reason": reason, **where}
+
+
+def roots_of(item: dict) -> list[Path]:
+    """A client's skills roots in a plan or journal: Codex has a second one."""
+    return [Path(item[key]) for key in ("destination", "destination2") if item.get(key)]
+
+
+def target_of(item: dict, action: dict) -> Path:
+    return roots_of(item)[action.get("root", 0)] / action["entry"]
+
+
+def slot(client: str, action: dict) -> str:
+    """The backup directory of an action's root."""
+    return client + ("2" if action.get("root") else "")
+
+
+def plan_entries(client, roots, managed, desired, library, router, named) -> tuple[list, list, dict]:
     actions, kept, new_managed = [], [], {}
-    existing = {p.name for p in dest.iterdir()} if dest.exists() else set()
-    for entry in sorted(existing | set(desired) | set(managed)):
-        target, want, rec = dest / entry, desired.get(entry), managed.get(entry)
-        present = entry in existing
-        if want and rec and rec.get("tree") == want["tree"] and present and plain_dir(target):
-            # Unchanged since this installer recorded it: a cheap existence check, no hashing.
-            new_managed[entry] = dict(want, sha256=rec["sha256"])
-            continue
-        if rec and entry in library.skipped:
-            new_managed[entry] = rec  # frozen: never updated or removed while the entry is skipped
-            kept.append(kept_entry(entry, f"library entry skipped: {library.skipped[entry]}"))
-            continue
-        if present and not want and not rec:
-            # Never hashed, claimed or removed, even when identical to a library skill.
-            kept.append(kept_entry(entry, "not installed by awesome-skills"))
-            continue
-        current = fingerprint(target) if present else None
-        owned = False
-        if current is not None and not protected(target):
-            owned = (
-                current == rec["sha256"]
-                if rec
-                else bool(want) and entry in library.skills and library.adoptable(entry, target)
-            )
-        if current is not None and not owned:
-            kept.append(kept_entry(entry))
-            if rec:
-                # Retain the last installed fingerprint so future updates keep
-                # recognizing the edited copy, including after deselection.
-                new_managed[entry] = rec
-            if want and not rec and client == "codex":
-                if want["source_ids"] != ["@library"] or not same_tree(router["listing"], target):
-                    raise InstallError(f"Cannot install {client}:{entry}: preserved destination differs: {target}")
-            continue
-        if want:
-            if current is not None and same_tree(expected_listing(want, library, router), target):
-                new_managed[entry] = dict(want, sha256=current)  # identical content: record, do not copy
-            else:
-                new_managed[entry] = dict(want, sha256=None)  # filled in once the copy is prepared
-                actions.append(
-                    {
-                        "entry": entry,
-                        "before": current,
-                        "after": None,
-                        "source": want["source_ids"][0],
-                        "tree": want["tree"],
-                    }
-                )
-        elif owned:
-            actions.append({"entry": entry, "before": current, "after": None})
+    for index, dest in enumerate(roots):
+        where = {"root": index} if index else {}
+        wanted = {e: w for e, w in desired.items() if w.get("root", 0) == index}
+        records = {e: r for e, r in managed.items() if r.get("root", 0) == index}
+        existing = {p.name for p in dest.iterdir()} if dest.exists() else set()
+        for entry in sorted(existing | set(wanted) | set(records)):
+            target, want, rec = dest / entry, wanted.get(entry), records.get(entry)
+            present = entry in existing
+            if want and rec and present and plain_dir(target) and all(rec.get(k) == want.get(k) for k in SHORTCUT):
+                # Unchanged since this installer recorded it: a cheap existence check, no hashing.
+                new_managed[entry] = dict(want, sha256=rec["sha256"])
+                continue
+            if rec and entry in library.skipped:
+                new_managed[entry] = rec  # frozen: never updated or removed while the entry is skipped
+                kept.append(kept_entry(entry, f"library entry skipped: {library.skipped[entry]}", **where))
+                continue
+            if present and not want and not rec:
+                # Never hashed, claimed or removed, even when identical to a library skill.
+                kept.append(kept_entry(entry, "not installed by awesome-skills", **where))
+                continue
+            current = fingerprint(target) if present else None
+            owned = False
+            if current is not None and not protected(target):
+                owned = current == rec["sha256"] if rec else bool(want) and adoptable(client, want, library, target)
+            if current is not None and not owned:
+                kept.append(kept_entry(entry, **where))
+                if rec:
+                    # Retain the last installed fingerprint so future updates keep
+                    # recognizing the edited copy, including after deselection.
+                    new_managed[entry] = rec
+                if want and not rec and client == "codex" and entry in named:
+                    if not matches(client, want, library, router, target):
+                        raise InstallError(f"Cannot install {client}:{entry}: preserved destination differs: {target}")
+                continue
+            if want:
+                if current is not None and matches(client, want, library, router, target):
+                    new_managed[entry] = dict(want, sha256=current)  # identical content: record, do not copy
+                else:
+                    new_managed[entry] = dict(want, sha256=None)  # filled in once the copy is prepared
+                    source = {"source": want["source_ids"][0], "tree": want["tree"]}
+                    actions.append({"entry": entry, "before": current, "after": None, **source, **where})
+            elif owned:
+                actions.append({"entry": entry, "before": current, "after": None, **where})
     return actions, kept, new_managed
 
 
-def external_skills(client: str, dest: Path, kept: list, home: Path) -> dict:
-    """Preserved skills, even symlinks, and for Codex ~/.agents/skills, by frontmatter name."""
-    paths = {item["entry"]: dest / item["entry"] for item in kept}
-    if client == "codex":
-        agents = home / ".agents/skills"
-        if agents.is_dir() and agents != dest:
-            paths.update({f".agents/{p.name}": p for p in agents.iterdir()})
+def external_skills(client: str, roots: list, kept: list, home: Path) -> dict:
+    """Path -> frontmatter name of preserved skills (even symlinks), and for Codex of everything in
+    ~/.agents/skills when that is not one of its roots."""
+    paths = [roots[item.get("root", 0)] / item["entry"] for item in kept]
+    agents = home / ".agents/skills"
+    if client == "codex" and agents.is_dir() and agents not in roots:
+        paths += list(agents.iterdir())
     external = {}
-    for entry, directory in paths.items():
+    for directory in paths:
         p = directory / "SKILL.md"
         if p.is_file():
             try:
-                external[entry] = {"name": frontmatter_name(p.read_bytes(), display(p)), "path": directory}
+                external[directory] = frontmatter_name(p.read_bytes(), display(p))
             except InstallError:
                 pass
     return external
@@ -1792,74 +1910,102 @@ def external_skills(client: str, dest: Path, kept: list, home: Path) -> dict:
 
 def external_conflicts(external: dict) -> dict:
     by_name = defaultdict(list)
-    for entry, ext in external.items():
-        by_name[ext["name"]].append(entry)
+    for path, name in external.items():
+        by_name[name].append(path)
     groups = {}
-    for name, entries in sorted(by_name.items()):
-        if len(entries) > 1 and len({tree_id(local_listing(external[e]["path"])) for e in entries}) > 1:
-            groups[name] = entries
+    for name, paths in sorted(by_name.items()):
+        if len(paths) > 1 and len({tree_id(local_listing(p)) for p in paths}) > 1:
+            groups[name] = sorted(map(display, paths))
     return groups
 
 
-def plan_client(client, dest, old, ids, library, router, home) -> dict:
-    managed = old.get("managed", {}) if old.get("destination") == str(dest) else {}
-    desired, conflicts = desired_entries(client, ids, library, router)
-    actions, kept, new_managed = plan_entries(client, dest, managed, desired, library, router)
-    external = external_skills(client, dest, kept, home)
-    preserved = {item["entry"] for item in kept}
-    for entry, info in list(new_managed.items()):
-        if entry in preserved:
-            continue  # The recorded hash is historical for a modified managed copy.
-        for other, ext in external.items():
-            if other == entry or ext["name"] != info["name"]:
-                continue
-            if not same_tree(expected_listing(info, library, router), ext["path"]):
-                if client == "codex":
-                    raise InstallError(
-                        f"Frontmatter name conflict with preserved {display(ext['path'])}: {info['name']} ({entry})"
-                    )
-                conflicts[info["name"]] = sorted(
-                    set(conflicts.get(info["name"], [])) | {entry, f"external:{display(ext['path'])}"}
-                )
-                continue
-            if client == "codex":
-                target, rec = dest / entry, managed.get(entry)
-                current = fingerprint(target)
-                actions = [a for a in actions if a["entry"] != entry]
-                new_managed.pop(entry, None)
-                if current is not None and rec and current == rec["sha256"] and not protected(target):
-                    actions.append({"entry": entry, "before": current, "after": None})
-                elif current is not None and rec:
-                    new_managed[entry] = rec  # a modified copy found through the shortcut stays preserved
-                kept.append(kept_entry(entry, f"identical external name at {other}; not claimed"))
-                break
-    new = {"schema": SCHEMA, "client": client, "destination": str(dest), "selection": ids, "managed": new_managed}
-    return {
-        "client": client,
-        "destination": str(dest),
-        "actions": actions,
-        "preserved": kept,
-        "conflicts": conflicts,
-        "external_conflicts": external_conflicts(external),
-        "failed": [],
-        "state": new,
-        "previous_state": old,
-        "managed_before": managed,
+def unclaim(plan: dict, entry: str, info: dict, managed: dict, reason: str):
+    """Leave a Codex name to a preserved skill (two skills with one name make `$name` inject
+    neither): our unmodified copy goes, a modified one stays."""
+    where = {"root": 1} if info.get("root") else {}
+    target, rec = roots_of(plan)[info.get("root", 0)] / entry, managed.get(entry)
+    current = fingerprint(target)
+    plan["actions"] = [a for a in plan["actions"] if a["entry"] != entry]
+    plan["state"]["managed"].pop(entry, None)
+    if current is not None and rec and current == rec["sha256"] and not protected(target):
+        plan["actions"].append({"entry": entry, "before": current, "after": None, **where})
+    elif current is not None and rec:
+        plan["state"]["managed"][entry] = rec  # a modified copy found through the shortcut stays preserved
+    plan["preserved"].append(kept_entry(entry, reason, **where))
+
+
+def plan_client(client, roots, old, base, visible, manual, library, router, home) -> dict:
+    """Plan one client from its state `base` (old, or the migrated form of old)."""
+    keys = ("destination", "destination2")
+    managed = {
+        entry: rec
+        for entry, rec in base.get("managed", {}).items()
+        if rec.get("root", 0) < len(roots) and base.get(keys[rec.get("root", 0)]) == str(roots[rec.get("root", 0)])
     }
+    desired, conflicts, named = desired_entries(client, visible, manual, library, router)
+    for entry, want in desired.items():  # a managed copy keeps its root; a new Codex copy goes by its ID
+        rec = managed.get(entry)
+        if rec.get("root") if rec else client == "codex" and entry != ROUTER and placement(entry):
+            want["root"] = 1
+    actions, kept, new_managed = plan_entries(client, roots, managed, desired, library, router, named)
+    new = {"schema": SCHEMA, "client": client, "destination": str(roots[0]), "selection": visible, "manual": manual}
+    plan = {"client": client, "destination": str(roots[0])}
+    if len(roots) > 1:
+        new["destination2"] = plan["destination2"] = str(roots[1])
+    new.update(selection_version=SELECTION_VERSION, managed=new_managed)
+    external = external_skills(client, roots, kept, home)
+    plan.update(actions=actions, preserved=kept, conflicts=conflicts, external_conflicts=external_conflicts(external))
+    plan.update(failed=[], state=new, previous_state=old, managed_before=managed, router=router)
+    preserved = {roots[item.get("root", 0)] / item["entry"] for item in kept}
+    for entry, info in list(new_managed.items()):
+        target = roots[info.get("root", 0)] / entry
+        if target in preserved:
+            continue  # The recorded hash is historical for a modified managed copy.
+        for path, name in external.items():
+            if path == target or name != info["name"]:
+                continue
+            identical = matches(client, info, library, router, path)
+            if client == "claude":
+                if not identical:
+                    conflicts[name] = sorted(set(conflicts.get(name, [])) | {entry, f"external:{display(path)}"})
+                continue
+            if not identical and entry in named:
+                raise InstallError(f"Frontmatter name conflict with preserved {display(path)}: {name} ({entry})")
+            unclaim(plan, entry, info, managed, f"name {name!r} is taken by {display(path)}; not claimed")
+            break
+    return plan
 
 
 def mass_removal(args, plans: list) -> str | None:
     """A no-argument update that would remove most managed skills is refused unless asked for."""
-    if args.allow_mass_removal or args.selection is not None or args.enable or args.disable:
+    if args.allow_mass_removal or args.selection is not None or args.manual is not None or args.enable or args.disable:
         return None
     for p in plans:
-        before = p["managed_before"]
-        removing = [a for a in p["actions"] if a.get("source") is None and a["entry"] in before]
+        before, after = p["managed_before"], p["state"]["managed"]
+        removing = [a for a in p["actions"] if a.get("source") is None and a["entry"] not in after]
         if len(removing) >= MASS_REMOVAL_MINIMUM and len(removing) > MASS_REMOVAL_SHARE * len(before):
             return (
                 f"Refusing to remove {len(removing)} of {len(before)} managed {p['client']} skills in one update; "
                 "rerun with --allow-mass-removal if that is intended"
             )
+    return None
+
+
+def overflow(plans: list) -> str | None:
+    """A Codex root holding more than ROOT_CAP top-level folders (any owner) could lose skills."""
+    for p in plans:
+        for index, root in enumerate(roots_of(p) if p["client"] == "codex" else []):
+            names = {n for n in os.listdir(root) if not n.startswith(".")} if root.is_dir() else set()
+            for action in (a for a in p["actions"] if a.get("root", 0) == index):
+                if action.get("source"):
+                    names.add(action["entry"])
+                else:
+                    names.discard(action["entry"])
+            if len(names) > ROOT_CAP:
+                return (
+                    f"Refusing to fill {display(root)} with {len(names)} skill folders: Codex finds at most "
+                    f"about 2,000 per root (limit {ROOT_CAP}); remove skills there or install fewer (--manual)"
+                )
     return None
 
 
@@ -2021,7 +2167,7 @@ def preflight(plans: list, state: Path):
         if read_json(state / f"{p['client']}.json", {}) != p["previous_state"]:
             raise InstallError(f"Selection changed since planning: {p['client']}")
         for action in p["actions"]:
-            target = Path(p["destination"]) / action["entry"]
+            target = target_of(p, action)
             no_symlink_ancestors(target)
             if fingerprint(target) != action["before"]:
                 raise InstallError(f"Destination changed since planning: {display(target)}")
@@ -2034,7 +2180,7 @@ def preflight(plans: list, state: Path):
                 )
 
 
-def apply_plans(plans: list, state: Path, library: Library, router: dict, keep: int = KEEP_BACKUPS) -> Path | None:
+def apply_plans(plans: list, state: Path, library: Library, keep: int = KEEP_BACKUPS) -> Path | None:
     """Apply verified plans as one recoverable transaction. The caller holds the lock."""
     preflight(plans, state)
     changed = [p for p in plans if p["actions"] or read_json(state / f"{p['client']}.json", {}) != p["state"]]
@@ -2050,19 +2196,15 @@ def apply_plans(plans: list, state: Path, library: Library, router: dict, keep: 
     no_symlink_ancestors(backup)
     backup.mkdir(parents=True)
     journal = {"schema": SCHEMA, "state_dir": str(state), "status": "preparing", "clients": []}
+    if any("migration" in p for p in changed):
+        journal["migration"] = MIGRATION  # a --restore of this transaction undoes the migration for good
     for p in changed:
         statefile = state / f"{p['client']}.json"
-        journal["clients"].append(
-            {
-                "client": p["client"],
-                "destination": p["destination"],
-                "old_state": read_json(statefile, {}) if statefile.exists() else None,
-                "new_state": None,
-                "actions": p["actions"],
-            }
-        )
+        item = {k: p[k] for k in ("client", "destination", "destination2") if k in p}
+        item.update(old_state=read_json(statefile, {}) if statefile.exists() else None, new_state=None)
+        journal["clients"].append(dict(item, actions=p["actions"], **({"migrated": True} if "migration" in p else {})))
     atomic_json(backup / "restore.json", journal)
-    prepare_copies(changed, backup, library, router)
+    prepare_copies(changed, backup, library)
     for item, p in zip(journal["clients"], changed, strict=True):
         validate_state(p["state"], p["client"])
         item["new_state"], item["actions"] = p["state"], p["actions"]
@@ -2083,29 +2225,28 @@ def apply_plans(plans: list, state: Path, library: Library, router: dict, keep: 
 
 def move_live_entries(changed: list, state: Path, backup: Path):
     for p in changed:
-        dest = Path(p["destination"])
         for action in p["actions"]:
-            entry, target = action["entry"], dest / action["entry"]
+            entry, target, where = action["entry"], target_of(p, action), slot(p["client"], action)
             if fingerprint(target) != action["before"] or is_link(target):
                 raise InstallError(f"Destination changed since planning: {target}; recovery journal: {backup}")
             if action["before"] is not None:
-                saved = backup / p["client"] / entry
+                saved = backup / where / entry
                 saved.parent.mkdir(parents=True, exist_ok=True)
                 move(target, saved)
             if action["after"] is not None:
-                dest.mkdir(parents=True, exist_ok=True)
-                move(backup / "prepared" / p["client"] / entry, target)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                move(backup / "prepared" / where / entry, target)
         atomic_json(state / f"{p['client']}.json", p["state"])
 
 
-def prepare_copies(changed: list, backup: Path, library: Library, router: dict):
+def prepare_copies(changed: list, backup: Path, library: Library):
     """Prepare and verify replacements before any live entry moves. A skill that fails is
     skipped (its live copy and record stay as they were) and reported; the others proceed."""
     try:
         for p in changed:
             for action in list(p["actions"]):
                 if action.get("source") is not None:
-                    prepare_one(p, action, backup, library, router)
+                    prepare_one(p, action, backup, library)
     except BaseException:
         if (backup / "prepared").exists():
             try:
@@ -2115,21 +2256,23 @@ def prepare_copies(changed: list, backup: Path, library: Library, router: dict):
         raise
 
 
-def prepare_one(p: dict, action: dict, backup: Path, library: Library, router: dict):
-    entry = action["entry"]
-    prepared = backup / "prepared" / p["client"] / entry
+def prepare_one(p: dict, action: dict, backup: Path, library: Library):
+    """Copy the library tree, turn it into the client's copy, and verify both steps."""
+    entry, want = action["entry"], p["state"]["managed"][action["entry"]]
+    prepared = backup / "prepared" / slot(p["client"], action) / entry
     try:
         prepared.parent.mkdir(parents=True, exist_ok=True)
         if action["source"] == "@library":
-            write_tree(router["entries"], prepared)
-            expected = router["listing"]
+            write_tree(p["router"]["entries"], prepared)
+            expected = p["router"]["listing"]
         else:
             library.materialize(action["source"], prepared)
-            expected = library.listing(action["source"])
+            expected, edits = library.derived(p["client"], action["source"], want["invocation"])
+            apply_edits(prepared, edits)
         if not same_tree(expected, prepared):
             raise InstallError(f"Prepared copy changed: {display(prepared)}")
         name = library.skill_name((prepared / "SKILL.md").read_bytes(), entry)
-        if name != p["state"]["managed"][entry]["name"]:
+        if name != want["name"]:
             raise InstallError(f"Frontmatter name {name!r} differs from {INDEX}")
     except (InstallError, OSError) as exc:
         if os.path.lexists(prepared):
@@ -2182,6 +2325,12 @@ def restore(backup: Path, state: Path, dry_run: bool, quiet: bool = False):
             path.unlink(missing_ok=True)
         else:
             atomic_json(path, client["old_state"])
+    if journal["status"] == "complete" and journal.get("migration") == MIGRATION:
+        marks = read_json(state / MIGRATIONS, {})  # an undone migration is not redone (see migrated_state)
+        for client in journal["clients"]:
+            if client.get("migrated"):
+                marks.setdefault(MIGRATION, {}).setdefault(client["client"], {})["undone"] = time.time()
+        atomic_json(state / MIGRATIONS, marks)
     journal["status"] = "restored"
     atomic_json(backup / "restore.json", journal)
 
@@ -2196,10 +2345,10 @@ def restore_operations(backup: Path, state: Path, journal: dict) -> list:
         seen_clients.add(name)
         validate_state(client.get("new_state") or {}, name)
         validate_state(client.get("old_state") or {}, name)
-        if not client.get("new_state") or client.get("destination") != client["new_state"]["destination"]:
+        roots = roots_of(client)
+        if not client.get("new_state") or not roots or roots != roots_of(client["new_state"]):
             raise InstallError("Recovery destination does not match the client manifest")
-        dest = safe_absolute(Path(client["destination"]))
-        if str(dest) != client["destination"]:
+        if any(safe_absolute(root) != root for root in roots):
             raise InstallError("Recovery destination must be canonical and absolute")
         current_state = read_json(state / f"{client['client']}.json", {})
         if current_state not in [client["new_state"], client["old_state"] or {}]:
@@ -2215,8 +2364,9 @@ def restore_operations(backup: Path, state: Path, journal: dict) -> list:
                 action["entry"], {}
             ).get("sha256"):
                 raise InstallError("Recovery fingerprint does not match the ownership manifest")
-            target = dest / action["entry"]
-            saved = backup / client["client"] / action["entry"]
+            if action.get("root", 0) not in range(len(roots)):
+                raise InstallError("Invalid recovery action")
+            target, saved = target_of(client, action), backup / slot(name, action) / action["entry"]
             no_symlink_ancestors(saved)
             if target.exists() and (not target.is_dir() or not (target / "SKILL.md").is_file()):
                 raise InstallError(f"Recovery target is not a skill directory: {display(target)}")
@@ -2310,56 +2460,98 @@ def kept_backups() -> int:
 
 
 def resolve_clients(args, home: Path, storage: list[Path], source: Path | None) -> list[tuple]:
+    """(client, skills roots, state) for each client run: Claude has one root, Codex two."""
+    codex_home = native(Path(os.path.abspath(os.environ.get("CODEX_HOME") or home / ".codex")))
+    defaults = {"claude": [home / ".claude/skills"], "codex": [codex_home / "skills", home / ".agents/skills"]}
+    states = {client: read_json(storage[0] / f"{client}.json", {}) for client in defaults}
+    for client, value in states.items():
+        validate_state(value, client)
+
+    def configured(client: str, index: int, saved: bool = True) -> Path:
+        variable = f"SKILLS_{client.upper()}_DEST" + ("2" if index else "")
+        recorded = states[client].get(("destination", "destination2")[index]) if saved else None
+        return Path(os.environ.get(variable) or recorded or defaults[client][index])
+
     clients = []
     for client in ["codex"] if args.codex_only else ["claude"] if args.claude_only else ["claude", "codex"]:
-        state = storage[0]
-        old = read_json(state / f"{client}.json", {})
-        validate_state(old, client)
-        dest = safe_absolute(
-            Path(
-                os.environ.get(f"SKILLS_{client.upper()}_DEST", old.get("destination", str(home / f".{client}/skills")))
-            )
-        )
-        if dest == home / ".agents" or home / ".agents" in dest.parents:
-            raise InstallError(f"This installer does not own ~/.agents: {display(dest)}")
+        roots = [safe_absolute(configured(client, i)) for i in range(len(defaults[client]))]
+        if roots[0] == home / ".agents" or home / ".agents" in roots[0].parents:
+            raise InstallError(f"This installer does not own ~/.agents: {display(roots[0])}")
         other = "claude" if client == "codex" else "codex"
-        other_state = read_json(state / f"{other}.json", {})
-        validate_state(other_state, other)
-        other_roots = {Path(os.environ.get(f"SKILLS_{other.upper()}_DEST", str(home / f".{other}/skills")))}
-        if other_state.get("destination"):
-            other_roots.add(Path(other_state["destination"]))
-        for root in other_roots:
-            if overlap(dest, native(root.expanduser().resolve())):
-                raise InstallError(f"Client destinations overlap: {display(dest)}, {display(root)}")
-        codex_root = native(Path(os.path.abspath(Path(os.environ.get("CODEX_HOME", str(home / ".codex")))))) / "skills"
-        for root in [home / ".codex/skills", home / ".claude/skills", home / ".agents", codex_root, dest]:
+        others = {configured(other, i, saved) for i in range(len(defaults[other])) for saved in (False, True)}
+        resolved = [native(b.expanduser().resolve()) for b in others]
+        for a, b in [(a, b) for a in roots for b in resolved] + ([tuple(roots)] if len(roots) > 1 else []):
+            if overlap(a, b):
+                raise InstallError(f"Client destinations overlap: {display(a)}, {display(b)}")
+        for root in [home / ".codex/skills", home / ".claude/skills", home / ".agents", codex_home / "skills", *roots]:
             root = native(root.resolve())
             for path in storage:
                 if overlap(path, root):
                     raise InstallError(
                         f"Storage and discovery roots must be disjoint: {display(path)}, {display(root)}"
                     )
-        if source is not None and overlap(source, dest):
-            raise InstallError(f"Source and destination overlap: {display(source)}, {display(dest)}")
-        clients.append((client, dest, old))
+        if source is not None and any(overlap(source, root) for root in roots):
+            raise InstallError(f"Source and destination overlap: {display(source)}, {display(roots[0])}")
+        clients.append((client, roots, states[client]))
     return clients
 
 
-def make_plans(args, clients: list, library: Library, home: Path) -> tuple[list, dict]:
-    router = router_info(library)
-    plans = [
-        plan_client(client, dest, old, selection(args, client, old, library), library, router, home)
-        for client, dest, old in clients
-    ]
-    if len(plans) == 2:
-        a, b = (Path(p["destination"]) for p in plans)
-        if overlap(a, b):
-            raise InstallError(f"Client destinations overlap: {display(a)}, {display(b)}")
-    return plans, router
+def migrated_state(old: dict, client: str, undone: bool) -> tuple[dict, dict | None]:
+    """(state, migration) for a v1 state, once: Claude's old default @all shows only the router,
+    any other selection stays visible, and the rest is installed hidden. A migration undone with
+    --restore is an opt-out: the old selection stays and nothing is hidden."""
+    if not old or old.get("selection_version") == SELECTION_VERSION:
+        return old, None
+    visible, manual = old["selection"], [] if undone else ["@all"]
+    if client == "claude" and visible == ["@all"] and not undone:
+        visible = ["@library"]
+    base = dict(old, selection=visible, manual=manual, selection_version=SELECTION_VERSION)
+    return base, None if undone else {"from": old["selection"], "selection": visible, "manual": manual}
+
+
+def make_plans(args, clients: list, library: Library, home: Path, state: Path, data: Path) -> list:
+    marks = read_json(state / MIGRATIONS, {}).get(MIGRATION, {})
+    plans = []
+    for client, roots, old in clients:
+        base, migration = migrated_state(old, client, bool(marks.get(client, {}).get("undone")))
+        visible, manual = selection(args, client, base, library), manual_set(args, base, library)
+        router = router_info(client, launcher_call(data))
+        plans.append(plan_client(client, roots, old, base, visible, manual, library, router, home))
+        if migration:
+            plans[-1]["migration"] = migration
+    every = [root for p in plans for root in roots_of(p)]
+    for i, a in enumerate(every):
+        for b in every[i + 1 :]:
+            if overlap(a, b):
+                raise InstallError(f"Client destinations overlap: {display(a)}, {display(b)}")
+    return plans
+
+
+def record_migrations(state: Path, plans: list, backup: Path):
+    """Mark migrated clients once their transaction is complete: an interrupted one is redone."""
+    migrated = [p["client"] for p in plans if "migration" in p]
+    if migrated:
+        marks = read_json(state / MIGRATIONS, {})
+        for client in migrated:
+            marks.setdefault(MIGRATION, {})[client] = {"time": time.time(), "backup": display(backup)}
+        atomic_json(state / MIGRATIONS, marks)
+
+
+def summary(p: dict) -> str:
+    """One line for a large plan, such as a first install or a migration of thousands of copies."""
+    records, client, m = p["state"]["managed"].values(), p["client"], p.get("migration")
+    hidden = sum(info.get("invocation") == "manual" for info in records)
+    if m:
+        undo = f"--selection {','.join(m['from'])}" if m["selection"] != m["from"] else "--manual ''"
+        visible = ",".join(m["selection"]) or "nothing"
+        return f"Migrated {client}: {','.join(m['from'])} -> visible {visible}, {hidden} hidden; undo: --{client}-only {undo}"
+    copied = sum(a["after"] is not None for a in p["actions"])
+    removed = len(p["actions"]) - copied
+    return f"Updated {client}: {copied} copied, {removed} removed; {len(records) - hidden} visible, {hidden} hidden"
 
 
 def report(dry_run: bool, library: Library, plans: list, legacy: list[Path], pending: Path | None = None) -> dict:
-    hidden = {"state", "previous_state", "managed_before"}
+    hidden = {"state", "previous_state", "managed_before", "router"}
     clients = [{k: v for k, v in p.items() if k not in hidden} | {"selection": p["state"]["selection"]} for p in plans]
     result = {
         "dry_run": dry_run,
@@ -2403,12 +2595,12 @@ def build_parser() -> argparse.ArgumentParser:
     clients.add_argument("--claude-only", action="store_true")
     parser.add_argument("--source", type=Path, help="local skills directory (default: adjacent library)")
     parser.add_argument("--remote", action="store_true", help=argparse.SUPPRESS)
-    parser.add_argument(
-        "--selection", help="replace ONE client's selection with comma-separated IDs; empty disables all"
-    )
-    parser.add_argument("--enable", action="append", default=[], metavar="ID")
-    parser.add_argument("--disable", action="append", default=[], metavar="ID")
+    parser.add_argument("--selection", help="replace ONE client's visible set: IDs, @library, @all; empty for none")
+    parser.add_argument("--manual", metavar="SPEC", help="replace ONE client's hidden set: @all, IDs, or empty")
+    parser.add_argument("--enable", action="append", default=[], metavar="ID", help="show ID to the model")
+    parser.add_argument("--disable", action="append", default=[], metavar="ID", help="stop showing ID")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--no-fetch", action="store_true", help="plan against the library clone as it is (offline)")
     parser.add_argument("--list", action="store_true", help="list full-library metadata and name conflicts")
     parser.add_argument("--search", default="", help="filter --list by ID, name, description or origin")
     parser.add_argument("--restore", type=Path, help="restore a backup, refusing later modifications")
@@ -2424,7 +2616,8 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    if (args.selection is not None or args.enable or args.disable) and not (args.codex_only or args.claude_only):
+    changes = args.selection is not None or args.manual is not None or args.enable or args.disable
+    if changes and not (args.codex_only or args.claude_only):
         parser.error("selection changes require --codex-only or --claude-only")
     home = native(Path.home())
     data_default = default_data(home)
@@ -2471,7 +2664,7 @@ def run_update(args, git, home, state, data, legacy_cache, source, url, branch, 
     with ExitStack() as stack:
         # A remote run fetches into the shared clone, and a stale transaction must be undone
         # before planning: both happen under the lock. A local plan is computed without writes.
-        if remote and args.dry_run:
+        if remote and (args.dry_run or args.no_fetch):
             existing_clone(data)  # before the lock: a dry run on a fresh HOME writes nothing
         locked = remote or (not args.dry_run and interrupted_transaction(state, keep) is not None)
         if locked:
@@ -2481,11 +2674,10 @@ def run_update(args, git, home, state, data, legacy_cache, source, url, branch, 
             if not args.dry_run:
                 recover(state, keep)
         clients = resolve_clients(args, home, storage, source)
-        library = stack.enter_context(
-            open_library(git, source, data, url, branch, "dry-run" if args.dry_run else "apply")
-        )
-        plans, router = make_plans(args, clients, library, home)
-        blocked = mass_removal(args, plans)
+        mode = "dry-run" if args.dry_run else "apply"
+        library = stack.enter_context(open_library(git, source, data, url, branch, mode, not args.no_fetch))
+        plans = make_plans(args, clients, library, home, state, data)
+        blocked = mass_removal(args, plans) or overflow(plans)
         if args.dry_run:
             emit(report(True, library, plans, legacy_caches(legacy_cache), interrupted_transaction(state, keep)))
             if blocked:
@@ -2495,13 +2687,18 @@ def run_update(args, git, home, state, data, legacy_cache, source, url, branch, 
             raise PersonNeeded(blocked)
         if not locked:
             stack.enter_context(state_lock(state))
-        backup = apply_plans(plans, state, library, router, keep)
+        backup = apply_plans(plans, state, library, keep)
         if backup:
+            record_migrations(state, plans, backup)
             prune_backups(state, keep)
+        write_launchers(data, state, library)
         removed = remove_legacy_caches(legacy_cache) if migrated(state) else []
     failures = [dict(f, client=p["client"]) for p in plans for f in p["failed"]]
-    if backup:
+    if backup and sum(len(p["actions"]) for p in plans) > SUMMARY_ACTIONS:
+        print("\n".join(map(summary, plans)))
+    elif backup:
         emit(report(False, library, plans, removed))
+    if backup:
         print(f"Recovery backup: {display(backup)}")
     elif not failures:
         print("Already current; selection preserved.")

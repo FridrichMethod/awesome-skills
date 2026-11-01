@@ -70,15 +70,18 @@ def test_first_install_is_a_blobless_sparse_clone(remote):
     assert not (repo / "skills").exists(), "skill content is checked out only while installing"
     assert (repo / "scripts/install_skills.py").is_file() and (repo / installer.INDEX).is_file()
     claude = home / ".claude/skills"
-    assert sorted(os.listdir(claude)) == ["alpha", "beta"]
+    assert sorted(os.listdir(claude)) == ["alpha", installer.ROUTER, "beta"]
     assert (claude / "alpha/nested/deep/data.txt").read_bytes() == b"alpha data\n"
     trees = upstream.trees()
     assert manifest(home, "claude")["managed"]["alpha"]["tree"] == trees["alpha"]
-    # The installer's own git tree hashing agrees with git.
+    # The installer's own git tree hashing agrees with git, for a copy shown to the model.
+    run("--claude-only", "--enable", "beta")
     assert installer.tree_id(installer.local_listing(claude / "beta")) == trees["beta"]
+    launcher = data_dir(home) / "bin/awesome-skills"
     router = (home / ".codex/skills" / installer.ROUTER / "SKILL.md").read_text()
-    assert str(repo / "scripts" / "install_skills.py") in router
-    assert sorted(os.listdir(home / ".codex/skills")) == [installer.ROUTER]
+    assert f"{launcher} search --client codex" in router
+    assert str(repo / "scripts" / "install_skills.py") in launcher.read_text()
+    assert sorted(os.listdir(home / ".codex/skills")) == ["alpha", installer.ROUTER, "beta"]
 
 
 def test_unchanged_update_is_one_fetch_and_no_writes(remote, monkeypatch, capsys):
@@ -105,7 +108,8 @@ def test_changed_skill_fetches_only_its_new_blob_and_rewrites_only_it(remote):
     home, upstream = remote
     run()
     repo, claude = clone(home), home / ".claude/skills"
-    beta, codex = snapshot(claude / "beta"), snapshot(home / ".codex")
+    beta = snapshot(claude / "beta")
+    codex = {p: v for p, v in snapshot(home / ".codex").items() if "/skills/beta" in p}
     packs = packed_objects(repo)
     upstream.skill("alpha", files={"helper.txt": "alpha support, revised\n"})
     upstream.commit("revise alpha")
@@ -121,14 +125,16 @@ def test_changed_skill_fetches_only_its_new_blob_and_rewrites_only_it(remote):
     assert changed <= trees <= changed | {upstream.rev("main~1^{tree}")}
     assert (claude / "alpha/helper.txt").read_bytes() == b"alpha support, revised\n"
     assert snapshot(claude / "beta") == beta
-    assert snapshot(home / ".codex") == codex
+    assert {p: v for p, v in snapshot(home / ".codex").items() if "/skills/beta" in p} == codex
+    assert (home / ".codex/skills/alpha/helper.txt").read_bytes() == b"alpha support, revised\n"
+    assert (home / ".codex/skills/alpha" / installer.POLICY_FILE).is_file(), "still hidden"
     assert manifest(home, "claude")["managed"]["alpha"]["tree"] == upstream.trees()["alpha"]
 
 
 def test_only_selected_skills_are_downloaded(remote):
     home, upstream = remote
-    run("--claude-only", "--selection", "alpha")
-    run("--codex-only")
+    run("--claude-only", "--selection", "alpha", "--manual", "")
+    run("--codex-only", "--manual", "")
     repo = clone(home)
     assert upstream.blobs("beta") <= missing_objects(repo)
     assert not upstream.blobs("alpha") & missing_objects(repo)
@@ -181,7 +187,7 @@ def make_legacy_install(home, upstream):
         "origins": [],
     }
     for client, dest, entries, selection in [
-        ("claude", claude, managed, ["@all"]),
+        ("claude", claude, managed, ["alpha", "beta"]),
         ("codex", codex, {installer.ROUTER: router}, ["@library"]),
     ]:
         record = {"schema": 1, "client": client, "destination": str(installer.native(dest)), "selection": selection}
@@ -202,7 +208,8 @@ def test_tarball_install_is_adopted_without_recopying(remote):
     assert records["alpha"]["tree"] == upstream.trees()["alpha"]
     assert "tree" not in records["beta"]
     router = manifest(home, "codex")["managed"][installer.ROUTER]
-    assert router["tree"] and str(clone(home)) in (home / ".codex/skills" / installer.ROUTER / "SKILL.md").read_text()
+    launcher = data_dir(home) / "bin/awesome-skills"
+    assert router["tree"] and str(launcher) in (home / ".codex/skills" / installer.ROUTER / "SKILL.md").read_text()
     cache = home / ".cache/awesome-skills"
     assert not legacy.exists()
     assert (cache / "notes.txt").is_file() and (cache / "libraries/keep-me").is_dir()
@@ -235,8 +242,11 @@ def test_remote_install_needs_only_the_standard_library(remote, tmp_path):
     helper = [sys.executable, "-B", str(ROOT / "scripts/install_skills.py"), "--remote"]
     first = subprocess.run(helper, capture_output=True, text=True, env=env)
     assert first.returncode == 0, first.stderr
-    assert sorted(os.listdir(home / ".claude/skills")) == ["alpha", "beta", "gamma"]
+    assert sorted(os.listdir(home / ".claude/skills")) == ["alpha", installer.ROUTER, "beta", "gamma"]
     assert manifest(home, "claude")["managed"]["gamma"]["name"] == "gamma"
+    hidden = (home / ".claude/skills/gamma/SKILL.md").read_text()
+    assert hidden == f"---\n{installer.HIDDEN_KEY}: true\n" + SHAPED_SKILL[4:], "transformed without PyYAML"
+    assert (home / ".codex/skills/gamma" / installer.POLICY_FILE).is_file()
     # A user's own skill is matched by its frontmatter name without PyYAML, too.
     put(home / ".agents/skills/mine/SKILL.md", "---\nname: 'gamma'\ndescription: mine\n---\n")
     conflict = subprocess.run([*helper, "--codex-only", "--enable", "gamma"], capture_output=True, text=True, env=env)
@@ -354,19 +364,20 @@ def test_deep_paths_install_on_every_platform(remote):
     installed = installer.native(home / ".claude/skills/gamma") / deep
     assert len(str(installed)) > 260
     assert installed.read_bytes() == b"deep\n"
-    run("--claude-only", "--disable", "gamma")
+    run("--claude-only", "--manual", "")
     assert not installer.native(home / ".claude/skills/gamma").exists()
 
 
 def test_disable_and_restore_after_a_git_update(remote):
     home, _ = remote
     run()
-    run("--claude-only", "--disable", "beta")
+    run("--claude-only", "--manual", "alpha")
     assert not (home / ".claude/skills/beta").exists()
     backup = sorted((data_dir(home) / "backups").iterdir())[-1]
     run("--restore", str(backup))
     assert (home / ".claude/skills/beta/helper.txt").read_bytes() == b"beta support\n"
-    assert manifest(home, "claude")["selection"] == ["@all"]
+    assert manifest(home, "claude")["selection"] == ["@library"]
+    assert manifest(home, "claude")["manual"] == ["@all"]
 
 
 @pytest.mark.skipif(WINDOWS, reason="native Windows stores no executable bit")
@@ -375,7 +386,7 @@ def test_executable_bits_follow_the_tree(remote):
     put(upstream.work / "skills/alpha/run.sh", "#!/bin/sh\n")
     (upstream.work / "skills/alpha/run.sh").chmod(0o755)
     upstream.commit("add script")
-    run()
+    run("--claude-only", "--enable", "alpha")  # a visible copy is the library tree
     alpha = home / ".claude/skills/alpha"
     assert stat.S_IMODE((alpha / "run.sh").stat().st_mode) == 0o755
     assert stat.S_IMODE((alpha / "helper.txt").stat().st_mode) == 0o644
@@ -442,7 +453,7 @@ def test_unportable_upstream_entries_are_skipped_and_managed_ones_frozen(remote,
     assert "skipping library entry nul" in err
     assert installer.fingerprint(home / ".claude/skills/beta") == beta
     assert manifest(home, "claude")["managed"]["beta"] == record, "a skipped managed entry is frozen, not removed"
-    assert sorted(os.listdir(home / ".claude/skills")) == ["alpha", "beta"]
+    assert sorted(os.listdir(home / ".claude/skills")) == ["alpha", installer.ROUTER, "beta"]
     with pytest.raises(installer.InstallError, match="Cannot enable"):
         run("--codex-only", "--enable", "beta")
 
@@ -650,3 +661,27 @@ def test_symlinks_from_the_remote_library_are_never_installed(remote, capsys):
     assert not (clone(home) / "skills/evil").exists(), "the entry is never checked out"
     with pytest.raises(installer.InstallError, match="Cannot enable"):
         run("--codex-only", "--enable", "evil")
+
+
+def test_no_fetch_changes_visibility_offline_without_downloading(remote, monkeypatch, tmp_path):
+    home, _ = remote
+    run()
+    repo, codex = clone(home), home / ".codex/skills"
+    packs = packed_objects(repo)
+    monkeypatch.setenv("SKILLS_REPOSITORY_URL", (tmp_path / "unreachable.git").as_uri())
+    with pytest.raises(installer.InstallError, match="git fetch failed"):
+        run("--codex-only", "--enable", "alpha")
+    calls = []
+    original = installer.Git.run
+
+    def spy(self, repo, *args, **kwargs):
+        calls.append(args[0])
+        return original(self, repo, *args, **kwargs)
+
+    monkeypatch.setattr(installer.Git, "run", spy)
+    assert run("--codex-only", "--enable", "alpha", "--no-fetch") == 0
+    assert "fetch" not in calls
+    assert not (codex / "alpha" / installer.POLICY_FILE).exists() and (codex / "beta" / installer.POLICY_FILE).exists()
+    assert run("--claude-only", "--enable", "beta", "--no-fetch") == 0
+    assert packed_objects(repo) == packs, "the blobs were already in the clone"
+    assert run("--no-fetch", "--dry-run") == 0

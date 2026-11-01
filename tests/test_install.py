@@ -85,14 +85,27 @@ def listed(capsys, source, *args):
     return json.loads(capsys.readouterr().out)
 
 
+def hidden_from_claude(path) -> bool:
+    return (path / "SKILL.md").read_text().startswith(f"---\n{installer.HIDDEN_KEY}: true\n")
+
+
+def hidden_from_codex(path) -> bool:
+    policy = path / installer.POLICY_FILE
+    return policy.is_file() and "allow_implicit_invocation: false" in policy.read_text()
+
+
 def test_first_install_and_no_argument_updater(sandbox, capsys):
     home, source = sandbox
     run(source)
     codex = home / ".codex/skills"
     claude = home / ".claude/skills"
-    assert sorted(p.name for p in codex.iterdir()) == [installer.ROUTER]
-    assert sorted(p.name for p in claude.iterdir()) == ["alpha", "beta"]
+    everything = ["alpha", installer.ROUTER, "beta"]  # alpha and beta land in Codex's first root
+    assert sorted(p.name for p in codex.iterdir()) == everything
+    assert sorted(p.name for p in claude.iterdir()) == everything
+    assert hidden_from_claude(claude / "alpha") and not hidden_from_claude(claude / installer.ROUTER)
+    assert hidden_from_codex(codex / "beta") and not (codex / installer.ROUTER / installer.POLICY_FILE).exists()
     run(source, "--codex-only", "--enable", "alpha")
+    assert not hidden_from_codex(codex / "alpha") and hidden_from_codex(codex / "beta")
     before, times = installer.fingerprint(home), snapshot(home)
     capsys.readouterr()
     run(source)  # consumer updater: no selection/client arguments
@@ -100,7 +113,9 @@ def test_first_install_and_no_argument_updater(sandbox, capsys):
     assert installer.fingerprint(home) == before
     assert snapshot(home) == times
     assert state(home)["selection"] == ["@library", "alpha"]
-    assert state(home, "claude")["selection"] == ["@all"]
+    assert state(home)["manual"] == ["@all"] and state(home)["selection_version"] == 2
+    assert state(home, "claude")["selection"] == ["@library"]
+    assert state(home, "claude")["managed"]["beta"]["invocation"] == "manual"
     assert state(home, "claude")["managed"]["beta"]["origins"]
     assert state(home, "claude")["managed"]["beta"]["tree"] == installer.tree_id(
         installer.local_listing(source / "beta")
@@ -135,7 +150,7 @@ def test_unselected_legacy_copies_are_never_adopted_or_removed(sandbox, capsys):
     codex = home / ".codex/skills"
     shutil.copytree(source, codex)
     legacy = {name: installer.fingerprint(codex / name) for name in ("alpha", "beta")}
-    run(source, "--codex-only")
+    run(source, "--codex-only", "--manual", "")
     assert {name: installer.fingerprint(codex / name) for name in ("alpha", "beta")} == legacy
     assert set(state(home)["managed"]) == {installer.ROUTER}
     plan = json.loads(capsys.readouterr().out.split("Recovery backup:")[0])
@@ -223,7 +238,8 @@ def test_client_selections_are_independent(sandbox):
     codex_before = installer.fingerprint(home / ".codex")
     run(source, "--claude-only", "--selection", "beta")
     assert installer.fingerprint(home / ".codex") == codex_before
-    assert not (home / ".claude/skills/alpha").exists()
+    assert hidden_from_claude(home / ".claude/skills/alpha") and not hidden_from_claude(home / ".claude/skills/beta")
+    assert not (home / ".claude/skills" / installer.ROUTER).exists()
     claude_before = installer.fingerprint(home / ".claude")
     run(source, "--codex-only", "--selection", "alpha")
     assert installer.fingerprint(home / ".claude") == claude_before
@@ -238,8 +254,8 @@ def test_update_adds_only_new_claude_skill_and_preserves_codex_choice(sandbox):
     skill(source, "gamma")
     (source / "alpha/helper.txt").write_text("upstream update")
     run(source)
-    assert (home / ".claude/skills/gamma").exists()
-    assert not (home / ".codex/skills/gamma").exists()
+    assert hidden_from_claude(home / ".claude/skills/gamma")
+    assert hidden_from_codex(home / ".codex/skills/gamma")
     assert state(home)["selection"] == ["@library"]
     assert (home / ".claude/skills/alpha/helper.txt").read_text() == "upstream update"
 
@@ -254,34 +270,40 @@ def test_new_library_skill_manifest_is_accepted_by_later_runs(sandbox):
     before = installer.fingerprint(home)
     run(source)
     assert installer.fingerprint(home) == before
+    run(source, "--claude-only", "--enable", "late-upstream")
+    assert not hidden_from_claude(home / ".claude/skills/late-upstream")
     run(source, "--claude-only", "--disable", "late-upstream")
+    assert hidden_from_claude(home / ".claude/skills/late-upstream"), "deselected skills stay installed, hidden"
+    run(source, "--claude-only", "--manual", "")
     assert not (home / ".claude/skills/late-upstream").exists()
     run(source, "--restore", str(backups(home)[-1]))
-    assert (home / ".claude/skills/late-upstream").exists()
+    assert hidden_from_claude(home / ".claude/skills/late-upstream")
 
 
-def test_identical_frontmatter_names_deduplicate_with_provenance(sandbox, capsys):
+def test_codex_installs_identical_aliases_each_under_its_own_name(sandbox, capsys):
     home, source = sandbox
     shutil.copytree(source / "alpha", source / "alias")
-    run(source, "--codex-only", "--selection", "alpha,alias")
-    assert len(list((home / ".codex/skills").iterdir())) == 1
-    info = next(iter(state(home)["managed"].values()))
-    assert info["source_ids"] == ["alias", "alpha"]
+    run(source, "--codex-only", "--selection", "alpha,alias", "--manual", "")
+    codex = home / ".codex/skills"
+    assert sorted(os.listdir(codex)) == ["alias", "alpha"]
+    assert installer.frontmatter_name((codex / "alias/SKILL.md").read_bytes(), "alias") == "alias"
+    assert installer.frontmatter_name((codex / "alpha/SKILL.md").read_bytes(), "alpha") == "alpha"
+    info = state(home)["managed"]["alias"]
+    assert info["source_ids"] == ["alias"] and info["name"] == "alias"
     assert "origins" in info
     index = listed(capsys, source)
     assert index["skills"]["alias"]["origins"]
     assert index["skills"]["alias"]["tree"] == index["skills"]["alpha"]["tree"]
 
 
-def test_different_same_names_require_explicit_variant(sandbox, capsys):
+def test_codex_names_same_name_variants_after_their_ids(sandbox, capsys):
     home, source = sandbox
     skill(source, "variant", name="alpha", body="different content")
-    before = installer.fingerprint(home)
-    with pytest.raises(installer.InstallError, match="name conflicts"):
-        run(source, "--codex-only", "--selection", "alpha,variant")
-    assert installer.fingerprint(home) == before
-    run(source, "--codex-only", "--selection", "variant")
-    assert (home / ".codex/skills/variant").exists()
+    run(source, "--codex-only", "--selection", "alpha,variant")
+    variant = home / ".agents/skills/variant"  # the second root
+    assert installer.frontmatter_name((variant / "SKILL.md").read_bytes(), "variant") == "variant"
+    assert "different content" in (variant / "SKILL.md").read_text()
+    assert not hidden_from_codex(variant) and not hidden_from_codex(home / ".codex/skills/alpha")
     assert listed(capsys, source)["conflicts"] == {"alpha": ["alpha", "variant"]}
 
 
@@ -293,7 +315,7 @@ def test_claude_full_preserves_variants_and_reports_conflicts(sandbox, capsys):
     assert '"conflicts": {' in report and '"variant"' in report
     assert (home / ".claude/skills/alpha").exists()
     assert (home / ".claude/skills/variant").exists()
-    assert not (home / ".codex/skills/alpha").exists()
+    assert hidden_from_codex(home / ".codex/skills/alpha") and hidden_from_codex(home / ".agents/skills/variant")
 
 
 def test_external_same_name_collision_fails_before_mutation(sandbox):
@@ -307,6 +329,7 @@ def test_external_same_name_collision_fails_before_mutation(sandbox):
 
 def test_deselect_and_restore(sandbox):
     home, source = sandbox
+    run(source, "--codex-only", "--manual", "")
     run(source, "--codex-only", "--enable", "alpha")
     run(source, "--codex-only", "--disable", "alpha")
     assert not (home / ".codex/skills/alpha").exists()
@@ -354,8 +377,11 @@ def test_local_router_points_at_running_helper_and_source(sandbox):
     home, source = sandbox
     run(source, "--codex-only")
     body = (home / ".codex/skills" / installer.ROUTER / "SKILL.md").read_text()
-    assert str(ROOT / "scripts/install_skills.py") in body
-    assert f"--source {source}" in body.replace("'", "").replace('"', "")
+    launcher = state_dir(home) / "bin/awesome-skills"
+    assert f"{launcher} search --client codex WORDS" in body
+    text = launcher.read_text()
+    assert str(ROOT / "scripts/install_skills.py") in text and str(ROOT / "scripts/search_skills.py") in text
+    assert f"--source {source}" in text.replace("'", "")
     assert not (home / ".cache").exists()
 
 
@@ -372,7 +398,7 @@ def test_local_shell_updater_preserves_selection_without_arguments(sandbox):
     rerun = subprocess.run(["bash", str(clone / "install.sh")], capture_output=True)
     assert rerun.returncode == 0, rerun.stderr
     assert state(home)["selection"] == ["@library", "alpha"]
-    assert not (home / ".codex/skills/beta").exists()
+    assert hidden_from_codex(home / ".codex/skills/beta") and not hidden_from_codex(home / ".codex/skills/alpha")
 
 
 STORAGE = pytest.mark.parametrize("variable", ["SKILLS_DATA_DIR", "SKILLS_STATE_DIR", "SKILLS_CACHE_DIR"])
@@ -430,13 +456,19 @@ def test_managed_copy_with_identical_external_is_removed(sandbox):
     assert "alpha" not in state(home)["managed"]
 
 
-def test_generated_router_name_conflict_is_not_silently_overwritten(sandbox):
+def test_a_library_skill_named_like_the_router_never_replaces_it(sandbox, capsys):
     home, source = sandbox
     skill(source, "other-router", name=installer.ROUTER)
-    before = installer.fingerprint(home)
-    with pytest.raises(installer.InstallError, match="name conflicts"):
-        run(source, "--codex-only", "--enable", "other-router")
-    assert installer.fingerprint(home) == before
+    run(source, "--codex-only", "--enable", "other-router")
+    other = home / ".agents/skills/other-router"
+    assert installer.frontmatter_name((other / "SKILL.md").read_bytes(), "other") == "other-router"
+    router = home / ".codex/skills" / installer.ROUTER / "SKILL.md"
+    assert "search --client codex" in router.read_text()
+    capsys.readouterr()
+    run(source, "--claude-only")
+    assert json.loads(capsys.readouterr().out.split("Recovery backup:")[0])["clients"][0]["conflicts"] == {
+        installer.ROUTER: [installer.ROUTER, "other-router"]
+    }
 
 
 def test_agents_name_conflict_is_read_only(sandbox):
@@ -472,7 +504,7 @@ def test_failed_preparation_skips_only_that_entry_and_exits_nonzero(sandbox, mon
         return original(entries, target)
 
     monkeypatch.setattr(installer, "write_tree", fail)
-    assert run(source, "--codex-only") == 1
+    assert run(source, "--codex-only", "--manual", "") == 1
     assert "simulated storage failure" in capsys.readouterr().err
     assert installer.fingerprint(codex) == before
     assert not [
@@ -497,12 +529,12 @@ def test_one_failing_skill_does_not_block_the_others(sandbox, monkeypatch, capsy
     err = capsys.readouterr().err
     assert "claude:alpha" in err and "simulated unwritable path" in err
     claude = home / ".claude/skills"
-    assert sorted(os.listdir(claude)) == ["beta"]
-    assert set(state(home, "claude")["managed"]) == {"beta"}
+    assert sorted(os.listdir(claude)) == [installer.ROUTER, "beta"]
+    assert set(state(home, "claude")["managed"]) == {installer.ROUTER, "beta"}
     assert (home / ".codex/skills" / installer.ROUTER).is_dir()
     monkeypatch.setattr(installer.DirLibrary, "materialize", original)
     assert run(source) == 0
-    assert sorted(os.listdir(claude)) == ["alpha", "beta"]
+    assert sorted(os.listdir(claude)) == ["alpha", installer.ROUTER, "beta"]
 
 
 @STORAGE
@@ -579,19 +611,22 @@ def test_broken_symlink_state_is_never_replaced(sandbox, tmp_path):
 def test_empty_selection_persists(sandbox):
     home, source = sandbox
     run(source, "--codex-only")
-    run(source, "--codex-only", "--selection", "")
+    run(source, "--codex-only", "--selection", "", "--manual", "")
     run(source)
-    assert state(home)["selection"] == []
+    assert state(home)["selection"] == [] and state(home)["manual"] == []
     assert list((home / ".codex/skills").iterdir()) == []
 
 
 def test_source_using_router_directory_can_be_selected_without_generated_router(sandbox):
     home, source = sandbox
     skill(source, installer.ROUTER, name="explicit-source-variant")
-    run(source, "--codex-only", "--selection", installer.ROUTER)
-    assert installer.fingerprint(home / ".codex/skills" / installer.ROUTER) == installer.fingerprint(
+    run(source, "--claude-only", "--selection", installer.ROUTER)
+    assert installer.fingerprint(home / ".claude/skills" / installer.ROUTER) == installer.fingerprint(
         source / installer.ROUTER
     )
+    run(source, "--codex-only", "--selection", installer.ROUTER)
+    copy = (home / ".codex/skills" / installer.ROUTER / "SKILL.md").read_bytes()
+    assert installer.frontmatter_name(copy, "copy") == installer.ROUTER, "renamed to its ID, not generated"
 
 
 def test_cross_filesystem_preflight_preserves_all_live_entries(sandbox, monkeypatch):
@@ -817,7 +852,7 @@ def test_update_that_would_remove_most_managed_skills_is_refused(sandbox):
         shutil.rmtree(source / f"extra-{i:02d}")
     claude = home / ".claude/skills"
     before = installer.fingerprint(claude)
-    with pytest.raises(installer.PersonNeeded, match="Refusing to remove 23 of 25 managed claude skills.*--allow"):
+    with pytest.raises(installer.PersonNeeded, match="Refusing to remove 23 of 26 managed claude skills.*--allow"):
         run(source)
     result = subprocess.run(
         [sys.executable, "-B", str(ROOT / "scripts/install_skills.py"), "--source", str(source)],
@@ -827,7 +862,7 @@ def test_update_that_would_remove_most_managed_skills_is_refused(sandbox):
     assert result.returncode == installer.NEEDS_PERSON, result.stderr
     assert installer.fingerprint(claude) == before
     assert run(source, "--allow-mass-removal") == 0
-    assert sorted(os.listdir(claude)) == ["alpha", "beta"]
+    assert sorted(os.listdir(claude)) == ["alpha", installer.ROUTER, "beta"]
 
 
 def test_explicit_selection_change_is_not_a_mass_removal(sandbox):
@@ -835,7 +870,7 @@ def test_explicit_selection_change_is_not_a_mass_removal(sandbox):
     for i in range(23):
         skill(source, f"extra-{i:02d}")
     run(source)
-    assert run(source, "--claude-only", "--selection", "alpha") == 0
+    assert run(source, "--claude-only", "--selection", "alpha", "--manual", "") == 0
     assert sorted(os.listdir(home / ".claude/skills")) == ["alpha"]
 
 
@@ -848,7 +883,7 @@ def test_unportable_local_entries_are_skipped_with_a_warning(sandbox, capsys):
     assert run(source) == 0
     err = capsys.readouterr().err
     assert "skipping library entry colon" in err and "skipping library entry aux" in err
-    assert sorted(os.listdir(home / ".claude/skills")) == ["alpha", "beta"]
+    assert sorted(os.listdir(home / ".claude/skills")) == ["alpha", installer.ROUTER, "beta"]
 
 
 def without_flock(monkeypatch):

@@ -1,4 +1,5 @@
-"""The read-only library search. Temporary copies only."""
+"""The read-only library search, the launcher that runs it and the installer, and the routers
+that call the launcher. Temporary HOME and copies only."""
 
 from __future__ import annotations
 
@@ -103,3 +104,76 @@ def test_visible_marks_and_codex_paths_come_from_the_state(library, tmp_path):
         "beta [visible] - Beta skill.",
         f"  {first / 'beta/SKILL.md'}",
     ]
+
+
+def sandbox_env(tmp_path, **extra) -> tuple[Path, dict]:
+    home = tmp_path / "home"
+    home.mkdir(exist_ok=True)
+    env = {
+        k: v for k, v in os.environ.items() if not k.startswith("SKILLS_") and k not in ("XDG_DATA_HOME", "CODEX_HOME")
+    }
+    env.update(HOME=str(home), USERPROFILE=str(home), LOCALAPPDATA=str(home / "AppData/Local"), **extra)
+    return home, env
+
+
+@POSIX
+def test_the_launcher_carries_the_install_time_storage_and_dispatches_search(tmp_path):
+    checkout = tmp_path / "repo"
+    for skill_id in ("alpha", "beta"):
+        skill(checkout / "skills", skill_id)
+    shutil.copytree(ROOT / "scripts", checkout / "scripts")
+    index = installer.index_text(installer.build_index(checkout / "skills"))
+    (checkout / installer.INDEX).write_text(index)
+    custom = tmp_path / "custom-state"
+    home, env = sandbox_env(tmp_path, SKILLS_STATE_DIR=str(custom), SKILLS_CODEX_DEST=str(tmp_path / "cx/skills"))
+    install = [sys.executable, "-B", str(checkout / "scripts/install_skills.py")]
+    assert subprocess.run(install, env=env, capture_output=True).returncode == 0
+    launcher = home / ".local/share/awesome-skills/bin/awesome-skills"
+    assert os.access(launcher, os.X_OK)
+    bare = {"HOME": str(home), "PATH": os.environ["PATH"]}  # what a router's shell may have
+    found = subprocess.run(
+        [str(launcher), "search", "--client", "codex", "alpha"], env=bare, capture_output=True, text=True
+    )
+    assert found.returncode == 0, found.stderr
+    assert f"  {tmp_path / 'cx/skills/alpha/SKILL.md'}" in found.stdout.splitlines()
+    shown = subprocess.run(
+        [str(launcher), "--codex-only", "--enable", "beta"], env=bare, capture_output=True, text=True
+    )
+    assert shown.returncode == 0, shown.stderr
+    assert json.loads((custom / "codex.json").read_text())["selection"] == ["@library", "beta"]
+    assert not (home / ".local/share/awesome-skills/codex.json").exists(), "no second, divergent state"
+
+
+def test_routers_differ_per_client_and_quote_for_powershell_on_windows(monkeypatch, tmp_path):
+    call = installer.shlex.quote(str(tmp_path / "bin/awesome-skills"))
+    claude = installer.router_info("claude", call)["entries"]["SKILL.md"][2].decode()
+    codex = installer.router_info("codex", call)["entries"]["SKILL.md"][2].decode()
+    head, body = claude.split("\n---\n", 1)
+    assert f"allowed-tools: Bash({call} search *)" in head and 'argument-hint: "[what you need]"' in head
+    assert installer.HIDDEN_KEY not in head
+    assert body.startswith("Request: $ARGUMENTS\n") and "!`" not in claude
+    assert f"{call} search --client claude WORDS" in body and "/ID" in body and "SKILL.md" in body
+    assert f"{call} search --client codex WORDS" in codex and "$ID" in codex and "argument-hint" not in codex
+    assert "/ID" not in codex and "Skill tool" not in codex
+    monkeypatch.setattr(installer, "WINDOWS", True)
+    data = Path("C:/Users/o'brien/AppData/Local/awesome-skills")
+    assert installer.launcher_call(data).startswith("& 'C:") and "o''brien" in installer.launcher_call(data)
+    assert (
+        "```powershell"
+        in installer.router_info("codex", installer.launcher_call(data))["entries"]["SKILL.md"][2].decode()
+    )
+
+
+class FakeLibrary:
+    def router_command(self):
+        return "C:/lib/scripts/install_skills.py", []
+
+
+def test_the_windows_launcher_uses_single_quoted_literals(monkeypatch, tmp_path):
+    monkeypatch.setattr(installer, "WINDOWS", True)
+    monkeypatch.setattr(installer.sys, "executable", "C:/Python/py'thon.exe")
+    data, state = tmp_path / "da'ta", tmp_path / "state"
+    files = installer.launchers(data, state, FakeLibrary())
+    ps1 = files[data / "bin/awesome-skills.ps1"]
+    assert ps1.startswith("\ufeff# Written by the awesome-skills installer")
+    assert "& 'C:/Python/py''thon.exe' -B" in ps1 and "da''ta" in ps1 and "@args" in ps1
