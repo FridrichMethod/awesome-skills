@@ -74,6 +74,20 @@ def test_enable_and_disable_change_only_what_the_model_sees(sandbox, capsys):
     assert state(home, "claude")["selection"] == ["@library"]
 
 
+def test_disable_from_a_visible_all_shows_the_rest(sandbox):
+    """The printed migration undo makes Claude's visible set @all again; --disable then lists the
+    rest of the library, as v1 did."""
+    home, source = sandbox
+    run(source)
+    assert run(source, "--claude-only", "--selection", "@all") == 0
+    claude = home / ".claude/skills"
+    assert not hidden_from_claude(claude / "alpha") and not hidden_from_claude(claude / "beta")
+    assert run(source, "--claude-only", "--disable", "alpha") == 0
+    assert state(home, "claude")["selection"] == ["beta"]
+    assert hidden_from_claude(claude / "alpha") and not hidden_from_claude(claude / "beta")
+    assert not (claude / ROUTER).exists()
+
+
 def test_the_manual_set_decides_what_else_is_installed(sandbox):
     home, source = sandbox
     run(source)
