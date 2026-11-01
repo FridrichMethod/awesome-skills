@@ -1033,10 +1033,39 @@ def test_a_local_tree_may_still_contain_links(sandbox, tmp_path):
         pytest.skip("symlinks unavailable")
     linked = skill(source, "linked")
     (linked / "helper-link").symlink_to("helper.txt")
-    assert run(source) == 0
+    assert run(source, "--claude-only") == 0
     installed = home / ".claude/skills/linked/helper-link"
     assert installer.is_link(installed) and os.readlink(installed) == "helper.txt"
     assert "linked" in state(home, "claude")["managed"]
+
+
+def test_no_link_of_a_local_tree_reaches_codex(sandbox, tmp_path, capsys):
+    """Codex follows directory links in its skill roots, and a link's target may turn into a folder
+    later: a SKILL.md through one would be listed with its own name and no policy, in the model's
+    catalog. A skill with a link anywhere gets no Codex copy (exit 1 naming it); Claude, which reads
+    only the top-level SKILL.md and never writes through a link, still gets its copy."""
+    home, source = sandbox
+    if not can_symlink(tmp_path):
+        pytest.skip("symlinks unavailable")
+    outside = skill(tmp_path / "elsewhere", "elsewhere-skill")  # a folder outside the tree, with a SKILL.md
+    (skill(source, "peer-link") / "peer").symlink_to(source / "beta", target_is_directory=True)
+    (skill(source, "outside-link") / "deep/away").parent.mkdir(parents=True)
+    (source / "outside-link/deep/away").symlink_to(outside, target_is_directory=True)
+    (skill(source, "file-link") / "notes.md").symlink_to("helper.txt")
+    linked = ["file-link", "outside-link", "peer-link"]
+    before = installer.fingerprint(tmp_path / "elsewhere"), installer.fingerprint(source)
+    capsys.readouterr()
+    assert run(source) == 1
+    err = capsys.readouterr().err
+    assert all(f"codex:{s} (Cannot install {s} for Codex:" in err for s in linked), err
+    assert "claude:" not in err
+    for root in (home / ".codex/skills", home / ".agents/skills"):
+        assert not set(linked) & set(os.listdir(root)) and not [p for p in root.rglob("*") if p.is_symlink()]
+    assert not set(linked) & set(state(home, "codex")["managed"])
+    assert all(hidden_from_claude(home / ".claude/skills" / s) for s in linked), "Claude's copies are hidden"
+    assert installer.is_link(home / ".claude/skills/peer-link/peer")
+    assert (installer.fingerprint(tmp_path / "elsewhere"), installer.fingerprint(source)) == before
+    assert hidden_from_codex(codex_copy(home, "beta")), "the skill a link led to is installed once, hidden"
 
 
 def test_hiding_and_renaming_never_write_through_a_link(sandbox, tmp_path, capsys):
@@ -1056,8 +1085,8 @@ def test_hiding_and_renaming_never_write_through_a_link(sandbox, tmp_path, capsy
     assert installer.fingerprint(shared) == outside, "nothing outside the destinations is written"
     err = capsys.readouterr().err
     assert "claude:linked-md (Cannot edit linked-md/SKILL.md: it is or lies below a symbolic link)" in err
-    assert "codex:linked-md (Cannot edit linked-md/SKILL.md" in err
-    assert "codex:linked-agents (Cannot edit linked-agents/agents/openai.yaml" in err
+    assert "codex:linked-md (Cannot install linked-md for Codex: SKILL.md is a symbolic link" in err
+    assert "codex:linked-agents (Cannot install linked-agents for Codex: agents is a symbolic link" in err
     assert all(hidden_from_claude(home / ".claude/skills" / s) for s in ("linked-agents", "alpha"))
     assert run(source, "--claude-only", "--enable", "linked-md") == 0, "a visible Claude copy needs no edit"
     assert installer.is_link(home / ".claude/skills/linked-md/SKILL.md")
