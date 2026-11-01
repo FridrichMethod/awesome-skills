@@ -1018,3 +1018,32 @@ def test_a_local_tree_may_still_contain_links(sandbox, tmp_path):
     installed = home / ".claude/skills/linked/helper-link"
     assert installer.is_link(installed) and os.readlink(installed) == "helper.txt"
     assert "linked" in state(home, "claude")["managed"]
+
+
+def test_hiding_and_renaming_never_write_through_a_link(sandbox, tmp_path, capsys):
+    home, source = sandbox
+    if not can_symlink(tmp_path):
+        pytest.skip("symlinks unavailable")
+    shared = tmp_path / "shared"
+    skill(shared, "master", name="shared-original-name")
+    (shared / "agents").mkdir()
+    (shared / "agents/openai.yaml").write_text("interface:\n  display_name: Shared\n")
+    (skill(source, "linked-md") / "SKILL.md").unlink()
+    (source / "linked-md/SKILL.md").symlink_to(shared / "master/SKILL.md")
+    (skill(source, "linked-agents") / "agents").symlink_to(shared / "agents", target_is_directory=True)
+    outside = installer.fingerprint(shared)
+    capsys.readouterr()
+    assert run(source) == 1
+    assert installer.fingerprint(shared) == outside, "nothing outside the destinations is written"
+    err = capsys.readouterr().err
+    assert "claude:linked-md (Cannot edit linked-md/SKILL.md: it is or lies below a symbolic link)" in err
+    assert "codex:linked-md (Cannot edit linked-md/SKILL.md" in err
+    assert "codex:linked-agents (Cannot edit linked-agents/agents/openai.yaml" in err
+    assert hidden_from_claude(home / ".claude/skills/linked-agents") and hidden_from_claude(home / ".claude/skills/alpha")
+    assert run(source, "--claude-only", "--enable", "linked-md") == 0, "a visible Claude copy needs no edit"
+    assert installer.is_link(home / ".claude/skills/linked-md/SKILL.md")
+    copy = tmp_path / "copy"
+    shutil.copytree(source / "linked-agents", copy, symlinks=True)
+    with pytest.raises(installer.InstallError, match="write through a link"):
+        installer.apply_edits(copy, {"agents/openai.yaml": b"policy:\n  allow_implicit_invocation: false\n"})
+    assert installer.fingerprint(shared) == outside

@@ -979,7 +979,8 @@ def nested_name(skill_id: str, rel: str) -> str:
 
 
 def copy_edits(client: str, skill_id: str, invocation: str, listing: dict, read) -> dict:
-    """rel -> bytes the client's copy replaces or adds; read(rel) gives the library's bytes."""
+    """rel -> bytes the client's copy replaces or adds; read(rel) gives the library's bytes. A
+    local tree may link: an edit of a link, or below a linked folder, would write outside the copy."""
     edits, hide = {}, invocation == "manual"
     for rel in sorted(listing):
         top = rel == "SKILL.md"
@@ -998,6 +999,10 @@ def copy_edits(client: str, skill_id: str, invocation: str, listing: dict, read)
                 edits[policy] = new
         if data != original:
             edits[rel] = data
+    for rel in edits:
+        parts = rel.split("/")
+        if any(listing.get("/".join(parts[:i]), "0")[0] == "120000" for i in range(1, len(parts) + 1)):
+            raise InstallError(f"Cannot edit {skill_id}/{rel}: it is or lies below a symbolic link")
     return edits
 
 
@@ -1017,6 +1022,8 @@ def apply_edits(target: Path, edits: dict):
             dirs.remove(name)
     for rel, data in sorted(edits.items()):
         path = target.joinpath(*rel.split("/"))
+        if is_link(path) or any(map(is_link, path.parents[: rel.count("/")])):
+            raise InstallError(f"Refusing to write through a link: {display(path)}")
         fresh = not path.exists()
         if not path.parent.exists():
             path.parent.mkdir(parents=True)
