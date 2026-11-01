@@ -105,6 +105,18 @@ def test_a_user_edit_to_a_hidden_copy_survives_toggles_and_updates(sandbox):
     assert state(home, "claude")["managed"]["alpha"]["sha256"] == record
 
 
+def test_a_local_policy_file_that_cannot_take_the_key_fails_its_skill(sandbox, capsys):
+    home, source = sandbox
+    gamma = skill(source, "gamma")  # a --source tree, which the sync never checked
+    (gamma / "agents").mkdir()
+    (gamma / "agents/openai.yaml").write_text("interface:\n  display_name: Gamma\n...\n")
+    capsys.readouterr()
+    assert run(source, "--codex-only") == 1, "not installed as if hidden while Codex would list it"
+    err = capsys.readouterr().err
+    assert "codex:gamma (Cannot hide gamma/SKILL.md: agents/openai.yaml is not one block mapping at column 0)" in err
+    assert not codex_copy(home, "gamma").exists() and hidden_from_codex(codex_copy(home, "alpha"))
+
+
 def test_an_upstream_change_is_installed_still_hidden(sandbox):
     home, source = sandbox
     run(source)

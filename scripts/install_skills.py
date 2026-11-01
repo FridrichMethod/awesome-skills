@@ -873,6 +873,12 @@ def hidden_policy(data: bytes | None, label: str) -> bytes:
     def refuse(reason: str) -> InstallError:
         return InstallError(f"Cannot hide {label}: {POLICY_FILE} {reason}")
 
+    # An appended block would not join an indented or flow root, nor follow a `...` document end.
+    first = next((t for t in text if t.strip() and t.lstrip()[0] != "#"), "a")
+    if not (plain_start(first[0], first[1:2]) or first[0] in "'\"") or any(
+        DOCUMENT_MARKER.match(t) or t[:1] == "%" for t in text
+    ):
+        raise refuse("is not one block mapping at column 0")
     found = [i for i, line in enumerate(text) if POLICY_KEY_LINE.match(line)]
     if len(found) > 1:
         raise refuse("has more than one top-level policy key")

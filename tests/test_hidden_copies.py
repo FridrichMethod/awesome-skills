@@ -139,6 +139,14 @@ def test_an_existing_false_is_left_byte_for_byte():
         (b"policy:\n  allow_implicit_invocation:\n    true\n", "not a plain one-line value"),
         (b"policy:\n  allow_implicit_invocation: [\n    true]\n", "not a plain one-line value"),
         (b'policy:\n  "allow_implicit_invocation": true\n', "not a plain one-line value"),
+        # A `policy:` block appended to these would be invalid YAML, which Codex ignores as a whole.
+        (b"  interface:\n    display_name: Alpha\n", "not one block mapping at column 0"),
+        (b"interface:\n  display_name: Alpha\n...\n", "not one block mapping at column 0"),
+        (b"interface: {}\n---\nother: 1\n", "not one block mapping at column 0"),
+        (b"%YAML 1.1\n---\ninterface: {}\n", "not one block mapping at column 0"),
+        (b"# flow\n{interface: {display_name: Alpha}}\n", "not one block mapping at column 0"),
+        (b"- interface\n", "not one block mapping at column 0"),
+        (b"&root\ninterface: {}\n", "not one block mapping at column 0"),
     ],
 )
 def test_other_policy_shapes_are_refused(data, reason):
