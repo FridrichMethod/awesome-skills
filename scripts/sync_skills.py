@@ -1059,8 +1059,9 @@ def hidden_copy_problems(prepared: Path, skill_id: str, data: bytes, metadata: d
 
 
 def codex_copy_problems(prepared: Path, skill_id: str) -> list[str]:
-    """Why the installer could not name this skill's Codex copy after its ID: every SKILL.md, the
-    nested ones included, must take its new name line by line and otherwise read as before."""
+    """Why the installer could not make this skill's Codex copy: every SKILL.md, the nested ones
+    included, must take its new name line by line and otherwise read as before, and each
+    agents/openai.yaml it gives the policy must keep everything else."""
     installer = _installer()
     files = {p.relative_to(prepared).as_posix(): ("100644", "") for p in prepared.rglob("*") if p.is_file()}
     try:
@@ -1069,7 +1070,16 @@ def codex_copy_problems(prepared: Path, skill_id: str) -> list[str]:
         return [str(error)]
     problems = []
     for rel, data in sorted(edits.items()):
-        if not rel.endswith("SKILL.md"):
+        if rel.endswith(installer.POLICY_FILE):
+            original = prepared / rel
+            try:
+                expected = (yaml.safe_load(original.read_bytes()) or {}) if original.is_file() else {}
+                expected = {**expected, "policy": {**expected.get("policy", {}), "allow_implicit_invocation": False}}
+                same = yaml.safe_load(data) == expected
+            except (yaml.YAMLError, AttributeError, TypeError):
+                same = False
+            if not same:
+                problems.append(f"giving {skill_id}/{rel} the Codex policy changes how the rest of it reads")
             continue
         name = skill_id if rel == "SKILL.md" else installer.nested_name(skill_id, rel)
         try:

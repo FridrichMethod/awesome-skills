@@ -84,6 +84,34 @@ def test_a_nested_skill_gets_a_unique_name_and_stays_out_of_the_codex_catalog():
     assert "agents/openai.yaml" not in out, "a visible top-level copy keeps its policy"
 
 
+NESTED_POLICY = "interface:\n  display_name: Tool\ndependencies:\n  tools:\n  - type: mcp\n    value: srv\n"
+
+
+@pytest.mark.parametrize("invocation", ["auto", "manual"])
+def test_a_nested_skill_keeps_its_own_openai_yaml_with_the_policy_merged_in(invocation):
+    """A nested SKILL.md is out of the catalog in visible copies too: its own agents/openai.yaml
+    takes the policy and keeps everything else, such as its MCP dependency declaration."""
+    files = {"SKILL.md": SKILL, "tools/SKILL.md": SKILL, "tools/agents/openai.yaml": NESTED_POLICY}
+    merged = yaml.safe_load(edits("codex", invocation, files)["tools/agents/openai.yaml"])
+    assert merged == {**yaml.safe_load(NESTED_POLICY), "policy": {"allow_implicit_invocation": False}}
+
+
+def test_the_sync_rejects_a_codex_copy_whose_policy_file_would_lose_its_fields(tmp_path, monkeypatch):
+    """codex_copy_problems checks every file a Codex copy edits, policy files included: a merge that
+    dropped the rest of a nested agents/openai.yaml is caught at sync time."""
+    root = tmp_path / "alpha"
+    for rel, text in {"SKILL.md": SKILL, "tools/SKILL.md": SKILL, "tools/agents/openai.yaml": NESTED_POLICY}.items():
+        (root / rel).parent.mkdir(parents=True, exist_ok=True)
+        (root / rel).write_text(text)
+    assert ss.codex_copy_problems(root, "alpha") == []
+    monkeypatch.setattr(
+        ss._installer(), "hidden_policy", lambda data, label: b"policy:\n  allow_implicit_invocation: false\n"
+    )
+    assert ss.codex_copy_problems(root, "alpha") == [
+        "giving alpha/tools/agents/openai.yaml the Codex policy changes how the rest of it reads"
+    ]
+
+
 def test_long_nested_names_are_shortened_with_a_hash():
     name = installer.nested_name("a" * 60, "deep/er/SKILL.md")
     assert len(name) == 64 and name.startswith("a" * 53 + "-")
