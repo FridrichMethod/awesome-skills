@@ -43,7 +43,7 @@ SCHEMA = 1
 # `invocation`. SCHEMA also gates the index and journals: it stays 1.
 SELECTION_VERSION = 2
 MIGRATION, MIGRATIONS = "selection-v2", "migrations.json"
-FORM = 1  # of copy_edits: raise it with any change there, so copies are derived again
+FORM = 2  # of copy_edits: raise it with any change there, so copies are derived again
 SHORTCUT = ("tree", "invocation", "name", "root", "form")  # an unchanged copy is not rehashed
 ROOT_CAP = 1990  # Codex walks at most 2,000 directories per root, top level first
 # Codex walks ~/.agents/skills six levels deep; Gemini CLI reads only ~/.agents/skills/*/SKILL.md and lists
@@ -827,7 +827,8 @@ CODEX_SYSTEM_SKILLS = frozenset({"imagegen", "openai-docs", "review-agent", "ski
 # Claude Code's own commands and bundled skills (2.1.316, listed by `claude -p` and the interactive
 # ones): a personal skill folder of that name takes over /NAME, its allowed-tools and !`...` lines
 # included, while the model listing still shows the bundled text. Never a Claude copy; the sync gives
-# a library skill of such an ID a source-qualified one.
+# a library skill of such an ID a source-qualified one. A frontmatter name is a /NAME alias too (it
+# took over /review, /plan, /schedule and /help), so such a Claude copy is named after its ID.
 CLAUDE_COMMANDS = frozenset(
     "add-dir advisor agents artifact-capabilities artifact-design artifact-diagramming auto-mode-setup autocompact "
     "bashes batch btw bug chrome claude-api claude-in-chrome clear code-review color compact config context copy "
@@ -955,6 +956,12 @@ def plugin_path(rel: str) -> bool:
     return any(part in PLUGIN_DIRS for part in rel.split("/"))
 
 
+def named_by_id(client: str, name: str) -> bool:
+    """Whether the client's copy of a skill with this frontmatter name is named after its ID: every
+    Codex copy, and a Claude copy whose name is one of Claude Code's own (CLAUDE_COMMANDS)."""
+    return client == "codex" or name.strip().casefold() in CLAUDE_COMMANDS
+
+
 def renamed_skill_md(data: bytes, name: str, label: str) -> bytes:
     """SKILL.md whose one top-level name line (added if missing) is `name: "NAME"`, which must
     read as NAME without PyYAML, or InstallError."""
@@ -988,11 +995,11 @@ def nested_name(skill_id: str, rel: str) -> str:
     return name if len(name) <= 64 else name[:53] + "-" + hashlib.sha256(name.encode()).hexdigest()[:10]
 
 
-def edited_files(client: str, hide: bool, listing: dict) -> list[str]:
+def edited_files(client: str, hide: bool, listing: dict, rename: bool = False) -> list[str]:
     """The library files copy_edits reads: each SKILL.md it may rewrite, each agents/openai.yaml it
     gives the policy."""
     if client == "claude":
-        return ["SKILL.md"] if hide and "SKILL.md" in listing else []
+        return ["SKILL.md"] if (hide or rename) and "SKILL.md" in listing else []
     found = []
     for rel in sorted(r for r in listing if r.rsplit("/", 1)[-1] == "SKILL.md" and not plugin_path(r)):
         policy = rel[: -len("SKILL.md")] + POLICY_FILE
@@ -1000,11 +1007,13 @@ def edited_files(client: str, hide: bool, listing: dict) -> list[str]:
     return found
 
 
-def copy_edits(client: str, skill_id: str, invocation: str, listing: dict, read) -> dict:
-    """rel -> bytes the client's copy replaces or adds; read(rel) gives the library's. A local tree
-    may link: an edit of or below a link would write outside the copy."""
+def copy_edits(client: str, skill_id: str, invocation: str, listing: dict, read, rename: bool | None = None) -> dict:
+    """rel -> bytes the client's copy replaces or adds; read(rel) gives the library's. `rename` (see
+    named_by_id; always for Codex) names each SKILL.md after the ID. A local tree may link: an edit of
+    or below a link would write outside the copy."""
     edits, hide = {}, invocation == "manual"
-    if client == "claude" and not hide:
+    rename = client == "codex" or bool(rename)
+    if client == "claude" and not (hide or rename):
         return edits  # read nothing
     if client == "codex" and not CODEX_NAME.fullmatch(skill_id):
         raise InstallError(f"Codex cannot name a skill {skill_id!r}: {CODEX_NAME.pattern}")
@@ -1016,8 +1025,9 @@ def copy_edits(client: str, skill_id: str, invocation: str, listing: dict, read)
         data = original = read(rel)
         if top and hide:
             data = hidden_skill_md(data, label)
-        if client == "codex":
+        if rename:
             data = renamed_skill_md(data, skill_id if top else nested_name(skill_id, rel), label)
+        if client == "codex":
             policy = rel[: -len("SKILL.md")] + POLICY_FILE
             old = read(policy) if (hide or not top) and policy in listing else None
             new = hidden_policy(old, label) if hide or not top else None
@@ -1258,6 +1268,7 @@ class Library:
         key = (client, skill_id, invocation)
         if key not in self._derived:
             listing, files = self.listing(skill_id), {}
+            rename = named_by_id(client, self.skills.get(skill_id, {}).get("name", ""))
 
             def read(rel):
                 p = local and local.joinpath(*rel.split("/"))
@@ -1266,14 +1277,14 @@ class Library:
                 return self.read(skill_id, rel)
 
             failed = []
-            for rel in edited_files(client, invocation == "manual", listing):  # each one the clone lacks is
+            for rel in edited_files(client, invocation == "manual", listing, rename):  # each one the clone lacks is
                 try:  # noted (GitLibrary.read) before any fails, so one batch brings them all
                     files[rel] = read(rel)
                 except InstallError as exc:
                     failed.append(exc)
             if failed:
                 raise failed[0]
-            edits = copy_edits(client, skill_id, invocation, listing, files.__getitem__)
+            edits = copy_edits(client, skill_id, invocation, listing, files.__getitem__, rename)
             self._derived[key] = derived_listing(listing, edits), edits
         return self._derived[key]
 
@@ -1913,8 +1924,8 @@ def desired_entries(client: str, visible: list, manual: list, library: Library, 
     for skill_id in sorted(installed):
         info = dict(library.skills[skill_id], source_ids=[skill_id], form=FORM)
         info["invocation"] = "auto" if skill_id in shown else "manual"
-        if client == "codex":
-            info["name"] = skill_id  # every Codex copy is renamed to its ID, so names never collide
+        if named_by_id(client, info["name"]):
+            info["name"] = skill_id  # so Codex names never collide, and no Claude copy is a /COMMAND
         desired[skill_id] = info
     if "@library" in visible:
         origin = {"repository": REPOSITORY, "path": "scripts/install_skills.py"}
@@ -1934,10 +1945,11 @@ def may_hold(client: str, want: dict, library: Library, path: Path) -> bool:
     """Whether the directory could hold the client's copy, judged without the library's bytes: each
     file a copy keeps as it is has the library's blob, and nothing else is there. In a blobless clone
     a skill's files may be missing, and a file read alone is a fetch of its own."""
-    listing, hide = library.listing(want["source_ids"][0]), want["invocation"] == "manual"
+    skill_id, hide = want["source_ids"][0], want["invocation"] == "manual"
+    listing, rename = library.listing(skill_id), named_by_id(client, library.skills.get(skill_id, {}).get("name", ""))
     edited = set()
     for rel in (r for r in listing if r.rsplit("/", 1)[-1] == "SKILL.md" and not plugin_path(r)):
-        if client == "codex" or hide and rel == "SKILL.md":
+        if client == "codex" or (hide or rename) and rel == "SKILL.md":
             edited.add(rel)
         if client == "codex" and (hide or rel != "SKILL.md"):
             edited.add(rel[: -len("SKILL.md")] + POLICY_FILE)

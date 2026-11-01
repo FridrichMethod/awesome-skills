@@ -38,6 +38,15 @@ def test_a_visible_claude_copy_is_the_library_tree():
     assert edits("claude", "auto", {"SKILL.md": SKILL, "sub/SKILL.md": SKILL}) == {}
 
 
+@pytest.mark.parametrize("invocation", ["auto", "manual"])
+def test_a_claude_copy_named_like_a_claude_code_command_takes_its_id(invocation):
+    out = installer.copy_edits("claude", "alpha", invocation, *tree({"SKILL.md": SKILL}), rename=True)
+    assert list(out) == ["SKILL.md"] and installer.frontmatter_name(out["SKILL.md"], "x") == "alpha"
+    assert frontmatter(out["SKILL.md"]).get(HIDDEN, False) is (invocation == "manual")
+    assert installer.named_by_id("claude", " Review ") and installer.named_by_id("claude", "PLAN")
+    assert not installer.named_by_id("claude", "reviewer") and installer.named_by_id("codex", "reviewer")
+
+
 def test_a_hidden_claude_copy_carries_the_key_only_in_its_top_level_skill():
     out = edits("claude", "manual", {"SKILL.md": SKILL, "sub/SKILL.md": SKILL})
     assert list(out) == ["SKILL.md"]
@@ -186,15 +195,17 @@ def test_every_transform_of_the_live_library_reads_as_before_plus_its_change():
     for skill_id in installer.skill_ids(skills):
         directory = skills / skill_id
         listing = installer.local_listing(directory)
-        for client, invocation in (("claude", "manual"), ("codex", "auto"), ("codex", "manual")):
+        name = installer.metadata((directory / "SKILL.md").read_bytes(), skill_id)["name"]
+        for client, invocation in (("claude", "auto"), ("claude", "manual"), ("codex", "auto"), ("codex", "manual")):
+            rename = installer.named_by_id(client, name)
             found = installer.copy_edits(
-                client, skill_id, invocation, listing, lambda rel, d=directory: (d / rel).read_bytes()
+                client, skill_id, invocation, listing, lambda rel, d=directory: (d / rel).read_bytes(), rename
             )
             for rel, data in found.items():
                 before = (directory / rel).read_bytes() if rel in listing else None
                 if rel.endswith("SKILL.md"):
                     expected = frontmatter(before)
-                    if client == "codex":
+                    if rename:
                         expected["name"] = skill_id if rel == "SKILL.md" else installer.nested_name(skill_id, rel)
                         assert installer.frontmatter_name(data, rel) == expected["name"]
                     if invocation == "manual" and rel == "SKILL.md":

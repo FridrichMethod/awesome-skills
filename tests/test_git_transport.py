@@ -330,6 +330,23 @@ def test_remote_codex_copies_are_renamed_and_hidden_with_the_standard_library(re
     ), "Claude's copy keeps its name"
 
 
+def test_remote_claude_copies_named_like_a_claude_code_command_are_renamed(remote, tmp_path):
+    """/review would run a personal skill named review: its Claude copy takes its ID as name, without
+    PyYAML, and the next run finds it current."""
+    home, upstream = remote
+    upstream.skill("review--up--0123456789", name="review")
+    upstream.commit("a skill named like /review")
+    env = without_pyyaml(tmp_path, subprocess_env())
+    helper = [sys.executable, "-B", str(ROOT / "scripts/install_skills.py"), "--remote"]
+    first = subprocess.run(helper, capture_output=True, text=True, env=env)
+    assert first.returncode == 0, first.stderr
+    copy = home / ".claude/skills/review--up--0123456789"
+    assert installer.frontmatter_name((copy / "SKILL.md").read_bytes(), "x") == copy.name and hidden_from_claude(copy)
+    assert manifest(home, "claude")["managed"][copy.name]["name"] == copy.name
+    again = subprocess.run(helper, capture_output=True, text=True, env=env)
+    assert again.returncode == 0 and again.stdout == "Already current; selection preserved.\n", again.stdout
+
+
 def test_a_line_break_claude_code_does_not_see_fails_its_skill_for_both_clients(remote, capsys):
     """The sync rejects `a<U+2028>b: c` in a frontmatter; a library commit that bypassed it still gets
     no copy at all, since Claude Code would drop its frontmatter, disable-model-invocation included."""

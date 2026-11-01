@@ -251,8 +251,8 @@ def test_a_new_form_of_the_copies_reaches_installs_whose_tree_is_unchanged(sandb
     assert state(home, "claude")["managed"]["alpha"]["form"] == installer.FORM
     original = installer.copy_edits
 
-    def revised(client, skill_id, invocation, listing, read):  # a later fix of the transforms
-        edits = original(client, skill_id, invocation, listing, read)
+    def revised(client, skill_id, invocation, listing, read, rename=None):  # a later fix of the transforms
+        edits = original(client, skill_id, invocation, listing, read, rename)
         return dict(edits, **{"NOTICE.txt": b"revised\n"}) if skill_id == "alpha" else edits
 
     monkeypatch.setattr(installer, "copy_edits", revised)
@@ -664,6 +664,29 @@ def test_a_bundled_codex_skill_name_is_never_installed_for_codex(sandbox):
     assert not codex_copy(home, "skill-creator").exists() and "skill-creator" not in state(home, "codex")["managed"]
     with pytest.raises(installer.InstallError, match="collides with reserved library entry: skill-creator"):
         run(source, "--codex-only", "--enable", "skill-creator")
+
+
+def test_a_claude_copy_named_like_a_claude_code_command_is_named_after_its_id(sandbox, capsys):
+    """Claude Code also resolves /NAME through a personal skill's frontmatter name, so a library skill
+    `name: review` under any ID would take over /review, its allowed-tools and !`...` lines included.
+    Its Claude copy, hidden or visible, is named after its ID; any other name stays an alias."""
+    home, source = sandbox
+    skill(source, "review--up--0123456789", name="review")
+    skill(source, "planner", name="Plan")
+    skill(source, "delta", name="shared-name")
+    assert run(source) == 0
+    claude = home / ".claude/skills"
+    assert (claude / "review--up--0123456789/SKILL.md").read_text() == (
+        f'---\n{installer.HIDDEN_KEY}: true\nname: "review--up--0123456789"\n'
+        "description: Use review--up--0123456789\n---\nbody\n"
+    )
+    assert name_of(claude / "planner") == "planner" and hidden_from_claude(claude / "planner")
+    assert state(home, "claude")["managed"]["planner"]["name"] == "planner"
+    assert name_of(claude / "delta") == "shared-name" and hidden_from_claude(claude / "delta")
+    assert run(source, "--claude-only", "--enable", "planner") == 0
+    assert name_of(claude / "planner") == "planner" and not hidden_from_claude(claude / "planner")
+    capsys.readouterr()
+    assert run(source) == 0 and capsys.readouterr().out == "Already current; selection preserved.\n"
 
 
 def test_a_codex_root_that_would_overflow_is_refused_before_writing(sandbox, monkeypatch, capsys):
