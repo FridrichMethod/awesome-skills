@@ -264,10 +264,11 @@ def test_a_new_form_of_the_copies_reaches_installs_whose_tree_is_unchanged(sandb
     assert state(home, "codex")["managed"]["beta"]["form"] == installer.FORM, "recorded, not copied again"
 
 
-def test_state_versions_and_records_are_validated():
-    v1 = {"schema": 1, "client": "codex", "destination": "/x", "selection": ["@library"], "managed": {}}
+def test_state_versions_and_records_are_validated(tmp_path):
+    first, second = str(tmp_path / "x"), str(tmp_path / "y")  # "/x" has no drive, so is relative on Windows
+    v1 = {"schema": 1, "client": "codex", "destination": first, "selection": ["@library"], "managed": {}}
     installer.validate_state(v1, "codex")
-    v2 = dict(v1, manual=["@all"], selection_version=2, destination2="/y")
+    v2 = dict(v1, manual=["@all"], selection_version=2, destination2=second)
     v2["managed"] = {"a": {"sha256": "0" * 64, "invocation": "manual", "root": 1}}
     installer.validate_state(v2, "codex")
     for bad in (
@@ -275,6 +276,7 @@ def test_state_versions_and_records_are_validated():
         dict(v2, selection_version=3),
         dict(v2, managed={"a": {"sha256": "0" * 64, "invocation": "hidden"}}),
         dict(v1, managed={"a": {"sha256": "0" * 64, "root": 1}}),
+        dict(v2, destination2="y"),
     ):
         with pytest.raises(installer.InstallError):
             installer.validate_state(bad, "codex")
