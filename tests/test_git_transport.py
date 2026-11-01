@@ -64,6 +64,15 @@ def subprocess_env(**extra):
     return {**os.environ, "SKILLS_PYTHON": sys.executable, **extra}
 
 
+def test_no_test_removes_a_clone_with_shutil():
+    """git marks pack files read-only on Windows, where shutil.rmtree then stops: the clone, and the
+    data folder that holds it, go through installer.rmtree. Only Windows fails otherwise; this holds
+    the rule on every host."""
+    for path in sorted(Path(__file__).parent.glob("*.py")):
+        found = re.findall(r"shutil\.rmtree\((?:clone|data_dir)\(", path.read_text(encoding="utf-8"))
+        assert not found, f"{path.name}: {len(found)} use(s) of shutil.rmtree on a clone"
+
+
 def test_first_install_is_a_blobless_sparse_clone(remote):
     home, upstream = remote
     run()
@@ -847,7 +856,7 @@ def test_a_plan_made_again_after_its_batch_warns_once(remote, capsys, monkeypatc
     assert run("--claude-only") == 0
     value = manifest(home, "claude")
     put(data_dir(home) / "claude.json", json.dumps(dict(value, selection=[*value["selection"], "gone"])))
-    shutil.rmtree(clone(home))  # cloned again with no skill's files
+    installer.rmtree(clone(home))  # cloned again with no skill's files
     mine = home / ".claude/skills/mine"  # a near copy of alpha under the user's own folder and its name
     shutil.copytree(upstream.work / "skills/alpha", mine)
     put(mine / "SKILL.md", "---\nname: alpha\ndescription: the user's own\n---\n")
@@ -874,7 +883,7 @@ def test_a_lost_data_folder_is_adopted_back_in_one_run(remote, capsys, monkeypat
     before = {client: manifest(home, client)["managed"] for client in ("claude", "codex")}
     assert "nest" in before["codex"] and before["codex"]["nest"]["invocation"] == "manual"
     copies = snapshot(home / ".codex") | snapshot(home / ".agents") | snapshot(home / ".claude")
-    shutil.rmtree(data_dir(home))
+    installer.rmtree(data_dir(home))
     capsys.readouterr()
     batches, fetch = [], installer.GitLibrary.fetch_wanted
     monkeypatch.setattr(installer.GitLibrary, "fetch_wanted", lambda self: batches.append(fetch(self)) or batches[-1])
@@ -910,7 +919,7 @@ def test_a_folder_with_a_file_no_copy_has_is_rejected_without_fetching(remote, m
         for entry in os.listdir(other) if other != alpha.parent and other.is_dir() else []:
             shutil.rmtree(other / entry)
     put(alpha / "notes-of-another-tool.txt", "theirs\n")
-    shutil.rmtree(data_dir(home))  # state and clone: the copy is unmanaged, the new clone has no blobs
+    installer.rmtree(data_dir(home))  # state and clone: the copy is unmanaged, the new clone has no blobs
     assert run("--claude-only", "--selection", "", "--manual", "") == 0
     batches, fetch = [], installer.GitLibrary.fetch_wanted
     monkeypatch.setattr(installer.GitLibrary, "fetch_wanted", lambda self: batches.append(fetch(self)) or batches[-1])
@@ -931,7 +940,7 @@ def test_a_folder_whose_files_differ_from_the_library_is_rejected_without_fetchi
         for entry in os.listdir(other) if other != alpha.parent and other.is_dir() else []:
             shutil.rmtree(other / entry)
     put(alpha / "helper.txt", "another tool's version\n")  # the same files, one of them different
-    shutil.rmtree(data_dir(home))
+    installer.rmtree(data_dir(home))
     assert run("--claude-only", "--selection", "", "--manual", "") == 0
     batches, fetch = [], installer.GitLibrary.fetch_wanted
     monkeypatch.setattr(installer.GitLibrary, "fetch_wanted", lambda self: batches.append(fetch(self)) or batches[-1])
