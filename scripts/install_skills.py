@@ -1279,7 +1279,9 @@ class DirLibrary(Library):
         # through one would be listed under its own name with no policy. Claude reads one SKILL.md.
         links = sorted(r for r, (mode, _) in self.listing(skill_id).items() if mode == "120000" and not plugin_path(r))
         if client == "codex" and links:
-            raise InstallError(f"Cannot install {skill_id} for Codex: {links[0]} is a symbolic link, which Codex follows")
+            raise InstallError(
+                f"Cannot install {skill_id} for Codex: {links[0]} is a symbolic link, which Codex follows"
+            )
         found = super().derived(client, skill_id, invocation, local)
         # The sync never saw this tree: an edited copy needs its checks (sync_skills.copy_problems).
         if found[1] and skill_id not in self._problems:
