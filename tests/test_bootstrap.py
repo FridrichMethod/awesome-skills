@@ -10,11 +10,12 @@ import shutil
 import subprocess
 import sys
 import threading
+from pathlib import Path
 
 import pytest
 
 from scripts import install_skills as installer
-from tests.gitfixtures import ROOT, WINDOWS, Upstream, data_dir, isolate, without_pyyaml
+from tests.gitfixtures import ROOT, WINDOWS, Upstream, data_dir, isolate, put, without_pyyaml
 
 PWSH = shutil.which("pwsh")
 ALREADY = "Already current; selection preserved."
@@ -56,19 +57,27 @@ def served_installer():
     server.server_close()
 
 
-def check_contract(home, env, command):
+def plant_modules(directory: Path) -> Path:
+    """A json.py where a bootstrap's Python might look first (its working or temporary directory, the
+    script's own folder): imported, it writes a marker. Returns the marker's path."""
+    marker = directory.parent / f"{directory.name}-planted-module-ran"
+    put(directory / "json.py", f"open({str(marker)!r}, 'w').close()\nraise SystemExit(97)\n")
+    return marker
+
+
+def check_contract(home, env, command, cwd=None):
     """First install, a no-op update in one line, exit 75 under the lock, exit 2 for usage errors."""
-    first = subprocess.run(command, env=env, capture_output=True, text=True)
+    first = subprocess.run(command, env=env, capture_output=True, text=True, cwd=cwd)
     assert first.returncode == 0, first.stderr
     assert (home / ".claude/skills/alpha/SKILL.md").is_file()
     assert (home / ".codex/skills" / installer.ROUTER / "SKILL.md").is_file()
-    again = subprocess.run(command, env=env, capture_output=True, text=True)
+    again = subprocess.run(command, env=env, capture_output=True, text=True, cwd=cwd)
     assert again.returncode == 0, again.stderr
     assert again.stdout.strip() == ALREADY
     with installer.state_lock(installer.native(data_dir(home))):
-        busy = subprocess.run(command, env=env, capture_output=True, text=True)
+        busy = subprocess.run(command, env=env, capture_output=True, text=True, cwd=cwd)
     assert busy.returncode == installer.LOCK_BUSY, busy.stderr
-    usage = subprocess.run([*command, "--enable", "alpha"], env=env, capture_output=True, text=True)
+    usage = subprocess.run([*command, "--enable", "alpha"], env=env, capture_output=True, text=True, cwd=cwd)
     assert usage.returncode == 2, usage.stderr
 
 
@@ -79,9 +88,16 @@ def test_piped_install_sh(remote, tmp_path):
     env["SKILLS_INSTALLER_URL"] = (ROOT / "scripts/install_skills.py").as_uri()
     piped = tmp_path / "pipe.sh"  # stands in for `curl -fsSL .../install.sh | bash -s -- ARGS`
     piped.write_text(f'exec bash -s -- "$@" < {shlex.quote(str(ROOT / "install.sh"))}\n')
-    check_contract(home, env, ["bash", str(piped)])
+    planted = plant_modules(tmp_path / "caller")  # the directory the hook or the user runs it from
+    check_contract(home, env, ["bash", str(piped)], cwd=tmp_path / "caller")
+    assert not planted.exists(), "the installer runs isolated (-I): the caller's directory is not on sys.path"
     missing = subprocess.run(["bash", str(piped)], env={**env, "SKILLS_PYTHON": "no-such-python"}, capture_output=True)
     assert missing.returncode == 1 and b"Python 3.11+ is required" in missing.stderr
+    old = tmp_path / "old-python"  # stands in for a python3 older than 3.11
+    put(old, "#!/bin/sh\nexit 1\n")
+    old.chmod(0o755)
+    older = subprocess.run(["bash", str(piped)], env={**env, "SKILLS_PYTHON": str(old)}, capture_output=True)
+    assert older.returncode == 1 and b"Python 3.11+ is required" in older.stderr
 
 
 def test_installer_fits_in_one_python_c_argument():
@@ -97,7 +113,19 @@ def test_downloaded_install_ps1(remote, tmp_path, served_installer):
     alone = tmp_path / "download/install.ps1"  # no checkout next to it: download mode
     alone.parent.mkdir()
     shutil.copyfile(ROOT / "install.ps1", alone)
-    check_contract(home, env, [pwsh(), "-NoProfile", "-NonInteractive", "-File", str(alone)])
+    temporary = tmp_path / "temporary"  # where install.ps1 saves the downloaded installer
+    planted = plant_modules(temporary)
+    env.update(TMPDIR=str(temporary), TEMP=str(temporary), TMP=str(temporary))
+    check_contract(home, env, [pwsh(), "-NoProfile", "-NonInteractive", "-File", str(alone)], cwd=temporary)
+    assert not planted.exists(), "the installer runs isolated (-I): its download folder is not on sys.path"
+    if not WINDOWS:
+        old = tmp_path / "old-python"  # stands in for a python older than 3.11
+        put(old, "#!/bin/sh\nexit 1\n")
+        old.chmod(0o755)
+        older = subprocess.run(
+            [pwsh(), "-NoProfile", "-File", str(alone)], env={**env, "SKILLS_PYTHON": str(old)}, capture_output=True
+        )
+        assert older.returncode == 1 and b"Python 3.11+ is required" in older.stderr
     unreachable = {**env, "SKILLS_INSTALLER_URL": served_installer.replace("install_skills.py", "missing.py")}
     failed = subprocess.run(
         [pwsh(), "-NoProfile", "-File", str(alone)], env=unreachable, capture_output=True, text=True
@@ -112,9 +140,26 @@ def test_install_ps1_from_a_checkout_uses_the_adjacent_installer(remote, tmp_pat
     shutil.copytree(ROOT / "scripts", checkout / "scripts")
     shutil.copyfile(ROOT / "install.ps1", checkout / "install.ps1")
     shutil.copytree(tmp_path / "upstream/skills", checkout / "skills")
+    planted = plant_modules(checkout / "scripts")
     command = [pwsh(), "-NoProfile", "-NonInteractive", "-File", str(checkout / "install.ps1")]
     args = ["--claude-only", "--selection", "beta", "--manual="]  # nothing hidden besides
     result = subprocess.run([*command, *args], env=env, capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
+    assert not planted.exists(), "-P: the installer's own folder is not on sys.path"
     assert sorted(os.listdir(home / ".claude/skills")) == ["beta"]
     assert not (data_dir(home) / installer.CLONE).exists(), "a checkout install needs no library clone"
+
+
+@pytest.mark.skipif(WINDOWS or not shutil.which("bash"), reason="install.sh is the POSIX bootstrap")
+def test_install_sh_from_a_checkout_keeps_the_script_folder_off_sys_path(remote, tmp_path):
+    home, env = remote
+    checkout = tmp_path / "checkout"
+    shutil.copytree(ROOT / "scripts", checkout / "scripts")
+    shutil.copyfile(ROOT / "install.sh", checkout / "install.sh")
+    shutil.copytree(tmp_path / "upstream/skills", checkout / "skills")
+    planted = plant_modules(checkout / "scripts")
+    args = ["--claude-only", "--selection", "beta", "--manual="]
+    result = subprocess.run(["bash", str(checkout / "install.sh"), *args], env=env, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert sorted(os.listdir(home / ".claude/skills")) == ["beta"]
+    assert not planted.exists(), "-P: the installer's own folder is not on sys.path"

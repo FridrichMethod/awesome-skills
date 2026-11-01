@@ -137,10 +137,13 @@ def test_the_launcher_carries_the_install_time_storage_and_dispatches_search(tmp
     )
     assert found.returncode == 0, found.stderr
     assert f"  {tmp_path / 'cx/skills/alpha/SKILL.md'}" in found.stdout.splitlines()
+    marker = tmp_path / "planted-module-ran"  # the installer's own folder is not on its sys.path (-P)
+    (checkout / "scripts/json.py").write_text(f"open({str(marker)!r}, 'w').close()\nraise SystemExit(97)\n")
     shown = subprocess.run(
         [str(launcher), "--codex-only", "--enable", "beta"], env=bare, capture_output=True, text=True
     )
     assert shown.returncode == 0, shown.stderr
+    assert not marker.exists()
     assert json.loads((custom / "codex.json").read_text())["selection"] == ["@library", "beta"]
     assert not (home / ".local/share/awesome-skills/codex.json").exists(), "no second, divergent state"
 
@@ -208,7 +211,8 @@ def test_the_windows_launcher_uses_single_quoted_literals(monkeypatch, tmp_path)
     files = installer.launchers(data, state, FakeLibrary())
     ps1 = files[data / "bin/awesome-skills.ps1"]
     assert ps1.startswith("\ufeff# Written by the awesome-skills installer")
-    assert "& 'C:/Python/py''thon.exe' -B" in ps1 and "da''ta" in ps1 and "@args" in ps1
+    assert "& 'C:/Python/py''thon.exe' -P -B" in ps1 and "da''ta" in ps1 and "@args" in ps1
+    assert "& 'C:/Python/py''thon.exe' -I -B" in ps1, "the search runs isolated"
 
 
 PWSH = shutil.which("pwsh")

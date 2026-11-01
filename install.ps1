@@ -26,10 +26,16 @@ if ($env:SKILLS_PYTHON) {
 }
 $exe = $python[0]
 $prefix = @($python | Select-Object -Skip 1)
+& $exe @prefix -I -c 'import sys; sys.exit(sys.version_info < (3, 11))'
+if ($LASTEXITCODE -ne 0) {
+    Stop-Install "Python 3.11+ is required; $($python -join ' ') is older (set SKILLS_PYTHON)"
+}
 
+# Python never imports from a folder it was not given: a checkout's installer runs with -P (its own
+# folder stays off sys.path; PyYAML may live in the user's site-packages), a download with -I.
 $local = if ($PSScriptRoot) { Join-Path (Join-Path $PSScriptRoot 'scripts') 'install_skills.py' } else { '' }
 if ($local -and (Test-Path -LiteralPath $local -PathType Leaf)) {
-    & $exe @prefix -B $local @args
+    & $exe @prefix -P -B $local @args
     exit $LASTEXITCODE
 }
 
@@ -46,7 +52,7 @@ try {
     } catch {
         Stop-Install "could not download the installer from $url"
     }
-    & $exe @prefix -B $temp --remote @args
+    & $exe @prefix -I -B $temp --remote @args
     $code = $LASTEXITCODE
 } finally {
     Remove-Item -LiteralPath $temp -Force -ErrorAction SilentlyContinue

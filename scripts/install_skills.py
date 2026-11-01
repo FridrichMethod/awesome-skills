@@ -1617,7 +1617,7 @@ def launchers(data: Path, state: Path, library: Library) -> dict:
     sh.append(
         f'if [ "${{1-}}" = search ]; then\n    shift\n    exec {q(python)} -I -B {q(search)} --state "$SKILLS_STATE_DIR" "$@"\nfi'
     )
-    sh.append(f'exec {q(python)} -B {" ".join(map(q, [helper, *extra]))} "$@"')
+    sh.append(f'exec {q(python)} -P -B {" ".join(map(q, [helper, *extra]))} "$@"')  # -P: no script folder
     files = {launcher_path(data): "\n".join(sh) + "\n"}
     if WINDOWS:
         p = ps_quote
@@ -1626,7 +1626,7 @@ def launchers(data: Path, state: Path, library: Library) -> dict:
             f"if ($args.Count -and $args[0] -eq 'search') {{\n    & {p(python)} -I -B {p(search)} --state $env:SKILLS_STATE_DIR @($args | Select-Object -Skip 1)"
         )
         ps.append(
-            f"}} else {{\n    & {p(python)} -B {' '.join(map(p, [helper, *extra]))} @args\n}}\nexit $LASTEXITCODE"
+            f"}} else {{\n    & {p(python)} -P -B {' '.join(map(p, [helper, *extra]))} @args\n}}\nexit $LASTEXITCODE"
         )
         files[launcher_path(data, ".ps1")] = "\ufeff" + "\n".join(ps) + "\n"  # a BOM: Windows PowerShell reads UTF-8
     return files

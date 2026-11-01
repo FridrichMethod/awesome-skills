@@ -7,11 +7,17 @@ if ! command -v "$python" >/dev/null 2>&1; then
   echo "awesome-skills: Python 3.11+ is required; not found: $python (set SKILLS_PYTHON)" >&2
   exit 1
 fi
+if ! "$python" -I -c 'import sys; sys.exit(sys.version_info < (3, 11))' >/dev/null 2>&1; then
+  echo "awesome-skills: Python 3.11+ is required; $python is older (set SKILLS_PYTHON)" >&2
+  exit 1
+fi
+# Python never imports from a folder it was not given: a checkout's installer runs with -P (its own
+# folder stays off sys.path; PyYAML may live in the user's site-packages), a download with -I.
 script_path="${BASH_SOURCE[0]:-}"
 if [[ -n "$script_path" && -f "$script_path" ]]; then
   script_dir="$(cd "$(dirname "$script_path")" && pwd)"
   if [[ -f "$script_dir/scripts/install_skills.py" ]]; then
-    exec "$python" -B "$script_dir/scripts/install_skills.py" "$@"
+    exec "$python" -P -B "$script_dir/scripts/install_skills.py" "$@"
   fi
 fi
 if ! command -v curl >/dev/null 2>&1; then
@@ -24,4 +30,4 @@ if ! installer="$(curl -fsSL "$url")"; then
   echo "awesome-skills: could not download the installer from $url" >&2
   exit 1
 fi
-exec "$python" -B -c "$installer" --remote "$@"
+exec "$python" -I -B -c "$installer" --remote "$@"
