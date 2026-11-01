@@ -67,8 +67,8 @@ def test_skill_paths_check_out_on_windows():
 
 
 def test_committed_library_passes_the_sync_rules():
-    """What the weekly sync would refuse to commit: portability, name parity, and frontmatter
-    Claude Code cannot parse."""
+    """What the weekly sync would refuse to commit: portability, name parity, frontmatter Claude
+    Code cannot parse, and skills the installer could not hide."""
     assert sync_skills.library_problems(ROOT / "skills") == []
 
 

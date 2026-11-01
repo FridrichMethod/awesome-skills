@@ -18,6 +18,7 @@ Filters out:
 from __future__ import annotations
 
 import argparse
+import copy
 import functools
 import hashlib
 import importlib.util
@@ -972,6 +973,71 @@ def candidate_problems(prepared: Path, skill_id: str) -> list[str]:
             "frontmatter has a multi-line quoted scalar or flow collection with a line not indented past "
             "its key, which Claude Code cannot parse"
         )
+    return problems + hidden_copy_problems(prepared, skill_id, data, metadata)
+
+
+def hidden_copy_problems(prepared: Path, skill_id: str, data: bytes, metadata: dict) -> list[str]:
+    """Why the installer could not hide this skill from the model safely: its line-by-line edits
+    of SKILL.md (disable-model-invocation) and of each skill directory's agents/openai.yaml
+    (policy.allow_implicit_invocation) must succeed and leave everything else as PyYAML read it."""
+    installer = _installer()
+    problems = []
+    try:
+        hidden = installer.hidden_skill_md(data, skill_id)
+        same = installer.metadata(hidden, skill_id) == {**metadata, installer.HIDDEN_KEY: True}
+        try:
+            plain = installer.frontmatter_name(data, skill_id)
+        except installer.InstallError:
+            plain = None  # reported by candidate_problems
+        if not same or plain is not None and installer.frontmatter_name(hidden, skill_id) != plain:
+            problems.append(f"adding `{installer.HIDDEN_KEY}: true` changes how the rest of the frontmatter reads")
+    except installer.InstallError as error:
+        problems.append(str(error))
+    for directory in sorted({prepared, *(p.parent for p in prepared.rglob("SKILL.md"))}):
+        path = directory / installer.POLICY_FILE
+        if os.path.lexists(path):
+            label = "/".join([skill_id, *directory.relative_to(prepared).parts])
+            problems += policy_problems(path, label)
+    return problems
+
+
+def _duplicate_keys(node) -> list[str]:
+    if not isinstance(node, yaml.MappingNode):
+        return []
+    keys = [key.value for key, _ in node.value if isinstance(key, yaml.ScalarNode)]
+    return sorted({key for key in keys if keys.count(key) > 1})
+
+
+def policy_problems(path: Path, label: str) -> list[str]:
+    """Why setting policy.allow_implicit_invocation to false in this agents/openai.yaml is unsafe.
+    Codex reads the file with serde_yaml, which refuses duplicate keys, and ignores a file it
+    cannot read as a whole, policy included: the skill would silently stay in the catalog."""
+    installer = _installer()
+    prefix = f"Cannot hide {label}: {installer.POLICY_FILE}"
+    try:
+        data = path.read_bytes()
+        before, original = yaml.compose(data), yaml.safe_load(data)
+    except OSError as error:
+        return [f"{prefix} cannot be read ({error})"]
+    except yaml.YAMLError as error:
+        return [f"{prefix} is not valid YAML ({str(error).splitlines()[0]})"]
+    if not isinstance(before, yaml.MappingNode) or before.flow_style:
+        return [f"{prefix} is not a block-style mapping"]
+    try:
+        merged = installer.hidden_policy(data, label)
+        after, result = yaml.compose(merged), yaml.safe_load(merged)
+    except installer.InstallError as error:
+        return [str(error)]
+    except yaml.YAMLError:
+        after = result = None
+    expected = copy.deepcopy(original)
+    if isinstance(expected.get("policy", {}), dict):
+        expected.setdefault("policy", {})["allow_implicit_invocation"] = False
+    policy = [value for key, value in before.value if isinstance(key, yaml.ScalarNode) and key.value == "policy"]
+    duplicates = _duplicate_keys(before) + (_duplicate_keys(policy[-1]) if policy else [])
+    problems = [f"{prefix} has duplicate keys: {', '.join(duplicates)}"] if duplicates else []
+    if result != expected or _duplicate_keys(after) != _duplicate_keys(before):
+        problems.append(f"{prefix} would read differently once policy.allow_implicit_invocation is false")
     return problems
 
 

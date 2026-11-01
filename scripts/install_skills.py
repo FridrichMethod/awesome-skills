@@ -862,6 +862,100 @@ def index_text(index: dict) -> str:
     return json.dumps(index, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
 
 
+# --- Hidden copies ---------------------------------------------------------------------
+
+# A skill installed but hidden from the model: Claude Code drops a skill whose frontmatter sets
+# disable-model-invocation from the model's listing (the last duplicate key wins, so every
+# existing top-level line of the key is replaced); Codex leaves a skill whose agents/openai.yaml
+# sets policy.allow_implicit_invocation to false out of the prompt catalog. Both still run on
+# /ID and $ID. Either transform refuses a shape it cannot edit line by line, and the sync rejects
+# a library skill that either one refuses or that PyYAML would then read differently.
+HIDDEN_KEY = "disable-model-invocation"
+HIDDEN_KEY_LINE = re.compile(r"""(["']?)disable-model-invocation\1[ \t]*:""")
+HIDDEN_PLAIN_LINE = re.compile(r"disable-model-invocation:[ \t]+(?:true|True|TRUE|false|False|FALSE)[ \t]*(?:#.*)?")
+POLICY_FILE = "agents/openai.yaml"
+POLICY_KEY_LINE = re.compile(r"""(["']?)policy\1[ \t]*:""")
+POLICY_BLOCK_LINE = re.compile(r"policy:[ \t]*(?:#.*)?")
+IMPLICIT_KEY_LINE = re.compile(r"""(["']?)allow_implicit_invocation\1[ \t]*:""")
+IMPLICIT_ONE_LINE = re.compile(r"allow_implicit_invocation:[ \t]+[^ \t#].*")
+IMPLICIT_FALSE_LINE = re.compile(r"allow_implicit_invocation:[ \t]+false[ \t]*(?:#.*)?")
+UTF8_BOM = b"\xef\xbb\xbf"
+
+
+def split_text(data: bytes, label: str) -> tuple[bytes, list[str], str]:
+    """(BOM, lines split at LF with any CR kept, the CR to end a new line with) of UTF-8 bytes."""
+    bom = UTF8_BOM if data.startswith(UTF8_BOM) else b""
+    try:
+        lines = data[len(bom) :].decode("utf-8").split("\n")
+    except UnicodeDecodeError as e:
+        raise InstallError(f"Cannot hide {label}: not UTF-8 ({e})") from e
+    return bom, lines, "\r" if lines[0].endswith("\r") else ""
+
+
+def hidden_skill_md(data: bytes, label: str) -> bytes:
+    """SKILL.md as a hidden copy: every top-level disable-model-invocation line removed, then
+    `disable-model-invocation: true` right after the opening `---`. BOM and line endings stay.
+    A top-level line of the key that is not a plain one-line true or false raises InstallError."""
+    bom, lines, cr = split_text(data, label)
+    end = next((i for i in range(1, len(lines)) if lines[i].rstrip("\r").strip() == "---"), None)
+    if lines[0].rstrip("\r").strip() != "---" or end is None:
+        raise InstallError(f"Invalid frontmatter at {label}: missing frontmatter")
+    kept = []
+    for line in lines[1:end]:
+        if not HIDDEN_KEY_LINE.match(line):
+            kept.append(line)
+        elif not HIDDEN_PLAIN_LINE.fullmatch(line.rstrip("\r")):
+            raise InstallError(f"Cannot hide {label}: top-level {HIDDEN_KEY} is not a plain one-line true or false")
+    out = [lines[0], f"{HIDDEN_KEY}: true{cr}", *kept, *lines[end:]]
+    return bom + "\n".join(out).encode("utf-8")
+
+
+def hidden_policy(data: bytes | None, label: str) -> bytes:
+    """agents/openai.yaml as a hidden copy: a new file when there is none, a `policy:` block
+    appended when the file has no top-level policy key, otherwise allow_implicit_invocation set
+    to false (or added) inside the block-style `policy:` mapping. BOM and line endings stay.
+    Any other shape raises InstallError."""
+    if data is None:
+        return b"policy:\n  allow_implicit_invocation: false\n"
+    bom, lines, cr = split_text(data, label)
+    text = [line.rstrip("\r") for line in lines]
+
+    def refuse(reason: str) -> InstallError:
+        return InstallError(f"Cannot hide {label}: {POLICY_FILE} {reason}")
+
+    found = [i for i, line in enumerate(text) if POLICY_KEY_LINE.match(line)]
+    if len(found) > 1:
+        raise refuse("has more than one top-level policy key")
+    if not found:
+        tail = f"{cr}\n" if lines[-1] else ""
+        block = f"{tail}policy:{cr}\n  allow_implicit_invocation: false{cr}\n"
+        return bom + ("\n".join(lines) + block).encode("utf-8")
+    p = found[0]
+    if not POLICY_BLOCK_LINE.fullmatch(text[p]):
+        raise refuse("has a policy that is not a block-style mapping")
+    end = next((j for j in range(p + 1, len(text)) if text[j][:1] not in ("", " ", "#")), len(text))
+    entries = [j for j in range(p + 1, end) if text[j].strip() and not text[j].lstrip(" ").startswith("#")]
+    if not entries or text[entries[0]].lstrip(" ").startswith("-"):
+        raise refuse("has a policy that is not a block-style mapping")
+    indent = len(text[entries[0]]) - len(text[entries[0]].lstrip(" "))
+    children = [j for j in entries if len(text[j]) - len(text[j].lstrip(" ")) <= indent]
+    keys = [j for j in children if IMPLICIT_KEY_LINE.match(text[j], indent)]
+    if len(keys) > 1:
+        raise refuse("sets policy.allow_implicit_invocation more than once")
+    line = " " * indent + f"allow_implicit_invocation: false{cr}"
+    if not keys:
+        lines.insert(p + 1, line)
+        return bom + "\n".join(lines).encode("utf-8")
+    k = keys[0]
+    following = next((j for j in children if j > k), end)
+    if not IMPLICIT_ONE_LINE.fullmatch(text[k], indent) or any(j in entries for j in range(k + 1, following)):
+        raise refuse("has a policy.allow_implicit_invocation that is not a plain one-line value")
+    if IMPLICIT_FALSE_LINE.fullmatch(text[k], indent):
+        return data
+    lines[k] = line
+    return bom + "\n".join(lines).encode("utf-8")
+
+
 def origins(provenance: dict, skill_id: str, revision: str) -> list:
     entry = provenance.get(skill_id) if isinstance(provenance, dict) else None
     recorded = entry.get("origins") if isinstance(entry, dict) else None
