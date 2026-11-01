@@ -1019,6 +1019,10 @@ def hidden_copy_problems(prepared: Path, skill_id: str, data: bytes, metadata: d
             problems.append(f"adding `{installer.HIDDEN_KEY}: true` changes how the rest of the frontmatter reads")
     except installer.InstallError as error:
         problems.append(str(error))
+    if metadata.get("user-invocable", True) is not True:
+        # Claude Code reads any value it cannot take as true as false; with the key, a hidden copy
+        # could then be run neither by the model nor with /ID.
+        problems.append("user-invocable is not true: its hidden copy could not be run at all")
     for directory in sorted({prepared, *(p.parent for p in prepared.rglob("SKILL.md"))}):
         path = directory / installer.POLICY_FILE
         if os.path.lexists(path):

@@ -171,6 +171,7 @@ def skill(root: Path, frontmatter_lines: str = "", files: dict | None = None) ->
     [
         ("", {}),
         (f"{HIDDEN}: true\n", {}),
+        ("user-invocable: true\n", {}),
         (f"{HIDDEN}: false\n", {"agents/openai.yaml": "interface:\n  display_name: Alpha\n"}),
         ("", {"agents/openai.yaml": "policy:\n  allow_implicit_invocation: true\n"}),
         ("", {"nested/SKILL.md": "---\nname: nested\ndescription: x\n---\n", "nested/agents/openai.yaml": "a: 1\n"}),
@@ -186,6 +187,8 @@ def test_skills_the_installer_can_hide_pass(tmp_path, lines, files):
     [
         (f'{HIDDEN}: "true"\n', {}, f"Cannot hide alpha: top-level {HIDDEN} is not a plain one-line true or false"),
         (f'"{HIDDEN}": false\n', {}, "is not a plain one-line true or false"),
+        ("user-invocable: false\n", {}, "user-invocable is not true: its hidden copy could not be run at all"),
+        ("user-invocable: maybe\n", {}, "user-invocable is not true"),
         ("", {"agents/openai.yaml": "policy: {allow_implicit_invocation: true}\n"}, "not a block-style mapping"),
         ("", {"agents/openai.yaml": "- a\n- b\n"}, "agents/openai.yaml is not a block-style mapping"),
         ("", {"agents/openai.yaml": "{interface: {display_name: A}}\n"}, "is not a block-style mapping"),
