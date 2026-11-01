@@ -41,6 +41,9 @@ LIBRARY_INDEX_PATH = REPO_ROOT / "library_index.json"
 # Exit status when some upstream skills were rejected but the valid rest was synced.
 # The workflow commits the valid rest, then fails the run so the rejection is seen.
 REJECTED_EXIT = 3
+# Codex refuses a skill name over 64 characters, and every Codex copy is named after its ID;
+# 61 leaves room for the `-N` suffix of a taken variant ID.
+VARIANT_ID_MAX = 61
 
 # README headline figures are derived from the live tree on every sync so they
 # never drift between runs. Badge/prose use a rounded "<floor>+" figure; the
@@ -829,9 +832,12 @@ class LibrarySources:
             existing.update(origin)
 
     def _variant_id(self, base: str, source_name: str, origin: dict) -> str:
+        """`base--source--hash`, with base shortened so that the ID, even with a `-N` suffix,
+        stays within the 64 characters Codex accepts as a skill name."""
         source = re.sub(r"[^a-zA-Z0-9_-]", "-", source_name)
         key = json.dumps(_origin_key(origin), ensure_ascii=True).encode()
-        qualified = f"{base}--{source}--{hashlib.sha256(key).hexdigest()[:10]}"
+        tail = f"--{source}--{hashlib.sha256(key).hexdigest()[:10]}"
+        qualified = base[: max(1, VARIANT_ID_MAX - len(tail))].rstrip("-") + tail
         skill_id = qualified
         suffix = 2
         while self._taken(skill_id):

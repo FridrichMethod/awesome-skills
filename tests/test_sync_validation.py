@@ -261,6 +261,20 @@ def test_reserved_library_ids_move_to_their_variant_with_provenance(tmp_path):
     assert ss.LibrarySources(skills, tmp_path / "library_sources.json").release_reserved() == []
 
 
+def test_a_variant_id_fits_a_codex_name(tmp_path):
+    library = ss.LibrarySources(tmp_path / "skills", tmp_path / "library_sources.json")
+    origin = {"repository": ss.UPSTREAMS[0][0], "path": "skills/x"}
+    base = "spatial-transcriptomics-deconvolution-cell2location"  # 51 characters, a real base ID
+    long = library._variant_id(base, "academic-humanizer", origin)
+    assert len(long) <= ss.VARIANT_ID_MAX and installer.CODEX_NAME.fullmatch(long)
+    assert long.startswith(base[:20]) and long.endswith(library._variant_id("x", "academic-humanizer", origin)[1:])
+    library.entries[long] = {"origins": []}
+    taken = library._variant_id(base, "academic-humanizer", origin)
+    assert taken == f"{long}-2" and len(taken) <= 64
+    short = library._variant_id("pdb", "gdm-science", origin)
+    assert short.startswith("pdb--gdm-science--") and len(short) == len("pdb--gdm-science--") + 10, "unchanged"
+
+
 def library_paths(monkeypatch, tmp_path: Path) -> Path:
     skills = tmp_path / "skills"
     for name, value in [

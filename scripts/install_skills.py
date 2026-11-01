@@ -907,6 +907,7 @@ def hidden_policy(data: bytes | None, label: str) -> bytes:
 # SKILL.md gets a unique name and the policy. Hidden Codex copies get the Claude key, for Cursor.
 PLUGIN_DIRS = frozenset({".claude-plugin", ".codex-plugin", ".cursor-plugin"})
 NAME_KEY_LINE = re.compile(r"""(["']?)name\1[ \t]*:(?=[ \t\r]|$)""")
+CODEX_NAME = re.compile(r"[A-Za-z0-9_:-]{1,64}")  # longer: not loaded; others end a $NAME
 
 
 def plugin_path(rel: str) -> bool:
@@ -952,6 +953,8 @@ def copy_edits(client: str, skill_id: str, invocation: str, listing: dict, read)
     edits, hide = {}, invocation == "manual"
     if client == "claude" and not hide:
         return edits  # read nothing
+    if client == "codex" and not CODEX_NAME.fullmatch(skill_id):
+        raise InstallError(f"Codex cannot name a skill {skill_id!r}: {CODEX_NAME.pattern}")
     for rel in sorted(listing):
         top = rel == "SKILL.md"
         if rel.rsplit("/", 1)[-1] != "SKILL.md" or plugin_path(rel) or client == "claude" and not top:

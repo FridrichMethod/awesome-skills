@@ -128,6 +128,18 @@ def test_plugin_folders_are_dropped_from_every_copy(tmp_path):
     ]
 
 
+@pytest.mark.parametrize("skill_id", ["a" * 65, "with.dot"])
+def test_a_codex_copy_needs_an_id_codex_loads_and_mentions(tmp_path, skill_id):
+    """Codex refuses a name over 64 characters; `$NAME` stops at any other character."""
+    with pytest.raises(installer.InstallError, match="Codex cannot name a skill"):
+        edits("codex", "auto", {"SKILL.md": SKILL}, skill_id=skill_id)
+    assert list(edits("claude", "manual", {"SKILL.md": SKILL}, skill_id=skill_id)) == ["SKILL.md"]
+    (tmp_path / skill_id).mkdir()
+    (tmp_path / skill_id / "SKILL.md").write_text(SKILL)
+    assert any("Codex cannot name a skill" in p for p in ss.candidate_problems(tmp_path / skill_id, skill_id))
+    assert edits("codex", "auto", {"SKILL.md": SKILL}, skill_id="a" * 64), "64 characters are fine"
+
+
 def test_the_sync_rejects_a_skill_whose_codex_copy_cannot_be_named(tmp_path):
     root = tmp_path / "alpha"
     (root / "sub").mkdir(parents=True)
