@@ -237,7 +237,29 @@ def test_skills_the_installer_can_hide_pass(tmp_path, lines, files):
         ("", {"agents/openai.yaml": "interface: [\n"}, "is not valid YAML"),
         ("", {"agents/openai.yaml": "interface: 1\n---\ninterface: 2\n"}, "is not valid YAML"),
         ("", {"agents/openai.yaml": "interface: {}\ninterface: {}\n"}, "has duplicate keys: interface"),
-        ("", {"agents/openai.yaml": "policy:\n  products: []\n  products: []\n"}, "has duplicate keys: products"),
+        (
+            "",
+            {"agents/openai.yaml": "policy:\n  products: []\n  products: []\n"},
+            "has duplicate keys: policy.products",
+        ),
+        # Codex reads the file with serde_yaml, which refuses a duplicate at any depth: it then ignores the
+        # whole file, the policy included.
+        (
+            "",
+            {"agents/openai.yaml": 'interface:\n  display_name: "One"\n  display_name: "Two"\n'},
+            "has duplicate keys: interface.display_name",
+        ),
+        (
+            "",
+            {"agents/openai.yaml": "interface:\n  default_prompt: a\n  default_prompt: b\n"},
+            "has duplicate keys: interface.default_prompt",
+        ),
+        (
+            "",
+            {"agents/openai.yaml": "dependencies:\n  tools:\n    - type: mcp\n      value: x\n      value: y\n"},
+            "has duplicate keys: dependencies.tools[0].value",
+        ),
+        ("", {"agents/openai.yaml": "interface:\n  extra: 1\n  extra: 2\n"}, "has duplicate keys: interface.extra"),
         (
             "",
             {"agents/openai.yaml": 'interface:\n  default_prompt: "a\npolicy:\n  b"\n'},

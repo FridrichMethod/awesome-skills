@@ -1106,11 +1106,21 @@ def codex_copy_problems(prepared: Path, skill_id: str) -> list[str]:
     return problems
 
 
-def _duplicate_keys(node) -> list[str]:
+def _duplicate_keys(node, path: str = "", depth: int = 0) -> list[str]:
+    """Each key repeated within one mapping, at any depth, as a dotted path (`a.b[0].c`)."""
+    if depth > 32:  # an alias may make the node graph cyclic
+        return []
+    if isinstance(node, yaml.SequenceNode):
+        return [d for i, item in enumerate(node.value) for d in _duplicate_keys(item, f"{path}[{i}]", depth + 1)]
     if not isinstance(node, yaml.MappingNode):
         return []
+    prefix = f"{path}." if path else ""
     keys = [key.value for key, _ in node.value if isinstance(key, yaml.ScalarNode)]
-    return sorted({key for key in keys if keys.count(key) > 1})
+    found = [prefix + key for key in sorted({key for key in keys if keys.count(key) > 1})]
+    for key, value in node.value:
+        if isinstance(key, yaml.ScalarNode):
+            found += _duplicate_keys(value, prefix + key.value, depth + 1)
+    return found
 
 
 # The typed fields Codex 0.165 reads from agents/openai.yaml (probed: an unknown key is ignored, any
@@ -1189,8 +1199,7 @@ def policy_problems(path: Path, label: str) -> list[str]:
     expected = copy.deepcopy(original)
     if isinstance(expected.get("policy", {}), dict):
         expected.setdefault("policy", {})["allow_implicit_invocation"] = False
-    policy = [value for key, value in before.value if isinstance(key, yaml.ScalarNode) and key.value == "policy"]
-    duplicates = _duplicate_keys(before) + (_duplicate_keys(policy[-1]) if policy else [])
+    duplicates = _duplicate_keys(before)
     problems = [f"{prefix} has duplicate keys: {', '.join(duplicates)}"] if duplicates else []
     if result != expected or _duplicate_keys(after) != _duplicate_keys(before):
         problems.append(f"{prefix} would read differently once policy.allow_implicit_invocation is false")
