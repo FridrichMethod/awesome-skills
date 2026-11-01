@@ -215,11 +215,12 @@ def test_exact_client_copies_are_adopted_and_raw_trees_only_when_named(sandbox, 
     assert not claude_plan["actions"], "the exact hidden alpha is recorded, and @all names no raw tree"
     assert {"entry": "beta", "reason": "protected, modified, or unproven ownership"} in claude_plan["preserved"]
     assert installer.fingerprint(claude / "alpha") == alpha and installer.fingerprint(claude / "beta") == beta
-    assert set(state(home, "claude")["managed"]) == {"alpha"}, "an unmanaged router folder stays unclaimed"
+    assert set(state(home, "claude")["managed"]) == {"alpha", installer.ROUTER}, "the exact router is ours too"
     run(source, "--claude-only", "--manual", "alpha,beta")
     actions = [a["entry"] for a in plan(capsys)["clients"][0]["actions"]]
     assert actions == ["beta"], "a raw tree whose ID is named is claimed and copied again"
-    assert hidden_from_claude(claude / "beta") and set(state(home, "claude")["managed"]) == {"alpha", "beta"}
+    assert hidden_from_claude(claude / "beta")
+    assert set(state(home, "claude")["managed"]) == {"alpha", "beta", installer.ROUTER}
 
 
 def test_only_this_installers_copies_are_claimed_in_the_shared_agents_root(sandbox, capsys):

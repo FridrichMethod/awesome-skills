@@ -956,6 +956,18 @@ def nested_name(skill_id: str, rel: str) -> str:
     return name if len(name) <= 64 else name[:53] + "-" + hashlib.sha256(name.encode()).hexdigest()[:10]
 
 
+def edited_files(client: str, hide: bool, listing: dict) -> list[str]:
+    """The library files copy_edits reads: each SKILL.md it may rewrite, each agents/openai.yaml it
+    gives the policy."""
+    if client == "claude":
+        return ["SKILL.md"] if hide and "SKILL.md" in listing else []
+    found = []
+    for rel in sorted(r for r in listing if r.rsplit("/", 1)[-1] == "SKILL.md" and not plugin_path(r)):
+        policy = rel[: -len("SKILL.md")] + POLICY_FILE
+        found += [rel, policy] if (hide or rel != "SKILL.md") and policy in listing else [rel]
+    return found
+
+
 def copy_edits(client: str, skill_id: str, invocation: str, listing: dict, read) -> dict:
     """rel -> bytes the client's copy replaces or adds; read(rel) gives the library's. A local tree
     may link: an edit of or below a link would write outside the copy."""
@@ -1213,7 +1225,7 @@ class Library:
         read alone is a fetch."""
         key = (client, skill_id, invocation)
         if key not in self._derived:
-            listing = self.listing(skill_id)
+            listing, files = self.listing(skill_id), {}
 
             def read(rel):
                 p = local and local.joinpath(*rel.split("/"))
@@ -1221,7 +1233,15 @@ class Library:
                     return data
                 return self.read(skill_id, rel)
 
-            edits = copy_edits(client, skill_id, invocation, listing, read)
+            failed = []
+            for rel in edited_files(client, invocation == "manual", listing):  # each one the clone lacks is
+                try:  # noted (GitLibrary.read) before any fails, so one batch brings them all
+                    files[rel] = read(rel)
+                except InstallError as exc:
+                    failed.append(exc)
+            if failed:
+                raise failed[0]
+            edits = copy_edits(client, skill_id, invocation, listing, files.__getitem__)
             self._derived[key] = derived_listing(listing, edits), edits
         return self._derived[key]
 
@@ -1910,10 +1930,13 @@ def matches(client: str, want: dict, library: Library, router: dict, path: Path)
         return False  # the copy cannot be made; preparing it reports why
 
 
-def adoptable(client: str, want: dict, library: Library, path: Path, raw: bool) -> bool:
+def adoptable(client: str, want: dict, library: Library, router: dict, path: Path, raw: bool) -> bool:
     """An unmanaged directory is claimed as an exact client copy in a form only this installer
-    writes, or if `raw` (named, not in ~/.agents) as an exact library tree, then copied again."""
+    writes (the router included), or if `raw` (named, not in ~/.agents) as an exact library tree,
+    then copied again."""
     skill_id = want["source_ids"][0]
+    if skill_id == "@library":
+        return exact_tree(router["listing"], path)
     if skill_id not in library.skills:
         return False
     try:
@@ -1971,7 +1994,9 @@ def plan_entries(client, roots, managed, desired, library, router, named) -> tup
             if current is not None and not protected(target):
                 raw = not index and entry in named  # @all names nothing: other tools' copies stay theirs
                 owned = (
-                    current == rec["sha256"] if rec else bool(want) and adoptable(client, want, library, target, raw)
+                    current == rec["sha256"]
+                    if rec
+                    else bool(want) and adoptable(client, want, library, router, target, raw)
                 )
             if current is not None and not owned:
                 kept.append(kept_entry(entry, **where))
@@ -2688,17 +2713,18 @@ def make_plans(args, clients: list, library: Library, state: Path, data: Path) -
 
 def planned(args, clients: list, library: Library, state: Path, data: Path) -> tuple[list, dict]:
     """make_plans, reading no library file the clone lacks; if it needed some, they are downloaded
-    in one batch (not with --no-fetch) and the plan is made again."""
+    in one batch (not with --no-fetch) and the plan is made again with them. Each batch leaves fewer
+    files missing, and a comparison asks for all it needs at once, so a second batch is rare."""
     library.planning = True
     try:
-        try:
-            result = make_plans(args, clients, library, state, data)
-        except InstallError:
-            if not library.wanted or args.no_fetch:
-                raise
-        if not args.no_fetch and library.fetch_wanted():
-            result = make_plans(args, clients, library, state, data)
-        return result
+        while True:
+            try:
+                result = make_plans(args, clients, library, state, data)
+            except InstallError:
+                if not library.wanted or args.no_fetch:
+                    raise
+            if args.no_fetch or not library.fetch_wanted():
+                return result
     finally:
         library.planning = False
 

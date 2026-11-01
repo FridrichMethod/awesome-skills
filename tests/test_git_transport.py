@@ -805,6 +805,37 @@ def test_planning_downloads_one_batch_at_most_however_many_folders_it_compares(r
     assert all(f"near-{skill_id}" in os.listdir(home / ".agents/skills") for skill_id in ids)
 
 
+def test_a_lost_data_folder_is_adopted_back_in_one_run(remote, capsys, monkeypatch):
+    """With the state and the clone gone (one folder when XDG_DATA_HOME is unset), every copy is
+    unmanaged and compared with the copy this installer would make. A comparison may need several
+    files the fresh blobless clone lacks: a hidden Codex copy reads SKILL.md and agents/openai.yaml,
+    a nested SKILL.md one more. All of them come in the one batch, and the plan made again with them
+    adopts every identical copy at once."""
+    home, upstream = remote
+    nested = "---\nname: sub\ndescription: nested\n---\nbody\n"
+    files = {"sub/SKILL.md": nested, "agents/openai.yaml": "interface:\n  display_name: Nest\n"}
+    upstream.skill("nest", files=files)
+    upstream.commit("a skill with a policy file and a nested SKILL.md")
+    assert run() == 0
+    before = {client: manifest(home, client)["managed"] for client in ("claude", "codex")}
+    assert "nest" in before["codex"] and before["codex"]["nest"]["invocation"] == "manual"
+    copies = snapshot(home / ".codex") | snapshot(home / ".agents") | snapshot(home / ".claude")
+    shutil.rmtree(data_dir(home))
+    capsys.readouterr()
+    batches, fetch = [], installer.GitLibrary.fetch_wanted
+    monkeypatch.setattr(installer.GitLibrary, "fetch_wanted", lambda self: batches.append(fetch(self)) or batches[-1])
+    assert run() == 0
+    assert batches == [True, False], "every file the comparisons needed came in one batch"
+    after = {client: manifest(home, client)["managed"] for client in ("claude", "codex")}
+    assert {c: sorted(m) for c, m in after.items()} == {c: sorted(m) for c, m in before.items()}
+    assert all(after[c][e]["sha256"] == before[c][e]["sha256"] for c in after for e in after[c])
+    assert snapshot(home / ".codex") | snapshot(home / ".agents") | snapshot(home / ".claude") == copies
+    plan, _ = json.JSONDecoder().raw_decode(capsys.readouterr().out)
+    assert [item["preserved"] for item in plan["clients"]] == [[], []], "every copy adopted, the routers too"
+    assert run() == 0
+    assert capsys.readouterr().out.strip().endswith("Already current; selection preserved.")
+
+
 def test_planning_reads_installed_copies_instead_of_fetching_their_blobs(remote):
     home, upstream = remote
     run("--claude-only", "--selection", "", "--manual", "")
