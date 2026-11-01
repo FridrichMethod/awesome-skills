@@ -1,4 +1,5 @@
 """Shared pytest fixtures. Adds repo root to sys.path so tests can import scripts.*."""
+
 from __future__ import annotations
 
 import sys

@@ -14,6 +14,7 @@ Filters out:
 - Bundled vector DBs and dataset blobs (**/repo/src/db/, **/repo/dataset/)
 - Anything referenced by an upstream .gitattributes as Git LFS
 """
+
 from __future__ import annotations
 
 import argparse
@@ -74,14 +75,30 @@ UPSTREAMS = [
     ("https://github.com/lishix520/academic-paper-skills.git", "lishix-paper", "lishix academic-paper"),
     ("https://github.com/Imbad0202/academic-research-skills.git", "imbad-academic", "Imbad academic-research"),
     ("https://github.com/Yuan1z0825/nature-skills.git", "nature-skills", "Nature journal writing & figures (13k ⭐)"),
-    ("https://github.com/AIScientists-Dev/academic-humanizer.git", "academic-humanizer", "Academic-humanizer — clarify & de-AI academic prose and grant proposals"),
-    ("https://github.com/google-deepmind/science-skills.git", "gdm-science", "Google DeepMind Science Skills — genomics, structural bio, cheminformatics, literature DBs"),
+    (
+        "https://github.com/AIScientists-Dev/academic-humanizer.git",
+        "academic-humanizer",
+        "Academic-humanizer — clarify & de-AI academic prose and grant proposals",
+    ),
+    (
+        "https://github.com/google-deepmind/science-skills.git",
+        "gdm-science",
+        "Google DeepMind Science Skills — genomics, structural bio, cheminformatics, literature DBs",
+    ),
     ("https://github.com/adaptyvbio/protein-design-skills.git", "adaptyv-protein", "Adaptyv protein-design [P0]"),
     # --- general-purpose dev/productivity collections ---
     ("https://github.com/wshobson/agents.git", "wshobson-agents", "wshobson agents (155 dev skills, 35.5k ⭐)"),
-    ("https://github.com/anthropics/claude-plugins-official.git", "anthropics-plugins", "Anthropic official plugins (19.5k ⭐)"),
+    (
+        "https://github.com/anthropics/claude-plugins-official.git",
+        "anthropics-plugins",
+        "Anthropic official plugins (19.5k ⭐)",
+    ),
     # --- foundational / official collections ---
-    ("https://github.com/forrestchang/andrej-karpathy-skills.git", "karpathy-skills", "Andrej Karpathy CLAUDE.md skill (133.3k ⭐)"),
+    (
+        "https://github.com/forrestchang/andrej-karpathy-skills.git",
+        "karpathy-skills",
+        "Andrej Karpathy CLAUDE.md skill (133.3k ⭐)",
+    ),
     ("https://github.com/anthropics/skills.git", "anthropics-skills", "Anthropic official skills (136.1k ⭐)"),
     ("https://github.com/obra/superpowers.git", "obra-superpowers", "Superpowers methodology framework (194.6k ⭐)"),
 ]
@@ -153,7 +170,7 @@ def should_skip_path(path: Path, lfs_paths: set[Path]) -> bool:
         return True
     for needles in IGNORE_PATH_PARTS:
         for i in range(len(parts) - len(needles) + 1):
-            if tuple(parts[i:i + len(needles)]) == needles:
+            if tuple(parts[i : i + len(needles)]) == needles:
                 return True
     return False
 
@@ -530,7 +547,7 @@ def sanitize_skill_frontmatter(skill_file: Path) -> str:
                 if key == "description" and len(folded) > DESCRIPTION_MAX:
                     folded = _smart_trim(folded)
                 lines[i:next_i] = [f"{key}: {_yaml_double_quote(folded)}\n"]
-                end_idx -= (next_i - i - 1)
+                end_idx -= next_i - i - 1
                 i += 1
                 continue
 
@@ -1055,10 +1072,7 @@ def sanitize_only(target: Path) -> int:
             invalid_files.append(skill_md)
 
     print()
-    print(
-        f"sanitize-only: scanned {total}, rewrote {sanitized}, "
-        f"synthesized {synthesized}, {invalid} unrecoverable"
-    )
+    print(f"sanitize-only: scanned {total}, rewrote {sanitized}, synthesized {synthesized}, {invalid} unrecoverable")
     if invalid_files:
         for f in invalid_files[:20]:
             print(f"  unrecoverable: {f.relative_to(target.parent)}", file=sys.stderr)

@@ -10,6 +10,7 @@ that behavior:
 4.  Substitution is idempotent and a no-op leaves the file byte-identical.
 5.  A missing README returns ``False`` rather than raising.
 """
+
 from __future__ import annotations
 
 from pathlib import Path

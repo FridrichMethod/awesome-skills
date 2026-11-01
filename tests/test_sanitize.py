@@ -14,6 +14,7 @@ Coverage targets the six sanitization classes the sync workflow relies on:
 
 Plus idempotency and missing-frontmatter handling.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -151,7 +152,7 @@ class TestSanitizeSkillFrontmatter:
         assert f.read_text() == body
 
     def test_length_cap_smart_trims(self, tmp_path: Path) -> None:
-        long_desc = (". ".join(["Sentence " + str(i) for i in range(200)]) + ".")
+        long_desc = ". ".join(["Sentence " + str(i) for i in range(200)]) + "."
         assert len(long_desc) > 1024
         body = f"---\nname: foo\ndescription: {long_desc}\n---\n"
         f = _write(tmp_path, body)
@@ -203,14 +204,7 @@ class TestSanitizeSkillFrontmatter:
 
     @pytest.mark.parametrize("marker", ['"|"', '"|-"', '"|+"'])
     def test_broken_literal_scalar_collapsed(self, tmp_path: Path, marker: str) -> None:
-        body = (
-            "---\n"
-            "name: foo\n"
-            f"description: {marker}\n"
-            "  Line A.\n"
-            "  Line B.\n"
-            "---\n"
-        )
+        body = "---\n" "name: foo\n" f"description: {marker}\n" "  Line A.\n" "  Line B.\n" "---\n"
         f = _write(tmp_path, body)
         ss.sanitize_skill_frontmatter(f)
         doc = _parse_frontmatter(f.read_text())
@@ -220,15 +214,7 @@ class TestSanitizeSkillFrontmatter:
 
     def test_multiline_quoted_scalar_left_alone(self, tmp_path: Path) -> None:
         """Regression: previously double-wrapped multi-line strings."""
-        body = (
-            '---\n'
-            'name: foo\n'
-            'description: "first half ...\n'
-            '\n'
-            'second half."\n'
-            'license: MIT\n'
-            '---\n'
-        )
+        body = "---\n" "name: foo\n" 'description: "first half ...\n' "\n" 'second half."\n' "license: MIT\n" "---\n"
         f = _write(tmp_path, body)
         ss.sanitize_skill_frontmatter(f)
         after = f.read_text()
@@ -324,14 +310,7 @@ class TestIdempotency:
         ),
         (
             "broken_folded",
-            (
-                "---\n"
-                "name: foo\n"
-                'description: ">"\n'
-                "  L1.\n"
-                "  L2.\n"
-                "---\n"
-            ),
+            ("---\n" "name: foo\n" 'description: ">"\n' "  L1.\n" "  L2.\n" "---\n"),
         ),
         (
             "flow_list",
@@ -339,14 +318,7 @@ class TestIdempotency:
         ),
         (
             "multiline_quoted",
-            (
-                '---\n'
-                'name: foo\n'
-                'description: "first\n'
-                '\n'
-                'second"\n'
-                '---\n'
-            ),
+            ("---\n" "name: foo\n" 'description: "first\n' "\n" 'second"\n' "---\n"),
         ),
     ]
 
@@ -396,7 +368,7 @@ class TestPostSanitizeInvariants:
         cases = [
             "---\nname: foo\ndescription: A: B: C: D\n---\n",
             "---\nname: foo\ndescription: " + "Y" * 2000 + "\n---\n",
-            "---\nname: foo\ndescription: \">\"\n  Body.\n---\n",
+            '---\nname: foo\ndescription: ">"\n  Body.\n---\n',
         ]
         for i, body in enumerate(cases):
             f = tmp_path / f"case_{i}.md"
