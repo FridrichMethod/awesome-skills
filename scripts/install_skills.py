@@ -2823,7 +2823,9 @@ def summary(p: dict, backup: Path) -> str:
         undo = f"--selection {','.join(m['from'])}" if m["selection"] != m["from"] else "--manual ''"
         undo = f"--{client}-only " + (f"--restore {display(backup)}" if len(undo) > 99 else undo)
         visible = few(m["selection"]) or "nothing"
-        return f"Migrated {client}: {few(m['from'])} -> visible {visible}, {hidden} hidden; undo: {undo}"
+        gone = [a["entry"] for a in p["actions"] if a.get("source") is None]  # say, an ID renamed upstream
+        gone = f", {len(gone)} removed ({few(gone)})" if gone else ""
+        return f"Migrated {client}: {few(m['from'])} -> visible {visible}, {hidden} hidden{gone}; undo: {undo}"
     copied = sum(a["after"] is not None for a in p["actions"])
     removed = len(p["actions"]) - copied
     return f"Updated {client}: {copied} copied, {removed} removed; {len(records) - hidden} visible, {hidden} hidden"

@@ -777,6 +777,22 @@ def test_claude_all_migrates_once_to_the_router_with_the_library_hidden(sandbox,
     assert not any(hidden_from_claude(claude / s) for s in os.listdir(claude))
 
 
+def test_the_migration_line_names_the_copies_it_removes(sandbox, monkeypatch, capsys):
+    """A v1 copy whose ID left the library (the sync renamed skill-creator, say) is removed with the
+    migration: /skill-creator then stops working, so the one-line summary says so."""
+    home, source = sandbox
+    for skill_id in ("renamed-upstream", *(f"extra-{i:02d}" for i in range(25))):
+        skill(source, skill_id)
+    make_v1(home, source, "claude", ["@all"])
+    shutil.rmtree(source / "renamed-upstream")
+    monkeypatch.setattr(installer, "SUMMARY_ACTIONS", 5)
+    capsys.readouterr()
+    assert run(source, "--claude-only") == 0
+    line = capsys.readouterr().out.splitlines()[0]
+    assert line.startswith("Migrated claude: @all -> visible @library, 27 hidden, 1 removed (renamed-upstream);"), line
+    assert not (home / ".claude/skills/renamed-upstream").exists()
+
+
 def test_a_claude_v1_list_of_most_of_the_library_migrates_like_all(sandbox, monkeypatch, capsys):
     home, source = sandbox
     for i in range(100):
