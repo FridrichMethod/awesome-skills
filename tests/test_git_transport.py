@@ -664,6 +664,23 @@ def test_symlinks_from_the_remote_library_are_never_installed(remote, capsys):
         run("--codex-only", "--enable", "evil")
 
 
+def test_planning_reads_installed_copies_instead_of_fetching_their_blobs(remote):
+    home, upstream = remote
+    run("--claude-only", "--selection", "", "--manual", "")
+    repo, claude = clone(home), home / ".claude/skills"
+    assert upstream.blobs("alpha") <= missing_objects(repo)
+    # A tarball install that a v1 git installer recorded as identical: its blobs were never fetched.
+    shutil.copytree(upstream.work / "skills/alpha", claude / "alpha")
+    record = {"name": "alpha", "tree": upstream.trees()["alpha"], "source_ids": ["alpha"], "origins": []}
+    record["sha256"] = installer.fingerprint(claude / "alpha")
+    v1 = {"schema": 1, "client": "claude", "destination": str(installer.native(claude)), "selection": ["@all"]}
+    put(data_dir(home) / "claude.json", json.dumps(dict(v1, managed={"alpha": record})))
+    assert run("--claude-only", "--dry-run", "--no-fetch") == 0
+    assert upstream.blobs("alpha") <= missing_objects(repo), "planning the migration fetched nothing"
+    assert run("--claude-only") == 0
+    assert (claude / "alpha/SKILL.md").read_text().startswith(f"---\n{installer.HIDDEN_KEY}: true\n")
+
+
 def test_no_fetch_changes_visibility_offline_without_downloading(remote, monkeypatch, tmp_path):
     home, _ = remote
     run()

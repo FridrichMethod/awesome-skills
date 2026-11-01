@@ -982,6 +982,8 @@ def copy_edits(client: str, skill_id: str, invocation: str, listing: dict, read)
     """rel -> bytes the client's copy replaces or adds; read(rel) gives the library's bytes. A
     local tree may link: an edit of a link, or below a linked folder, would write outside the copy."""
     edits, hide = {}, invocation == "manual"
+    if client == "claude" and not hide:
+        return edits  # read nothing
     for rel in sorted(listing):
         top = rel == "SKILL.md"
         if rel.rsplit("/", 1)[-1] != "SKILL.md" or plugin_path(rel) or client == "claude" and not top:
@@ -1184,12 +1186,21 @@ class Library:
     def read(self, skill_id: str, rel: str) -> bytes:
         raise NotImplementedError
 
-    def derived(self, client: str, skill_id: str, invocation: str) -> tuple[dict, dict]:
-        """(listing, edits) of a client's copy (see copy_edits); InstallError if it cannot be made."""
+    def derived(self, client: str, skill_id: str, invocation: str, local: Path | None = None) -> tuple[dict, dict]:
+        """(listing, edits) of a client's copy (see copy_edits); InstallError if it cannot be made.
+        A file of `local`, an installed copy, holding the library's bytes is read there: in a
+        blobless clone each blob read alone is a fetch of its own."""
         key = (client, skill_id, invocation)
         if key not in self._derived:
             listing = self.listing(skill_id)
-            edits = copy_edits(client, skill_id, invocation, listing, lambda rel: self.read(skill_id, rel))
+
+            def read(rel):
+                p = local and local.joinpath(*rel.split("/"))
+                if p and not is_link(p) and p.is_file() and blob_id(data := p.read_bytes()) == listing[rel][1]:
+                    return data
+                return self.read(skill_id, rel)
+
+            edits = copy_edits(client, skill_id, invocation, listing, read)
             self._derived[key] = derived_listing(listing, edits), edits
         return self._derived[key]
 
@@ -1807,7 +1818,7 @@ def matches(client: str, want: dict, library: Library, router: dict, path: Path)
     try:
         if want["source_ids"] == ["@library"]:
             return same_tree(router["listing"], path)
-        return same_tree(library.derived(client, want["source_ids"][0], want["invocation"])[0], path)
+        return same_tree(library.derived(client, want["source_ids"][0], want["invocation"], path)[0], path)
     except InstallError:
         return False  # the copy cannot be made; preparing it reports why
 
@@ -1819,7 +1830,7 @@ def adoptable(client: str, want: dict, library: Library, path: Path) -> bool:
     if skill_id not in library.skills:
         return False
     try:
-        if exact_tree(library.derived(client, skill_id, want["invocation"])[0], path):
+        if exact_tree(library.derived(client, skill_id, want["invocation"], path)[0], path):
             return True
     except InstallError:
         pass
