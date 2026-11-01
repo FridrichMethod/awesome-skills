@@ -1882,7 +1882,9 @@ def plan_entries(client, roots, managed, desired, library, router, named) -> tup
                         raise InstallError(f"Cannot install {client}:{entry}: preserved destination differs: {target}")
                 continue
             if want:
-                if current is not None and matches(client, want, library, router, target):
+                # A copy of another tree is copied again: comparing would fetch its new blobs one by one.
+                stale = rec and rec.get("tree") not in (None, want["tree"])
+                if current is not None and not stale and matches(client, want, library, router, target):
                     new_managed[entry] = dict(want, sha256=current)  # identical content: record, do not copy
                 else:
                     new_managed[entry] = dict(want, sha256=None)  # filled in once the copy is prepared
@@ -2295,6 +2297,9 @@ def prepare_one(p: dict, action: dict, backup: Path, library: Library):
         p["failed"].append({"entry": entry, "source": action["source"], "error": str(exc)})
         return
     action["after"] = fingerprint(prepared)
+    if action["after"] == action["before"]:  # the change was in what the copy drops or rewrites
+        rmtree(prepared)
+        p["actions"].remove(action)
     p["state"]["managed"][entry]["sha256"] = action["after"]
 
 

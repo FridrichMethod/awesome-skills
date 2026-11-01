@@ -133,6 +133,29 @@ def test_changed_skill_fetches_only_its_new_blob_and_rewrites_only_it(remote):
     assert manifest(home, "claude")["managed"]["alpha"]["tree"] == upstream.trees()["alpha"]
 
 
+def test_changed_skill_bodies_are_downloaded_in_one_batch(remote):
+    """The weekly update changes many SKILL.md files: planning must not read one (in a blobless
+    clone each blob read alone is a fetch), so the run adds the fetch and one download."""
+    home, upstream = remote
+    ids = ["alpha", "beta", *(f"extra-{i}" for i in range(4))]
+    for skill_id in ids[2:]:
+        upstream.skill(skill_id)
+    upstream.commit("more skills")
+    run()
+    repo = clone(home)
+    packs = set(packed_objects(repo))
+    for skill_id in ids:
+        upstream.skill(skill_id, body=f"{skill_id} revised")
+    upstream.commit("revise every body")
+    assert run("--dry-run") == 0
+    assert len(set(packed_objects(repo)) - packs) == 1, "a dry run fetches commits and trees, no blob"
+    assert run() == 0
+    assert len(set(packed_objects(repo)) - packs) == 2, "the new bodies come in one batch"
+    for skill_id in ids:
+        for copy in (home / ".claude/skills" / skill_id, codex_copy(home, skill_id)):
+            assert f"{skill_id} revised" in (copy / "SKILL.md").read_text() and hidden_from_claude(copy)
+
+
 def test_only_selected_skills_are_downloaded(remote):
     home, upstream = remote
     run("--claude-only", "--selection", "alpha", "--manual", "")

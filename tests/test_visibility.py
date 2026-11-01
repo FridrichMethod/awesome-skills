@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 
 from scripts import install_skills as installer
+from tests.gitfixtures import snapshot
 from tests.test_install import can_symlink, codex_copy, hidden_from_claude, hidden_from_codex, skill, state_dir
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -158,6 +159,29 @@ def test_an_upstream_change_is_installed_still_hidden(sandbox):
     for copy in (home / ".claude/skills/alpha", codex_copy(home, "alpha")):
         assert (copy / "helper.txt").read_text() == "upstream change\n"
     assert hidden_from_claude(home / ".claude/skills/alpha") and hidden_from_codex(codex_copy(home, "alpha"))
+
+
+def test_an_upstream_change_that_leaves_the_copies_as_they_are_moves_nothing(sandbox, capsys):
+    """A changed tree is copied again without being compared first; a copy that comes out the
+    same (the change was in a dropped plugin folder) is recorded, and the transaction restores."""
+    home, source = sandbox
+    (source / "alpha/.claude-plugin").mkdir()
+    (source / "alpha/.claude-plugin/plugin.json").write_text("{}\n")
+    run(source)
+    copies = [home / ".claude/skills/alpha", codex_copy(home, "alpha")]
+    before = [snapshot(copy) for copy in copies]
+    records = {client: state(home, client) for client in ("claude", "codex")}
+    (source / "alpha/.claude-plugin/plugin.json").write_text('{"version": "2"}\n')
+    capsys.readouterr()
+    assert run(source) == 0
+    assert all(not client["actions"] and not client["failed"] for client in plan(capsys)["clients"])
+    assert [snapshot(copy) for copy in copies] == before
+    tree = installer.tree_id(installer.local_listing(source / "alpha"))
+    assert all(state(home, client)["managed"]["alpha"]["tree"] == tree for client in records)
+    assert run(source) == 0 and "Already current" in capsys.readouterr().out
+    backup = sorted((state_dir(home) / "backups").iterdir())[-1]
+    assert installer.main(["--restore", str(backup)]) == 0
+    assert {client: state(home, client) for client in records} == records
 
 
 def test_exact_client_copies_are_adopted_and_raw_trees_only_when_named(sandbox, capsys):
