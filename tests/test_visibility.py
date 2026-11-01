@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 from scripts import install_skills as installer
-from tests.test_install import codex_copy, hidden_from_claude, hidden_from_codex, skill, state_dir
+from tests.test_install import can_symlink, codex_copy, hidden_from_claude, hidden_from_codex, skill, state_dir
 
 ROOT = Path(__file__).resolve().parents[1]
 ROUTER = installer.ROUTER
@@ -182,6 +182,34 @@ def test_codex_finds_its_second_root_however_home_is_spelled(sandbox, monkeypatc
     capsys.readouterr()
     assert run(source, "--codex-only") == 0
     assert capsys.readouterr().out == "Already current; selection preserved.\n", "its own copies are not foreign"
+
+
+def test_a_linked_second_codex_root_is_never_written_and_blocks_no_update(sandbox, tmp_path, monkeypatch, capsys):
+    home, source = sandbox
+    if not can_symlink(tmp_path):
+        pytest.skip("symlinks unavailable")
+    ids = ["alpha", "beta", *(f"extra-{i}" for i in range(6))]
+    for skill_id in ids[2:]:
+        skill(source, skill_id)
+    shared = home / "shared-skills"  # ~/.agents/skills shared with other tools through a link
+    skill(shared, "mine", body="the user's own")
+    (home / ".agents").mkdir()
+    (home / ".agents/skills").symlink_to(shared, target_is_directory=True)
+    outside = installer.fingerprint(shared)
+    capsys.readouterr()
+    assert run(source) == 0
+    assert "Refusing symlink directory or ancestor" in capsys.readouterr().err
+    assert installer.fingerprint(shared) == outside
+    assert all(hidden_from_claude(home / ".claude/skills" / s) for s in ids), "Claude is updated as usual"
+    first, second = home / ".codex/skills", [s for s in ids if installer.placement(s)]
+    assert second and sorted(os.listdir(first)) == sorted([ROUTER, *(s for s in ids if s not in second)])
+    assert "destination2" not in state(home, "codex")
+    assert run(source, "--codex-only", "--enable", second[0]) == 0, "a skill asked for by name goes to the first root"
+    assert name_of(first / second[0]) == second[0] and not hidden_from_codex(first / second[0])
+    assert installer.fingerprint(shared) == outside
+    monkeypatch.setenv("SKILLS_CODEX_DEST2", str(home / ".agents/skills"))
+    with pytest.raises(installer.InstallError, match="symlink"):
+        run(source, "--codex-only")
 
 
 def test_codex_copies_drop_plugin_folders_and_neutralize_nested_skills(sandbox):

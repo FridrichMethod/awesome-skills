@@ -1936,10 +1936,13 @@ def plan_client(client, roots, old, base, visible, manual, library, router, home
         if rec.get("root", 0) < len(roots) and base.get(keys[rec.get("root", 0)]) == str(roots[rec.get("root", 0)])
     }
     desired, conflicts, named = desired_entries(client, visible, manual, library, router)
-    for entry, want in desired.items():  # a managed copy keeps its root; a new Codex copy goes by its ID
+    for entry, want in list(desired.items()):  # a managed copy keeps its root; a new Codex copy goes by its ID
         rec = managed.get(entry)
         if rec.get("root") if rec else client == "codex" and entry != ROUTER and placement(entry):
-            want["root"] = 1
+            if len(roots) > 1:
+                want["root"] = 1
+            elif entry not in named:
+                del desired[entry]  # no usable second root (see resolve_clients)
     actions, kept, new_managed = plan_entries(client, roots, managed, desired, library, router, named)
     new = {"schema": SCHEMA, "client": client, "destination": str(roots[0]), "selection": visible, "manual": manual}
     plan = {"client": client, "destination": str(roots[0])}
@@ -2465,7 +2468,14 @@ def resolve_clients(args, home: Path, storage: list[Path], source: Path | None) 
 
     clients = []
     for client in ["codex"] if args.codex_only else ["claude"] if args.claude_only else ["claude", "codex"]:
-        roots = [safe_absolute(configured(client, i)) for i in range(len(defaults[client]))]
+        roots = []
+        for i in range(len(defaults[client])):
+            try:
+                roots.append(safe_absolute(configured(client, i)))
+            except InstallError as exc:  # a linked ~/.agents/skills is never written through
+                if not i or os.environ.get("SKILLS_CODEX_DEST2"):
+                    raise
+                warn(f"{exc}; Codex gets only the skills placed in its first root and those named")
         if roots[0] == home / ".agents" or home / ".agents" in roots[0].parents:
             raise InstallError(f"This installer does not own ~/.agents: {display(roots[0])}")
         other = "claude" if client == "codex" else "codex"
