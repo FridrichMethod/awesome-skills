@@ -2478,7 +2478,8 @@ def resolve_clients(args, home: Path, storage: list[Path], source: Path | None) 
         if roots[0] == home / ".agents" or home / ".agents" in roots[0].parents:
             raise InstallError(f"This installer does not own ~/.agents: {display(roots[0])}")
         other = "claude" if client == "codex" else "codex"
-        others = {configured(other, i, saved) for i in range(len(defaults[other])) for saved in (False, True)}
+        saved = [Path(states[other][k]) for k in ("destination", "destination2") if states[other].get(k)]
+        others = [configured(other, i, False) for i in range(len(defaults[other]))] + saved
         resolved = [native(b.expanduser().resolve()) for b in others]
         for a, b in [(a, b) for a in roots for b in resolved] + ([tuple(roots)] if len(roots) > 1 else []):
             if overlap(a, b):

@@ -355,3 +355,14 @@ def test_an_interrupted_migration_is_recovered_and_redone(sandbox, capsys):
     assert "Recovered an interrupted update" in out and '"migration"' in out
     assert state(home, "claude")["selection"] == ["@library"] and v1["selection"] == ["@all"]
     assert json.loads((state_dir(home) / installer.MIGRATIONS).read_text())[installer.MIGRATION]["claude"]
+
+
+def test_a_saved_destination_of_the_other_client_still_counts_when_overridden(sandbox, monkeypatch):
+    home, source = sandbox
+    run(source, "--claude-only")
+    monkeypatch.setenv("SKILLS_CLAUDE_DEST", str(home / "elsewhere/skills"))
+    monkeypatch.setenv("SKILLS_CODEX_DEST2", str(home / ".claude/skills"))
+    before = installer.fingerprint(home)
+    with pytest.raises(installer.InstallError, match="destinations overlap"):
+        run(source, "--codex-only")
+    assert installer.fingerprint(home) == before
