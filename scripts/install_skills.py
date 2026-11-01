@@ -1401,7 +1401,7 @@ class GitLibrary(Library):
         if self._missing is None:
             tree = self.git.text(self.repo, "rev-parse", "--verify", f"{self.revision}:skills")
             out = self.git.run(self.repo, "rev-list", "--objects", "--missing=print", tree)
-            self._missing = {line[1:].decode() for line in out.split() if line.startswith(b"?")}
+            self._missing = {line[1:].decode() for line in out.splitlines() if line.startswith(b"?")}
         return self._missing
 
     def fetch_wanted(self):
