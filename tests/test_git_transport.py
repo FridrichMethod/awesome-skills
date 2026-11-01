@@ -14,6 +14,7 @@ import threading
 import time
 
 import pytest
+import yaml
 
 from scripts import install_skills as installer
 from tests.gitfixtures import (
@@ -271,6 +272,37 @@ def test_remote_install_needs_only_the_standard_library(remote, tmp_path):
     listed = subprocess.run(router, capture_output=True, text=True, env=env)
     assert listed.returncode == 0, listed.stderr
     assert list(json.loads(listed.stdout)["skills"]) == ["gamma"]
+
+
+def test_remote_codex_copies_are_renamed_and_hidden_with_the_standard_library(remote, tmp_path):
+    """The edits most library skills need (a name that is not the ID, an agents/openai.yaml with or
+    without a policy, a nested SKILL.md) run without PyYAML, as on a fresh host."""
+    home, upstream = remote
+    upstream.skill("delta", name="shared-name")
+    upstream.skill("eps", files={installer.POLICY_FILE: "interface:\n  display_name: Eps\n"})
+    upstream.skill("zeta", files={installer.POLICY_FILE: "policy:\n  allow_implicit_invocation: true\n"})
+    upstream.skill("eta", files={"tools/inner/SKILL.md": "---\nname: inner\ndescription: Nested.\n---\n"})
+    upstream.commit("shapes the Codex copies edit")
+    env = without_pyyaml(tmp_path, subprocess_env())
+    first = subprocess.run(
+        [sys.executable, "-B", str(ROOT / "scripts/install_skills.py"), "--remote"],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert first.returncode == 0, first.stderr
+    copies = {s: codex_copy(home, s) for s in ("delta", "eps", "zeta", "eta")}
+    copies["eta--tools-inner"] = copies["eta"] / "tools/inner"
+    for name, copy in copies.items():
+        assert installer.frontmatter_name((copy / "SKILL.md").read_bytes(), name) == name
+        assert yaml.safe_load((copy / installer.POLICY_FILE).read_text())["policy"] == {
+            "allow_implicit_invocation": False
+        }
+    assert yaml.safe_load((copies["eps"] / installer.POLICY_FILE).read_text())["interface"] == {"display_name": "Eps"}
+    assert (
+        hidden_from_claude(home / ".claude/skills/delta")
+        and "shared-name" in (home / ".claude/skills/delta/SKILL.md").read_text()
+    ), "Claude's copy keeps its name"
 
 
 def test_lock_contention_exits_75(remote):
