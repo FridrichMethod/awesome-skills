@@ -166,6 +166,33 @@ def skill(root: Path, frontmatter_lines: str = "", files: dict | None = None) ->
     return root
 
 
+# agents/openai.yaml shapes Codex 0.165 reads (probed with `codex debug prompt-input`): unknown keys,
+# any scalar as a string, null sections, known products, an oauth callback port.
+CODEX_READS = [
+    "interface:\n  display_name: 12\n  brand_color: true\n  unknown: [1, {a: 2}]\nextra: {b: [3]}\n",
+    "interface:\ndependencies:\npolicy:\n  products:\n",
+    "policy:\n  products: [codex, chatgpt, atlas, CODEX]\n",
+    "dependencies:\n  tools:\n    - type: mcp\n      transport: carrier-pigeon\n      oauth: {callbackPort: 8080, x: [1]}\n",
+]
+# Shapes Codex 0.165 cannot read into its typed schema: it ignores the whole file, policy included.
+CODEX_IGNORES = {
+    "policy:\n  products:\n    - nonsense\n": "policy.products is not a list of",
+    "policy:\n  products: [codex, Codex]\n": "policy.products is not a list of",
+    "policy:\n  products: codex\n": "policy.products is not a list of",
+    "interface:\n  display_name: [a, b]\n": "interface.display_name is not a single value",
+    "interface:\n  default_prompt: {a: b}\n": "interface.default_prompt is not a single value",
+    "interface: hello\n": "interface is not a mapping",
+    "dependencies: []\n": "dependencies is not a mapping",
+    "dependencies:\n  tools: x\n": "dependencies.tools is not a list",
+    "dependencies:\n  tools:\n    - x\n": "dependencies.tools[0] is not a mapping",
+    "dependencies:\n  tools:\n    - command: [a, b]\n": "dependencies.tools[0].command is not a single value",
+    "dependencies:\n  tools:\n    - oauth: true\n": "dependencies.tools[0].oauth is not a mapping",
+    "dependencies:\n  tools:\n    - oauth: {callbackPort: 65536}\n": "oauth.callbackPort is not one port number",
+    "dependencies:\n  tools:\n    - oauth: {callback_port: '80'}\n": "oauth.callbackPort is not one port number",
+    "dependencies:\n  tools:\n    - oauth: {callbackPort: 1, callback_port: 2}\n": "is not one port number",
+}
+
+
 @pytest.mark.parametrize(
     "lines, files",
     [
@@ -175,6 +202,7 @@ def skill(root: Path, frontmatter_lines: str = "", files: dict | None = None) ->
         (f"{HIDDEN}: false\n", {"agents/openai.yaml": "interface:\n  display_name: Alpha\n"}),
         ("", {"agents/openai.yaml": "policy:\n  allow_implicit_invocation: true\n"}),
         ("", {"nested/SKILL.md": "---\nname: nested\ndescription: x\n---\n", "nested/agents/openai.yaml": "a: 1\n"}),
+        *(("", {"agents/openai.yaml": text}) for text in CODEX_READS),
     ],
 )
 def test_skills_the_installer_can_hide_pass(tmp_path, lines, files):
@@ -216,6 +244,14 @@ def test_skills_the_installer_could_not_hide_are_rejected(tmp_path, lines, files
     problems = ss.candidate_problems(root, "alpha")
     assert any(expected in problem for problem in problems), problems
     assert not any(problem.startswith("Invalid frontmatter") for problem in problems)
+
+
+@pytest.mark.parametrize("text", CODEX_IGNORES, ids=list(CODEX_IGNORES.values()))
+def test_a_policy_file_codex_would_ignore_as_a_whole_is_rejected(tmp_path, text):
+    root = skill(tmp_path / "alpha", files={"agents/openai.yaml": text})
+    problems = ss.candidate_problems(root, "alpha")
+    prefix = "Cannot hide alpha: agents/openai.yaml is ignored as a whole by Codex, its policy included: "
+    assert len(problems) == 1 and problems[0].startswith(prefix) and CODEX_IGNORES[text] in problems[0], problems
 
 
 def test_library_problems_name_the_skill(tmp_path):

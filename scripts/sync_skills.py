@@ -1086,6 +1086,48 @@ def _duplicate_keys(node) -> list[str]:
     return sorted({key for key in keys if keys.count(key) > 1})
 
 
+# The typed fields Codex 0.165 reads from agents/openai.yaml (probed: an unknown key is ignored, any
+# scalar reads as a string). A known field of another shape, or a product it does not know, makes
+# Codex ignore the whole file, the policy included, so the skill would stay in the model's catalog.
+CODEX_INTERFACE_FIELDS = ("display_name", "short_description", "icon_small", "icon_large", "brand_color", "default_prompt")
+CODEX_TOOL_FIELDS = ("type", "value", "description", "transport", "command", "url")
+CODEX_PRODUCTS = frozenset({"atlas", "chatgpt", "codex", "ATLAS", "CHATGPT", "CODEX"})
+
+
+def codex_metadata_problems(value: dict) -> list[str]:
+    """The fields of a loaded agents/openai.yaml that Codex cannot read into its typed schema."""
+    problems = []
+
+    def section(node, where: str) -> dict:  # absent or null: empty
+        if node is not None and not isinstance(node, dict):
+            problems.append(f"{where} is not a mapping")
+        return node if isinstance(node, dict) else {}
+
+    def scalars(node: dict, where: str, keys: tuple):
+        problems.extend(f"{where}.{key} is not a single value" for key in keys if isinstance(node.get(key), dict | list))
+
+    scalars(section(value.get("interface"), "interface"), "interface", CODEX_INTERFACE_FIELDS)
+    tools = section(value.get("dependencies"), "dependencies").get("tools")
+    if tools is not None and not isinstance(tools, list):
+        problems.append("dependencies.tools is not a list")
+    for i, tool in enumerate(tools if isinstance(tools, list) else []):
+        where = f"dependencies.tools[{i}]"
+        if not isinstance(tool, dict):
+            problems.append(f"{where} is not a mapping")
+            continue
+        scalars(tool, where, CODEX_TOOL_FIELDS)
+        oauth = section(tool.get("oauth"), f"{where}.oauth")
+        ports = [oauth[key] for key in ("callback_port", "callbackPort") if key in oauth]  # one is an alias
+        if len(ports) > 1 or any(p is not None and (type(p) is not int or not 0 <= p <= 65535) for p in ports):
+            problems.append(f"{where}.oauth.callbackPort is not one port number")
+    products = section(value.get("policy"), "policy").get("products")
+    if products is not None and (
+        not isinstance(products, list) or any(not isinstance(p, str) or p not in CODEX_PRODUCTS for p in products)
+    ):
+        problems.append(f"policy.products is not a list of {', '.join(sorted(CODEX_PRODUCTS))}")
+    return problems
+
+
 def policy_problems(path: Path, label: str) -> list[str]:
     """Why setting policy.allow_implicit_invocation to false in this agents/openai.yaml is unsafe.
     Codex reads the file with serde_yaml, which refuses duplicate keys, and ignores a file it
@@ -1116,6 +1158,9 @@ def policy_problems(path: Path, label: str) -> list[str]:
     problems = [f"{prefix} has duplicate keys: {', '.join(duplicates)}"] if duplicates else []
     if result != expected or _duplicate_keys(after) != _duplicate_keys(before):
         problems.append(f"{prefix} would read differently once policy.allow_implicit_invocation is false")
+    unread = codex_metadata_problems(result) if isinstance(result, dict) else []
+    if unread:
+        problems.append(f"{prefix} is ignored as a whole by Codex, its policy included: {'; '.join(unread)}")
     return problems
 
 

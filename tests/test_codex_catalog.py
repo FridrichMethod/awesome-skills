@@ -245,3 +245,37 @@ def test_local_codex_discovery_and_model_visible_catalog(tmp_path):
     assert result["no_argument_update_preserved_selection"]
     assert result["no_argument_update_codex_actions"] == 0
     assert result["temporary_artifacts_removed"]
+
+
+@pytest.mark.skipif(
+    os.environ.get("AWESOME_SKILLS_CODEX_INTEGRATION") != "1",
+    reason="Set AWESOME_SKILLS_CODEX_INTEGRATION=1 for local offline Codex integration",
+)
+def test_local_codex_ignores_exactly_the_policy_files_the_sync_rejects(tmp_path):
+    """The sync's model of Codex's agents/openai.yaml schema, checked against the local Codex:
+    hidden copies of the shapes it accepts stay out of the catalog, the others are listed."""
+    codex = shutil.which("codex")
+    if not codex:
+        pytest.skip("Local Codex unavailable")
+    yaml = pytest.importorskip("yaml")
+    from scripts import install_skills as installer
+    from scripts import sync_skills
+    from tests.test_hidden_copies import CODEX_IGNORES, CODEX_READS
+
+    home, work, temporary = tmp_path / "home", tmp_path / "work", tmp_path / "tmp"
+    for directory in (home / ".codex", work, temporary):
+        directory.mkdir(parents=True)
+    shapes = {f"reads-{i}": t for i, t in enumerate(CODEX_READS)}
+    shapes |= {f"ignored-{i}": t for i, t in enumerate(CODEX_IGNORES)}
+    for name, text in shapes.items():
+        root = home / ".agents/skills" / name
+        (root / "agents").mkdir(parents=True)
+        (root / "SKILL.md").write_text(f"---\nname: {name}\ndescription: Probe {name}.\n---\n")
+        merged = installer.hidden_policy(text.encode(), name)
+        (root / installer.POLICY_FILE).write_bytes(merged)
+        assert bool(sync_skills.codex_metadata_problems(yaml.safe_load(merged))) == name.startswith("ignored")
+    env = verifier.isolated_env(home, temporary)
+    disabled = [arg for feature in verifier.REMOTE_FEATURES for arg in ("--disable", feature)]
+    prompt = json.loads(verifier.run([codex, "debug", "prompt-input", *disabled, "Offline probe"], env, work))
+    listed = {entry["name"] for entry in verifier.catalog_entries(prompt)} & set(shapes)
+    assert listed == {name for name in shapes if name.startswith("ignored")}
