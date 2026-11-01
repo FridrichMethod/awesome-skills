@@ -14,13 +14,15 @@ fi
 # Python never imports from a folder it was not given: a checkout's installer runs with -P (its own
 # folder stays off sys.path; PyYAML may live in the user's site-packages), a download with -I.
 # The installer beside this script runs only from a checkout (skills/ or .git) that this user owns
-# and no one else may write to, scripts/ and the file included (group write only for the user's own
-# private group): a copy of this script staged in a shared temporary folder such as /tmp must never
-# run what another user put beside it.
+# and no one else may write to, scripts/ and each of its Python files included (the installer runs
+# sync_skills.py, the launcher search_skills.py; group write only for the user's own private group):
+# a copy of this script staged in a shared temporary folder such as /tmp must never run what another
+# user put beside it.
 trusted='import grp, os, pwd, sys
 d = sys.argv[1]
+s = os.path.join(d, "scripts")
 ok = os.path.isdir(os.path.join(d, "skills")) or os.path.lexists(os.path.join(d, ".git"))
-for p in (d, os.path.join(d, "scripts"), os.path.join(d, "scripts", "install_skills.py")):
+for p in (d, s, *(os.path.join(s, n) for n in sorted(os.listdir(s)) if n.endswith(".py"))):
     s = os.stat(p)
     try:
         me, g = pwd.getpwuid(os.geteuid()).pw_name, grp.getgrgid(s.st_gid)

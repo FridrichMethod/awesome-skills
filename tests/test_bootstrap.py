@@ -229,11 +229,17 @@ def test_install_sh_staged_where_others_can_write_downloads_the_installer(remote
 
 @NEEDS_PWSH
 @pytest.mark.skipif(WINDOWS, reason="Windows' temporary folder is per user; the ownership check is POSIX")
-def test_install_ps1_staged_where_others_can_write_downloads_the_installer(remote, tmp_path, served_installer):
+@pytest.mark.parametrize("writable", ["shared temporary folder", "no checkout"])
+def test_install_ps1_staged_where_others_can_write_downloads_the_installer(
+    remote, tmp_path, served_installer, writable
+):
     home, env, _ = remote
     staging = tmp_path / "staging"
     marker = plant_installer(staging)
-    staging.chmod(0o1777)
+    if writable == "shared temporary folder":
+        staging.chmod(0o1777)
+    else:
+        (staging / "skills").rmdir()  # a private folder holding no checkout
     alone = staging / "awesome-skills-4242.ps1"  # install.ps1's own advice: save it in the temporary folder
     shutil.copyfile(ROOT / "install.ps1", alone)
     env = {**env, "TMPDIR": str(staging), "SKILLS_INSTALLER_URL": served_installer}
@@ -243,3 +249,69 @@ def test_install_ps1_staged_where_others_can_write_downloads_the_installer(remot
     assert result.returncode == 0, result.stderr
     assert not marker.exists(), "the planted installer ran"
     assert "not using" in result.stderr and (home / ".claude/skills/alpha/SKILL.md").is_file()
+
+
+def ownership_snippet(script: str) -> str:
+    """The Python ownership check a bootstrap runs on the folder beside it."""
+    text = (ROOT / script).read_text()
+    start, end = ("trusted='", "'\n") if script == "install.sh" else ("$owned = @'\n", "\n'@")
+    return text.split(start, 1)[1].split(end, 1)[0]
+
+
+@pytest.mark.skipif(WINDOWS, reason="the ownership check is POSIX")
+@pytest.mark.parametrize("script", ["install.sh", "install.ps1"])
+@pytest.mark.parametrize(
+    "path, owner, mode, group, accepted",
+    [
+        ("scripts", "me", 0o755, "shared", True),
+        ("scripts", "other", 0o755, "private", False),  # say, a deleted checkout recreated by another user
+        ("scripts", "me", 0o775, "shared", False),  # every member of labshare could plant code
+        ("scripts", "me", 0o775, "private", True),  # the user's own group, as with umask 002
+        ("scripts", "me", 0o777, "private", False),
+        (".", "other", 0o755, "private", False),
+        ("scripts/install_skills.py", "me", 0o664, "shared", False),
+        ("scripts/sync_skills.py", "me", 0o666, "private", False),  # run by a local install of edited copies
+        ("scripts/search_skills.py", "other", 0o644, "private", False),  # run by the launcher's search
+    ],
+)
+def test_a_checkout_is_trusted_only_if_no_one_else_may_write_to_it(
+    tmp_path, monkeypatch, script, path, owner, mode, group, accepted
+):
+    """Run as the bootstrap runs it, with the owner, group and mode of one path made up: a file of
+    another user needs root to make."""
+    import builtins
+    import grp
+    import pwd
+    import stat
+    import types
+
+    checkout = tmp_path / "checkout"
+    for rel in ("install_skills.py", "sync_skills.py", "search_skills.py"):
+        put(checkout / "scripts" / rel, "")
+    (checkout / "skills").mkdir()
+    me = os.geteuid()
+    name = pwd.getpwuid(me).pw_name
+    groups = {
+        1001: types.SimpleNamespace(gr_name=name, gr_mem=[]),
+        2002: types.SimpleNamespace(gr_name="labshare", gr_mem=["x"]),
+    }
+    target = os.path.normpath(checkout / path)
+
+    def fake_stat(p):
+        kind = stat.S_IFMT(os.stat(p).st_mode)
+        if os.path.normpath(p) != target:
+            return types.SimpleNamespace(st_uid=me, st_gid=2002, st_mode=kind | 0o755)
+        uid, gid = me if owner == "me" else me + 1, 1001 if group == "private" else 2002
+        return types.SimpleNamespace(st_uid=uid, st_gid=gid, st_mode=kind | mode)
+
+    fake_os, fake_grp = types.ModuleType("os"), types.ModuleType("grp")
+    fake_os.__dict__.update(os.__dict__, stat=fake_stat)
+    fake_grp.__dict__.update(grp.__dict__, getgrgid=groups.__getitem__)
+
+    def importer(module, *args, **kwargs):
+        return {"os": fake_os, "grp": fake_grp}.get(module) or builtins.__import__(module, *args, **kwargs)
+
+    monkeypatch.setattr(sys, "argv", ["-c", str(checkout)])
+    with pytest.raises(SystemExit) as exited:
+        exec(ownership_snippet(script), {"__builtins__": {**builtins.__dict__, "__import__": importer}})
+    assert (not exited.value.code) is accepted
