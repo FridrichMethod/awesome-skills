@@ -876,6 +876,9 @@ def test_explicit_selection_change_is_not_a_mass_removal(sandbox):
     for i in range(23):
         skill(source, f"extra-{i:02d}")
     run(source)
+    assert run(source, "--codex-only", "--manual", "") == 0, "the undo a migration prints removes every hidden copy"
+    assert sorted(os.listdir(home / ".codex/skills")) == [installer.ROUTER]
+    assert not os.listdir(home / ".agents/skills")
     assert run(source, "--claude-only", "--selection", "alpha", "--manual", "") == 0
     assert sorted(os.listdir(home / ".claude/skills")) == ["alpha"]
 
@@ -1039,7 +1042,7 @@ def test_hiding_and_renaming_never_write_through_a_link(sandbox, tmp_path, capsy
     assert "claude:linked-md (Cannot edit linked-md/SKILL.md: it is or lies below a symbolic link)" in err
     assert "codex:linked-md (Cannot edit linked-md/SKILL.md" in err
     assert "codex:linked-agents (Cannot edit linked-agents/agents/openai.yaml" in err
-    assert hidden_from_claude(home / ".claude/skills/linked-agents") and hidden_from_claude(home / ".claude/skills/alpha")
+    assert all(hidden_from_claude(home / ".claude/skills" / s) for s in ("linked-agents", "alpha"))
     assert run(source, "--claude-only", "--enable", "linked-md") == 0, "a visible Claude copy needs no edit"
     assert installer.is_link(home / ".claude/skills/linked-md/SKILL.md")
     copy = tmp_path / "copy"
