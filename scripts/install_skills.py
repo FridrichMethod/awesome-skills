@@ -1798,18 +1798,19 @@ def matches(client: str, want: dict, library: Library, router: dict, path: Path)
         return False  # the copy cannot be made; preparing it reports why
 
 
-def adoptable(client: str, want: dict, library: Library, path: Path) -> bool:
-    """An unmanaged directory is claimed only as an exact client copy, or as an exact library tree
-    (which is then copied again in the client's form)."""
+def adoptable(client: str, want: dict, library: Library, path: Path, raw: bool) -> bool:
+    """An unmanaged directory is claimed as an exact client copy in a form only this installer
+    writes, or, if `raw` (named, not in ~/.agents), as an exact library tree, then copied again."""
     skill_id = want["source_ids"][0]
     if skill_id not in library.skills:
         return False
     try:
-        if exact_tree(library.derived(client, skill_id, want["invocation"], path)[0], path):
+        listing = library.derived(client, skill_id, want["invocation"], path)[0]
+        if listing != library.listing(skill_id) and exact_tree(listing, path):
             return True
     except InstallError:
         pass
-    return library.adoptable(skill_id, path)
+    return raw and library.adoptable(skill_id, path)
 
 
 def kept_entry(entry: str, reason: str = "protected, modified, or unproven ownership", **where) -> dict:
@@ -1855,7 +1856,10 @@ def plan_entries(client, roots, managed, desired, library, router, named) -> tup
             current = fingerprint(target) if present else None
             owned = False
             if current is not None and not protected(target):
-                owned = current == rec["sha256"] if rec else bool(want) and adoptable(client, want, library, target)
+                raw = not index and entry in named  # @all names nothing: other tools' copies stay theirs
+                owned = (
+                    current == rec["sha256"] if rec else bool(want) and adoptable(client, want, library, target, raw)
+                )
             if current is not None and not owned:
                 kept.append(kept_entry(entry, **where))
                 if rec:

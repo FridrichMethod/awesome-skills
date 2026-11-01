@@ -115,21 +115,47 @@ def test_an_upstream_change_is_installed_still_hidden(sandbox):
     assert hidden_from_claude(home / ".claude/skills/alpha") and hidden_from_codex(codex_copy(home, "alpha"))
 
 
-def test_exact_client_copies_are_adopted_and_raw_trees_copied_again(sandbox, capsys):
+def test_exact_client_copies_are_adopted_and_raw_trees_only_when_named(sandbox, capsys):
     home, source = sandbox
     run(source)
     for client in ("claude", "codex"):
         (state_dir(home) / f"{client}.json").unlink()
     claude = home / ".claude/skills"
     shutil.rmtree(claude / "beta")
-    shutil.copytree(source / "beta", claude / "beta")  # the library tree, not the hidden copy
-    alpha = installer.fingerprint(claude / "alpha")
+    shutil.copytree(source / "beta", claude / "beta")  # the library tree, which any tool may copy
+    alpha, beta = installer.fingerprint(claude / "alpha"), installer.fingerprint(claude / "beta")
     capsys.readouterr()
     run(source, "--claude-only")
+    claude_plan = plan(capsys)["clients"][0]
+    assert not claude_plan["actions"], "the exact hidden alpha is recorded, and @all names no raw tree"
+    assert {"entry": "beta", "reason": "protected, modified, or unproven ownership"} in claude_plan["preserved"]
+    assert installer.fingerprint(claude / "alpha") == alpha and installer.fingerprint(claude / "beta") == beta
+    assert set(state(home, "claude")["managed"]) == {"alpha"}, "an unmanaged router folder stays unclaimed"
+    run(source, "--claude-only", "--manual", "alpha,beta")
     actions = [a["entry"] for a in plan(capsys)["clients"][0]["actions"]]
-    assert actions == ["beta"], "the exact hidden alpha is recorded, the raw beta copied again"
-    assert installer.fingerprint(claude / "alpha") == alpha and hidden_from_claude(claude / "beta")
-    assert set(state(home, "claude")["managed"]) == {"alpha", "beta"}
+    assert actions == ["beta"], "a raw tree whose ID is named is claimed and copied again"
+    assert hidden_from_claude(claude / "beta") and set(state(home, "claude")["managed"]) == {"alpha", "beta"}
+
+
+def test_only_this_installers_copies_are_claimed_in_the_shared_agents_root(sandbox, capsys):
+    home, source = sandbox
+    run(source, "--codex-only")
+    second = home / ".agents/skills"
+    assert installer.placement("beta") and hidden_from_codex(second / "beta")
+    (state_dir(home) / "codex.json").unlink()
+    run(source, "--codex-only")
+    assert "beta" in state(home, "codex")["managed"], "an exact hidden Codex copy is this installer's"
+    shutil.rmtree(second / "beta")
+    shutil.copytree(source / "beta", second / "beta")  # as `npx skills` would leave it
+    (state_dir(home) / "codex.json").unlink()
+    raw = installer.fingerprint(second / "beta")
+    capsys.readouterr()
+    run(source, "--codex-only")
+    assert installer.fingerprint(second / "beta") == raw and "beta" not in state(home, "codex")["managed"]
+    assert any(item["entry"] == "beta" and item.get("root") == 1 for item in plan(capsys)["clients"][0]["preserved"])
+    with pytest.raises(installer.InstallError, match="preserved destination differs"):
+        run(source, "--codex-only", "--manual", "beta")
+    assert installer.fingerprint(second / "beta") == raw
 
 
 def test_state_versions_and_records_are_validated():
