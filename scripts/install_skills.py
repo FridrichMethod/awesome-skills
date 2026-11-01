@@ -1636,7 +1636,8 @@ def launcher_path(data: Path, suffix: str = "") -> Path:
 
 
 def ps_quote(value: str) -> str:
-    return "'" + value.replace("'", "''") + "'"
+    """A PowerShell single-quoted literal: each of its quote marks (' and U+2018-U+201B) doubled."""
+    return "'" + re.sub("['\u2018-\u201b]", lambda m: m.group() * 2, value) + "'"
 
 
 def launcher_call(data: Path) -> str:

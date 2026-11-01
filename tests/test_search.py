@@ -266,7 +266,7 @@ def test_the_powershell_launcher_runs_the_search_and_the_installer(library, monk
             return str(library / "scripts/install_skills.py"), []
 
     monkeypatch.setattr(installer, "WINDOWS", True)
-    data = tmp_path / "da'ta"
+    data = tmp_path / "O\u2019Brien's da\u2018ta"  # PowerShell ends a single-quoted string at either mark
     path, text = next((p, t) for p, t in installer.launchers(data, tmp_path / "state", Library()).items() if p.suffix)
     path.parent.mkdir(parents=True)
     path.write_bytes(text.encode())
@@ -276,3 +276,18 @@ def test_the_powershell_launcher_runs_the_search_and_the_installer(library, monk
     assert subprocess.run([*command, "search", "zzz"], capture_output=True).returncode == 1
     usage = subprocess.run([*command, "--help"], capture_output=True, text=True)
     assert usage.returncode == 0 and "--manual" in usage.stdout, usage.stderr
+
+
+@pytest.mark.skipif(
+    PWSH is None and os.environ.get("AWESOME_SKILLS_REQUIRE_PWSH") != "1", reason="PowerShell 7 (pwsh) unavailable"
+)
+def test_a_powershell_literal_keeps_every_single_quote_mark(tmp_path):
+    """PowerShell also ends a single-quoted string at U+2018, U+2019, U+201A and U+201B: a path such
+    as C:\\Users\\O\u2019Brien must stay one literal, and the rest of it never runs as code."""
+    if PWSH is None:
+        pytest.fail("pwsh is required (AWESOME_SKILLS_REQUIRE_PWSH=1) but not on PATH")
+    values = ["O\u2019Brien", "a\u2019+(Write-Output INJECTED)+\u2019b", "\u2018x\u201ay\u201bz'", '$(1+1) `n "q"']
+    script = tmp_path / "literals.ps1"
+    script.write_bytes(("\ufeff" + "".join(f"Write-Output {installer.ps_quote(v)}\n" for v in values)).encode())
+    out = subprocess.run([PWSH, "-NoProfile", "-NonInteractive", "-File", str(script)], capture_output=True)
+    assert out.returncode == 0 and out.stdout.decode().splitlines() == values, out.stderr.decode()
