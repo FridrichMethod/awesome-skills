@@ -2277,7 +2277,8 @@ def prepare_one(p: dict, action: dict, backup: Path, library: Library):
     p["state"]["managed"][entry]["sha256"] = action["after"]
 
 
-def restore(backup: Path, state: Path, dry_run: bool, quiet: bool = False):
+def restore(backup: Path, state: Path, dry_run: bool, quiet: bool = False, only: str | None = None):
+    """Undo a transaction, or `only` that client's part (the next restore or recovery undoes the rest)."""
     no_symlink_ancestors(backup)
     if backup.parent != state / "backups":
         raise InstallError(f"Recovery backup must belong to this state directory: {display(state)}")
@@ -2289,7 +2290,10 @@ def restore(backup: Path, state: Path, dry_run: bool, quiet: bool = False):
         or not isinstance(journal.get("clients"), list)
     ):
         raise InstallError(f"Invalid or already restored journal: {display(backup)}")
-    operations = [] if journal["status"] == "preparing" else restore_operations(backup, state, journal)
+    chosen = [c for c in journal["clients"] if not c.get("restored") and only in (None, c.get("client"))]
+    if not chosen:
+        raise InstallError(f"Nothing {only or ''} left to restore: {display(backup)}")
+    operations = [] if journal["status"] == "preparing" else restore_operations(backup, state, chosen)
     if not quiet:
         print(json.dumps({"restore": display(backup), "targets": [display(t) for t, _, _ in operations]}, indent=2))
     if dry_run:
@@ -2307,26 +2311,28 @@ def restore(backup: Path, state: Path, dry_run: bool, quiet: bool = False):
         if saved.exists():
             target.parent.mkdir(parents=True, exist_ok=True)
             move(saved, target)
-    for client in journal["clients"]:
+    for client in chosen:
         path = state / f"{client['client']}.json"
         if client["old_state"] is None:
             path.unlink(missing_ok=True)
         else:
             atomic_json(path, client["old_state"])
+        client["restored"] = True
     if journal["status"] == "complete" and journal.get("migration") == MIGRATION:
         marks = read_json(state / MIGRATIONS, {})  # an undone migration is not redone (see migrated_state)
-        for client in journal["clients"]:
+        for client in chosen:
             if client.get("migrated"):
                 marks.setdefault(MIGRATION, {}).setdefault(client["client"], {})["undone"] = time.time()
         atomic_json(state / MIGRATIONS, marks)
-    journal["status"] = "restored"
+    if all(c.get("restored") for c in journal["clients"]):
+        journal["status"] = "restored"
     atomic_json(backup / "restore.json", journal)
 
 
-def restore_operations(backup: Path, state: Path, journal: dict) -> list:
+def restore_operations(backup: Path, state: Path, clients: list) -> list:
     operations = []
     seen_clients = set()
-    for client in journal["clients"]:
+    for client in clients:
         name = client.get("client")
         if name not in {"claude", "codex"} or name in seen_clients:
             raise InstallError(f"Invalid recovery client: {name}")
@@ -2557,7 +2563,7 @@ def summary(p: dict, backup: Path) -> str:
     hidden = sum(info.get("invocation") == "manual" for info in records)
     if m:
         undo = f"--selection {','.join(m['from'])}" if m["selection"] != m["from"] else "--manual ''"
-        undo = f"--restore {display(backup)}" if len(undo) > 99 else f"--{client}-only {undo}"
+        undo = f"--{client}-only " + (f"--restore {display(backup)}" if len(undo) > 99 else undo)
         visible = few(m["selection"]) or "nothing"
         return f"Migrated {client}: {few(m['from'])} -> visible {visible}, {hidden} hidden; undo: {undo}"
     copied = sum(a["after"] is not None for a in p["actions"])
@@ -2648,12 +2654,15 @@ def main(argv: list[str] | None = None) -> int:
     else:
         data = storage_path("SKILLS_DATA_DIR", data_default)
     if args.restore:
-        target = safe_absolute(args.restore)
+        target, only = (
+            safe_absolute(args.restore),
+            "codex" if args.codex_only else "claude" if args.claude_only else None,
+        )
         if args.dry_run:
-            restore(target, state, True)
+            restore(target, state, True, only=only)
         else:
             with state_lock(state):
-                restore(target, state, False)
+                restore(target, state, False, only=only)
         return 0
     if not remote:
         adjacent = Path(helper).resolve().parent if helper else Path.cwd()

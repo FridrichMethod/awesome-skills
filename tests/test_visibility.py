@@ -476,13 +476,12 @@ def test_a_claude_v1_list_of_most_of_the_library_migrates_like_all(sandbox, monk
     assert run(source, "--claude-only") == 0
     out = capsys.readouterr().out.splitlines()
     backup = out[1].split(": ", 1)[1]
-    assert (
-        out[0] == f"Migrated claude: {len(kept)} IDs -> visible @library, {len(every)} hidden; undo: --restore {backup}"
-    )
+    undo = f"--claude-only --restore {backup}"
+    assert out[0] == f"Migrated claude: {len(kept)} IDs -> visible @library, {len(every)} hidden; undo: {undo}"
     value = state(home, "claude")
     assert (value["selection"], value["manual"]) == (["@library"], ["@all"]), "the model's listing cannot overflow"
     assert all(hidden_from_claude(home / ".claude/skills" / s) for s in every)
-    run(source, "--restore", backup)
+    run(source, "--claude-only", "--restore", backup)
     run(source, "--claude-only")
     assert (state(home, "claude")["selection"], state(home, "claude")["manual"]) == (kept, []), "undone for good"
     capsys.readouterr()
@@ -492,6 +491,38 @@ def test_a_claude_v1_list_of_most_of_the_library_migrates_like_all(sandbox, monk
     assert capsys.readouterr().out.startswith(
         "Migrated codex: 100 IDs -> visible 100 IDs, 2 hidden; undo: --codex-only --manual ''"
     )
+
+
+def test_the_printed_claude_undo_leaves_the_codex_migration_of_the_same_run(sandbox, monkeypatch, capsys):
+    home, source = sandbox
+    for i in range(100):
+        skill(source, f"extra-{i:03d}")
+    kept = [s for s in installer.skill_ids(source) if s != "beta"]
+    make_v1(home, source, "claude", kept)
+    make_v1(home, source, "codex", ["@library", "alpha"])
+    codex_v1 = state(home, "codex")
+    monkeypatch.setattr(installer, "SUMMARY_ACTIONS", 5)
+    capsys.readouterr()
+    assert run(source) == 0, "one transaction migrates both clients"
+    out = capsys.readouterr().out.splitlines()
+    backup = out[2].split(": ", 1)[1]
+    assert out[0].endswith(f"undo: --claude-only --restore {backup}")
+    assert out[1].startswith("Migrated codex: ") and out[1].endswith("undo: --codex-only --manual ''")
+    codex = state(home, "codex")
+    assert run(source, "--claude-only", "--restore", backup) == 0
+    assert state(home, "claude")["selection"] == kept and "selection_version" not in state(home, "claude")
+    assert state(home, "codex") == codex, "the Codex migration stays"
+    marks = json.loads((state_dir(home) / installer.MIGRATIONS).read_text())[installer.MIGRATION]
+    assert marks["claude"]["undone"] and "undone" not in marks["codex"]
+    assert run(source) == 0
+    assert (state(home, "claude")["selection"], state(home, "claude")["manual"]) == (kept, [])
+    assert state(home, "codex") == codex
+    with pytest.raises(installer.InstallError, match="Nothing claude left to restore"):
+        run(source, "--claude-only", "--restore", backup)
+    assert run(source, "--restore", backup) == 0, "the rest of the transaction"
+    assert state(home, "codex") == codex_v1
+    with pytest.raises(installer.InstallError, match="already restored"):
+        run(source, "--restore", backup)
 
 
 def test_other_v1_selections_stay_visible_with_the_rest_hidden(sandbox, capsys):
