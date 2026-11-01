@@ -23,8 +23,8 @@ NEEDS_PWSH = pytest.mark.skipif(
     PWSH is None and os.environ.get("AWESOME_SKILLS_REQUIRE_PWSH") != "1", reason="PowerShell 7 (pwsh) unavailable"
 )
 # install.sh passes the whole installer as one `python -c` argument; Linux caps a single
-# argument at 128 KiB (MAX_ARG_STRLEN), so keep a margin below it.
-ARGUMENT_BUDGET = 120 * 1024
+# argument at 128 KiB (MAX_ARG_STRLEN, 131,072 bytes with its NUL), so keep 4 KiB below it.
+ARGUMENT_BUDGET = 124 * 1024
 
 
 def pwsh():
