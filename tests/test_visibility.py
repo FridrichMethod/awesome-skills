@@ -350,6 +350,22 @@ def test_copies_in_a_second_root_that_became_a_link_stay_owned(sandbox, tmp_path
     assert value["destination2"] == str(installer.native(shared)) and set(placed) <= set(value["managed"])
 
 
+def test_a_visible_copy_another_tool_left_in_the_shared_root_is_never_claimed(sandbox, capsys):
+    home, source = sandbox
+    second = home / ".agents/skills"
+    assert installer.placement("beta"), "beta belongs in the second root"
+    shutil.copytree(source / "beta", second / "beta")  # identical to beta's visible Codex copy
+    raw = installer.fingerprint(second / "beta")
+    assert installer.DirLibrary(source).derived("codex", "beta", "auto")[1] == {}, "nothing tells it apart"
+    capsys.readouterr()
+    assert run(source, "--codex-only", "--manual", "", "--selection", "@library,beta") == 0
+    assert "beta" not in state(home, "codex")["managed"] and installer.fingerprint(second / "beta") == raw
+    assert any(item["entry"] == "beta" and item.get("root") == 1 for item in plan(capsys)["clients"][0]["preserved"])
+    with pytest.raises(installer.InstallError, match="preserved destination differs"):
+        run(source, "--codex-only", "--selection", "@library", "--manual", "beta")
+    assert installer.fingerprint(second / "beta") == raw, "never rewritten as a hidden copy"
+
+
 def test_codex_copies_drop_plugin_folders_and_neutralize_nested_skills(sandbox):
     home, source = sandbox
     gamma = skill(source, "gamma")
