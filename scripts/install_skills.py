@@ -2647,8 +2647,29 @@ def kept_backups() -> int:
     return int(value)
 
 
+def codex_view_of_claude(agents: Path, codex_root: Path, claude: list[Path]) -> tuple[Path, Path] | None:
+    """(the path, the Claude root) when Codex would read one of these Claude roots: ~/.agents/skills
+    leads into it, or a link in ~/.agents/skills or $CODEX_HOME/skills (which Codex follows) leads onto
+    or above it. A link to one skill of the root shows Codex that skill alone."""
+    roots = [(c, native(c.expanduser().resolve())) for c in claude]
+    found = next((c for c, r in roots if overlap(native(agents.resolve()), r)), None)
+    if found:
+        return agents, found
+    for folder in (agents, codex_root):
+        try:
+            links = sorted(p for p in folder.iterdir() if is_link(p)) if folder.is_dir() else []
+        except OSError:
+            links = []
+        for link in links:
+            target = native(link.resolve())
+            found = next((c for c, r in roots if target == r or target in r.parents), None)
+            if found:
+                return link, found
+    return None
+
+
 def resolve_clients(args, home: Path, storage: list[Path], source: Path | None) -> list[tuple]:
-    """(client, skills roots, state, foreign ~/.agents/skills or None, why Codex is held or None):
+    """(client, skills roots, state, foreign ~/.agents/skills or None, why the client is held or None):
     Claude has one root, Codex two."""
     codex_home = native(Path(os.path.abspath(os.environ.get("CODEX_HOME") or home / ".codex")))
     agents = home / ".agents/skills"
@@ -2670,17 +2691,20 @@ def resolve_clients(args, home: Path, storage: list[Path], source: Path | None) 
             return True
         return False
 
-    # Codex reads ~/.agents/skills. Led into the Claude root that holds this installer's copies (or that
-    # this run fills), it would list every hidden Claude copy (it ignores the Claude key) and find most
-    # names twice: Codex then installs nothing (make_plans), and Claude is never held for it.
+    # A Claude root holding this installer's copies (or that this run fills) that Codex reads would show
+    # Codex every Claude copy, hidden ones included (it ignores the Claude key), and most names twice:
+    # then Codex installs nothing, and Claude no hidden copy (make_plans), as either would fill the folder
+    # Codex lists to its model with the library.
     claude = [] if args.codex_only else [configured("claude", 0)]
     claude += [Path(states["claude"]["destination"])] if states["claude"].get("managed") else []
-    into = next((p for p in claude if overlap(native(agents.resolve()), native(p.expanduser().resolve()))), None)
-    hold = into and (
-        f"Codex is left as it is: {display(agents)} leads into Claude's skills ({display(into)}), so Codex would "
-        "list every hidden Claude copy and find most names twice. Replace the link with a folder of its own, "
-        "or stop installing for Codex: --codex-only --selection '' --manual ''"
-    )
+    shared = codex_view_of_claude(agents, codex_home / "skills", claude)
+    how = shared and f"{display(shared[0])} leads into Claude's skills ({display(shared[1])}), so Codex would list"
+    hold = shared and {
+        "codex": f"Codex is left as it is: {how} every Claude copy and find most names twice. Replace the link with "
+        "a folder of its own, or stop installing for Codex: --codex-only --selection '' --manual ''",
+        "claude": f"Claude gets no hidden copies: {how} every one. Replace the link with a folder of its own, or "
+        "keep Claude to the skills the model sees: --claude-only --manual ''",
+    }
     clients = []
     for client in ["codex"] if args.codex_only else ["claude"] if args.claude_only else ["claude", "codex"]:
         roots = []
@@ -2690,8 +2714,14 @@ def resolve_clients(args, home: Path, storage: list[Path], source: Path | None) 
             except InstallError as exc:  # a linked ~/.agents/skills is never written through
                 if not i or os.environ.get("SKILLS_CODEX_DEST2"):
                     raise
+                there = native(configured(client, i).resolve())
+                fix = (
+                    f"replace the link with a folder of its own: Codex finds only the copies in {display(roots[0])}"
+                    if overlap(there, native(roots[0].resolve()))
+                    else f"set SKILLS_CODEX_DEST2={display(there)} to write them there"
+                )
                 if not hold:
-                    warn(f"{exc}; Codex's copies there are left as they are (see SKILLS_CODEX_DEST2)")
+                    warn(f"{exc}; Codex's copies there are left as they are ({fix})")
         if roots[0] == home / ".agents" or home / ".agents" in roots[0].parents:
             raise InstallError(f"This installer does not own ~/.agents: {display(roots[0])}")
         other = "claude" if client == "codex" else "codex"
@@ -2712,8 +2742,8 @@ def resolve_clients(args, home: Path, storage: list[Path], source: Path | None) 
                     )
         if source is not None and any(overlap(source, root) for root in roots):
             raise InstallError(f"Source and destination overlap: {display(source)}, {display(roots[0])}")
-        codex = client == "codex"
-        clients.append((client, roots, states[client], agents if codex and not hold else None, hold if codex else None))
+        foreign = agents if client == "codex" and not hold else None
+        clients.append((client, roots, states[client], foreign, hold and hold[client]))
     return clients
 
 
@@ -2738,7 +2768,7 @@ def make_plans(args, clients: list, library: Library, state: Path, data: Path) -
     for client, roots, old, agents, hold in clients:
         base, migration = migrated_state(old, client, bool(marks.get(client, {}).get("undone")), set(library.skills))
         visible, manual = selection(args, client, base, library), manual_set(args, client, base, library)
-        if hold and (visible or manual):  # an uninstall is never held
+        if hold and (manual if client == "claude" else visible or manual):  # never an uninstall
             held[client] = hold
             continue
         router = router_info(client, data)
