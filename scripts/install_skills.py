@@ -37,8 +37,8 @@ except ImportError:  # native Windows
 REPOSITORY = "https://github.com/FridrichMethod/awesome-skills"
 REPOSITORY_URL = REPOSITORY + ".git"
 SCHEMA = 1
-# v2 states: `selection` is what the model sees, `manual` what is installed hidden besides, and
-# records carry `invocation` (SCHEMA also gates the index and journals, so it stays 1).
+# v2 states: `selection` is shown to the model, `manual` installed hidden besides; records carry
+# `invocation`. SCHEMA also gates the index and journals, so it stays 1.
 SELECTION_VERSION = 2
 MIGRATION, MIGRATIONS = "selection-v2", "migrations.json"
 SHORTCUT = ("tree", "invocation", "name", "root")  # an unchanged record and copy is not rehashed
@@ -51,8 +51,8 @@ PROVENANCE = "library_sources.json"
 CLONE = "library"
 MARKER = "awesome-skills-library"  # file in the clone's .git directory
 MIN_GIT = (2, 29, 0)
-# A sparse index keeps every directory outside the cone as one entry, so git on Windows
-# never checks (and refuses) a Windows-invalid path deep inside a skill nobody selected.
+# A sparse index keeps each directory outside the cone as one entry: git on Windows never
+# refuses a Windows-invalid path inside a skill nobody selected.
 SPARSE_INDEX_GIT = (2, 37, 0)
 LOCK_BUSY = 75
 NEEDS_PERSON = 3  # an interrupted update or a mass removal needs a person's decision
@@ -421,53 +421,31 @@ ESCAPES = {
 }
 HEX_ESCAPES = {"x": 2, "u": 4, "U": 8}
 HEX_DIGITS = frozenset("0123456789abcdefABCDEF")
-# PyYAML's implicit resolvers (yaml/resolver.py) for plain scalars that do not load as str.
+# PyYAML's implicit resolvers (yaml/resolver.py, verbose) for plain scalars that do not load as str.
 NOT_STRINGS = [
-    (
-        re.compile(
-            r"""^(?:yes|Yes|YES|no|No|NO
-                    |true|True|TRUE|false|False|FALSE
-                    |on|On|ON|off|Off|OFF)$""",
-            re.X,
+    (re.compile(pattern, re.X), first)
+    for pattern, first in (
+        (r"^(?:yes|Yes|YES|no|No|NO|true|True|TRUE|false|False|FALSE|on|On|ON|off|Off|OFF)$", "yYnNtTfFoO"),
+        (
+            r"""^(?:[-+]?(?:[0-9][0-9_]*)\.[0-9_]*(?:[eE][-+][0-9]+)?|\.[0-9][0-9_]*(?:[eE][-+][0-9]+)?
+            |[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\.[0-9_]*|[-+]?\.(?:inf|Inf|INF)|\.(?:nan|NaN|NAN))$""",
+            "-+0123456789.",
         ),
-        "yYnNtTfFoO",
-    ),
-    (
-        re.compile(
-            r"""^(?:[-+]?(?:[0-9][0-9_]*)\.[0-9_]*(?:[eE][-+][0-9]+)?
-                    |\.[0-9][0-9_]*(?:[eE][-+][0-9]+)?
-                    |[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\.[0-9_]*
-                    |[-+]?\.(?:inf|Inf|INF)
-                    |\.(?:nan|NaN|NAN))$""",
-            re.X,
+        (
+            r"""^(?:[-+]?0b[0-1_]+|[-+]?0[0-7_]+|[-+]?(?:0|[1-9][0-9_]*)|[-+]?0x[0-9a-fA-F_]+
+            |[-+]?[1-9][0-9_]*(?::[0-5]?[0-9])+)$""",
+            "-+0123456789",
         ),
-        "-+0123456789.",
-    ),
-    (
-        re.compile(
-            r"""^(?:[-+]?0b[0-1_]+
-                    |[-+]?0[0-7_]+
-                    |[-+]?(?:0|[1-9][0-9_]*)
-                    |[-+]?0x[0-9a-fA-F_]+
-                    |[-+]?[1-9][0-9_]*(?::[0-5]?[0-9])+)$""",
-            re.X,
+        (r"^(?:<<)$", "<"),
+        (r"^(?: ~ |null|Null|NULL | )$", "~nN"),
+        (
+            r"""^(?:[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]|[0-9][0-9][0-9][0-9] -[0-9][0-9]? -[0-9][0-9]?
+            (?:[Tt]|[ \t]+)[0-9][0-9]?:[0-9][0-9] :[0-9][0-9] (?:\.[0-9]*)?
+            (?:[ \t]*(?:Z|[-+][0-9][0-9]?(?::[0-9][0-9])?))?)$""",
+            "0123456789",
         ),
-        "-+0123456789",
-    ),
-    (re.compile(r"^(?:<<)$"), "<"),
-    (re.compile(r"""^(?: ~ |null|Null|NULL | )$""", re.X), "~nN"),
-    (
-        re.compile(
-            r"""^(?:[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]
-                    |[0-9][0-9][0-9][0-9] -[0-9][0-9]? -[0-9][0-9]?
-                     (?:[Tt]|[ \t]+)[0-9][0-9]?
-                     :[0-9][0-9] :[0-9][0-9] (?:\.[0-9]*)?
-                     (?:[ \t]*(?:Z|[-+][0-9][0-9]?(?::[0-9][0-9])?))?)$""",
-            re.X,
-        ),
-        "0123456789",
-    ),
-    (re.compile(r"^(?:=)$"), "="),
+        (r"^(?:=)$", "="),
+    )
 ]
 
 
@@ -644,8 +622,8 @@ class NameReader:
         return self.stack[-1][0] if self.stack else -1
 
     def enter(self, col: int, kind: str):
-        """Add a key ("map") or a `- ` entry ("seq") at col to its block collection, or open one
-        as the pending value of the key or entry above, as PyYAML's parser allows."""
+        """Add a key ("map") or `- ` entry ("seq") at col to its block collection, or open one as
+        the pending value above, as PyYAML's parser allows."""
         top = self.stack[-1] if self.stack else None
         if top and top[0] == col and top[1] == "seq" and top[3] and kind == "map":
             self.stack.pop()  # a key at its mapping's column ends an indentless sequence
@@ -758,9 +736,8 @@ class NameReader:
         raise ValueError("unterminated quoted scalar")
 
     def flow(self, i: int, k: int) -> tuple[int, int]:
-        """(row, column) just past the flow collection that opens at row i, column k. Inside it
-        PyYAML ignores indentation, and a plain scalar that reaches the end of a line goes on
-        with the next one unless that starts with a comment."""
+        """(row, column) just past the flow collection opening at row i, column k. Indentation is
+        ignored there; a plain scalar at the end of a line goes on unless the next starts a comment."""
         depth, plain = 0, False
         while i < len(self.lines):
             line = self.lines[i]
@@ -835,10 +812,9 @@ def index_text(index: dict) -> str:
 # Codex's bundled system skills (codex-cli 0.165): the sync gives a library skill with such an
 # ID a source-qualified one, since a plain `$ID` would be ambiguous.
 CODEX_SYSTEM_SKILLS = frozenset({"imagegen", "openai-docs", "review-agent", "skill-creator", "skill-installer"})
-# A hidden skill still runs on /ID and $ID: Claude Code leaves one whose frontmatter sets
-# disable-model-invocation out of the model's listing (the last duplicate key wins, so every
-# top-level line of it is replaced), Codex one whose agents/openai.yaml sets
-# policy.allow_implicit_invocation false. The sync rejects skills these line edits cannot hide.
+# A hidden skill still runs on /ID and $ID: Claude Code lists no skill whose frontmatter sets
+# disable-model-invocation (the last duplicate key wins, so every top-level line is replaced),
+# Codex none whose agents/openai.yaml sets policy.allow_implicit_invocation false.
 HIDDEN_KEY = "disable-model-invocation"
 HIDDEN_KEY_LINE = re.compile(r"""(["']?)disable-model-invocation\1[ \t]*:""")
 HIDDEN_PLAIN_LINE = re.compile(r"disable-model-invocation:[ \t]+(?:true|True|TRUE|false|False|FALSE)[ \t]*(?:#.*)?")
@@ -852,7 +828,7 @@ UTF8_BOM = b"\xef\xbb\xbf"
 
 
 def split_text(data: bytes, label: str) -> tuple[bytes, list[str], str]:
-    """(BOM, lines split at LF with any CR kept, the CR to end a new line with) of UTF-8 bytes."""
+    """(BOM, lines split at LF with CRs kept, the CR to end a new line with) of UTF-8 bytes."""
     bom = UTF8_BOM if data.startswith(UTF8_BOM) else b""
     try:
         lines = data[len(bom) :].decode("utf-8").split("\n")
@@ -870,9 +846,8 @@ def frontmatter_end(lines: list[str], label: str) -> int:
 
 
 def hidden_skill_md(data: bytes, label: str) -> bytes:
-    """SKILL.md with every top-level disable-model-invocation line replaced by one `true` line
-    right after the opening `---`; BOM and line endings stay. A line of the key that is not a
-    plain one-line boolean raises InstallError."""
+    """SKILL.md with each top-level disable-model-invocation line replaced by one `true` line after
+    the opening `---`, BOM and line endings kept; InstallError unless each is a one-line boolean."""
     bom, lines, cr = split_text(data, label)
     end = frontmatter_end(lines, label)
     kept = []
@@ -886,9 +861,9 @@ def hidden_skill_md(data: bytes, label: str) -> bytes:
 
 
 def hidden_policy(data: bytes | None, label: str) -> bytes:
-    """agents/openai.yaml with policy.allow_implicit_invocation false: the file or a `policy:`
-    block is added if missing, else the key is set inside the block-style mapping. BOM and line
-    endings stay; any other shape raises InstallError."""
+    """agents/openai.yaml with policy.allow_implicit_invocation false: the file or a `policy:` block
+    is added if missing, else the key is set in that block mapping. BOM and line endings stay; any
+    other shape raises InstallError."""
     if data is None:
         return b"policy:\n  allow_implicit_invocation: false\n"
     bom, lines, cr = split_text(data, label)
@@ -946,8 +921,8 @@ def plugin_path(rel: str) -> bool:
 
 
 def renamed_skill_md(data: bytes, name: str, label: str) -> bytes:
-    """SKILL.md whose one top-level name line (added if missing) is `name: "NAME"`; the result
-    must read as NAME without PyYAML, or InstallError is raised."""
+    """SKILL.md whose one top-level name line (added if missing) is `name: "NAME"`, which must
+    read as NAME without PyYAML, or InstallError."""
 
     def reads_as_name(text: bytes) -> bool:
         try:
@@ -1425,7 +1400,7 @@ def retried(action):
 
 
 def create_clone(git: Git, data: Path, url: str, branch: str):
-    """Clone into a temporary sibling, check out only scripts/ and root files, then rename into place."""
+    """Clone into a temporary sibling, check out scripts/ and root files, then rename it into place."""
     data.mkdir(parents=True, exist_ok=True)
     temp, repo = data / f".{CLONE}.tmp-{uuid.uuid4().hex}", data / CLONE
 
@@ -1561,7 +1536,7 @@ def open_library(git: Git | None, source: Path | None, data: Path, url: str, bra
 
 
 def listed_library(git: Git | None, source: Path | None, data: Path) -> Library:
-    """--list reads the clone at its last update, offline (missing objects may be fetched lazily)."""
+    """--list reads the clone as of its last update (missing objects may be fetched lazily)."""
     if git is None:
         return DirLibrary(source)
     repo = existing_clone(data)
@@ -1884,8 +1859,7 @@ def plan_entries(client, roots, managed, desired, library, router, named) -> tup
             if current is not None and not owned:
                 kept.append(kept_entry(entry, **where))
                 if rec:
-                    # Retain the last installed fingerprint so future updates keep
-                    # recognizing the edited copy, including after deselection.
+                    # Keep the installed fingerprint: later runs still recognize the edited copy.
                     new_managed[entry] = rec
                 if want and not rec and client == "codex" and entry in named:
                     if not matches(client, want, library, router, target):
@@ -2432,7 +2406,7 @@ def remove_legacy_caches(cache_root: Path) -> list[Path]:
 
 
 def migrated(state: Path) -> bool:
-    """No managed router still comes from the tarball installer, whose router pointed into its cache."""
+    """No managed router still comes from the tarball installer (its router used the cache)."""
     for client in ("claude", "codex"):
         managed = read_json(state / f"{client}.json", {}).get("managed", {})
         if any(info.get("source_ids") == ["@library"] and "tree" not in info for info in managed.values()):
