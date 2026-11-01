@@ -107,6 +107,41 @@ def test_visible_marks_and_codex_paths_come_from_the_state(library, tmp_path):
     ]
 
 
+def test_the_exact_id_outranks_skills_that_mention_it_more_often(library):
+    index = json.loads((library / installer.INDEX).read_text())
+    index["skills"].update(
+        {
+            "pdb": {"name": "pdb", "description": "Protein Data Bank."},
+            "bio-pdb-structure-navigation": {"name": "bio-pdb-navigation", "description": "Read pdb files, pdb tools."},
+        }
+    )
+    (library / installer.INDEX).write_text(json.dumps(index))
+    assert [line.split(" ")[0] for line in search(library, "pdb").stdout.splitlines()[1:]] == [
+        "pdb",
+        "bio-pdb-structure-navigation",
+    ]
+
+
+def test_a_codex_path_comes_from_the_recorded_root_or_says_it_is_missing(library, tmp_path):
+    """A foreign folder of the same name in the other root is never the path the router reads, and
+    a skill with no Codex copy says so instead of naming a path."""
+    state, first, second = tmp_path / "state", tmp_path / "codex", tmp_path / "agents"
+    state.mkdir()
+    codex = {"selection": ["@library"], "destination": str(first), "destination2": str(second)}
+    (state / "codex.json").write_text(json.dumps(dict(codex, managed={"alpha": {"root": 1}})))
+    skill(first, "alpha", body="another tool's alpha")
+    skill(second, "alpha")
+    env = {**os.environ, "HOME": str(tmp_path / "empty-home")}
+    env.pop("CODEX_HOME", None)
+    lines = search(library, "skill", "--client", "codex", "--state", str(state), env=env).stdout.splitlines()
+    assert lines[1:] == [
+        "alpha - Alpha skill.",
+        f"  {second / 'alpha/SKILL.md'}",
+        "beta - Beta skill.",
+        "  (not installed for Codex)",
+    ]
+
+
 def sandbox_env(tmp_path, **extra) -> tuple[Path, dict]:
     home = tmp_path / "home"
     home.mkdir(exist_ok=True)
