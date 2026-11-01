@@ -884,3 +884,19 @@ def test_on_windows_git_is_found_by_its_pathext_suffix(tmp_path, monkeypatch):
     monkeypatch.chdir(project)
     monkeypatch.setenv("PATH", os.pathsep.join([".", str(tools)]))
     assert installer.find_git() == str(tools / "git.CMD")
+
+
+@pytest.mark.parametrize("dot", ["empty folder", "empty file"])
+def test_a_local_tree_reads_no_repository_above_its_own_broken_git(tmp_path, dot):
+    """A --source checkout whose .git is not a repository records no revision and no sparse flag of
+    the repository around it (`git -C DIR` would climb to that one)."""
+    outer = Upstream(tmp_path).work  # a real repository with commits
+    inner = outer / "vendor/checkout"
+    put(inner / "skills/solo/SKILL.md", "---\nname: solo\ndescription: Use solo\n---\nbody\n")
+    if dot == "empty folder":
+        (inner / ".git").mkdir()
+    else:
+        put(inner / ".git", "")
+    assert installer.checkout_git(outer, "rev-parse", "HEAD"), "the outer repository answers"
+    assert installer.checkout_git(inner, "rev-parse", "HEAD") == ""
+    assert installer.checkout_git(inner, "config", "--bool", "core.sparseCheckout") == ""
