@@ -389,6 +389,37 @@ def test_claude_all_migrates_once_to_the_router_with_the_library_hidden(sandbox,
     assert not any(hidden_from_claude(claude / s) for s in os.listdir(claude))
 
 
+def test_a_claude_v1_list_of_most_of_the_library_migrates_like_all(sandbox, monkeypatch, capsys):
+    home, source = sandbox
+    for i in range(100):
+        skill(source, f"extra-{i:03d}")
+    every = installer.skill_ids(source)
+    kept = [s for s in every if s != "beta"]  # how v1 stored @all after `--claude-only --disable beta`
+    make_v1(home, source, "codex", kept[:100])
+    make_v1(home, source, "claude", kept)
+    monkeypatch.setattr(installer, "SUMMARY_ACTIONS", 5)
+    capsys.readouterr()
+    assert run(source, "--claude-only") == 0
+    out = capsys.readouterr().out.splitlines()
+    backup = out[1].split(": ", 1)[1]
+    assert (
+        out[0] == f"Migrated claude: {len(kept)} IDs -> visible @library, {len(every)} hidden; undo: --restore {backup}"
+    )
+    value = state(home, "claude")
+    assert (value["selection"], value["manual"]) == (["@library"], ["@all"]), "the model's listing cannot overflow"
+    assert all(hidden_from_claude(home / ".claude/skills" / s) for s in every)
+    run(source, "--restore", backup)
+    run(source, "--claude-only")
+    assert (state(home, "claude")["selection"], state(home, "claude")["manual"]) == (kept, []), "undone for good"
+    capsys.readouterr()
+    monkeypatch.setattr(installer, "SUMMARY_ACTIONS", 1)  # the two hidden copies
+    run(source, "--codex-only")
+    assert state(home, "codex")["selection"] == kept[:100], "Codex lists stay visible, as specified"
+    assert capsys.readouterr().out.startswith(
+        "Migrated codex: 100 IDs -> visible 100 IDs, 2 hidden; undo: --codex-only --manual ''"
+    )
+
+
 def test_other_v1_selections_stay_visible_with_the_rest_hidden(sandbox, capsys):
     home, source = sandbox
     make_v1(home, source, "claude", ["alpha"])

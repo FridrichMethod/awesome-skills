@@ -2506,14 +2506,15 @@ def resolve_clients(args, home: Path, storage: list[Path], source: Path | None) 
     return clients
 
 
-def migrated_state(old: dict, client: str, undone: bool) -> tuple[dict, dict | None]:
-    """(state, migration) for a v1 state, once: Claude's old default @all shows only the router,
-    any other selection stays visible, and the rest is installed hidden. A migration undone with
-    --restore is an opt-out: the old selection stays and nothing is hidden."""
+def migrated_state(old: dict, client: str, undone: bool, ids: set) -> tuple[dict, dict | None]:
+    """(state, migration) for a v1 state, once: Claude's old default @all (after a --disable, v1 kept
+    it as a list of the other IDs: over 99 and most of the library) shows only the router, any other
+    selection stays visible, the rest is installed hidden. Undone with --restore, it is an opt-out."""
     if not old or old.get("selection_version") == SELECTION_VERSION:
         return old, None
     visible, manual = old["selection"], [] if undone else ["@all"]
-    if client == "claude" and visible == ["@all"] and not undone:
+    big = len(visible) > 99 and 2 * len(ids & set(visible)) > len(ids)
+    if client == "claude" and not undone and (visible == ["@all"] or big):
         visible = ["@library"]
     base = dict(old, selection=visible, manual=manual, selection_version=SELECTION_VERSION)
     return base, None if undone else {"from": old["selection"], "selection": visible, "manual": manual}
@@ -2523,7 +2524,7 @@ def make_plans(args, clients: list, library: Library, home: Path, state: Path, d
     marks = read_json(state / MIGRATIONS, {}).get(MIGRATION, {})
     plans = []
     for client, roots, old in clients:
-        base, migration = migrated_state(old, client, bool(marks.get(client, {}).get("undone")))
+        base, migration = migrated_state(old, client, bool(marks.get(client, {}).get("undone")), set(library.skills))
         visible, manual = selection(args, client, base, library), manual_set(args, client, base, library)
         router = router_info(client, data)
         plans.append(plan_client(client, roots, old, base, visible, manual, library, router, home))
@@ -2547,14 +2548,19 @@ def record_migrations(state: Path, plans: list, backup: Path):
         atomic_json(state / MIGRATIONS, marks)
 
 
-def summary(p: dict) -> str:
+def few(ids: list) -> str:
+    return ",".join(ids) if len(ids) < 9 else f"{len(ids)} IDs"
+
+
+def summary(p: dict, backup: Path) -> str:
     """One line for a large plan, such as a first install or a migration of thousands of copies."""
     records, client, m = p["state"]["managed"].values(), p["client"], p.get("migration")
     hidden = sum(info.get("invocation") == "manual" for info in records)
     if m:
         undo = f"--selection {','.join(m['from'])}" if m["selection"] != m["from"] else "--manual ''"
-        visible = ",".join(m["selection"]) or "nothing"
-        return f"Migrated {client}: {','.join(m['from'])} -> visible {visible}, {hidden} hidden; undo: --{client}-only {undo}"
+        undo = f"--restore {display(backup)}" if len(undo) > 99 else f"--{client}-only {undo}"
+        visible = few(m["selection"]) or "nothing"
+        return f"Migrated {client}: {few(m['from'])} -> visible {visible}, {hidden} hidden; undo: {undo}"
     copied = sum(a["after"] is not None for a in p["actions"])
     removed = len(p["actions"]) - copied
     return f"Updated {client}: {copied} copied, {removed} removed; {len(records) - hidden} visible, {hidden} hidden"
@@ -2705,7 +2711,7 @@ def run_update(args, git, home, state, data, legacy_cache, source, url, branch, 
         removed = remove_legacy_caches(legacy_cache) if migrated(state) else []
     failures = [dict(f, client=p["client"]) for p in plans for f in p["failed"]]
     if backup and sum(len(p["actions"]) for p in plans) > SUMMARY_ACTIONS:
-        print("\n".join(map(summary, plans)))
+        print("\n".join(summary(p, backup) for p in plans))
     elif backup:
         emit(report(False, library, plans, removed))
     if backup:
