@@ -138,11 +138,22 @@ def test_frontmatter_delimiters_are_shared_with_metadata():
     for data in (b"", b"name: alpha\n", b"---\nname: alpha\n", b"\xff---\n"):
         with pytest.raises(installer.InstallError, match="Invalid frontmatter at fixture"):
             installer.frontmatter_name(data, "fixture")
-    # Every line break str.splitlines() knows ends a line for both readers.
-    data = b"---\r\ndescription: x\x0bname: alpha\r\n---\r\n"
-    assert installer.frontmatter_name(data, "fixture") == "alpha"
+    for data in (b"---\r\nname: alpha\r\n---\r\n", b"---\rname: alpha\r---\r"):  # CRLF and CR end lines
+        assert installer.frontmatter_name(data, "fixture") == "alpha"
+
+
+@pytest.mark.parametrize("char", ["\x0b", "\x0c", "\x1c", "\x1d", "\x1e", "\x85", "\u2028", "\u2029"])
+def test_a_line_break_only_some_readers_see_is_refused(char):
+    """str.splitlines() and PyYAML break lines at characters Claude Code and Codex read as part of
+    the line. `description: a<U+2028>extra: b` would then be two keys to the index and one value
+    that does not parse to Claude Code, which drops the frontmatter, disable-model-invocation included."""
+    data = f"---\nname: alpha\ndescription: Use alpha{char}extra: value\n---\nbody\n".encode()
+    with pytest.raises(installer.InstallError, match=f"U\\+{ord(char):04X}"):
+        installer.frontmatter_name(data, "fixture")
     pytest.importorskip("yaml")
-    assert installer.metadata(data, "fixture")["name"] == "alpha"
+    with pytest.raises(installer.InstallError, match=f"U\\+{ord(char):04X}"):
+        installer.metadata(data, "fixture")
+    assert installer.frontmatter_name(f"---\nname: alpha\n---\nbody{char}text\n".encode(), "x") == "alpha"
 
 
 WORDS = ["alpha", "it's", 'say "hi"', "a#b", "x:y", "[a]", "{b}", "c, d", "-e", "13c", "yes", "1.5", "~"]

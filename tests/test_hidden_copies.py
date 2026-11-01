@@ -270,6 +270,13 @@ def test_skills_the_installer_can_hide_pass(tmp_path, lines, files):
             {"deep/SKILL.md": "---\nname: deep\ndescription: x\n---\n", "deep/agents/openai.yaml": "policy: true\n"},
             "Cannot hide alpha/deep: agents/openai.yaml has a policy that is not a block-style mapping",
         ),
+        # A line break to PyYAML that Claude Code and Codex read as part of the line: to them the value
+        # holds `: ` and does not parse, so the whole frontmatter or openai.yaml would be dropped.
+        ("extra: Use it\u2028more: value\n", {}, "holds U+2028"),
+        ("metadata:\n  a: b\u2029c: d\n", {}, "holds U+2029"),
+        ("note: x\x85y: z\n", {}, "holds U+0085"),
+        ("", {"agents/openai.yaml": "interface:\n  display_name: a\u2028b: c\n"}, "holds U+2028"),
+        ("", {"sub/SKILL.md": "---\nname: sub\ndescription: x\u2029y: z\n---\n"}, "holds U+2029"),
     ],
 )
 def test_skills_the_installer_could_not_hide_are_rejected(tmp_path, lines, files, expected):

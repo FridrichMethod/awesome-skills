@@ -330,6 +330,24 @@ def test_remote_codex_copies_are_renamed_and_hidden_with_the_standard_library(re
     ), "Claude's copy keeps its name"
 
 
+def test_a_line_break_claude_code_does_not_see_fails_its_skill_for_both_clients(remote, capsys):
+    """The sync rejects `a<U+2028>b: c` in a frontmatter; a library commit that bypassed it still gets
+    no copy at all, since Claude Code would drop its frontmatter, disable-model-invocation included."""
+    home, upstream = remote
+    put(upstream.work / "skills/sneaky/SKILL.md", "---\nname: sneaky\ndescription: Use X\u2028extra: v\n---\nbody\n")
+    index = json.loads((upstream.work / installer.INDEX).read_text())
+    index["skills"]["sneaky"] = {"name": "sneaky", "description": "Use X"}
+    put(upstream.work / installer.INDEX, json.dumps(index))
+    upstream.commit("bypassed the sync", index=False)
+    capsys.readouterr()
+    assert run() == 1
+    err = capsys.readouterr().err
+    assert "claude:sneaky (Frontmatter at sneaky/SKILL.md holds U+2028" in err, err
+    assert "codex:sneaky (Frontmatter at sneaky/SKILL.md holds U+2028" in err, err
+    assert not (home / ".claude/skills/sneaky").exists() and not codex_copy(home, "sneaky").exists()
+    assert hidden_from_claude(home / ".claude/skills/alpha")
+
+
 def test_lock_contention_exits_75(remote):
     home, _ = remote
     with installer.state_lock(installer.native(data_dir(home))):

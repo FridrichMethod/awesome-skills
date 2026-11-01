@@ -426,6 +426,10 @@ def exact_tree(expected: dict, path: Path) -> bool:
 # A remote install reads only SKILL.md's top-level `name`, with NameReader (the rest comes from
 # library_index.json); the sync rejects a skill it reads differently from PyYAML.
 NON_PRINTABLE = re.compile(r"[^\t\n\r\x20-\x7e\x85\xa0-\ud7ff\ue000-\ufffd\U00010000-\U0010ffff]")
+# Line breaks to str.splitlines() or PyYAML that Claude Code and Codex read as part of the line: a key
+# after one would exist for the index alone, and the clients' line would not parse (Claude Code then
+# drops the whole frontmatter, disable-model-invocation included).
+ODD_BREAK = re.compile("[\x0b\x0c\x1c-\x1e\x85\u2028\u2029]")
 DOCUMENT_MARKER = re.compile(r"(?:---|\.\.\.)(?:[ \t]|$)")
 BLOCK_HEADER = re.compile(r"[|>](?:[+-]([1-9])?|([1-9])[+-]?)?(?: +(?:#.*)?)?")
 ESCAPES = {
@@ -475,15 +479,23 @@ def pyyaml():
     return yaml
 
 
+def no_odd_break(text: str, what: str):
+    if found := ODD_BREAK.search(text):
+        raise InstallError(
+            f"{what} holds U+{ord(found.group()):04X}, a line break to some YAML readers but not to Claude Code or Codex"
+        )
+
+
 def frontmatter(data: bytes, label: str) -> str:
     """The text between the first two `---` lines, as PyYAML and NameReader read it."""
     try:
-        lines = data.decode("utf-8").splitlines()
+        lines = re.split(r"\r\n?|\n", data.decode("utf-8"))
         if lines[0].strip() != "---":
             raise ValueError("missing frontmatter")
         end = next(i for i in range(1, len(lines)) if lines[i].strip() == "---")
     except (ValueError, IndexError, StopIteration) as e:
         raise InstallError(f"Invalid frontmatter at {label}: {e}") from e
+    no_odd_break("\n".join(lines[: end + 1]), f"Frontmatter at {label}")
     return "\n".join(lines[1:end])
 
 
@@ -857,6 +869,7 @@ def frontmatter_end(lines: list[str], label: str) -> int:
     end = next((i for i in range(1, len(lines)) if lines[i].rstrip("\r").strip() == "---"), None)
     if lines[0].rstrip("\r").strip() != "---" or end is None:
         raise InstallError(f"Invalid frontmatter at {label}: missing frontmatter")
+    no_odd_break("\n".join(lines[: end + 1]), f"Frontmatter at {label}")
     return end
 
 
@@ -883,6 +896,7 @@ def hidden_policy(data: bytes | None, label: str) -> bytes:
         return b"policy:\n  allow_implicit_invocation: false\n"
     bom, lines, cr = split_text(data, label)
     text = [line.rstrip("\r") for line in lines]
+    no_odd_break("\n".join(text), f"Cannot hide {label}: {POLICY_FILE}")
 
     def refuse(reason: str) -> InstallError:
         return InstallError(f"Cannot hide {label}: {POLICY_FILE} {reason}")
