@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 
 from scripts import install_skills as installer
-from tests.gitfixtures import without_pyyaml
+from tests.gitfixtures import git, without_pyyaml
 
 ROOT = Path(__file__).resolve().parents[1]
 POSIX_MODES = pytest.mark.skipif(os.name == "nt", reason="native Windows has no POSIX permission bits")
@@ -1009,6 +1009,22 @@ def test_backups_are_ordered_by_their_clock_independent_stamp(sandbox):
     (earlier / "restore.json").write_text(journal.replace('"status": "complete"', '"status": "applying"'))
     found = installer.interrupted_transaction(installer.native(state_dir(home)))
     assert found == installer.native(earlier), "every kept journal is checked, not only the newest"
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="git unavailable")
+def test_a_local_tree_reads_its_revision_from_its_own_checkout_alone(tmp_path):
+    """DIR/skills takes DIR's revision from DIR/.git only: a repository above DIR, such as another
+    user's in a shared temporary directory, is never read."""
+    commit = ["-c", "user.name=t", "-c", "user.email=t@example.invalid", "commit", "-q", "--allow-empty", "-m", "x"]
+    above, checkout = tmp_path / "shared", tmp_path / "shared/work"
+    git("init", "-q", str(above))
+    git("-C", str(above), *commit)
+    skill(checkout / "skills", "alpha")
+    assert installer.DirLibrary(installer.native(checkout / "skills")).revision == "unversioned"
+    git("init", "-q", str(checkout))
+    git("-C", str(checkout), *commit)
+    head = git("-C", str(checkout), "rev-parse", "HEAD").strip()
+    assert installer.DirLibrary(installer.native(checkout / "skills")).revision == head
 
 
 def test_a_local_tree_may_still_contain_links(sandbox, tmp_path):

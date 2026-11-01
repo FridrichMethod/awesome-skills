@@ -10,8 +10,10 @@ import socket
 import stat
 import subprocess
 import sys
+import tempfile
 import threading
 import time
+from pathlib import Path
 
 import pytest
 import yaml
@@ -581,6 +583,44 @@ def test_inherited_git_environment_never_reaches_another_repository(remote, monk
         assert run() == 0
     assert (git("-C", str(other), "for-each-ref"), (other / ".git/index").read_bytes(), snapshot(other)) == before
     assert (home / ".claude/skills/alpha/nested/deep/data.txt").read_bytes() == b"alpha data\n"
+
+
+def plant(tmp_path, monkeypatch, url: str, target: str) -> Path:
+    """Another user's repository at the top of a shared temporary directory, which git honors where
+    the global config trusts every directory (safe.directory=*, as on the owner's lab machine): it
+    redirects `url` to `target`, and its core.sshCommand writes a marker. Returns the marker."""
+    shared, marker = tmp_path / "shared-tmp", tmp_path / "planted-command-ran"
+    git("init", "-q", str(shared))
+    git("-C", str(shared), "config", f"url.{target}.insteadOf", url)
+    git("-C", str(shared), "config", "core.sshCommand", f"sh -c 'echo ran > \"$0\"; exit 1' {marker.as_posix()}")
+    with open(os.environ["GIT_CONFIG_GLOBAL"], "a") as config:
+        config.write("[safe]\n\tdirectory = *\n")
+    monkeypatch.setattr(tempfile, "tempdir", str(shared))
+    for key in ("TMPDIR", "TEMP", "TMP"):
+        monkeypatch.setenv(key, str(shared))
+    monkeypatch.setattr(installer, "PRIVATE", [], raising=False)  # this process's private directory
+    return marker
+
+
+@pytest.mark.parametrize("redirect", ["file", "ssh"])
+def test_a_repository_planted_in_the_temporary_directory_is_never_read(remote, monkeypatch, tmp_path, redirect):
+    """git --version, config, ls-remote and clone need no repository: they run in a private directory
+    of the installer's own, so a planted .git can neither redirect the library nor run a command."""
+    home, upstream = remote
+    evil = Upstream(tmp_path / "evil")
+    evil.skill("alpha", body="planted alpha")
+    evil.commit("planted")
+    target = evil.url if redirect == "file" else "ssh://planted.invalid/library.git"
+    marker = plant(tmp_path, monkeypatch, upstream.url, target)
+    found = installer.Git()
+    assert found.env.get("GIT_SSH_COMMAND") == installer.SSH_COMMAND, "the planted core.sshCommand is not ours"
+    assert installer.remote_tip(found, upstream.url, "main") == upstream.rev("main")
+    assert run() == 0
+    put(clone(home) / ".git/HEAD", "garbage\n")  # healing a damaged clone asks the remote (ls-remote)
+    assert run() == 0
+    assert not marker.exists()
+    for copy in (home / ".claude/skills/alpha", codex_copy(home, "alpha")):
+        assert "planted" not in (copy / "SKILL.md").read_text()
 
 
 def test_only_sha1_libraries_are_supported():

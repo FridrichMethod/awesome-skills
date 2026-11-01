@@ -6,6 +6,7 @@ and need only the standard library; a checkout's skills are read with PyYAML."""
 from __future__ import annotations
 
 import argparse
+import atexit
 import bisect
 import errno
 import hashlib
@@ -1062,6 +1063,33 @@ def git_env() -> dict:
     return env
 
 
+PRIVATE: list[Path] = []
+
+
+def private_cwd() -> Path:
+    """Where git runs without a repository: an empty folder in this process's own mkdtemp folder,
+    removed at exit. GIT_CEILING_DIRECTORIES names that mkdtemp folder, so git looks for a repository
+    in the empty folder alone: a .git above, such as another user's in a shared temporary directory,
+    whose url.*.insteadOf, core.sshCommand or credential helper git honors under safe.directory=*,
+    is never read, and the ceiling is never a drive root, which some git versions ignore (C:\\.git)."""
+    if not PRIVATE:
+        top = Path(os.path.realpath(tempfile.mkdtemp(prefix="awesome-skills-")))
+        atexit.register(shutil.rmtree, top, True)
+        (top / "git").mkdir()
+        PRIVATE.append(top / "git")
+    return PRIVATE[0]
+
+
+def checkout_git(directory: Path, *args: str) -> str:
+    """A git command's output in a local checkout, from its own .git, never one found above it."""
+    dot = directory / ".git"
+    if not os.path.lexists(dot) or not shutil.which("git"):
+        return ""
+    command = ["git", f"--git-dir={display(dot)}", f"--work-tree={display(directory)}", *args]
+    result = subprocess.run(command, capture_output=True, text=True, stdin=subprocess.DEVNULL, env=git_env())
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
 def minimum_git() -> tuple[tuple, str]:
     version = SPARSE_INDEX_GIT if WINDOWS else MIN_GIT
     return version, ".".join(map(str, version)) + (" (on Windows)" if WINDOWS else "")
@@ -1073,7 +1101,8 @@ class Git:
         exe = shutil.which("git")
         if not exe:
             raise InstallError(f"git {wanted} or newer is required; git was not found on PATH")
-        self.exe, self.env = exe, git_env()
+        self.exe, self.env, self.cwd = exe, git_env(), private_cwd()
+        self.env["GIT_CEILING_DIRECTORIES"] = str(self.cwd.parent)
         found = self.text(None, "--version")
         match = re.search(r"(\d+)\.(\d+)(?:\.(\d+))?", found)
         self.version = tuple(int(part or 0) for part in match.groups()) if match else (0, 0, 0)
@@ -1099,7 +1128,7 @@ class Git:
             input=stdin.encode(),
             capture_output=True,
             env=self.env,
-            cwd=tempfile.gettempdir() if repo is None else None,
+            cwd=self.cwd if repo is None else None,
         )
         if check and result.returncode:
             lines = [line for line in result.stderr.decode("utf-8", "replace").splitlines() if line.strip()]
@@ -1210,16 +1239,7 @@ class DirLibrary(Library):
             raise InstallError(f"Missing source library: {display(source)}")
         self.source = source
         provenance = read_json(source.parent / PROVENANCE, {})
-        if shutil.which("git"):
-            result = subprocess.run(
-                ["git", "-C", display(source.parent), "rev-parse", "HEAD"],
-                capture_output=True,
-                text=True,
-                stdin=subprocess.DEVNULL,
-                env=git_env(),
-            )
-            if result.returncode == 0:
-                self.revision = result.stdout.strip()
+        self.revision = checkout_git(source.parent, "rev-parse", "HEAD") or self.revision
         self._fingerprints, self._problems, self._rules = {}, {}, None
         ids = skill_ids(source)
         self._listings = {skill_id: local_listing(source / skill_id) for skill_id in ids}
@@ -2630,16 +2650,8 @@ def guard_source(source: Path, data: Path):
     if overlap(source, data) or is_library_clone(source.parent):
         raise InstallError(f"Refusing the managed library clone as a local source: {display(source)}")
     sparse = source.parent / ".git" / "info" / "sparse-checkout"
-    if sparse.is_file() and shutil.which("git"):
-        result = subprocess.run(
-            ["git", "-C", display(source.parent), "config", "--bool", "core.sparseCheckout"],
-            capture_output=True,
-            text=True,
-            stdin=subprocess.DEVNULL,
-            env=git_env(),
-        )
-        if result.stdout.strip() == "true":
-            raise InstallError(f"Refusing a sparse checkout as a local source: {display(source)}")
+    if sparse.is_file() and checkout_git(source.parent, "config", "--bool", "core.sparseCheckout") == "true":
+        raise InstallError(f"Refusing a sparse checkout as a local source: {display(source)}")
 
 
 def build_parser() -> argparse.ArgumentParser:
