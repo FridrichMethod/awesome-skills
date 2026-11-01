@@ -149,6 +149,7 @@ def router(client, data):
 
 
 def test_routers_differ_per_client_and_quote_for_powershell_on_windows(monkeypatch, tmp_path):
+    monkeypatch.setattr(installer, "WINDOWS", False)  # the POSIX forms first, on every platform
     call = installer.shlex.quote(str(tmp_path / "bin/awesome-skills"))
     claude, codex = router("claude", tmp_path), router("codex", tmp_path)
     head, body = claude.split("\n---\n", 1)
