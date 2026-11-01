@@ -30,7 +30,7 @@ Agent skills are how you give Claude Code or Codex CLI deep, reusable expertise 
 2. **Filters** out things that break installs (Git LFS pointers, files >40 MB, bundled vector DBs, stale `.gitattributes`).
 3. **Auto-syncs** every Sunday so your skill library stays current without manual work.
 
-The result is one URL + one command that bootstraps a fresh laptop with **2,300+ vetted skills** available through a searchable index and independent client selections, and that keeps them current with incremental git transfers.
+The result is one URL + one command that bootstraps a fresh laptop with **2,300+ vetted skills**, every one installed for Claude Code and Codex and runnable by hand (`/ID`, `$ID`), while the model sees only the few you choose plus a router that searches the rest, and that keeps them current with incremental git transfers.
 
 ---
 
@@ -41,6 +41,9 @@ The result is one URL + one command that bootstraps a fresh laptop with **2,300+
   - [Flags](#flags)
   - [Env overrides](#env-overrides)
   - [Exit codes](#exit-codes)
+  - [Visible and hidden skills](#visible-and-hidden-skills)
+  - [Router and search](#router-and-search)
+  - [Codex: two skills roots](#codex-two-skills-roots)
   - [Migration and recovery](#migration-and-recovery)
   - [Offline Codex validation](#offline-codex-validation)
   - [From a local clone](#from-a-local-clone)
@@ -75,11 +78,11 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File $f; Remove-Item -LiteralPath $f
 
 **The same command is the first install and every update**, on each OS; pass flags after it (`| bash -s -- --dry-run`, or `-File $f --dry-run`). When nothing changed it costs one `git fetch`, writes nothing, and prints `Already current; selection preserved.`
 
-The installer keeps a complete library outside skill discovery and installs independent, persistent selections:
+The installer keeps the library outside skill discovery and installs it for each client, independently and persistently:
 
-- **Codex starts with one `awesome-skills-library` skill**, whose description tells the model how to search the full library index or enable a source ID. Built-in, plugin, and user skills stay under their existing owners.
-- **Claude keeps the full collection by default**, including existing paths. Its selection is independent of Codex. Different-content name collisions are reported and all Claude variants remain available; Codex requires an explicit, unambiguous selection.
-- Repeated installs and an updater running `install.sh` **without arguments preserve both clients' choices**. New upstream entries join Claude's default `@all` selection; they do not join Codex's selected collection.
+- **Every library skill is installed and runs by hand**: start a message with `/ID` in Claude Code, or type `$ID` in Codex (the `$` picker lists them too).
+- **The model sees only each client's selection.** By default that is one `awesome-skills-library` router per client, which searches the library offline; everything else is installed hidden, so the model's skill list stays small. `--enable ID` shows a skill to the model, `--disable ID` hides it again (see [Visible and hidden skills](#visible-and-hidden-skills)).
+- Built-in, plugin, and user skills stay under their existing owners. Repeated installs and an updater running `install.sh` **without arguments preserve both clients' choices**; new upstream skills are installed hidden.
 
 **Requirements:** Python 3.11+, whose standard library is all a remote install or update needs, and **git 2.29 or newer** (**2.37 or newer** with Git for Windows, whose sparse index keeps Windows-invalid paths in unselected skills from blocking checkout). The POSIX bootstrap needs Bash and `curl`; the Windows bootstrap needs PowerShell 7 or Windows PowerShell 5.1 and finds Python as `SKILLS_PYTHON`, then `py -3`, then `python`. A missing or older git fails before anything is written, with a message naming the version found. Installs from a local clone need no network and no git, but read every `SKILL.md` in full with PyYAML (`python3 -m pip install 'PyYAML>=6.0'`), as does `scripts/sync_skills.py`; without it such an install stops before writing anything and says so. Use the existing project environment with `SKILLS_PYTHON=/path/to/venv/bin/python` when appropriate. The installer never installs Python dependencies implicitly.
 
@@ -88,8 +91,8 @@ The installer keeps a complete library outside skill discovery and installs inde
 The library is a git partial clone (`--filter=blob:none`) with a cone-mode sparse checkout, kept in the data directory: `${XDG_DATA_HOME:-~/.local/share}/awesome-skills/library` on Linux and macOS, `%LOCALAPPDATA%\awesome-skills\library` on Windows. Nothing lives under a cache directory that cleaners purge.
 
 - **An update fetches only new commits and trees** (the clone holds no file contents beyond what was installed). The full-library index that `--list` and the router read is the committed `library_index.json` (IDs, frontmatter names, descriptions) plus `library_sources.json` (origins), so searching never downloads skill bodies.
-- **Change detection is per skill, by git tree id.** Each ownership record stores the tree id it was installed from. A selected skill whose tree id is unchanged and whose directory still exists is skipped after a single `lstat`: nothing is hashed or rewritten. Only skills whose tree changed (or that are missing, newly selected, or deselected) are examined, so destination work is proportional to what changed.
-- **Only the blobs of selected skills that changed are downloaded**: the installer narrows the sparse checkout to exactly those skill directories, lets git batch-fetch their missing blobs, copies and verifies them, and narrows the checkout back to `scripts/` and the root files. Unselected skills are never downloaded. Claude's default `@all` selection downloads the whole library once, on its first install.
+- **Change detection is per skill, by git tree id.** Each ownership record stores the tree id it was installed from and whether the model sees it. An installed skill whose tree id and visibility are unchanged and whose directory still exists is skipped after a single `lstat`: nothing is hashed or rewritten. Only skills whose tree or visibility changed (or that are missing, newly installed, or removed) are examined, so destination work is proportional to what changed.
+- **Only the blobs of installed skills that changed are downloaded**: the installer narrows the sparse checkout to exactly those skill directories, lets git batch-fetch their missing blobs, copies and verifies them, and narrows the checkout back to `scripts/` and the root files. Skills that are not installed are never downloaded. The default (the whole library, hidden) downloads it once, on the first install.
 - **One run at a time**: the installer holds its own lock (`flock` on Linux and macOS, `msvcrt` on Windows) across fetch, planning and apply, and exits `75` when another run holds it. Where `flock` does not work (NFS or Lustre homes without lock support, as on shared cluster login nodes) an exclusive (`O_EXCL`) lock file holding a random token and its start time takes its place; it counts as stale only after 6 hours, and a takeover renames it aside atomically and backs off if the file it moved is not the one it judged stale.
 - **A stalled network never holds the lock.** Every git transfer, including blob downloads during checkout, aborts below 1000 bytes/s for 60 s (`GIT_HTTP_LOW_SPEED_LIMIT`/`GIT_HTTP_LOW_SPEED_TIME` override); unless you configured ssh for git, ssh runs with `BatchMode=yes`, `ConnectTimeout=30` and keepalives.
 - **Unattended runs heal themselves.** An update killed mid-apply is undone at the start of the next run, which then applies normally; if a file it would restore was edited since, the run exits `3` and names the `--restore` command instead. Under the lock the installer removes stale git `*.lock` files and leftover partial clones; a dropped or stalled transfer is retried once; only a clone that git reports as damaged (not a git repository, bad or unreadable objects, a missing ref) is moved aside (`library.broken-<time>`) and cloned again once, and older broken copies are deleted only after that clone works. A full disk or a slow link is reported, never answered by re-cloning. Inherited `GIT_*` variables (a hook's `GIT_DIR`, `GIT_INDEX_FILE`, injected `GIT_CONFIG_COUNT` config, ...) and system or global git attributes are ignored, so a run started inside another repository never touches it.
@@ -99,17 +102,19 @@ The library is a git partial clone (`--filter=blob:none`) with a cone-mode spars
 ### Flags
 
 ```bash
-./install.sh --codex-only --enable protein-design-workflow
-./install.sh --codex-only --enable academic-paper
-./install.sh --codex-only --disable academic-paper
+./install.sh --codex-only --enable protein-design-workflow   # show it to the model
+./install.sh --codex-only --disable protein-design-workflow  # hidden again, still installed
+./install.sh --claude-only --manual ''                       # install only what the model sees
 ./install.sh --list --search protein
 ```
 
 | Flag | Effect |
 |---|---|
 | `--claude-only`, `--codex-only` | operate on one client |
-| `--enable ID`, `--disable ID` | persistently add/remove a directory source ID; repeatable; requires one client |
-| `--selection ID,ID` | replace one client's selection; `--selection ''` disables all managed skills |
+| `--enable ID`, `--disable ID` | persistently show or stop showing a directory source ID to the model (the visible set); repeatable; requires one client. A disabled skill stays installed while the hidden set covers it |
+| `--selection ID,ID` | replace one client's visible set: IDs, `@library` (the router), `@all`; `--selection ''` shows nothing |
+| `--manual SPEC` | replace one client's hidden set: `@all` (the default), `ID,ID`, or `''` to install only the visible set |
+| `--no-fetch` | plan against the library clone as it is, without fetching: visibility changes work offline and in seconds (skills never downloaded still need the network) |
 | `--list`, `--search TEXT` | inspect the complete library's IDs, frontmatter names, descriptions, tree ids, origins, and conflicts; reads the clone offline as of its last update (a remote `--list` needs an existing install) |
 | `--source DIR` | use another local `skills/` tree |
 | `--dry-run` | compute the exact plan against the remote tip without writing state or destinations and without moving the clone's checkout; it fetches new commits and trees into an existing clone (a remote dry run needs an existing install). `--list` and `--dry-run` may lazily fetch missing objects into the clone |
@@ -120,7 +125,7 @@ The library is a git partial clone (`--filter=blob:none`) with a cone-mode spars
 
 On PowerShell 5.1, write an empty selection as `--selection=` because that shell drops empty arguments.
 
-IDs refer to directories, but conflicts are checked using frontmatter `name` and git tree ids. Codex deduplicates identical selected aliases while retaining all source IDs and origins in its manifest/cache index. Different-content variants are preserved in the cache and cannot be enabled together for Codex. For Codex, an external skill with the same name and different content also blocks installation before changes are made. Claude keeps every selected variant, reports external conflicts, and preserves user edits. Neither skill names nor catalog ordering are changed.
+IDs refer to directories. Claude keeps every variant under its own directory and reports skills that share a frontmatter `name` (the name is only an alias there; `/ID` always works). Every Codex copy is named after its ID, so variants and aliases install side by side and `$ID` is unambiguous. A skill outside the library that already uses a name keeps it: the library copy with that ID is not installed for Codex (it is listed under `preserved`), and asking for that ID by name stops the run before any change. User edits are preserved for both clients.
 
 ### Env overrides
 
@@ -130,14 +135,15 @@ IDs refer to directories, but conflicts are checked using frontmatter `name` and
 | `SKILLS_REPOSITORY_URL` | `https://github.com/FridrichMethod/awesome-skills.git` | git remote of the library clone |
 | `SKILLS_INSTALLER_URL` | `https://raw.githubusercontent.com/FridrichMethod/awesome-skills/$SKILLS_BRANCH/scripts/install_skills.py` | installer the bootstraps download |
 | `SKILLS_CLAUDE_DEST` | `$HOME/.claude/skills` | Claude discovery destination |
-| `SKILLS_CODEX_DEST` | `$HOME/.codex/skills` | Codex discovery destination |
+| `SKILLS_CODEX_DEST` | `$CODEX_HOME/skills` (`$HOME/.codex/skills`) | Codex's first skills root |
+| `SKILLS_CODEX_DEST2` | `$HOME/.agents/skills` | Codex's second skills root (see [Codex: two skills roots](#codex-two-skills-roots)) |
 | `SKILLS_DATA_DIR` | `${XDG_DATA_HOME:-$HOME/.local/share}/awesome-skills` (Windows: `%LOCALAPPDATA%\awesome-skills`) | the library clone (`library/`) |
 | `SKILLS_STATE_DIR` | `$HOME/.local/share/awesome-skills` (Windows: `%LOCALAPPDATA%\awesome-skills`) | client selections, ownership manifests, recovery journals/backups, lock |
 | `SKILLS_CACHE_DIR` | `$HOME/.cache/awesome-skills` | where the former tarball installer kept snapshots; read only to remove them |
 | `SKILLS_PYTHON` | `python3` (Windows: `py -3`, then `python`) | Python 3.11+ that runs the installer (with PyYAML for an install from a checkout) |
 | `SKILLS_KEEP_BACKUPS` | `5` | transaction backups kept after each update (ordered by a clock-independent stamp; all kept ones are checked for an interrupted update); `0` keeps all |
 
-With `XDG_DATA_HOME` unset, data and state share one directory. State, data and the legacy cache must stay outside discovery, disjoint from install destinations, with no symlink ancestors. Both client destinations must be disjoint, including when updating only one client. Custom destinations are saved for subsequent no-argument updates. State and destinations must share a filesystem for reversible atomic moves; for a custom mount, set `SKILLS_STATE_DIR` to a directory on that mount. The state directory must persist across updater runs. The installer does not edit Codex/Claude configuration, dotfiles, or `~/.agents` configuration.
+With `XDG_DATA_HOME` unset, data and state share one directory. State, data and the legacy cache must stay outside discovery, disjoint from install destinations, with no symlink ancestors. All client destinations must be disjoint, including when updating only one client. Custom destinations are saved for subsequent no-argument updates, and the [launcher](#router-and-search) carries them with the state and data directories. State and destinations must share a filesystem for reversible atomic moves; for a custom mount, set `SKILLS_STATE_DIR` to a directory on that mount. The state directory must persist across updater runs. The installer does not edit Codex/Claude configuration or dotfiles; in `~/.agents` it writes only the skill folders it owns in `~/.agents/skills`.
 
 Consumers that need to know whether the skills are installed can check for the ownership manifests `claude.json`/`codex.json` in the state directory, or for the clone in the data directory; both are written only by successful runs.
 
@@ -155,10 +161,54 @@ curl -fsSL https://raw.githubusercontent.com/FridrichMethod/awesome-skills/main/
 | `0` | success, including `Already current; selection preserved.` |
 | `1` | error, with one message naming the missing tool or failing step; the previous install is left intact |
 | `2` | usage error |
-| `3` | a person must act: an interrupted update cannot be undone automatically because a file changed since (the message names the `--restore` command), or an update would remove most managed skills (rerun with `--allow-mass-removal` if intended) |
+| `3` | a person must act: an interrupted update cannot be undone automatically because a file changed since (the message names the `--restore` command), an update would remove most managed skills (rerun with `--allow-mass-removal` if intended), or a Codex skills root would hold more than 1,990 skill folders |
 | `75` | another installer run holds the lock (callers may ignore it) |
 
+### Visible and hidden skills
+
+Each client has two persistent sets, changed only with a client flag:
+
+- the **visible set** (`--selection`, `--enable`, `--disable`): what the model sees and may use on its own. IDs, `@library` for the router, or `@all`. Default: `@library`.
+- the **hidden set** (`--manual`): what is installed besides, for you to run by hand. `@all`, IDs, or `''`. Default: `@all`.
+
+| | Claude Code | Codex |
+|---|---|---|
+| A hidden copy | `disable-model-invocation: true` as the first frontmatter key: not in the model's skill list, and the Skill tool refuses it | `policy.allow_implicit_invocation: false` in `agents/openai.yaml` (plus the Claude key, which Cursor honors): not in the model's catalog |
+| Running any skill by hand | start a message with `/ID` (the directory name; the frontmatter `name` is only an alias) | `$ID` or the `$` picker; every Codex copy's frontmatter `name` is set to its ID |
+| Where | `~/.claude/skills` | split between two roots, see [below](#codex-two-skills-roots) |
+
+Installed copies are a deterministic function of the library tree, the client and the visibility: plugin manifest folders (`.claude-plugin/`, `.codex-plugin/`, `.cursor-plugin/`) are dropped from both clients' copies, since Claude would list their commands and Codex would name the skill `plugin:ID`; a `SKILL.md` below a skill's top level gets the Codex name `ID--sub-path` (shortened with a hash past 64 characters) and the Codex policy, so it can neither collide nor surface. Visible Claude copies are the library tree as it is. Fingerprints are taken of the copies as installed, so reruns change nothing, user edits are still recognized and preserved, an upstream change to a hidden skill is installed still hidden, and an unmanaged directory that is exactly the library tree is adopted and then copied again in the client's form. The weekly sync rejects library skills these line-by-line edits could not make safely.
+
+Codex's bundled system skills (`imagegen`, `openai-docs`, `review-agent`, `skill-creator`, `skill-installer`) are never library IDs, so `$skill-creator` stays Codex's own.
+
+### Router and search
+
+Each install writes a launcher, `<data>/bin/awesome-skills` (`%LOCALAPPDATA%\awesome-skills\bin\awesome-skills.ps1` as well on Windows). It runs the installer that made the install with that install's state and data directories, saved destinations and remote (unless you set them), so it never starts a second, divergent state:
+
+```bash
+~/.local/share/awesome-skills/bin/awesome-skills search protein design      # offline, read-only
+~/.local/share/awesome-skills/bin/awesome-skills --codex-only --enable binder-design --no-fetch
+```
+
+`search` runs `scripts/search_skills.py`, which needs only the standard library and no git: every word must match an ID, name or description (`-`, `_` and spaces are the same), the best matches come first, and at most 12 are printed (`--limit`, up to 50) as `ID - description`; `--client` marks the skills that client shows the model as `[visible]`, and for Codex prints each installed `SKILL.md` path. It exits `1` when nothing matches.
+
+Each client's router uses it:
+
+- **Claude** (`/awesome-skills-library what you need`, or picked by the model): searches with the request (`$ARGUMENTS`, never spliced into a shell command; `allowed-tools` permits exactly the launcher's `search`), invokes `[visible]` matches itself, and for hidden ones asks you to start your next message with `/ID`. It never opens a hidden skill's `SKILL.md`. A model-invoked router may need approval once; `permissions.allow` with `Skill(awesome-skills-library)` avoids that.
+- **Codex**: searches, then reads the printed `SKILL.md` and follows it, and tells you that `$ID` loads it directly.
+
+### Codex: two skills roots
+
+Codex reads two user skill roots, `$CODEX_HOME/skills` and `~/.agents/skills`, and walks at most 2,000 directories in each (top-level folders first). The whole library does not fit in one, so each Codex copy goes to one of them by a stable hash of its ID (a copy already installed keeps its root; the router stays in the first). `SKILLS_CODEX_DEST` and `SKILLS_CODEX_DEST2` move them.
+
+- Before any write, the installer counts each root's top-level folders, other owners' included, as they would be after the run, and refuses (exit `3`, nothing written) if one would exceed 1,990. Every library skill is then always found.
+- Each root still holds more than 2,000 directories, so Codex logs `skills scan reached its traversal limit` on every start. The TUI does not show it (it goes to `$CODEX_HOME/logs_2.sqlite`); `codex exec` prints it on stderr unless `RUST_LOG='error,codex_skills_extension::loader::host=off'`, which also hides that module's other errors. Top-level skills are not lost; only which nested `SKILL.md` files are read depends on where the walk stops.
+- Other tools read `~/.agents/skills` too: Gemini CLI (it puts every enabled skill's name and description in its system prompt), Cursor (which also reads `~/.codex/skills` and `~/.claude/skills`, and honors the Claude key of hidden copies), OpenCode (which rejects names containing `--` or `_`) and Copilot CLI. Codex reads user skills only from these two folders, so moving the second root with `SKILLS_CODEX_DEST2` hides its half of the library from Codex; it is meant for tests and custom layouts.
+- Both clients hold a full copy of the library, so it takes roughly twice the disk of one.
+
 ### Migration and recovery
+
+**To visible and hidden sets (once, automatically):** the first run of this version migrates each client's stored selection, under the lock and in a normal transaction. Claude's former default `@all` becomes the router visible with the whole library hidden; any other selection stays visible, with the rest of the library installed hidden. The migration removes nothing, so the mass-removal guard does not fire, and the run exits `0`. A large run prints one line per client instead of its JSON plan, for example `Migrated claude: @all -> visible @library, 2300 hidden; undo: --claude-only --selection @all`. `--dry-run` reports the migration (`"migration"` per client) without writing. Undo it either with that command (or `--codex-only --manual ''`), or with `--restore` of its transaction: a restored state is a lasting opt-out, recorded in `migrations.json` in the state directory, and is kept as it was with nothing hidden. A run interrupted during the migration is recovered and migrates again; the marker is written only once the transaction is complete. Its backup holds the replaced copies (about 300 MB for the whole library) until five later transactions have pruned it.
 
 **From the tarball installer (0.3.x and earlier):** the first run of this version recognizes the existing ownership manifests. A managed copy whose bytes and executable bits equal the library's current tree is recorded with its tree id and **not copied again** (permission differences such as tarball `0664` modes do not count); modified managed copies stay preserved as before. The old router, which pointed into the cache, is replaced. Once no managed router comes from the old installer, the snapshot directories it created under `~/.cache/awesome-skills/libraries/` (recognized by their 64-hex names and exact layout) are removed; nothing else there is touched. The first run downloads the blobs of selected skills once, then later runs are incremental.
 
@@ -175,7 +225,7 @@ Preview a change before applying it, and undo a transaction:
 
 A directory without a manifest is adopted **only when it is selected and its entire directory matches the current library tree**, including support files, extra/missing files, permissions (`0644`/`0755` files, `0755` directories as this installer writes them), and symlink targets; it is then recorded instead of copied again. A directory name alone is insufficient. An unmanaged directory that is not selected is never adopted or removed, even when identical to a library skill, so copies left by pre-manifest installers stay in place for you to remove; older copies differing from the library also remain untouched. Manifested copies are movable only if their recorded fingerprint still matches. Modified managed copies retain their old fingerprint so repeated updates continue to preserve them.
 
-Hidden entries such as Codex's own `.system` and every top-level symlink (and, on Windows, junction) are protected; no skill name is reserved. Unknown and modified entries are reported and preserved. No operation runs `rsync --delete` over a skills root. Removed or replaced owned directories are moved into a transaction backup, with old client state recorded before live changes. Replacements are fully prepared and verified first. Restore preserves unrelated entries and refuses to overwrite later user changes. A run interrupted while downloading or preparing copies changes nothing live and does not block later runs; one interrupted while moving entries is rolled back at once, or by the next run. The newest `SKILLS_KEEP_BACKUPS` (default 5) finished backups are kept; older ones are pruned after each update.
+Hidden entries such as Codex's own `.system` and every top-level symlink (and, on Windows, junction) are protected; apart from the router's directory and, for Codex, its bundled system skill names, no skill name is reserved. Unknown and modified entries are reported and preserved. No operation runs `rsync --delete` over a skills root. Removed or replaced owned directories are moved into a transaction backup, with old client state recorded before live changes. Replacements are fully prepared and verified first. Restore preserves unrelated entries and refuses to overwrite later user changes. A run interrupted while downloading or preparing copies changes nothing live and does not block later runs; one interrupted while moving entries is rolled back at once, or by the next run. The newest `SKILLS_KEEP_BACKUPS` (default 5) finished backups are kept; older ones are pruned after each update.
 
 Preserving unverifiable legacy skills can leave discovery overloaded. Inspect the plan and use your own backups/provenance to resolve those entries; the installer does not infer ownership or silently delete them. External/plugin collections can also exceed Codex limits independently of this repository. Restart Codex after selection changes, then verify its actual model catalog.
 
@@ -186,15 +236,15 @@ SKILLS_PYTHON=/path/to/venv/bin/python \
   /path/to/venv/bin/python -B scripts/verify_codex_catalog.py
 ```
 
-The verifier detects the installed version and available debug/protocol features, runs discovery and prompt preview in a temporary HOME with no credentials, and compares a legacy fixture with the migrated selection. It checks the names **and descriptions** of two fixture skills outside the library (one linked into the temporary `~/.agents/skills`) in the actual model-visible catalog, traversal warnings, and a no-argument updater rerun. It disables remote plugins/apps and blocks network proxies, invokes no model, and cleans its temporary environment. Unsupported debug interfaces are reported explicitly; discovery counts and rendering limits are measured, not hard-coded. Counts can differ because Codex intentionally hides some discovered system skills.
+The verifier detects the installed version and available debug/protocol features, installs a fixture of the library (`SKILL.md`, `agents/openai.yaml` and plugin manifests, with the directory layout) for Codex in a temporary HOME with no credentials, and runs discovery and the prompt preview. It checks that every installed path is discovered with its ID as name, that no name is discovered twice, and that the model-visible catalog holds no installed skill outside the visible selection, with the names **and descriptions** of two fixture skills outside the library (one linked into the temporary `~/.agents/skills`) and of the router, then a no-argument updater rerun. The traversal-limit error is reported, not failed. It disables remote plugins/apps and blocks network proxies, invokes no model, and cleans its temporary environment. Unsupported debug interfaces are reported explicitly; discovery counts and rendering limits are measured, not hard-coded. Counts can differ because Codex intentionally hides some discovered system skills.
 
 ### From a local clone
 
-`./install.sh` (or `.\install.ps1`) in a complete checkout installs from the adjacent `skills/` tree and needs neither network nor git, only PyYAML; the router then points at that checkout. A sparse checkout, or the managed library clone itself, is refused as a local source. After a remote install, the helper inside the data directory serves the managed clone, offline for `--list`:
+`./install.sh` (or `.\install.ps1`) in a complete checkout installs from the adjacent `skills/` tree and needs neither network nor git, only PyYAML; the launcher and routers then point at that checkout. A sparse checkout, or the managed library clone itself, is refused as a local source. After a remote install, the launcher serves the managed clone, offline for `search`, `--list` and `--no-fetch`:
 
 ```bash
-python3 -B ~/.local/share/awesome-skills/library/scripts/install_skills.py --list --search protein
-python3 -B ~/.local/share/awesome-skills/library/scripts/install_skills.py --codex-only --enable SOURCE_ID
+~/.local/share/awesome-skills/bin/awesome-skills --list --search protein
+~/.local/share/awesome-skills/bin/awesome-skills --codex-only --enable SOURCE_ID
 ```
 
 To regenerate `library_index.json` after editing `skills/` by hand, run `python scripts/sync_skills.py --index-only`; CI checks that it matches.
@@ -317,7 +367,8 @@ awesome-skills/
 ├── install.ps1                      ← the same for native Windows PowerShell
 ├── scripts/
 │   ├── sync_skills.py               ← aggregation + provenance + library index
-│   ├── install_skills.py            ← git transport + selection + ownership + recovery
+│   ├── install_skills.py            ← git transport + visibility + ownership + recovery
+│   ├── search_skills.py             ← offline, read-only library search (the routers')
 │   └── verify_codex_catalog.py      ← offline model-catalog verification
 ├── tests/                           ← temporary-HOME contract tests (file:// git remote)
 ├── library_index.json               ← every skill's ID, name and description (generated)

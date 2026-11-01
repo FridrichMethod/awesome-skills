@@ -55,6 +55,7 @@ bash install.sh --help
 # Dry run against fake destinations
 SKILLS_CLAUDE_DEST=/tmp/awesome-test/c \
 SKILLS_CODEX_DEST=/tmp/awesome-test/x \
+SKILLS_CODEX_DEST2=/tmp/awesome-test/x2 \
 bash install.sh --dry-run
 
 # Full curl pipe round-trip (only after explicitly publishing your branch)
@@ -79,6 +80,7 @@ The verifier starts no model turn, copies no credentials, and cleans its isolate
 - Shell: pass `shellcheck -s bash -e SC2155`.
 - PowerShell: keep `install.ps1` ASCII and compatible with Windows PowerShell 5.1.
 - Python: pass `ruff check`. The pre-commit config covers both.
+- `scripts/search_skills.py`, which the routers run, imports only the standard library and never git.
 - `scripts/install_skills.py` imports only the standard library at module level: the bootstraps run it on whatever `python3` a host has. PyYAML stays a lazy import (`pyyaml()`) where whole frontmatter is parsed, and the file stays under 120 KiB because `install.sh` passes it as one `python -c` argument.
 - Workflows: pass `actionlint`.
 - Markdown: keep tables aligned by column.
