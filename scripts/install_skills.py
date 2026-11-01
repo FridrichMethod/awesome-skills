@@ -1922,16 +1922,20 @@ def unclaim(plan: dict, entry: str, info: dict, managed: dict, reason: str):
 
 def plan_client(client, roots, old, base, visible, manual, library, router, agents) -> dict:
     """Plan one client from its state `base` (old, or the migrated form of old)."""
-    keys = ("destination", "destination2")
-    managed = {
-        entry: rec
-        for entry, rec in base.get("managed", {}).items()
-        if rec.get("root", 0) < len(roots) and base.get(keys[rec.get("root", 0)]) == str(roots[rec.get("root", 0)])
-    }
+    keys, records = ("destination", "destination2"), base.get("managed", {})
+
+    def here(i: int) -> bool:  # the root recorded, as spelled then or through a link since
+        return i < len(roots) and (base[keys[i]] == str(roots[i]) or native(Path(base[keys[i]]).resolve()) == roots[i])
+
+    managed = {entry: rec for entry, rec in records.items() if here(rec.get("root", 0))}
+    # Codex's second root became a link (see resolve_clients): its copies stay, owned.
+    frozen = {entry: rec for entry, rec in records.items() if rec.get("root", 0) >= len(roots)}
     desired, conflicts, named = desired_entries(client, visible, manual, library, router)
     for entry, want in list(desired.items()):  # a managed copy keeps its root; a new Codex copy goes by its ID
         rec = managed.get(entry)
-        if rec.get("root") if rec else client == "codex" and entry != ROUTER and placement(entry):
+        if entry in frozen:
+            del desired[entry]
+        elif rec.get("root") if rec else client == "codex" and entry != ROUTER and placement(entry):
             if len(roots) > 1:
                 want["root"] = 1
             elif entry not in named:
@@ -1962,6 +1966,8 @@ def plan_client(client, roots, old, base, visible, manual, library, router, agen
                 raise InstallError(f"Frontmatter name conflict with preserved {display(path)}: {name} ({entry})")
             unclaim(plan, entry, info, managed, f"name {name!r} is taken by {display(path)}; not claimed")
             break
+    if frozen:
+        new.update(destination2=base["destination2"], managed={**new["managed"], **frozen})
     return plan
 
 
@@ -2333,7 +2339,7 @@ def restore_operations(backup: Path, state: Path, journal: dict) -> list:
         validate_state(client.get("new_state") or {}, name)
         validate_state(client.get("old_state") or {}, name)
         roots = roots_of(client)
-        if not client.get("new_state") or not roots or roots != roots_of(client["new_state"]):
+        if not client.get("new_state") or not roots or roots != roots_of(client["new_state"])[: len(roots)]:
             raise InstallError("Recovery destination does not match the client manifest")
         if any(safe_absolute(root) != root for root in roots):
             raise InstallError("Recovery destination must be canonical and absolute")
@@ -2476,7 +2482,7 @@ def resolve_clients(args, home: Path, storage: list[Path], source: Path | None) 
             except InstallError as exc:  # a linked ~/.agents/skills is never written through
                 if not i or os.environ.get("SKILLS_CODEX_DEST2"):
                     raise
-                warn(f"{exc}; Codex gets only the skills placed in its first root and those named")
+                warn(f"{exc}; Codex's copies there are left as they are (see SKILLS_CODEX_DEST2)")
         if roots[0] == home / ".agents" or home / ".agents" in roots[0].parents:
             raise InstallError(f"This installer does not own ~/.agents: {display(roots[0])}")
         other = "claude" if client == "codex" else "codex"

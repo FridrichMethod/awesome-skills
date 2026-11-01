@@ -289,6 +289,34 @@ def test_a_second_codex_root_linked_into_claudes_blocks_neither_client(sandbox, 
     assert run(source) == 0 and "Already current" in capsys.readouterr().out
 
 
+def test_copies_in_a_second_root_that_became_a_link_stay_owned(sandbox, tmp_path, monkeypatch, capsys):
+    home, source = sandbox
+    if not can_symlink(tmp_path):
+        pytest.skip("symlinks unavailable")
+    for i in range(6):
+        skill(source, f"extra-{i}")
+    run(source)
+    second, shared = home / ".agents/skills", home / "shared-skills"
+    placed = sorted(os.listdir(second))
+    assert placed and set(placed) <= set(state(home, "codex")["managed"])
+    second.rename(shared)  # shared with other tools from now on
+    second.symlink_to(shared, target_is_directory=True)
+    before, copies = state(home, "codex"), installer.fingerprint(shared)
+    capsys.readouterr()
+    assert run(source) == 0
+    assert "Codex's copies there are left as they are (see SKILLS_CODEX_DEST2)" in capsys.readouterr().err
+    assert state(home, "codex") == before, "still owned, not forgotten"
+    assert installer.fingerprint(shared) == copies
+    assert run(source, "--codex-only", "--enable", "alpha") == 0, "a visibility change still works"
+    assert state(home, "codex")["managed"].keys() == before["managed"].keys()
+    skill(source, placed[0], body="changed upstream")
+    monkeypatch.setenv("SKILLS_CODEX_DEST2", str(shared))  # the README's way to update them again
+    assert run(source, "--codex-only") == 0
+    assert "changed upstream" in (shared / placed[0] / "SKILL.md").read_text() and hidden_from_codex(shared / placed[0])
+    value = state(home, "codex")
+    assert value["destination2"] == str(installer.native(shared)) and set(placed) <= set(value["managed"])
+
+
 def test_codex_copies_drop_plugin_folders_and_neutralize_nested_skills(sandbox):
     home, source = sandbox
     gamma = skill(source, "gamma")
