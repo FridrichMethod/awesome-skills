@@ -109,4 +109,4 @@ jobs:
           pwsh --version
 
       - name: Run installer tests
-        run: pytest tests/test_install.py tests/test_git_transport.py tests/test_bootstrap.py tests/test_codex_catalog.py -v -rs
+        run: pytest tests/test_install.py tests/test_visibility.py tests/test_search.py tests/test_git_transport.py tests/test_bootstrap.py tests/test_codex_catalog.py -v -rs

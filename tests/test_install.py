@@ -378,7 +378,7 @@ def test_local_router_points_at_running_helper_and_source(sandbox):
     run(source, "--codex-only")
     body = (home / ".codex/skills" / installer.ROUTER / "SKILL.md").read_text()
     launcher = state_dir(home) / "bin/awesome-skills"
-    assert f"{launcher} search --client codex WORDS" in body
+    assert f"{installer.launcher_call(installer.native(state_dir(home)))} search --client codex WORDS" in body
     text = launcher.read_text()
     assert str(ROOT / "scripts/install_skills.py") in text and str(ROOT / "scripts/search_skills.py") in text
     assert f"--source {source}" in text.replace("'", "")

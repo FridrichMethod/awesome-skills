@@ -177,3 +177,31 @@ def test_the_windows_launcher_uses_single_quoted_literals(monkeypatch, tmp_path)
     ps1 = files[data / "bin/awesome-skills.ps1"]
     assert ps1.startswith("\ufeff# Written by the awesome-skills installer")
     assert "& 'C:/Python/py''thon.exe' -B" in ps1 and "da''ta" in ps1 and "@args" in ps1
+
+
+PWSH = shutil.which("pwsh")
+
+
+@pytest.mark.skipif(
+    PWSH is None and os.environ.get("AWESOME_SKILLS_REQUIRE_PWSH") != "1", reason="PowerShell 7 (pwsh) unavailable"
+)
+def test_the_powershell_launcher_runs_the_search_and_the_installer(library, monkeypatch, tmp_path):
+    if PWSH is None:
+        pytest.fail("pwsh is required (AWESOME_SKILLS_REQUIRE_PWSH=1) but not on PATH")
+    shutil.copyfile(ROOT / "scripts/install_skills.py", library / "scripts/install_skills.py")
+
+    class Library:
+        def router_command(self):
+            return str(library / "scripts/install_skills.py"), []
+
+    monkeypatch.setattr(installer, "WINDOWS", True)
+    data = tmp_path / "da'ta"
+    path, text = next((p, t) for p, t in installer.launchers(data, tmp_path / "state", Library()).items() if p.suffix)
+    path.parent.mkdir(parents=True)
+    path.write_bytes(text.encode())
+    command = [PWSH, "-NoProfile", "-NonInteractive", "-File", str(path)]
+    found = subprocess.run([*command, "search", "alpha"], capture_output=True, text=True)
+    assert found.returncode == 0 and "alpha - Alpha skill." in found.stdout, found.stderr
+    assert subprocess.run([*command, "search", "zzz"], capture_output=True).returncode == 1
+    usage = subprocess.run([*command, "--help"], capture_output=True, text=True)
+    assert usage.returncode == 0 and "--manual" in usage.stdout, usage.stderr

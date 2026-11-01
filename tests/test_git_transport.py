@@ -79,7 +79,7 @@ def test_first_install_is_a_blobless_sparse_clone(remote):
     assert installer.tree_id(installer.local_listing(claude / "beta")) == trees["beta"]
     launcher = data_dir(home) / "bin/awesome-skills"
     router = (home / ".codex/skills" / installer.ROUTER / "SKILL.md").read_text()
-    assert f"{launcher} search --client codex" in router
+    assert f"{installer.launcher_call(installer.native(data_dir(home)))} search --client codex" in router
     assert str(repo / "scripts" / "install_skills.py") in launcher.read_text()
     assert sorted(os.listdir(home / ".codex/skills")) == ["alpha", installer.ROUTER, "beta"]
 
