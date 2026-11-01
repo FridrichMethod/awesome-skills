@@ -169,6 +169,17 @@ def test_codex_copies_split_between_two_roots_by_a_stable_hash(sandbox, monkeypa
     assert installer.fingerprint(home) == before, "the saved second root is kept"
 
 
+def test_codex_finds_its_second_root_however_home_is_spelled(sandbox, monkeypatch, capsys):
+    home, source = sandbox
+    monkeypatch.setenv("HOME", str(home / "../home"))
+    skill(source, "delta")
+    run(source, "--codex-only")
+    assert (home / ".agents/skills/delta").is_dir()
+    capsys.readouterr()
+    assert run(source, "--codex-only") == 0
+    assert capsys.readouterr().out == "Already current; selection preserved.\n", "its own copies are not foreign"
+
+
 def test_codex_copies_drop_plugin_folders_and_neutralize_nested_skills(sandbox):
     home, source = sandbox
     gamma = skill(source, "gamma")

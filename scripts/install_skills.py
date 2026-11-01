@@ -1895,7 +1895,7 @@ def external_skills(client: str, roots: list, kept: list, home: Path) -> dict:
     ~/.agents/skills when that is not one of its roots."""
     paths = [roots[item.get("root", 0)] / item["entry"] for item in kept]
     agents = home / ".agents/skills"
-    if client == "codex" and agents.is_dir() and agents not in roots:
+    if client == "codex" and agents.is_dir() and not any(r.is_dir() and os.path.samefile(r, agents) for r in roots):
         paths += list(agents.iterdir())
     external = {}
     for directory in paths:
@@ -2619,7 +2619,7 @@ def main(argv: list[str] | None = None) -> int:
     changes = args.selection is not None or args.manual is not None or args.enable or args.disable
     if changes and not (args.codex_only or args.claude_only):
         parser.error("selection changes require --codex-only or --claude-only")
-    home = native(Path.home())
+    home = native(Path(os.path.abspath(Path.home())))  # compared with normalized roots
     data_default = default_data(home)
     state = storage_path("SKILLS_STATE_DIR", data_default if WINDOWS else home / ".local/share/awesome-skills")
     legacy_cache = storage_path("SKILLS_CACHE_DIR", home / ".cache/awesome-skills")
