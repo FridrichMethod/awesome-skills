@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 from scripts import install_skills as installer
-from tests.test_install import hidden_from_claude, hidden_from_codex, skill, state_dir
+from tests.test_install import codex_copy, hidden_from_claude, hidden_from_codex, skill, state_dir
 
 ROOT = Path(__file__).resolve().parents[1]
 ROUTER = installer.ROUTER
@@ -110,9 +110,9 @@ def test_an_upstream_change_is_installed_still_hidden(sandbox):
     run(source)
     (source / "alpha/helper.txt").write_text("upstream change\n")
     run(source)
-    for copy in (home / ".claude/skills/alpha", home / ".codex/skills/alpha"):
+    for copy in (home / ".claude/skills/alpha", codex_copy(home, "alpha")):
         assert (copy / "helper.txt").read_text() == "upstream change\n"
-    assert hidden_from_claude(home / ".claude/skills/alpha") and hidden_from_codex(home / ".codex/skills/alpha")
+    assert hidden_from_claude(home / ".claude/skills/alpha") and hidden_from_codex(codex_copy(home, "alpha"))
 
 
 def test_exact_client_copies_are_adopted_and_raw_trees_copied_again(sandbox, capsys):
@@ -158,11 +158,14 @@ def test_codex_copies_split_between_two_roots_by_a_stable_hash(sandbox, monkeypa
     monkeypatch.setenv("SKILLS_CODEX_DEST2", str(second))
     run(source, "--codex-only")
     first = home / ".codex/skills"
-    assert sorted(os.listdir(first)) == ["alpha", ROUTER, "beta"]
-    assert sorted(os.listdir(second)) == ["delta"]
-    assert name_of(second / "delta") == "delta" and hidden_from_codex(second / "delta")
+    roots = {s: second if installer.placement(s) else first for s in ("alpha", "beta", "delta")}
+    assert set(roots.values()) == {first, second}, "the fixture covers both roots"
+    assert sorted(os.listdir(first)) == sorted([ROUTER, *(s for s, r in roots.items() if r == first)])
+    assert sorted(os.listdir(second)) == sorted(s for s, r in roots.items() if r == second)
+    assert all(name_of(r / s) == s and hidden_from_codex(r / s) for s, r in roots.items())
     record = state(home, "codex")
-    assert record["destination2"] == str(installer.native(second)) and record["managed"]["delta"]["root"] == 1
+    assert record["destination2"] == str(installer.native(second))
+    assert all(record["managed"][s].get("root", 0) == installer.placement(s) for s in roots)
     monkeypatch.delenv("SKILLS_CODEX_DEST2")
     before = installer.fingerprint(home)
     run(source, "--codex-only")
@@ -174,7 +177,8 @@ def test_codex_finds_its_second_root_however_home_is_spelled(sandbox, monkeypatc
     monkeypatch.setenv("HOME", str(home / "../home"))
     skill(source, "delta")
     run(source, "--codex-only")
-    assert (home / ".agents/skills/delta").is_dir()
+    second = [s for s in ("alpha", "beta", "delta") if installer.placement(s)]
+    assert second and all((home / ".agents/skills" / s).is_dir() for s in second)
     capsys.readouterr()
     assert run(source, "--codex-only") == 0
     assert capsys.readouterr().out == "Already current; selection preserved.\n", "its own copies are not foreign"
@@ -187,7 +191,7 @@ def test_codex_copies_drop_plugin_folders_and_neutralize_nested_skills(sandbox):
     (gamma / ".claude-plugin/plugin.json").write_text("{}\n")
     skill(gamma / "tools", "inner", name="beta")  # a nested SKILL.md that would shadow beta
     run(source)
-    codex, claude = home / ".codex/skills/gamma", home / ".claude/skills/gamma"
+    codex, claude = codex_copy(home, "gamma"), home / ".claude/skills/gamma"
     assert not (codex / ".claude-plugin").exists() and not (claude / ".claude-plugin").exists()
     assert name_of(codex / "tools/inner") == "gamma--tools-inner" and hidden_from_codex(codex / "tools/inner")
     assert name_of(claude / "tools/inner") == "beta", "Claude reads only top-level skills"
@@ -199,7 +203,7 @@ def test_a_foreign_codex_skill_keeps_its_name(sandbox, capsys):
     capsys.readouterr()
     run(source, "--codex-only")
     codex = plan(capsys)["clients"][0]
-    assert not (home / ".codex/skills/alpha").exists(), "two skills named alpha would make $alpha inject neither"
+    assert not codex_copy(home, "alpha").exists(), "two skills named alpha would make $alpha inject neither"
     assert any(item["entry"] == "alpha" and "is taken by" in item["reason"] for item in codex["preserved"])
     assert (home / ".agents/skills/mine/SKILL.md").read_text().endswith("the user's own\n")
     with pytest.raises(installer.InstallError, match="Frontmatter name conflict"):
@@ -208,15 +212,16 @@ def test_a_foreign_codex_skill_keeps_its_name(sandbox, capsys):
 
 def test_a_codex_root_that_would_overflow_is_refused_before_writing(sandbox, monkeypatch, capsys):
     home, source = sandbox
-    monkeypatch.setattr(installer, "ROOT_CAP", 3)
+    first = [s for s in ("alpha", "beta") if not installer.placement(s)]
+    monkeypatch.setattr(installer, "ROOT_CAP", 1 + len(first))  # the router and the library fit, one more does not
     skill(home / ".codex/skills", "foreign")
     before = installer.fingerprint(home)
-    with pytest.raises(installer.PersonNeeded, match=r"Refusing to fill .*\.codex.skills with 4 skill folders"):
+    with pytest.raises(installer.PersonNeeded, match=rf"Refusing to fill .*\.codex.skills with {2 + len(first)} skill"):
         run(source, "--codex-only")
     assert installer.fingerprint(home) == before
     assert run(source, "--codex-only", "--dry-run") == 0
     assert "Refusing to fill" in capsys.readouterr().err
-    assert run(source, "--codex-only", "--manual", "alpha") == 0, "fewer skills fit"
+    assert run(source, "--codex-only", "--manual", "") == 0, "fewer skills fit"
 
 
 # --- Migration -------------------------------------------------------------------------------
@@ -274,7 +279,8 @@ def test_other_v1_selections_stay_visible_with_the_rest_hidden(sandbox, capsys):
     assert [a["entry"] for a in clients["claude"]["actions"]] == ["beta"], "alpha is recorded, not copied"
     assert installer.fingerprint(home / ".claude/skills/alpha") == alpha
     assert hidden_from_claude(home / ".claude/skills/beta")
-    assert not hidden_from_codex(home / ".codex/skills/beta") and hidden_from_codex(home / ".codex/skills/alpha")
+    assert codex_copy(home, "beta").is_dir() and not hidden_from_codex(codex_copy(home, "beta"))
+    assert hidden_from_codex(codex_copy(home, "alpha"))
     assert state(home, "codex")["selection"] == ["@library", "beta"]
 
 

@@ -94,18 +94,24 @@ def hidden_from_codex(path) -> bool:
     return policy.is_file() and "allow_implicit_invocation: false" in policy.read_text()
 
 
+def codex_copy(home, skill_id):
+    """Where a new Codex copy lands: sha256(ID) mod 2 picks the first or the second root."""
+    return home / (".agents/skills" if installer.placement(skill_id) else ".codex/skills") / skill_id
+
+
 def test_first_install_and_no_argument_updater(sandbox, capsys):
     home, source = sandbox
     run(source)
     codex = home / ".codex/skills"
     claude = home / ".claude/skills"
-    everything = ["alpha", installer.ROUTER, "beta"]  # alpha and beta land in Codex's first root
-    assert sorted(p.name for p in codex.iterdir()) == everything
-    assert sorted(p.name for p in claude.iterdir()) == everything
+    assert sorted(p.name for p in claude.iterdir()) == ["alpha", installer.ROUTER, "beta"]
+    assert all(codex_copy(home, s).is_dir() for s in ("alpha", "beta")) and (codex / installer.ROUTER).is_dir()
     assert hidden_from_claude(claude / "alpha") and not hidden_from_claude(claude / installer.ROUTER)
-    assert hidden_from_codex(codex / "beta") and not (codex / installer.ROUTER / installer.POLICY_FILE).exists()
+    assert (
+        hidden_from_codex(codex_copy(home, "beta")) and not (codex / installer.ROUTER / installer.POLICY_FILE).exists()
+    )
     run(source, "--codex-only", "--enable", "alpha")
-    assert not hidden_from_codex(codex / "alpha") and hidden_from_codex(codex / "beta")
+    assert not hidden_from_codex(codex_copy(home, "alpha")) and hidden_from_codex(codex_copy(home, "beta"))
     before, times = installer.fingerprint(home), snapshot(home)
     capsys.readouterr()
     run(source)  # consumer updater: no selection/client arguments
@@ -255,7 +261,7 @@ def test_update_adds_only_new_claude_skill_and_preserves_codex_choice(sandbox):
     (source / "alpha/helper.txt").write_text("upstream update")
     run(source)
     assert hidden_from_claude(home / ".claude/skills/gamma")
-    assert hidden_from_codex(home / ".codex/skills/gamma")
+    assert hidden_from_codex(codex_copy(home, "gamma"))
     assert state(home)["selection"] == ["@library"]
     assert (home / ".claude/skills/alpha/helper.txt").read_text() == "upstream update"
 
@@ -284,10 +290,10 @@ def test_codex_installs_identical_aliases_each_under_its_own_name(sandbox, capsy
     home, source = sandbox
     shutil.copytree(source / "alpha", source / "alias")
     run(source, "--codex-only", "--selection", "alpha,alias", "--manual", "")
-    codex = home / ".codex/skills"
-    assert sorted(os.listdir(codex)) == ["alias", "alpha"]
-    assert installer.frontmatter_name((codex / "alias/SKILL.md").read_bytes(), "alias") == "alias"
-    assert installer.frontmatter_name((codex / "alpha/SKILL.md").read_bytes(), "alpha") == "alpha"
+    for skill_id in ("alias", "alpha"):
+        copy = codex_copy(home, skill_id) / "SKILL.md"
+        assert installer.frontmatter_name(copy.read_bytes(), skill_id) == skill_id
+    assert sorted(state(home)["managed"]) == ["alias", "alpha"]
     info = state(home)["managed"]["alias"]
     assert info["source_ids"] == ["alias"] and info["name"] == "alias"
     assert "origins" in info
@@ -300,10 +306,10 @@ def test_codex_names_same_name_variants_after_their_ids(sandbox, capsys):
     home, source = sandbox
     skill(source, "variant", name="alpha", body="different content")
     run(source, "--codex-only", "--selection", "alpha,variant")
-    variant = home / ".agents/skills/variant"  # the second root
+    variant = codex_copy(home, "variant")
     assert installer.frontmatter_name((variant / "SKILL.md").read_bytes(), "variant") == "variant"
     assert "different content" in (variant / "SKILL.md").read_text()
-    assert not hidden_from_codex(variant) and not hidden_from_codex(home / ".codex/skills/alpha")
+    assert not hidden_from_codex(variant) and not hidden_from_codex(codex_copy(home, "alpha"))
     assert listed(capsys, source)["conflicts"] == {"alpha": ["alpha", "variant"]}
 
 
@@ -315,7 +321,7 @@ def test_claude_full_preserves_variants_and_reports_conflicts(sandbox, capsys):
     assert '"conflicts": {' in report and '"variant"' in report
     assert (home / ".claude/skills/alpha").exists()
     assert (home / ".claude/skills/variant").exists()
-    assert hidden_from_codex(home / ".codex/skills/alpha") and hidden_from_codex(home / ".agents/skills/variant")
+    assert hidden_from_codex(codex_copy(home, "alpha")) and hidden_from_codex(codex_copy(home, "variant"))
 
 
 def test_external_same_name_collision_fails_before_mutation(sandbox):
@@ -398,7 +404,7 @@ def test_local_shell_updater_preserves_selection_without_arguments(sandbox):
     rerun = subprocess.run(["bash", str(clone / "install.sh")], capture_output=True)
     assert rerun.returncode == 0, rerun.stderr
     assert state(home)["selection"] == ["@library", "alpha"]
-    assert hidden_from_codex(home / ".codex/skills/beta") and not hidden_from_codex(home / ".codex/skills/alpha")
+    assert hidden_from_codex(codex_copy(home, "beta")) and not hidden_from_codex(codex_copy(home, "alpha"))
 
 
 STORAGE = pytest.mark.parametrize("variable", ["SKILLS_DATA_DIR", "SKILLS_STATE_DIR", "SKILLS_CACHE_DIR"])
@@ -460,7 +466,7 @@ def test_a_library_skill_named_like_the_router_never_replaces_it(sandbox, capsys
     home, source = sandbox
     skill(source, "other-router", name=installer.ROUTER)
     run(source, "--codex-only", "--enable", "other-router")
-    other = home / ".agents/skills/other-router"
+    other = codex_copy(home, "other-router")
     assert installer.frontmatter_name((other / "SKILL.md").read_bytes(), "other") == "other-router"
     router = home / ".codex/skills" / installer.ROUTER / "SKILL.md"
     assert "search --client codex" in router.read_text()

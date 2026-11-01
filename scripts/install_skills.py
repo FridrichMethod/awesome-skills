@@ -1796,8 +1796,8 @@ def desired_entries(client: str, visible: list, manual: list, library: Library, 
 
 
 def placement(skill_id: str) -> int:
-    """The Codex root of a new copy, by a stable hash of the ID."""
-    return hashlib.sha256(skill_id.encode()).digest()[0] % 2
+    """The Codex root of a new copy: sha256(ID) mod 2."""
+    return int.from_bytes(hashlib.sha256(skill_id.encode()).digest(), "big") % 2
 
 
 def matches(client: str, want: dict, library: Library, router: dict, path: Path) -> bool:

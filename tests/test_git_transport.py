@@ -30,6 +30,7 @@ from tests.gitfixtures import (
     snapshot,
     without_pyyaml,
 )
+from tests.test_install import codex_copy
 
 pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="git unavailable")
 
@@ -81,7 +82,7 @@ def test_first_install_is_a_blobless_sparse_clone(remote):
     router = (home / ".codex/skills" / installer.ROUTER / "SKILL.md").read_text()
     assert f"{installer.launcher_call(installer.native(data_dir(home)))} search --client codex" in router
     assert str(repo / "scripts" / "install_skills.py") in launcher.read_text()
-    assert sorted(os.listdir(home / ".codex/skills")) == ["alpha", installer.ROUTER, "beta"]
+    assert all(codex_copy(home, s).is_dir() for s in ("alpha", "beta"))
 
 
 def test_unchanged_update_is_one_fetch_and_no_writes(remote, monkeypatch, capsys):
@@ -109,7 +110,7 @@ def test_changed_skill_fetches_only_its_new_blob_and_rewrites_only_it(remote):
     run()
     repo, claude = clone(home), home / ".claude/skills"
     beta = snapshot(claude / "beta")
-    codex = {p: v for p, v in snapshot(home / ".codex").items() if "/skills/beta" in p}
+    codex = snapshot(codex_copy(home, "beta"))
     packs = packed_objects(repo)
     upstream.skill("alpha", files={"helper.txt": "alpha support, revised\n"})
     upstream.commit("revise alpha")
@@ -125,9 +126,9 @@ def test_changed_skill_fetches_only_its_new_blob_and_rewrites_only_it(remote):
     assert changed <= trees <= changed | {upstream.rev("main~1^{tree}")}
     assert (claude / "alpha/helper.txt").read_bytes() == b"alpha support, revised\n"
     assert snapshot(claude / "beta") == beta
-    assert {p: v for p, v in snapshot(home / ".codex").items() if "/skills/beta" in p} == codex
-    assert (home / ".codex/skills/alpha/helper.txt").read_bytes() == b"alpha support, revised\n"
-    assert (home / ".codex/skills/alpha" / installer.POLICY_FILE).is_file(), "still hidden"
+    assert snapshot(codex_copy(home, "beta")) == codex
+    assert (codex_copy(home, "alpha") / "helper.txt").read_bytes() == b"alpha support, revised\n"
+    assert (codex_copy(home, "alpha") / installer.POLICY_FILE).is_file(), "still hidden"
     assert manifest(home, "claude")["managed"]["alpha"]["tree"] == upstream.trees()["alpha"]
 
 
@@ -140,7 +141,7 @@ def test_only_selected_skills_are_downloaded(remote):
     assert not upstream.blobs("alpha") & missing_objects(repo)
     run("--codex-only", "--enable", "beta")
     assert not upstream.blobs("beta") & missing_objects(repo)
-    assert (home / ".codex/skills/beta/helper.txt").read_bytes() == b"beta support\n"
+    assert (codex_copy(home, "beta") / "helper.txt").read_bytes() == b"beta support\n"
     assert not (home / ".claude/skills/beta").exists()
 
 
@@ -246,7 +247,7 @@ def test_remote_install_needs_only_the_standard_library(remote, tmp_path):
     assert manifest(home, "claude")["managed"]["gamma"]["name"] == "gamma"
     hidden = (home / ".claude/skills/gamma/SKILL.md").read_text()
     assert hidden == f"---\n{installer.HIDDEN_KEY}: true\n" + SHAPED_SKILL[4:], "transformed without PyYAML"
-    assert (home / ".codex/skills/gamma" / installer.POLICY_FILE).is_file()
+    assert (codex_copy(home, "gamma") / installer.POLICY_FILE).is_file()
     # A user's own skill is matched by its frontmatter name without PyYAML, too.
     put(home / ".agents/skills/mine/SKILL.md", "---\nname: 'gamma'\ndescription: mine\n---\n")
     conflict = subprocess.run([*helper, "--codex-only", "--enable", "gamma"], capture_output=True, text=True, env=env)
@@ -316,7 +317,7 @@ def test_router_helper_in_the_data_dir_serves_the_clone(remote, tmp_path):
         env=subprocess_env(),
     )
     assert enabled.returncode == 0, enabled.stderr
-    assert (home / ".codex/skills/beta/SKILL.md").is_file()
+    assert (codex_copy(home, "beta") / "SKILL.md").is_file()
 
 
 def test_failed_fetch_keeps_the_previous_install(remote, monkeypatch, tmp_path):
@@ -666,7 +667,7 @@ def test_symlinks_from_the_remote_library_are_never_installed(remote, capsys):
 def test_no_fetch_changes_visibility_offline_without_downloading(remote, monkeypatch, tmp_path):
     home, _ = remote
     run()
-    repo, codex = clone(home), home / ".codex/skills"
+    repo = clone(home)
     packs = packed_objects(repo)
     monkeypatch.setenv("SKILLS_REPOSITORY_URL", (tmp_path / "unreachable.git").as_uri())
     with pytest.raises(installer.InstallError, match="git fetch failed"):
@@ -681,7 +682,8 @@ def test_no_fetch_changes_visibility_offline_without_downloading(remote, monkeyp
     monkeypatch.setattr(installer.Git, "run", spy)
     assert run("--codex-only", "--enable", "alpha", "--no-fetch") == 0
     assert "fetch" not in calls
-    assert not (codex / "alpha" / installer.POLICY_FILE).exists() and (codex / "beta" / installer.POLICY_FILE).exists()
+    assert not (codex_copy(home, "alpha") / installer.POLICY_FILE).exists()
+    assert (codex_copy(home, "beta") / installer.POLICY_FILE).exists()
     assert run("--claude-only", "--enable", "beta", "--no-fetch") == 0
     assert packed_objects(repo) == packs, "the blobs were already in the clone"
     assert run("--no-fetch", "--dry-run") == 0
