@@ -895,14 +895,20 @@ def split_text(data: bytes, label: str) -> tuple[bytes, list[str], str]:
     return bom, lines, "\r" if lines[0].endswith("\r") else ""
 
 
+def frontmatter_end(lines: list[str], label: str) -> int:
+    """The index of the `---` line that closes the frontmatter opening the file."""
+    end = next((i for i in range(1, len(lines)) if lines[i].rstrip("\r").strip() == "---"), None)
+    if lines[0].rstrip("\r").strip() != "---" or end is None:
+        raise InstallError(f"Invalid frontmatter at {label}: missing frontmatter")
+    return end
+
+
 def hidden_skill_md(data: bytes, label: str) -> bytes:
     """SKILL.md as a hidden copy: every top-level disable-model-invocation line removed, then
     `disable-model-invocation: true` right after the opening `---`. BOM and line endings stay.
     A top-level line of the key that is not a plain one-line true or false raises InstallError."""
     bom, lines, cr = split_text(data, label)
-    end = next((i for i in range(1, len(lines)) if lines[i].rstrip("\r").strip() == "---"), None)
-    if lines[0].rstrip("\r").strip() != "---" or end is None:
-        raise InstallError(f"Invalid frontmatter at {label}: missing frontmatter")
+    end = frontmatter_end(lines, label)
     kept = []
     for line in lines[1:end]:
         if not HIDDEN_KEY_LINE.match(line):
@@ -957,6 +963,108 @@ def hidden_policy(data: bytes | None, label: str) -> bytes:
         return data
     lines[k] = line
     return bom + "\n".join(lines).encode("utf-8")
+
+
+# --- Client copies ---------------------------------------------------------------------
+
+# An installed copy is a pure function of the library tree, the client and whether the skill is
+# visible to the model. Both clients drop plugin manifest folders: Claude Code loads a skill
+# folder holding one as a plugin whose commands stay listed, and Codex then names the skill
+# `plugin:ID`. A hidden Claude copy carries disable-model-invocation. Every Codex copy is named
+# after its ID (Codex matches $NAME against the frontmatter name, which 500+ library skills
+# share); a SKILL.md below the top level gets a unique name and stays out of the catalog; a
+# hidden Codex copy also gets policy.allow_implicit_invocation false, plus the Claude key for
+# Cursor, which reads Codex's folders.
+PLUGIN_DIRS = frozenset({".claude-plugin", ".codex-plugin", ".cursor-plugin"})
+NAME_KEY_LINE = re.compile(r"""(["']?)name\1[ \t]*:(?=[ \t\r]|$)""")
+
+
+def plugin_path(rel: str) -> bool:
+    return any(part in PLUGIN_DIRS for part in rel.split("/"))
+
+
+def renamed_skill_md(data: bytes, name: str, label: str) -> bytes:
+    """SKILL.md whose top-level name reads as `name`: its one top-level name line becomes
+    `name: "NAME"` (or that line is added after the opening `---`). The result must read as
+    `name` without PyYAML, or InstallError is raised."""
+
+    def reads_as_name(text: bytes) -> bool:
+        try:
+            return frontmatter_name(text, label) == name
+        except InstallError:
+            return False
+
+    bom, lines, cr = split_text(data, label)
+    if reads_as_name(data[len(bom) :]):
+        return data
+    found = [i for i in range(1, frontmatter_end(lines, label)) if NAME_KEY_LINE.match(lines[i])]
+    if len(found) > 1:
+        raise InstallError(f"Cannot rename {label}: more than one top-level name")
+    line = f"name: {json.dumps(name)}{cr}"
+    if found:
+        lines[found[0]] = line
+    else:
+        lines.insert(1, line)
+    out = "\n".join(lines).encode("utf-8")
+    if not reads_as_name(out):
+        raise InstallError(f"Cannot rename {label}: its name is not a one-line top-level key")
+    return bom + out
+
+
+def nested_name(skill_id: str, rel: str) -> str:
+    """The Codex name of a SKILL.md below the top level: ID--sub-path, at most 64 characters."""
+    name = f"{skill_id}--" + re.sub(r"[^A-Za-z0-9_-]+", "-", rel.rsplit("/", 1)[0])
+    return name if len(name) <= 64 else name[:53] + "-" + hashlib.sha256(name.encode()).hexdigest()[:10]
+
+
+def copy_edits(client: str, skill_id: str, invocation: str, listing: dict, read) -> dict:
+    """rel -> bytes: the files a client's copy of a skill replaces or adds (read(rel) returns the
+    library's bytes). Raises InstallError when a file cannot be edited safely."""
+    edits, hide = {}, invocation == "manual"
+    for rel in sorted(listing):
+        top = rel == "SKILL.md"
+        if rel.rsplit("/", 1)[-1] != "SKILL.md" or plugin_path(rel) or client == "claude" and not top:
+            continue
+        label = f"{skill_id}/{rel}"
+        data = original = read(rel)
+        if top and hide:
+            data = hidden_skill_md(data, label)
+        if client == "codex":
+            data = renamed_skill_md(data, skill_id if top else nested_name(skill_id, rel), label)
+            policy = rel[: -len("SKILL.md")] + POLICY_FILE
+            old = read(policy) if (hide or not top) and policy in listing else None
+            new = hidden_policy(old, label) if hide or not top else None
+            if new != old:
+                edits[policy] = new
+        if data != original:
+            edits[rel] = data
+    return edits
+
+
+def derived_listing(listing: dict, edits: dict) -> dict:
+    """The git listing of a client's copy: plugin manifest folders dropped, edits applied."""
+    out = {rel: entry for rel, entry in listing.items() if not plugin_path(rel)}
+    out.update({rel: (listing.get(rel, ("100644",))[0], blob_id(data)) for rel, data in edits.items()})
+    return out
+
+
+def apply_edits(target: Path, edits: dict):
+    """Turn a verified copy of the library tree into the client's copy (see derived_listing)."""
+    for root, dirs, _ in os.walk(target):
+        for name in [d for d in dirs if d in PLUGIN_DIRS]:
+            path = Path(root) / name
+            path.unlink() if is_link(path) else rmtree(path)
+            dirs.remove(name)
+    for rel, data in sorted(edits.items()):
+        path = target.joinpath(*rel.split("/"))
+        fresh = not path.exists()
+        if not path.parent.exists():
+            path.parent.mkdir(parents=True)
+            if not WINDOWS:
+                path.parent.chmod(DIR_MODE)
+        path.write_bytes(data)
+        if fresh and not WINDOWS:
+            path.chmod(FILE_MODES["100644"])
 
 
 def origins(provenance: dict, skill_id: str, revision: str) -> list:

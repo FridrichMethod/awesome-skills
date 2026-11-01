@@ -1024,6 +1024,30 @@ def hidden_copy_problems(prepared: Path, skill_id: str, data: bytes, metadata: d
         if os.path.lexists(path):
             label = "/".join([skill_id, *directory.relative_to(prepared).parts])
             problems += policy_problems(path, label)
+    return problems + codex_copy_problems(prepared, skill_id)
+
+
+def codex_copy_problems(prepared: Path, skill_id: str) -> list[str]:
+    """Why the installer could not name this skill's Codex copy after its ID: every SKILL.md, the
+    nested ones included, must take its new name line by line and otherwise read as before."""
+    installer = _installer()
+    files = {p.relative_to(prepared).as_posix(): ("100644", "") for p in prepared.rglob("*") if p.is_file()}
+    try:
+        edits = installer.copy_edits("codex", skill_id, "auto", files, lambda rel: (prepared / rel).read_bytes())
+    except installer.InstallError as error:
+        return [str(error)]
+    problems = []
+    for rel, data in sorted(edits.items()):
+        if not rel.endswith("SKILL.md"):
+            continue
+        name = skill_id if rel == "SKILL.md" else installer.nested_name(skill_id, rel)
+        try:
+            before = yaml.safe_load(installer.frontmatter((prepared / rel).read_bytes(), rel))
+            after = yaml.safe_load(installer.frontmatter(data, rel))
+        except (installer.InstallError, yaml.YAMLError):
+            before = after = None
+        if not isinstance(before, dict) or after != {**before, "name": name}:
+            problems.append(f"naming {skill_id}/{rel} {name!r} for Codex changes how its frontmatter reads")
     return problems
 
 
