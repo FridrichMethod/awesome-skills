@@ -407,6 +407,21 @@ def test_local_shell_updater_preserves_selection_without_arguments(sandbox):
     assert hidden_from_codex(codex_copy(home, "beta")) and not hidden_from_codex(codex_copy(home, "alpha"))
 
 
+def test_a_local_install_needs_the_installer_file_itself(sandbox):
+    """Without a file of its own (a script on standard input, or `python -c`) the installer knows no
+    absolute path for itself, its search helper or sync_skills.py: a local install then refuses
+    before writing, never leaving a launcher or a router (whose allowed-tools would pre-approve it)
+    that runs a script named relative to the caller's folder."""
+    home, source = sandbox
+    code = (ROOT / "scripts/install_skills.py").read_text()
+    command = [sys.executable, "-B", "-", "--claude-only"]
+    result = subprocess.run(command, cwd=source.parent, input=code, capture_output=True, text=True)
+    assert result.returncode == 1 and "scripts/install_skills.py" in result.stderr, result.stderr
+    assert not os.path.lexists(home / ".claude") and not os.path.lexists(home / ".local")
+    with pytest.raises(installer.InstallError, match="absolute"):
+        installer.launchers(home, home, type("Local", (), {"router_command": lambda self: ("install_skills.py", [])})())
+
+
 STORAGE = pytest.mark.parametrize("variable", ["SKILLS_DATA_DIR", "SKILLS_STATE_DIR", "SKILLS_CACHE_DIR"])
 
 

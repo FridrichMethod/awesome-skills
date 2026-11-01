@@ -24,7 +24,7 @@ import time
 import uuid
 from collections import defaultdict
 from contextlib import ExitStack, contextmanager
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 if sys.version_info < (3, 11):  # noqa: UP036 - users may run an older python3
     print("awesome-skills requires Python 3.11 or newer.", file=sys.stderr)
@@ -1312,8 +1312,7 @@ class DirLibrary(Library):
 
     def router_command(self):
         helper = own_file()
-        helper = display(helper.resolve()) if helper else "install_skills.py"
-        return helper, ["--source", display(self.source)]
+        return display(helper.resolve()) if helper else "", ["--source", display(self.source)]
 
     def describe(self):
         return {"kind": self.kind, "path": display(self.source), "revision": self.revision}
@@ -1652,6 +1651,8 @@ def launchers(data: Path, state: Path, library: Library) -> dict:
     the destinations) and remote unless set, or (`search ...`) the read-only search."""
     helper, extra = library.router_command()
     search, python = str(Path(helper).with_name("search_skills.py")), sys.executable
+    if not all(PurePosixPath(p).is_absolute() or PureWindowsPath(p).is_absolute() for p in (helper, python)):
+        raise InstallError(f"The launcher needs absolute paths: {helper!r}, {python!r}")  # not the caller's
     env = {"SKILLS_STATE_DIR": display(state), "SKILLS_DATA_DIR": display(data)}
     env.update({key: os.environ[key] for key in ("SKILLS_REPOSITORY_URL", "SKILLS_BRANCH") if os.environ.get(key)})
     note = "# Written by the awesome-skills installer on every run; edits are overwritten."
@@ -2803,7 +2804,9 @@ def main(argv: list[str] | None = None) -> int:
                 restore(target, state, False, only=only)
         return 0
     if not remote:
-        adjacent = helper.resolve().parent if helper else Path.cwd()
+        if helper is None:  # its router and launcher would name scripts relative to a caller's folder
+            raise InstallError("A local install runs a checkout's scripts/install_skills.py itself, not its text")
+        adjacent = helper.resolve().parent
         default = adjacent / "skills" if (adjacent / "skills").exists() else adjacent.parent / "skills"
         source = native((args.source or default).resolve())
         guard_source(source, data)
