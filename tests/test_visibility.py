@@ -340,16 +340,25 @@ def test_the_shared_second_codex_root_is_capped_too(sandbox, monkeypatch):
 # --- Migration -------------------------------------------------------------------------------
 
 
-def make_v1(home, source, client, selection, manual=""):
-    """An install as the installer before hidden installs left it: v1 state, plain copies."""
-    run(source, f"--{client}-only", "--selection", ",".join(selection), "--manual", manual)
-    path = state_dir(home) / f"{client}.json"
-    value = json.loads(path.read_text())
-    for key in ("manual", "selection_version"):
-        value.pop(key)
-    for record in value["managed"].values():
-        record.pop("invocation")
-    path.write_text(json.dumps(value))
+def make_v1(home, source, client, selection):
+    """An install as the installer before hidden installs left it: one root per client holding the
+    library trees as they are, and v1 records (no manual, destination2, root or invocation)."""
+    dest = home / (".claude/skills" if client == "claude" else ".codex/skills")
+    ids = installer.skill_ids(source) if "@all" in selection else [i for i in selection if i[0] != "@"]
+    managed = {}
+    for skill_id in ids:
+        shutil.copytree(source / skill_id, dest / skill_id)
+        tree = installer.tree_id(installer.local_listing(source / skill_id))
+        managed[skill_id] = {"name": skill_id, "tree": tree, "source_ids": [skill_id], "origins": []}
+    if "@library" in selection:
+        skill(dest, ROUTER, body="the v1 router, which ran install_skills.py --list")
+        tree = installer.tree_id(installer.local_listing(dest / ROUTER))
+        managed[ROUTER] = {"name": ROUTER, "tree": tree, "source_ids": ["@library"], "origins": []}
+    for entry, record in managed.items():
+        record["sha256"] = installer.fingerprint(dest / entry)
+    value = {"schema": 1, "client": client, "destination": str(installer.native(dest)), "selection": selection}
+    state_dir(home).mkdir(parents=True, exist_ok=True)
+    (state_dir(home) / f"{client}.json").write_text(json.dumps(dict(value, managed=managed)))
 
 
 def test_claude_all_migrates_once_to_the_router_with_the_library_hidden(sandbox, monkeypatch, capsys):
@@ -392,9 +401,34 @@ def test_other_v1_selections_stay_visible_with_the_rest_hidden(sandbox, capsys):
     assert [a["entry"] for a in clients["claude"]["actions"]] == ["beta"], "alpha is recorded, not copied"
     assert installer.fingerprint(home / ".claude/skills/alpha") == alpha
     assert hidden_from_claude(home / ".claude/skills/beta")
-    assert codex_copy(home, "beta").is_dir() and not hidden_from_codex(codex_copy(home, "beta"))
-    assert hidden_from_codex(codex_copy(home, "alpha"))
+    beta = home / ".codex/skills/beta"  # a v1 copy, recorded where it is although its hash says root 1
+    assert installer.placement("beta") and beta.is_dir() and not hidden_from_codex(beta)
+    assert not (home / ".agents/skills/beta").exists() and "root" not in state(home, "codex")["managed"]["beta"]
+    assert (
+        hidden_from_codex(codex_copy(home, "alpha"))
+        and "the v1 router" not in (beta.parent / ROUTER / "SKILL.md").read_text()
+    )
     assert state(home, "codex")["selection"] == ["@library", "beta"]
+
+
+def test_a_v1_codex_copy_keeps_its_root_through_the_migration_even_when_edited(sandbox, capsys):
+    home, source = sandbox
+    skill(source, "gamma")
+    make_v1(home, source, "codex", ["@library", "beta", "gamma"])
+    codex = home / ".codex/skills"
+    (codex / "gamma/helper.txt").write_text("user edit\n")
+    edited, record = installer.fingerprint(codex / "gamma"), json.loads((state_dir(home) / "codex.json").read_text())
+    assert installer.placement("beta") and installer.placement("gamma"), "both would go to ~/.agents/skills if new"
+    capsys.readouterr()
+    assert run(source, "--codex-only") == 0
+    codex_plan = plan(capsys)["clients"][0]
+    assert sorted(a["entry"] for a in codex_plan["actions"]) == ["alpha", ROUTER], "beta is recorded, gamma kept"
+    assert installer.fingerprint(codex / "gamma") == edited and not (home / ".agents/skills/gamma").exists()
+    assert state(home, "codex")["managed"]["gamma"] == record["managed"]["gamma"], "the edited copy keeps its record"
+    assert not (home / ".agents/skills/beta").exists() and name_of(codex / "beta") == "beta"
+    capsys.readouterr()
+    assert run(source, "--codex-only") == 0
+    assert capsys.readouterr().out == "Already current; selection preserved.\n"
 
 
 def test_saved_ids_that_left_the_library_are_dropped_with_a_warning(sandbox, capsys):

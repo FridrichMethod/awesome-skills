@@ -30,7 +30,7 @@ from tests.gitfixtures import (
     snapshot,
     without_pyyaml,
 )
-from tests.test_install import codex_copy
+from tests.test_install import codex_copy, hidden_from_claude
 
 pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="git unavailable")
 
@@ -214,6 +214,21 @@ def test_tarball_install_is_adopted_without_recopying(remote):
     cache = home / ".cache/awesome-skills"
     assert not legacy.exists()
     assert (cache / "notes.txt").is_file() and (cache / "libraries/keep-me").is_dir()
+
+
+def test_a_tarball_install_of_all_migrates_to_hidden_copies(remote):
+    home, upstream = remote
+    make_legacy_install(home, upstream)
+    path = data_dir(home) / "claude.json"
+    put(path, json.dumps(dict(json.loads(path.read_text()), selection=["@all"])))  # Claude's old default
+    claude = home / ".claude/skills"
+    (claude / "beta/helper.txt").write_text("user edit after the old install\n")
+    beta = installer.fingerprint(claude / "beta")
+    assert run() == 0
+    assert hidden_from_claude(claude / "alpha") and installer.fingerprint(claude / "beta") == beta
+    value = manifest(home, "claude")
+    assert (value["selection"], value["manual"]) == (["@library"], ["@all"]) and (claude / installer.ROUTER).is_dir()
+    assert "tree" not in value["managed"]["beta"], "the modified copy keeps its tarball record"
 
 
 # Shapes from the library that a line-based reader gets wrong: a quoted value whose next line
