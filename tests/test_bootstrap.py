@@ -113,7 +113,8 @@ def test_install_ps1_from_a_checkout_uses_the_adjacent_installer(remote, tmp_pat
     shutil.copyfile(ROOT / "install.ps1", checkout / "install.ps1")
     shutil.copytree(tmp_path / "upstream/skills", checkout / "skills")
     command = [pwsh(), "-NoProfile", "-NonInteractive", "-File", str(checkout / "install.ps1")]
-    result = subprocess.run([*command, "--claude-only", "--selection", "beta"], env=env, capture_output=True, text=True)
+    args = ["--claude-only", "--selection", "beta", "--manual="]  # nothing hidden besides
+    result = subprocess.run([*command, *args], env=env, capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
     assert sorted(os.listdir(home / ".claude/skills")) == ["beta"]
     assert not (data_dir(home) / installer.CLONE).exists(), "a checkout install needs no library clone"
