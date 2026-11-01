@@ -793,6 +793,24 @@ def test_the_migration_line_names_the_copies_it_removes(sandbox, monkeypatch, ca
     assert not (home / ".claude/skills/renamed-upstream").exists()
 
 
+def test_restoring_the_migration_after_a_later_update_names_what_to_restore_first(sandbox):
+    home, source = sandbox
+    make_v1(home, source, "claude", ["@all"])
+    assert run(source, "--claude-only") == 0
+    migration = Path(
+        json.loads((state_dir(home) / installer.MIGRATIONS).read_text())[installer.MIGRATION]["claude"]["backup"]
+    )
+    skill(source, "alpha", body="changed upstream")  # the next weekly update
+    assert run(source, "--claude-only") == 0
+    later = installer.backup_dirs(installer.native(state_dir(home)))[-1]
+    assert later != installer.native(migration)
+    with pytest.raises(installer.InstallError, match="restore the later transactions first, newest first") as error:
+        run(source, "--restore", str(migration), "--dry-run")
+    assert installer.display(later) in str(error.value)
+    assert run(source, "--restore", str(later)) == 0 and run(source, "--restore", str(migration)) == 0
+    assert state(home, "claude")["selection"] == ["@all"] and not hidden_from_claude(home / ".claude/skills/alpha")
+
+
 def test_a_claude_v1_list_of_most_of_the_library_migrates_like_all(sandbox, monkeypatch, capsys):
     home, source = sandbox
     for i in range(100):

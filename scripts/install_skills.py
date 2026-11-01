@@ -2523,6 +2523,16 @@ def restore(backup: Path, state: Path, dry_run: bool, quiet: bool = False, only:
     atomic_json(backup / "restore.json", journal)
 
 
+def undone(backup: Path, client: str) -> bool:
+    """Whether a finished transaction holds a part of the client's not restored yet."""
+    try:
+        journal = read_json(backup / "restore.json", {})
+    except (InstallError, ValueError):
+        return False
+    parts = journal.get("clients") if journal.get("status") == "complete" else None
+    return any(isinstance(c, dict) and c.get("client") == client and not c.get("restored") for c in parts or [])
+
+
 def restore_operations(backup: Path, state: Path, clients: list) -> list:
     operations = []
     seen_clients = set()
@@ -2540,7 +2550,9 @@ def restore_operations(backup: Path, state: Path, clients: list) -> list:
             raise InstallError("Recovery destination must be canonical and absolute")
         current_state = read_json(state / f"{client['client']}.json", {})
         if current_state not in [client["new_state"], client["old_state"] or {}]:
-            raise InstallError(f"Client selection changed after this transaction: {client['client']}")
+            later = [b for b in backup_dirs(state) if backup_order(b) > backup_order(backup) and undone(b, name)]
+            first = f"; restore the later transactions first, newest first: {', '.join(map(display, later[::-1]))}"
+            raise InstallError(f"Client selection changed after this transaction: {name}{first * bool(later)}")
         for action in client["actions"]:
             valid_entry(action.get("entry"))
             valid_hash(action.get("before"))
