@@ -1235,6 +1235,7 @@ class Library:
         self.revision = "unversioned"
         self._derived: dict = {}
         self.planning, self.wanted = False, set()  # see GitLibrary.read
+        self.dropped = set()  # (client, saved set) whose IDs that left the library were reported
 
     def screen(self, ids: list[str], kinds: dict, indexed: set | None = None, links: bool = False) -> list[str]:
         """The IDs installable everywhere; the others are skipped with a warning."""
@@ -1876,7 +1877,7 @@ def selection(args, client: str, old: dict, library: Library) -> list[str]:
     blocked = sorted(set(args.enable) & set(library.skipped))
     if blocked:
         raise InstallError(f"Cannot enable {blocked}: {'; '.join(library.skipped[i] for i in blocked)}")
-    ids = set(stored(old, "selection", client, known) if args.selection is None else args.selection.split(",")) - {""}
+    ids = set(stored(old, "selection", client, library) if args.selection is None else args.selection.split(",")) - {""}
     if "@all" in ids and args.disable:
         ids = set(library.skills) | ids - {"@all"}
     ids.update(args.enable)
@@ -1893,18 +1894,20 @@ def selection(args, client: str, old: dict, library: Library) -> list[str]:
 def manual_set(args, client: str, old: dict, library: Library) -> list[str]:
     """The skills installed hidden unless shown: @all, IDs, or none."""
     known = set(library.skills) | set(library.skipped)
-    ids = set(stored(old, "manual", client, known) if args.manual is None else args.manual.split(",")) - {""}
+    ids = set(stored(old, "manual", client, library) if args.manual is None else args.manual.split(",")) - {""}
     unknown = ids - known - {"@all"}
     if unknown:
         raise InstallError(f"Unknown source IDs: {sorted(unknown)} (use --list --search)")
     return sorted(ids)
 
 
-def stored(old: dict, key: str, client: str, known: set) -> list[str]:
-    """A saved set without the IDs the library no longer has (renamed or removed upstream)."""
+def stored(old: dict, key: str, client: str, library: Library) -> list[str]:
+    """A saved set without the IDs the library no longer has (renamed or removed upstream), reported
+    once however often the run plans."""
     ids = old.get(key, ["@library"] if key == "selection" else ["@all"])
-    gone = sorted(set(ids) - known - {"@all", "@library"})
-    if gone:
+    gone = sorted(set(ids) - set(library.skills) - set(library.skipped) - {"@all", "@library"})
+    if gone and (client, key) not in library.dropped:
+        library.dropped.add((client, key))
         warn(f"{client}: dropping saved IDs that left the library (see --list --search): {', '.join(gone)}")
     return [i for i in ids if i not in gone]
 
@@ -2820,8 +2823,9 @@ def make_plans(args, clients: list, library: Library, state: Path, data: Path) -
             continue
         router = router_info(client, data)
         plans.append(plan_client(client, roots, old, base, visible, manual, library, router, agents))
-        if migration:
-            plans[-1]["migration"] = migration
+        if migration:  # reported as this run leaves the client; undone as the migration changed it
+            undo = f"--selection {','.join(migration['from'])}" if migration["selection"] != migration["from"] else ""
+            plans[-1].update(migration=dict(migration, selection=visible, manual=manual), undo=undo or "--manual ''")
     every = [root for p in plans for root in roots_of(p)]
     for i, a in enumerate(every):
         for b in every[i + 1 :]:
@@ -2867,8 +2871,7 @@ def summary(p: dict, backup: Path) -> str:
     records, client, m = p["state"]["managed"].values(), p["client"], p.get("migration")
     hidden = sum(info.get("invocation") == "manual" for info in records)
     if m:
-        undo = f"--selection {','.join(m['from'])}" if m["selection"] != m["from"] else "--manual ''"
-        undo = f"--{client}-only " + (f"--restore {display(backup)}" if len(undo) > 99 else undo)
+        undo = f"--{client}-only " + (f"--restore {display(backup)}" if len(p["undo"]) > 99 else p["undo"])
         visible = few(m["selection"]) or "nothing"
         gone = [a["entry"] for a in p["actions"] if a.get("source") is None]  # say, an ID renamed upstream
         gone = f", {len(gone)} removed ({few(gone)})" if gone else ""
@@ -2879,7 +2882,7 @@ def summary(p: dict, backup: Path) -> str:
 
 
 def report(dry_run: bool, library: Library, plans: list, legacy: list[Path], pending: Path | None = None) -> dict:
-    hidden = {"state", "previous_state", "managed_before", "router", "walked"}
+    hidden = {"state", "previous_state", "managed_before", "router", "walked", "undo"}
     clients = [{k: v for k, v in p.items() if k not in hidden} | {"selection": p["state"]["selection"]} for p in plans]
     result = {
         "dry_run": dry_run,

@@ -984,16 +984,29 @@ def test_a_v1_codex_copy_keeps_its_root_through_the_migration_even_when_edited(s
     assert capsys.readouterr().out == "Already current; selection preserved.\n"
 
 
-def test_saved_ids_that_left_the_library_are_dropped_with_a_warning(sandbox, capsys):
+def test_saved_ids_that_left_the_library_are_dropped_with_a_warning(sandbox, monkeypatch, capsys):
     home, source = sandbox
     make_v1(home, source, "claude", ["alpha", "beta"])
     make_v1(home, source, "codex", ["@library", "beta"])
     shutil.rmtree(source / "beta")  # renamed or removed upstream, as skill-creator was
     capsys.readouterr()
+    assert run(source, "--dry-run") == 0
+    migrations = {c["client"]: c["migration"] for c in json.loads(capsys.readouterr().out)["clients"]}
+    assert migrations["codex"] == {"from": ["@library", "beta"], "selection": ["@library"], "manual": ["@all"]}
+    assert migrations["claude"]["selection"] == ["alpha"], "the migration reports what stays visible"
+    monkeypatch.setattr(installer, "SUMMARY_ACTIONS", 0)
     assert run(source) == 0, "neither client is blocked"
-    err = capsys.readouterr().err
+    out, err = capsys.readouterr()
+    assert (
+        "Migrated codex: @library,beta -> visible @library, 1 hidden, 1 removed (beta); undo: --codex-only --manual ''"
+        in (out)
+    )
+    assert (
+        "Migrated claude: alpha,beta -> visible alpha, 0 hidden, 1 removed (beta); undo: --claude-only --manual ''"
+        in (out)
+    )
     for client in ("claude", "codex"):
-        assert f"{client}: dropping saved IDs that left the library (see --list --search): beta" in err
+        assert err.count(f"{client}: dropping saved IDs that left the library (see --list --search): beta") == 1
     assert state(home, "claude")["selection"] == ["alpha"] and state(home, "codex")["selection"] == ["@library"]
     run(source, "--claude-only", "--manual", "alpha")
     shutil.rmtree(source / "alpha")

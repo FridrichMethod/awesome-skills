@@ -840,6 +840,25 @@ def test_planning_downloads_one_batch_at_most_however_many_folders_it_compares(r
     assert all(f"near-{skill_id}" in os.listdir(home / ".agents/skills") for skill_id in ids)
 
 
+def test_a_plan_made_again_after_its_batch_warns_once(remote, capsys, monkeypatch):
+    """Planning that needs library files the clone lacks gets them in one batch and plans again; a
+    saved ID that left the library is reported once all the same."""
+    home, upstream = remote
+    assert run("--claude-only") == 0
+    value = manifest(home, "claude")
+    put(data_dir(home) / "claude.json", json.dumps(dict(value, selection=[*value["selection"], "gone"])))
+    shutil.rmtree(clone(home))  # cloned again with no skill's files
+    mine = home / ".claude/skills/mine"  # a near copy of alpha under the user's own folder and its name
+    shutil.copytree(upstream.work / "skills/alpha", mine)
+    put(mine / "SKILL.md", "---\nname: alpha\ndescription: the user's own\n---\n")
+    batches, fetch = [], installer.GitLibrary.fetch_wanted
+    monkeypatch.setattr(installer.GitLibrary, "fetch_wanted", lambda self: batches.append(fetch(self)) or batches[-1])
+    capsys.readouterr()
+    assert run("--claude-only") == 0
+    assert batches == [True, False], "planned twice"
+    assert capsys.readouterr().err.count("claude: dropping saved IDs that left the library") == 1
+
+
 def test_a_lost_data_folder_is_adopted_back_in_one_run(remote, capsys, monkeypatch):
     """With the state and the clone gone (one folder when XDG_DATA_HOME is unset), every copy is
     unmanaged and compared with the copy this installer would make. A comparison may need several
