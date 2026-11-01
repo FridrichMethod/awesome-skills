@@ -770,6 +770,30 @@ def test_the_shared_second_codex_root_is_capped_too(sandbox, monkeypatch):
     assert run(source, "--codex-only") == 0
 
 
+def test_the_cap_counts_other_tools_folders_through_a_linked_agents_folder(sandbox, tmp_path, monkeypatch):
+    """With ~/.agents/skills a link and SKILLS_CODEX_DEST2 set inside its target, as the warning says,
+    Codex still walks ~/.agents/skills first, so its folders count as they do in a real folder."""
+    home, source = sandbox
+    if not can_symlink(tmp_path):
+        pytest.skip("symlinks unavailable")
+    second = [s for s in ("alpha", "beta") if installer.placement(s)]
+    monkeypatch.setattr(installer, "ROOT_CAP", 4 + len(second))
+    shared = home / "shared-skills"
+    for name in ("foreign-one", "foreign-two"):
+        (skill(shared, name) / "references").mkdir()
+    (home / ".agents").mkdir()
+    (home / ".agents/skills").symlink_to(shared, target_is_directory=True)
+    monkeypatch.setenv("SKILLS_CODEX_DEST2", str(shared / installer.AGENTS_FOLDER))
+    before = installer.fingerprint(home)
+    message = rf"Refusing to fill .*{installer.AGENTS_FOLDER} with {len(second)} skill folders and 6 other folders"
+    with pytest.raises(installer.PersonNeeded, match=message):
+        run(source, "--codex-only")
+    assert installer.fingerprint(home) == before
+    shutil.rmtree(shared / "foreign-two")
+    assert run(source, "--codex-only") == 0
+    assert run(source, "--codex-only") == 0, "the second root itself, reached through the link, is no other folder"
+
+
 # --- Migration -------------------------------------------------------------------------------
 
 

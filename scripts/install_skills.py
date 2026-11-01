@@ -2178,9 +2178,9 @@ def mass_removal(args, plans: list) -> str | None:
 
 
 def walked(outer: Path | None, root: Path) -> int:
-    """The other folders Codex's breadth-first walk of `outer` (~/.agents/skills) reaches by the
-    depth of the skill folders in `root` (AGENTS_FOLDER inside it): outer, root, outer's folders and
-    theirs. None for a root Codex walks itself."""
+    """The other folders Codex's breadth-first walk of `outer` (~/.agents/skills, which may be a link)
+    reaches by the depth of the skill folders in `root` (AGENTS_FOLDER inside it): outer, root, outer's
+    folders and theirs. None for a root Codex walks itself."""
 
     def folders(path: Path) -> list[Path]:
         try:
@@ -2188,9 +2188,9 @@ def walked(outer: Path | None, root: Path) -> int:
         except OSError:
             return []
 
-    if outer is None or root.parent != outer:
+    if outer is None or native(root.parent.resolve()) != native(outer.resolve()):
         return 0
-    others = [c for c in folders(outer) if c != root]
+    others = [c for c in folders(outer) if c.name != root.name]
     return 2 + len(others) + sum(len(folders(c)) for c in others)
 
 
