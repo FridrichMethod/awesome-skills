@@ -656,13 +656,18 @@ def sanitize_skill_frontmatter(skill_file: Path) -> str:
 normalize_skill_frontmatter = sanitize_skill_frontmatter
 
 
-def copy_skill(src: Path, dest: Path, lfs_paths: set[Path]) -> tuple[int, int, int]:
+def copy_skill(src: Path, dest: Path, lfs_paths: set[Path], within: Path | None = None) -> tuple[int, int, int]:
     """Copy src tree into dest, filtering.
+
+    A file link is followed only to a regular file of `within` (the upstream checkout; by default
+    src) outside its .git: any other is copied as the link it is, which candidate_problems rejects,
+    so no file of the runner (its .git/config, /dev/zero) ever becomes library content.
 
     Returns (files copied, frontmatter blocks normalized, missing frontmatter).
     """
     if dest.exists():
         shutil.rmtree(dest)
+    base = (within or src).resolve()
     files_copied = 0
     frontmatter_normalized = 0
     missing_frontmatter = 0
@@ -677,12 +682,19 @@ def copy_skill(src: Path, dest: Path, lfs_paths: set[Path]) -> tuple[int, int, i
             src_file = Path(root) / f
             if should_skip_path(src_file, lfs_paths):
                 continue
+            target_file = target_root / f
+            if src_file.is_symlink():
+                resolved = src_file.resolve()
+                inside = resolved.is_relative_to(base) and not set(resolved.relative_to(base).parts) & IGNORE_DIR_NAMES
+                if not (inside and resolved.is_file()):
+                    os.symlink(os.readlink(src_file), target_file)
+                    files_copied += 1
+                    continue
             try:
                 if src_file.stat().st_size > MAX_FILE_BYTES:
                     continue
             except OSError:
                 continue
-            target_file = target_root / f
             shutil.copy2(src_file, target_file)
             if f == "SKILL.md":
                 status = sanitize_skill_frontmatter(target_file)
@@ -989,6 +1001,8 @@ def candidate_problems(prepared: Path, skill_id: str) -> list[str]:
         elif path.is_file():
             kinds[path.relative_to(prepared).as_posix()] = "file"
     problems = installer.skill_problems(skill_id, kinds)
+    if "link" in kinds.values():
+        return problems  # never read through a link: it may lead to any file of the runner
     try:
         data = (prepared / "SKILL.md").read_bytes()
         metadata = installer.metadata(data, skill_id)
@@ -1219,7 +1233,7 @@ def sync_upstream(url: str, name: str, description: str, staging: Path, stats: d
             continue
         # Compare the final filtered/sanitized content, not the raw upstream.
         prepared = staging / "prepared" / name / root.relative_to(repo_dir)
-        _, normalized_count, missing_count = copy_skill(root, prepared, lfs_paths)
+        _, normalized_count, missing_count = copy_skill(root, prepared, lfs_paths, repo_dir)
         frontmatter_normalized += normalized_count
         missing_frontmatter += missing_count
         origin = {

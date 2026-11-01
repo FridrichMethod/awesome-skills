@@ -183,6 +183,39 @@ def test_index_regeneration_failure_is_loud(tmp_path, monkeypatch, capsys):
     )
 
 
+@pytest.mark.skipif(os.name == "nt", reason="the sync runs on Linux; creating links needs privileges on Windows")
+def test_an_upstream_link_is_followed_only_to_a_file_of_its_own_checkout(pipeline, tmp_path, capsys):
+    """A link out of the upstream checkout, as to the runner's .git/config, must never become the
+    bytes of a library file that the weekly job commits and pushes."""
+    library, _, builders = pipeline
+    secret = tmp_path / "runner/work/awesome-skills/.git/config"
+    secret.parent.mkdir(parents=True)
+    secret.write_text('[http]\n\textraheader = "AUTHORIZATION: basic SECRET"\n')
+
+    def upstream(dest: Path):
+        write_skill(dest / "skills/leak")
+        (dest / "skills/leak/notes.txt").symlink_to(secret)
+        write_skill(dest / "skills/linked-skill-md")
+        (dest / "skills/linked-skill-md/SKILL.md").unlink()
+        (dest / "skills/linked-skill-md/SKILL.md").symlink_to(secret)
+        write_skill(dest / "skills/own-git")
+        (dest / ".git").mkdir()
+        (dest / ".git/config").write_text("[remote]\n\turl = SECRET\n")
+        (dest / "skills/own-git/config").symlink_to("../../.git/config")
+        write_skill(dest / "skills/shared-license", extra={"../../shared/LICENSE": "MIT\n"})
+        (dest / "skills/shared-license/LICENSE").symlink_to("../../shared/LICENSE")
+
+    builders.append(upstream)
+    stats = sync(pipeline)
+    err = capsys.readouterr().err
+    assert sorted(p.name for p in library.skills_dest.iterdir()) == ["shared-license"]
+    license_file = library.skills_dest / "shared-license/LICENSE"
+    assert not license_file.is_symlink() and license_file.read_text() == "MIT\n", "a file of the checkout is copied"
+    assert stats["rejected"] == 3 and "REJECTED skills/leak: notes.txt: symbolic link" in err
+    assert "SKILL.md: symbolic link" in err and "config: symbolic link" in err
+    assert "SECRET" not in err and secret.read_text().count("SECRET") == 1
+
+
 def test_portability_rules():
     assert installer.name_problem("aux.md") and installer.name_problem("x.") and installer.name_problem("a:b")
     assert not installer.name_problem("console.md")
