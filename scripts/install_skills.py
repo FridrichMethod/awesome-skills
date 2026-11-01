@@ -1792,7 +1792,8 @@ empty, ask the user what they need.
 
 {search}2. Reply with the 1-5 best IDs the search printed, one line each on why; never guess one.
 3. Invoke an ID marked [visible] with the Skill tool. For any other, ask the user to start their
-   next message with /ID and the task; do not open its SKILL.md or do its work yourself.
+   next message with /ID and the task; do not open its SKILL.md or do its work yourself. One the
+   search says is not installed needs the command in step 4 first.
 4. To list an ID in every session, {show}; do not run it unasked.
 """
     else:

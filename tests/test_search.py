@@ -142,6 +142,17 @@ def test_a_codex_path_comes_from_the_recorded_root_or_says_it_is_missing(library
     ]
 
 
+def test_a_claude_match_without_a_copy_says_so(library, tmp_path):
+    """With the hidden set narrowed (`--manual ID,ID` or `''`), most /IDs find nothing: the router must
+    not send the user to one. Without a recorded destination nothing is known, and nothing is said."""
+    state, claude = tmp_path / "state", tmp_path / "claude"
+    state.mkdir()
+    (state / "claude.json").write_text(json.dumps({"selection": ["@library"], "destination": str(claude)}))
+    skill(claude, "alpha")
+    lines = search(library, "skill", "--client", "claude", "--state", str(state)).stdout.splitlines()
+    assert lines[1:] == ["alpha - Alpha skill.", "beta - Beta skill.", "  (not installed for Claude Code)"]
+
+
 def sandbox_env(tmp_path, **extra) -> tuple[Path, dict]:
     home = tmp_path / "home"
     home.mkdir(exist_ok=True)
@@ -217,6 +228,7 @@ def test_routers_differ_per_client_and_quote_for_powershell_on_windows(monkeypat
     assert installer.HIDDEN_KEY not in head
     assert body.startswith("Request: $ARGUMENTS\n") and "!`" not in claude
     assert f"{call} search --client claude WORDS" in body and "/ID" in body and "SKILL.md" in body
+    assert "not installed" in body, "a match with no copy is never offered as /ID"
     assert f"{call} search --client codex WORDS" in codex and "$ID" in codex and "argument-hint" not in codex
     assert "/ID" not in codex and "Skill tool" not in codex
     monkeypatch.setattr(installer, "WINDOWS", True)

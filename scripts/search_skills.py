@@ -6,7 +6,8 @@ It reads library_index.json next to its own directory and matches every word aga
 skill's ID, frontmatter name and description, treating '-', '_', '/' and spaces alike. Matches
 are ranked (the exact ID first, then ID and name hits, then description hits) and printed as
 `ID - description`, at most --limit of them. With --state and --client, the IDs that client
-shows the model are marked [visible], and for Codex each match gets its installed SKILL.md.
+shows the model are marked [visible], for Codex each match gets its installed SKILL.md, and for
+Claude Code a match with no installed copy says so.
 Exit status: 0 with matches, 1 with none, 2 on a usage or index error.
 """
 
@@ -70,6 +71,13 @@ def codex_path(state: dict, skill_id: str) -> Path | None:
     return None
 
 
+def claude_copy(state: dict, skill_id: str) -> bool | None:
+    """Whether Claude's recorded skills folder holds the skill (/ID finds nothing otherwise); None
+    without a recorded folder."""
+    root = state.get("destination")
+    return (Path(root) / skill_id / "SKILL.md").is_file() if isinstance(root, str) else None
+
+
 def shorten(text: str) -> str:
     text = " ".join(str(text).split())
     return text if len(text) <= WIDTH else text[: WIDTH - 3].rstrip() + "..."
@@ -108,6 +116,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.client == "codex":
             path = codex_path(state, skill_id)
             print(f"  {path}" if path else "  (not installed for Codex)")
+        elif args.client == "claude" and claude_copy(state, skill_id) is False:
+            print("  (not installed for Claude Code)")
     if len(ranked) > limit:
         print(f"... {len(ranked) - limit} more; add a word to narrow the search")
     return 0 if ranked else 1
