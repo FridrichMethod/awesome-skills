@@ -50,7 +50,8 @@ def state(home, client):
 
 
 def plan(capsys) -> dict:
-    return json.loads(capsys.readouterr().out.split("Recovery backup:")[0])
+    """The JSON plan a run printed first (a "Recovery backup:" line follows when its backup keeps copies)."""
+    return json.JSONDecoder().raw_decode(capsys.readouterr().out)[0]
 
 
 def name_of(path: Path) -> str:

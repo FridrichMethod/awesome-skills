@@ -485,16 +485,357 @@ def test_deep_paths_install_on_every_platform(remote):
     assert not installer.native(home / ".claude/skills/gamma").exists()
 
 
-def test_disable_and_restore_after_a_git_update(remote):
+def test_disable_and_undo_after_a_git_update(remote):
+    """The copies a git update replaces are dropped: the selection flags undo it."""
     home, _ = remote
     run()
     run("--claude-only", "--manual", "alpha")
     assert not (home / ".claude/skills/beta").exists()
-    backup = sorted((data_dir(home) / "backups").iterdir())[-1]
-    run("--restore", str(backup))
+    backup = backups(home)[-1]
+    with pytest.raises(installer.InstallError, match="keeps no copies.*--selection, --manual, --enable or --disable"):
+        run("--restore", str(backup))
+    run("--claude-only", "--manual", "@all")
     assert (home / ".claude/skills/beta/helper.txt").read_bytes() == b"beta support\n"
     assert manifest(home, "claude")["selection"] == ["@library"]
     assert manifest(home, "claude")["manual"] == ["@all"]
+
+
+# --- Backups: a finished git update keeps no copies --------------------------------------------
+
+
+def backups(home) -> list[Path]:
+    return installer.backup_dirs(installer.native(data_dir(home)))
+
+
+def journal(backup: Path) -> dict:
+    return json.loads((backup / "restore.json").read_text(encoding="utf-8"))
+
+
+def copied_bytes(home) -> int:
+    """What the backups hold besides their journals."""
+    root = installer.native(data_dir(home) / "backups")
+    files = [p for p in root.rglob("*") if not p.is_dir() and p.name != "restore.json"] if root.exists() else []
+    return sum(p.lstat().st_size for p in files)
+
+
+def copied_skills(backup: Path) -> list[str]:
+    return sorted(p.parent.name for p in installer.native(backup).rglob("SKILL.md"))
+
+
+def revise(upstream, label="revised"):
+    for skill_id in ("alpha", "beta"):
+        upstream.skill(skill_id, files={"helper.txt": f"{skill_id} {label}\n"})
+    upstream.commit(label)
+
+
+def without_dropping(monkeypatch):
+    """Run as 4cc8390e and the v1 installers did: a finished backup keeps its copies."""
+    monkeypatch.setattr(installer, "drop_copies", lambda state, library: [])
+
+
+def test_a_finished_update_keeps_no_copies(remote, capsys):
+    home, upstream = remote
+    run()
+    revise(upstream)
+    capsys.readouterr()
+    assert run() == 0
+    out = capsys.readouterr().out
+    plan, end = json.JSONDecoder().raw_decode(out)
+    assert plan["clients"] and out[end:] == "\n", "the plan alone: no backup to name, and not 'Already current'"
+    run("--claude-only", "--manual", "alpha")
+    assert copied_bytes(home) == 0
+    assert all(copied_skills(b) == [] for b in backups(home))
+    *_, update, disable = backups(home)
+    for backup in (update, disable):
+        record = journal(backup)
+        assert record["status"] == "complete" and record["dropped"]
+        assert all("managed" not in (c["old_state"] or {}) for c in record["clients"]), "a small record"
+        assert {a["entry"] for c in record["clients"] for a in c["actions"]}, "it still says what changed"
+    assert (home / ".claude/skills/alpha/helper.txt").read_bytes() == b"alpha revised\n"
+
+
+def test_a_finished_migration_keeps_no_copies_and_its_undo_needs_none(remote, monkeypatch, capsys):
+    """A v1 install of a git library: the migration's backup (the whole library on a real host)
+    is dropped, and the printed undo gives the model the v1 visible set back."""
+    home, upstream = remote
+    for i in range(6):
+        upstream.skill(f"extra-{i}")
+    upstream.commit("more skills")
+    run("--codex-only")  # the clone, and a v2 Codex
+    claude, trees = home / ".claude/skills", upstream.trees()
+    managed = {}
+    for skill_id, tree in trees.items():
+        shutil.copytree(upstream.work / "skills" / skill_id, claude / skill_id)
+        record = {"name": skill_id, "tree": tree, "source_ids": [skill_id], "origins": []}
+        managed[skill_id] = dict(record, sha256=installer.fingerprint(claude / skill_id))
+    v1 = {"schema": 1, "client": "claude", "destination": str(installer.native(claude)), "selection": ["@all"]}
+    put(data_dir(home) / "claude.json", json.dumps(dict(v1, managed=managed)))
+    monkeypatch.setattr(installer, "SUMMARY_ACTIONS", 3)
+    capsys.readouterr()
+    assert run("--claude-only") == 0
+    out = capsys.readouterr().out
+    assert "Recovery backup" not in out and "--restore" not in out
+    line = out.splitlines()[0]
+    assert (
+        line == f"Migrated claude: @all -> visible @library, {len(trees)} hidden; undo: --claude-only --selection @all"
+    )
+    assert all(hidden_from_claude(claude / s) for s in trees)
+    assert copied_bytes(home) == 0 and journal(backups(home)[-1])["migration"] == installer.MIGRATION
+    assert run(*line.split("undo: ", 1)[1].split()) == 0
+    assert not any(hidden_from_claude(claude / s) for s in trees), "the v1 visible set: every skill"
+    assert manifest(home, "claude")["selection"] == ["@all"] and not (claude / installer.ROUTER).exists()
+
+
+KILLED_AT = """
+import os, sys
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+from scripts import install_skills as installer
+step, moves = sys.argv[2], []
+if step == "before-moves":
+    installer.move_live_entries = lambda *args: os._exit(137)
+elif step == "during-moves":
+    original = installer.move
+    def move(source, target):
+        original(source, target)
+        moves.append(target)
+        if len(moves) == 2:
+            os._exit(137)
+    installer.move = move
+elif step == "after-moves":
+    original = installer.atomic_json
+    def atomic_json(path, value):
+        if path.name == "restore.json" and value.get("status") == "complete":
+            os._exit(137)
+        original(path, value)
+    installer.atomic_json = atomic_json
+elif step == "during-deletion":  # the second folder of a backup marked dropped
+    original = installer.rmtree
+    def rmtree(path):
+        journal = Path(path).parent / "restore.json"
+        if journal.is_file() and '"dropped"' in journal.read_text(encoding="utf-8"):
+            moves.append(path)
+            if len(moves) == 2:
+                os._exit(137)
+        original(path)
+    installer.rmtree = rmtree
+installer.main(sys.argv[3:])
+"""
+
+
+def killed_at(step: str, *args):
+    command = [sys.executable, "-B", "-c", KILLED_AT, str(ROOT), step, "--remote", *args]
+    result = subprocess.run(command, capture_output=True, text=True)
+    assert result.returncode == 137, result.stderr
+
+
+@pytest.mark.parametrize("step", ["before-moves", "during-moves", "after-moves", "during-deletion"])
+def test_an_update_killed_at_any_step_is_rolled_back_or_finished(remote, capsys, step):
+    home, upstream = remote
+    run()
+    revise(upstream)
+    killed_at(step)
+    if step == "during-deletion":
+        assert journal(backups(home)[-1])["dropped"] and copied_skills(backups(home)[-1]), "killed while deleting"
+        assert installer.interrupted_transaction(installer.native(data_dir(home))) is None
+    else:
+        assert installer.interrupted_transaction(installer.native(data_dir(home))) is not None
+        assert copied_bytes(home) > 0, "an unfinished transaction keeps what its rollback needs"
+    capsys.readouterr()
+    assert run() == 0
+    out = capsys.readouterr().out
+    assert ("Recovered an interrupted update" in out) == (step != "during-deletion")
+    for copy in (home / ".claude/skills/alpha", codex_copy(home, "beta")):
+        assert (copy / "helper.txt").read_bytes() == f"{copy.name} revised\n".encode()
+    assert installer.interrupted_transaction(installer.native(data_dir(home))) is None
+    assert copied_bytes(home) == 0, "rolled back or finished, the copies are dropped"
+    capsys.readouterr()
+    assert run() == 0
+    assert capsys.readouterr().out == "Already current; selection preserved.\n"
+
+
+def test_an_interrupted_update_a_person_must_restore_keeps_its_copies(remote):
+    """The exit-3 case: a file edited since the crash stops the automatic rollback, the named
+    --restore still works, and only then is the backup dropped."""
+    home, upstream = remote
+    run()
+    revise(upstream)
+    killed_at("during-moves")  # Claude's alpha replaced, nothing else
+    alpha = home / ".claude/skills/alpha"
+    (alpha / "helper.txt").write_text("edited after the crash\n")
+    [*_, pending] = backups(home)
+    with pytest.raises(installer.PersonNeeded, match=f"--restore {re.escape(installer.display(pending))}"):
+        run()
+    assert copied_skills(pending).count("alpha") >= 2, "the old alpha and the prepared copies"
+    put(alpha / "helper.txt", "alpha revised\n")  # the person puts the edit away
+    assert run("--restore", str(pending)) == 0
+    assert (alpha / "helper.txt").read_bytes() == b"alpha support\n"
+    assert run() == 0
+    assert (alpha / "helper.txt").read_bytes() == b"alpha revised\n" and copied_bytes(home) == 0
+
+
+def test_backups_written_before_this_change_are_emptied_by_the_next_run(remote, monkeypatch, capsys):
+    """4cc8390e's journals have this shape without the drop; v1's lack the visible-set fields. A
+    run with nothing to change empties the ones whose copies git holds; --dry-run touches none."""
+    home, upstream = remote
+    run()
+    with monkeypatch.context() as patched:
+        without_dropping(patched)
+        revise(upstream)
+        assert run("--claude-only") == 0  # to become v1-shaped
+        revise(upstream, "revised again")
+        assert run() == 0
+    *_, v1, recent = backups(home)
+    value = journal(v1)
+    for client in value["clients"]:
+        for key in ("old_state", "new_state"):
+            client[key] = {k: v for k, v in client[key].items() if k not in ("manual", "selection_version")}
+            for record in client[key]["managed"].values():
+                for field in ("invocation", "form", "root"):
+                    record.pop(field, None)
+    (v1 / "restore.json").write_text(json.dumps(value), encoding="utf-8")
+    assert copied_skills(v1) == ["alpha", "beta"] and len(copied_skills(recent)) == 4
+    before = snapshot(data_dir(home) / "backups")
+    assert run("--dry-run") == 0 and snapshot(data_dir(home) / "backups") == before
+    capsys.readouterr()
+    assert run() == 0
+    assert capsys.readouterr().out == "Already current; selection preserved.\n"
+    assert copied_bytes(home) == 0 and journal(v1)["dropped"] and journal(recent)["dropped"]
+    with pytest.raises(installer.InstallError, match="keeps no copies"):
+        run("--restore", str(recent))
+    after = snapshot(data_dir(home))
+    assert run() == 0 and snapshot(data_dir(home)) == after, "nothing left to drop: nothing written"
+
+
+def test_a_failed_deletion_warns_and_the_next_run_finishes_it(remote, monkeypatch, capsys):
+    """The update is done when the deletion starts: a file held open (as Windows scanners do) or an
+    unreadable clone leaves the copies for a later run and fails nothing."""
+    home, upstream = remote
+    run()
+    revise(upstream)
+    with monkeypatch.context() as patched:
+        patched.setattr(installer, "rmtree", lambda path: (_ for _ in ()).throw(PermissionError(13, "in use", path)))
+        assert run() == 0
+    assert "for a later run" in capsys.readouterr().err
+    assert journal(backups(home)[-1])["dropped"] and copied_bytes(home) > 0
+    revise(upstream, "revised again")
+    with monkeypatch.context() as patched:
+        patched.setattr(
+            installer.GitLibrary, "known_trees", lambda self: (_ for _ in ()).throw(installer.GitError("bad"))
+        )
+        assert run() == 0
+    assert "for a later run" in capsys.readouterr().err
+    assert run() == 0 and copied_bytes(home) == 0
+
+
+def test_a_backup_a_person_has_begun_to_restore_is_kept(remote, monkeypatch):
+    """One client's part restored (or a --restore killed half-way, which running it again finishes):
+    the rest still needs its copies, so no run empties it."""
+    home, upstream = remote
+    run()
+    with monkeypatch.context() as patched:
+        without_dropping(patched)
+        revise(upstream)
+        assert run() == 0
+    [*_, backup] = backups(home)
+    assert run("--claude-only", "--restore", str(backup)) == 0
+    assert run("--codex-only") == 0, "nothing to change for Codex; the drop pass runs"
+    assert not journal(backup).get("dropped") and "beta" in copied_skills(backup)
+    assert run("--codex-only", "--restore", str(backup)) == 0
+    assert (codex_copy(home, "beta") / "helper.txt").read_bytes() == b"beta support\n"
+    assert run("--codex-only") == 0
+    assert copied_bytes(home) == 0, "restored in full, its copies go too"
+
+
+def test_a_restore_cut_short_keeps_its_backup_until_it_is_run_again(remote, monkeypatch, capsys):
+    home, upstream = remote
+    run()
+    with monkeypatch.context() as patched:
+        without_dropping(patched)
+        revise(upstream)
+        assert run() == 0
+    [*_, backup] = backups(home)
+    killed_at("during-moves", "--restore", str(backup))  # one copy put back, the journal still complete
+    capsys.readouterr()
+    assert run() == 0 and capsys.readouterr().out == "Already current; selection preserved.\n"
+    assert not journal(backup).get("dropped") and copied_skills(backup)
+    assert run("--restore", str(backup)) == 0
+    copies = [
+        home / ".claude/skills/alpha",
+        home / ".claude/skills/beta",
+        codex_copy(home, "alpha"),
+        codex_copy(home, "beta"),
+    ]
+    assert all((c / "helper.txt").read_bytes() == f"{c.name} support\n".encode() for c in copies)
+
+
+def test_a_backup_whose_origin_the_journal_cannot_prove_is_kept(remote, monkeypatch):
+    """A record without a tree (the tarball installer wrote such) proves nothing: that backup is
+    kept for --restore and pruned with the newest-N rule, while a provable one beside it is dropped."""
+    home, upstream = remote
+    run()
+    with monkeypatch.context() as patched:
+        without_dropping(patched)
+        revise(upstream)
+        assert run("--claude-only") == 0
+        revise(upstream, "revised again")
+        assert run("--claude-only") == 0
+    *_, provable, unproven = backups(home)
+    value = journal(unproven)
+    del value["clients"][0]["old_state"]["managed"]["alpha"]["tree"]
+    (unproven / "restore.json").write_text(json.dumps(value), encoding="utf-8")
+    assert run() == 0
+    assert copied_skills(provable) == [] and copied_skills(unproven) == ["alpha", "beta"]
+    assert run("--claude-only", "--restore", str(unproven)) == 0
+    assert (home / ".claude/skills/alpha/helper.txt").read_bytes() == b"alpha revised\n"
+
+
+def test_a_local_source_transaction_keeps_its_copies_and_restores(remote, tmp_path):
+    """Copies made from a local tree are not in git: neither the backup of the local update nor
+    that of the git update that replaced them is dropped, and both restore."""
+    home, _ = remote
+    local = tmp_path / "local/skills"
+    for skill_id in ("alpha", "beta"):
+        put(local / skill_id / "SKILL.md", f"---\nname: {skill_id}\ndescription: Use {skill_id}\n---\nmine\n")
+    claude = home / ".claude/skills/alpha"
+    assert installer.main(["--source", str(local), "--claude-only"]) == 0
+    put(local / "alpha/SKILL.md", "---\nname: alpha\ndescription: Use alpha\n---\nmine, revised\n")
+    assert installer.main(["--source", str(local), "--claude-only"]) == 0
+    assert run("--claude-only") == 0  # the git library replaces the local copies
+    *_, local_update, git_update = backups(home)
+    assert copied_skills(local_update) == ["alpha"]
+    assert set(copied_skills(git_update)) >= {"alpha", "beta"}
+    assert not journal(local_update).get("dropped") and not journal(git_update).get("dropped")
+    assert "mine" not in (claude / "SKILL.md").read_text()
+    assert run("--restore", str(git_update)) == 0
+    assert "mine, revised" in (claude / "SKILL.md").read_text()
+    assert run("--restore", str(local_update)) == 0
+    assert "mine\n" in (claude / "SKILL.md").read_text() and "revised" not in (claude / "SKILL.md").read_text()
+
+
+def test_keep_backups_counts_the_journals_kept_and_is_validated(remote, monkeypatch):
+    home, upstream = remote
+    monkeypatch.setenv("SKILLS_KEEP_BACKUPS", "2")
+    run()
+    for label in ("one", "two", "three"):
+        revise(upstream, label)
+        assert run() == 0
+    assert len(backups(home)) == 2 and all(journal(b)["dropped"] for b in backups(home)) and copied_bytes(home) == 0
+    monkeypatch.setenv("SKILLS_KEEP_BACKUPS", "two")
+    with pytest.raises(installer.InstallError, match="SKILLS_KEEP_BACKUPS must be a non-negative integer"):
+        run()
+
+
+def test_restoring_a_dropped_backup_says_how_to_undo_without_a_traceback(remote):
+    home, upstream = remote
+    run()
+    revise(upstream)
+    run()
+    helper = [sys.executable, "-B", str(ROOT / "scripts/install_skills.py"), "--remote"]
+    result = subprocess.run([*helper, "--restore", str(backups(home)[-1])], capture_output=True, text=True)
+    assert result.returncode == 1 and "Traceback" not in result.stderr
+    [line] = result.stderr.splitlines()
+    assert "keeps no copies" in line and "--selection, --manual, --enable or --disable" in line
 
 
 @pytest.mark.skipif(WINDOWS, reason="native Windows stores no executable bit")
