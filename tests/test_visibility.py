@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -870,9 +871,9 @@ def test_claude_all_migrates_once_to_the_router_with_the_library_hidden(sandbox,
     capsys.readouterr()
     assert run(source) == 0
     assert capsys.readouterr().out == "Already current; selection preserved.\n"
-    run(source, "--claude-only", "--selection", "@all")
+    assert run(source, *undo_of(out[0])) == 0
     run(source)
-    assert not any(hidden_from_claude(claude / s) for s in os.listdir(claude))
+    assert visible(home, "claude") == installer.skill_ids(source), "the v1 visible set: every skill, no router"
 
 
 def test_the_migration_line_names_the_copies_it_removes(sandbox, monkeypatch, capsys):
@@ -934,6 +935,21 @@ def test_the_restore_order_names_each_later_claude_transaction_newest_first(sand
     assert state(home, "claude")["selection"] == ["@all"]
 
 
+def visible(home, client) -> list[str]:
+    """The installed copies the model sees (the router among them)."""
+    if client == "claude":
+        return sorted(p.name for p in (home / ".claude/skills").iterdir() if not hidden_from_claude(p))
+    roots = [home / ".codex/skills", home / SECOND]
+    return sorted(p.name for r in roots if r.is_dir() for p in r.iterdir() if not hidden_from_codex(p))
+
+
+def undo_of(line: str) -> list[str]:
+    """The printed undo, as arguments: never a --restore, which needs a backup."""
+    command = line.split("; undo: ", 1)[1]
+    assert "--restore" not in command, line
+    return shlex.split(command)
+
+
 def test_a_claude_v1_list_of_most_of_the_library_migrates_like_all(sandbox, monkeypatch, capsys):
     home, source = sandbox
     for i in range(100):
@@ -946,22 +962,50 @@ def test_a_claude_v1_list_of_most_of_the_library_migrates_like_all(sandbox, monk
     capsys.readouterr()
     assert run(source, "--claude-only") == 0
     out = capsys.readouterr().out.splitlines()
-    backup = out[1].split(": ", 1)[1]
-    undo = f"--claude-only --restore {backup}"
+    undo = "--claude-only --selection @all --disable beta"
     assert out[0] == f"Migrated claude: {len(kept)} IDs -> visible @library, {len(every)} hidden; undo: {undo}"
     value = state(home, "claude")
     assert (value["selection"], value["manual"]) == (["@library"], ["@all"]), "the model's listing cannot overflow"
     assert all(hidden_from_claude(home / ".claude/skills" / s) for s in every)
-    run(source, "--claude-only", "--restore", backup)
+    assert run(source, *undo_of(out[0])) == 0
+    assert visible(home, "claude") == kept and state(home, "claude")["selection"] == kept, "the v1 visible set"
     run(source, "--claude-only")
-    assert (state(home, "claude")["selection"], state(home, "claude")["manual"]) == (kept, []), "undone for good"
+    assert visible(home, "claude") == kept, "a v2 state: the migration never runs again"
     capsys.readouterr()
     monkeypatch.setattr(installer, "SUMMARY_ACTIONS", 1)  # the two hidden copies
     run(source, "--codex-only")
     assert state(home, "codex")["selection"] == kept[:100], "Codex lists stay visible, as specified"
-    assert capsys.readouterr().out.startswith(
-        "Migrated codex: 100 IDs -> visible 100 IDs, 2 hidden; undo: --codex-only --manual ''"
-    )
+    line = capsys.readouterr().out.splitlines()[0]
+    assert line == "Migrated codex: 100 IDs -> visible 100 IDs, 2 hidden; undo: --codex-only --manual ''"
+    assert run(source, *undo_of(line)) == 0
+    copies = [p for root in (home / ".codex/skills", home / SECOND) if root.is_dir() for p in root.iterdir()]
+    assert visible(home, "codex") == kept[:100] and len(copies) == 100, "the v1 visible set, and nothing hidden"
+
+
+@pytest.mark.parametrize("left_out", [3, 98])
+def test_the_printed_undo_of_a_long_claude_list_is_the_shorter_selection_command(
+    sandbox, monkeypatch, capsys, left_out
+):
+    """@all less what v1 left out, or the list itself when that is shorter; IDs that left the library
+    since are not named, and a router v1 listed stays listed."""
+    home, source = sandbox
+    for i in range(98 + left_out):
+        skill(source, f"extra-{i:03d}")
+    every = installer.skill_ids(source)
+    v1 = ["@library", "gone-upstream", *every[left_out:]]
+    make_v1(home, source, "claude", [i for i in v1 if i != "gone-upstream"])
+    value = state(home, "claude")
+    (state_dir(home) / "claude.json").write_text(json.dumps(dict(value, selection=v1)))
+    monkeypatch.setattr(installer, "SUMMARY_ACTIONS", 5)
+    capsys.readouterr()
+    assert run(source, "--claude-only") == 0
+    line = capsys.readouterr().out.splitlines()[0]
+    assert line.startswith(f"Migrated claude: {len(v1)} IDs -> visible @library, {len(every)} hidden; undo: ")
+    args = undo_of(line)
+    shorter = "--disable" in args
+    assert shorter == (left_out == 3) and "gone-upstream" not in line
+    assert run(source, *args) == 0
+    assert visible(home, "claude") == sorted([ROUTER, *every[left_out:]]), "the v1 visible set"
 
 
 def test_the_printed_claude_undo_leaves_the_codex_migration_of_the_same_run(sandbox, monkeypatch, capsys):
@@ -971,14 +1015,32 @@ def test_the_printed_claude_undo_leaves_the_codex_migration_of_the_same_run(sand
     kept = [s for s in installer.skill_ids(source) if s != "beta"]
     make_v1(home, source, "claude", kept)
     make_v1(home, source, "codex", ["@library", "alpha"])
-    codex_v1 = state(home, "codex")
     monkeypatch.setattr(installer, "SUMMARY_ACTIONS", 5)
     capsys.readouterr()
     assert run(source) == 0, "one transaction migrates both clients"
     out = capsys.readouterr().out.splitlines()
-    backup = out[2].split(": ", 1)[1]
-    assert out[0].endswith(f"undo: --claude-only --restore {backup}")
+    assert out[0].endswith("undo: --claude-only --selection @all --disable beta")
     assert out[1].startswith("Migrated codex: ") and out[1].endswith("undo: --codex-only --manual ''")
+    codex = state(home, "codex")
+    assert run(source, *undo_of(out[0])) == 0
+    assert visible(home, "claude") == kept and state(home, "codex") == codex, "the Codex migration stays"
+
+
+def test_a_kept_migration_backup_restores_one_client_at_a_time(sandbox, monkeypatch, capsys):
+    """A migration from a local tree keeps its backup: --restore of one client's part is a lasting
+    opt-out for it alone, recorded as undone in migrations.json, and the rest restores later."""
+    home, source = sandbox
+    for i in range(100):
+        skill(source, f"extra-{i:03d}")
+    kept = [s for s in installer.skill_ids(source) if s != "beta"]
+    make_v1(home, source, "claude", kept)
+    make_v1(home, source, "codex", ["@library", "alpha"])
+    codex_v1 = state(home, "codex")
+    monkeypatch.setattr(installer, "SUMMARY_ACTIONS", 5)
+    capsys.readouterr()
+    assert run(source) == 0
+    out = capsys.readouterr().out.splitlines()
+    backup = out[2].split("Recovery backup: ", 1)[1]
     codex = state(home, "codex")
     assert run(source, "--claude-only", "--restore", backup) == 0
     assert state(home, "claude")["selection"] == kept and "selection_version" not in state(home, "claude")

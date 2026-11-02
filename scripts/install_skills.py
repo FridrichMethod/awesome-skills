@@ -2899,7 +2899,9 @@ def resolve_clients(args, home: Path, storage: list[Path], source: Path | None) 
 def migrated_state(old: dict, client: str, undone: bool, ids: set) -> tuple[dict, dict | None]:
     """(state, migration) for a v1 state, once: Claude's old default @all (or, after a --disable,
     v1's list of the rest: over 99 and most of the library) shows only the router, any other
-    selection stays visible, the rest is hidden. Undone with --restore, it is an opt-out."""
+    selection stays visible, the rest is hidden. A --restore of its transaction (where the backup
+    kept its copies, as from a local tree) is a lasting opt-out, marked "undone"; the printed undo
+    selects instead, which leaves a v2 state."""
     if not old or old.get("selection_version") == SELECTION_VERSION:
         return old, None
     visible, manual = old["selection"], [] if undone else ["@all"]
@@ -2908,6 +2910,19 @@ def migrated_state(old: dict, client: str, undone: bool, ids: set) -> tuple[dict
         visible = ["@library"]
     base = dict(old, selection=visible, manual=manual, selection_version=SELECTION_VERSION)
     return base, None if undone else {"from": old["selection"], "selection": visible, "manual": manual}
+
+
+def migration_undo(v1: list, library: Library) -> str:
+    """Selection flags that show the model v1's visible set again, as of this library: the list, or
+    @all less the rest when that is shorter (v1 stored @all that way after a --disable)."""
+    known = set(library.skills) | set(library.skipped) | {"@all", "@library"}
+    ids = [i for i in v1 if i in known]  # not those that left the library since
+    listed = "--selection " + ",".join(ids)
+    if "@all" in ids:
+        return listed
+    rest = sorted(set(library.skills) - set(ids))
+    every = "--selection " + ",".join(["@all", *(i for i in ids if i == "@library")])
+    return min(listed, every + "".join(f" --disable {i}" for i in rest), key=len)
 
 
 def kept_link_remedy(base: dict, migration: dict | None) -> str:
@@ -2933,8 +2948,9 @@ def make_plans(args, clients: list, library: Library, state: Path, data: Path) -
         router = router_info(client, data)
         plans.append(plan_client(client, roots, old, base, visible, manual, library, router, agents))
         if migration:  # reported as this run leaves the client; undone as the migration changed it
-            undo = f"--selection {','.join(migration['from'])}" if migration["selection"] != migration["from"] else ""
-            plans[-1].update(migration=dict(migration, selection=visible, manual=manual), undo=undo or "--manual ''")
+            changed = migration["selection"] != migration["from"]
+            undo = migration_undo(migration["from"], library) if changed else "--manual ''"
+            plans[-1].update(migration=dict(migration, selection=visible, manual=manual), undo=undo)
     every = [root for p in plans for root in roots_of(p)]
     for i, a in enumerate(every):
         for b in every[i + 1 :]:
@@ -2975,12 +2991,12 @@ def few(ids: list) -> str:
     return ",".join(ids) if len(ids) < 9 else f"{len(ids)} IDs"
 
 
-def summary(p: dict, backup: Path) -> str:
+def summary(p: dict) -> str:
     """One line for a large plan, such as a first install or a migration of thousands of copies."""
     records, client, m = p["state"]["managed"].values(), p["client"], p.get("migration")
     hidden = sum(info.get("invocation") == "manual" for info in records)
     if m:
-        undo = f"--{client}-only " + (f"--restore {display(backup)}" if len(p["undo"]) > 99 else p["undo"])
+        undo = f"--{client}-only {p['undo']}"  # selection flags: the backup may keep no copies
         visible = few(m["selection"]) or "nothing"
         gone = [a["entry"] for a in p["actions"] if a.get("source") is None]  # say, an ID renamed upstream
         gone = f", {len(gone)} removed ({few(gone)})" if gone else ""
@@ -3135,7 +3151,7 @@ def run_update(args, git, home, state, data, legacy_cache, source, url, branch, 
         removed = remove_legacy_caches(legacy_cache) if migrated(state) else []
     failures = [dict(f, client=p["client"]) for p in plans for f in p["failed"]]
     if backup and sum(len(p["actions"]) for p in plans) > SUMMARY_ACTIONS:
-        print("\n".join(summary(p, backup) for p in plans))
+        print("\n".join(summary(p) for p in plans))
     elif backup:
         emit(report(False, library, plans, removed))
     if backup and backup not in dropped:
