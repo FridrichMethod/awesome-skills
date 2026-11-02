@@ -2459,16 +2459,16 @@ def drop_copies(state: Path, library: Library):
 
     for backup in backup_dirs(state):
         try:
-            empty_backup(backup, state, known)
+            empty_backup(backup, state, known, library)
         except (InstallError, OSError, ValueError) as exc:
             warn(f"{display(backup)} keeps its copies for a later run: {exc}")
 
 
-def empty_backup(backup: Path, state: Path, known):
-    """Mark the journal dropped (first: --restore then refuses it, and a later run finishes an
-    interrupted deletion), then delete the rest. Never one still applying, nor one a --restore has
-    begun on while it can still finish. Lock held, a backup still preparing, or with no journal yet,
-    is a dead run's, which moved nothing live: what it prepared goes."""
+def empty_backup(backup: Path, state: Path, known, library: Library):
+    """Mark the journal dropped (first: --restore then refuses it, naming a migration's undo, and a
+    later run finishes an interrupted deletion), then delete the rest. Never one still applying, nor
+    one a --restore has begun on while it can still finish. Lock held, a backup still preparing, or
+    with no journal yet, is a dead run's, which moved nothing live: what it prepared goes."""
     payload = [p for p in backup.iterdir() if p.name != "restore.json"]
     if not payload:
         return
@@ -2489,6 +2489,7 @@ def empty_backup(backup: Path, state: Path, known):
             return
         if trees is None or trees and not trees <= known():
             return
+        migration_undos(journal, library)
         for client in journal["clients"]:
             for key in ("old_state", "new_state"):
                 if isinstance(client.get(key), dict):
@@ -2645,13 +2646,14 @@ def restore(backup: Path, state: Path, dry_run: bool, quiet: bool = False, only:
         or not isinstance(journal.get("clients"), list)
     ):
         raise InstallError(f"Invalid or already restored journal: {display(backup)}")
+    left = [c for c in journal["clients"] if isinstance(c, dict) and not c.get("restored")]
+    chosen = [c for c in left if only in (None, c.get("client"))]
     if journal.get("dropped"):
         raise InstallError(
             f"{display(backup)} keeps no copies: a finished update drops those it replaced, as the library's "
-            "git history holds them. Undo it with the selection flags, which install from the library again "
-            "(a migration printed its own): --claude-only or --codex-only with --selection, --manual, --enable or --disable"
+            "git history holds them. Undo it with the selection flags, which install from the library again: "
+            + selection_undo(chosen)
         )
-    chosen = [c for c in journal["clients"] if not c.get("restored") and only in (None, c.get("client"))]
     if not chosen:
         raise InstallError(f"Nothing {only or ''} left to restore: {display(backup)}")
     operations = [] if journal["status"] == "preparing" else restore_operations(backup, state, chosen)
@@ -2690,14 +2692,28 @@ def restore(backup: Path, state: Path, dry_run: bool, quiet: bool = False, only:
     atomic_json(backup / "restore.json", journal)
 
 
-def undone(backup: Path, client: str) -> bool:
-    """Whether a finished transaction that keeps its copies holds a part of the client's not restored yet."""
+def selection_undo(clients: list) -> str:
+    """The selection flags that undo these parts of a transaction: a migration's printed undo once a
+    drop recorded it (see migration_undos), else the flags to choose from."""
+    undos = [c["undo"] for c in clients if isinstance(c.get("undo"), str)]
+    others = [c.get("client") for c in clients if not isinstance(c.get("undo"), str)]
+    if others or not undos:
+        names = " or ".join(f"--{name}-only" for name in others or ["claude", "codex"])
+        undos.append(f"{names} with --selection, --manual, --enable or --disable")
+    return "; ".join(undos)
+
+
+def later_part(backup: Path, client: str) -> str | None:
+    """For a finished transaction holding a part of the client's not restored yet, "dropped" when its
+    backup keeps no copies (it cannot be restored), else "kept"; None for any other."""
     try:
         journal = read_json(backup / "restore.json", {})
     except (InstallError, ValueError):
-        return False
-    parts = journal.get("clients") if journal.get("status") == "complete" and not journal.get("dropped") else None
-    return any(isinstance(c, dict) and c.get("client") == client and not c.get("restored") for c in parts or [])
+        return None
+    parts = journal.get("clients") if journal.get("status") == "complete" else None
+    if any(isinstance(c, dict) and c.get("client") == client and not c.get("restored") for c in parts or []):
+        return "dropped" if journal.get("dropped") else "kept"
+    return None
 
 
 def restore_operations(backup: Path, state: Path, clients: list) -> list:
@@ -2717,9 +2733,14 @@ def restore_operations(backup: Path, state: Path, clients: list) -> list:
             raise InstallError("Recovery destination must be canonical and absolute")
         current_state = read_json(state / f"{client['client']}.json", {})
         if current_state not in [client["new_state"], client["old_state"] or {}]:
-            later = [b for b in backup_dirs(state) if backup_order(b) > backup_order(backup) and undone(b, name)]
-            first = f"; restore the later transactions first, newest first: {', '.join(map(display, later[::-1]))}"
-            raise InstallError(f"Client selection changed after this transaction: {name}{first * bool(later)}")
+            later = {b: later_part(b, name) for b in backup_dirs(state) if backup_order(b) > backup_order(backup)}
+            gone, first = ([b for b, part in later.items() if part == kind] for kind in ("dropped", "kept"))
+            if gone:  # the way back through the later ones is closed
+                how = f"; a later update keeps no copies ({display(gone[-1])}), so undo this one with the selection "
+                how += f"flags, which install from the library again: {selection_undo([client])}"
+            else:
+                how = f"; restore the later transactions first, newest first: {', '.join(map(display, first[::-1]))}"
+            raise InstallError(f"Client selection changed after this transaction: {name}{how * bool(gone or first)}")
         for action in client["actions"]:
             valid_entry(action.get("entry"))
             valid_hash(action.get("before"))
@@ -2954,6 +2975,26 @@ def migration_undo(v1: list, library: Library) -> str:
     return min(listed, every + "".join(f" --disable {i}" for i in rest), key=len)
 
 
+def printed_undo(client: str, migration: dict, library: Library) -> str:
+    """The command that undoes a client's migration (see make_plans), which needs no backup."""
+    changed = migration["selection"] != migration["from"]
+    return f"--{client}-only " + (migration_undo(migration["from"], library) if changed else "--manual ''")
+
+
+def migration_undos(journal: dict, library: Library):
+    """Record each migrated client's undo in a journal about to be dropped, for restore to name (4cc8390e
+    printed a --restore of the backup for a long Claude list): the line summary printed, made again
+    from the v1 state the journal keeps, as of this library."""
+    for client in journal["clients"]:
+        old = client.get("old_state")
+        v1 = old.get("selection") if isinstance(old, dict) else None
+        listed = isinstance(v1, list) and all(isinstance(i, str) for i in v1)
+        if client.get("migrated") and "undo" not in client and listed:
+            _, migration = migrated_state(old, client["client"], False, set(library.skills))
+            if migration:
+                client["undo"] = printed_undo(client["client"], migration, library)
+
+
 def kept_link_remedy(base: dict, migration: dict | None) -> str:
     """How Claude keeps a link through which Codex reads its folder (see resolve_clients): with nothing
     hidden. A migration to the router alone would then remove the library Claude lists now."""
@@ -2977,8 +3018,7 @@ def make_plans(args, clients: list, library: Library, state: Path, data: Path) -
         router = router_info(client, data)
         plans.append(plan_client(client, roots, old, base, visible, manual, library, router, agents))
         if migration:  # reported as this run leaves the client; undone as the migration changed it
-            changed = migration["selection"] != migration["from"]
-            undo = migration_undo(migration["from"], library) if changed else "--manual ''"
+            undo = printed_undo(client, migration, library)
             plans[-1].update(migration=dict(migration, selection=visible, manual=manual), undo=undo)
     every = [root for p in plans for root in roots_of(p)]
     for i, a in enumerate(every):
@@ -3025,7 +3065,7 @@ def summary(p: dict) -> str:
     records, client, m = p["state"]["managed"].values(), p["client"], p.get("migration")
     hidden = sum(info.get("invocation") == "manual" for info in records)
     if m:
-        undo = f"--{client}-only {p['undo']}"  # selection flags: the backup may keep no copies
+        undo = p["undo"]  # selection flags: the backup may keep no copies
         visible = few(m["selection"]) or "nothing"
         gone = [a["entry"] for a in p["actions"] if a.get("source") is None]  # say, an ID renamed upstream
         gone = f", {len(gone)} removed ({few(gone)})" if gone else ""

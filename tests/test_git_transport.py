@@ -858,6 +858,74 @@ def test_restoring_a_dropped_backup_says_how_to_undo_without_a_traceback(remote)
     assert "keeps no copies" in line and "--selection, --manual, --enable or --disable" in line
 
 
+def v1_install(home, upstream, client: str, selection: list):
+    """A v1 install from the upstream's trees (test_visibility.make_v1 for a git library): one root
+    per client, the library trees as they are, v1 records; "@library" adds v1's router, which git
+    never held."""
+    dest, trees, managed = home / (".claude/skills" if client == "claude" else ".codex/skills"), upstream.trees(), {}
+    for skill_id in sorted(trees) if "@all" in selection else [i for i in selection if i[0] != "@"]:
+        shutil.copytree(upstream.work / "skills" / skill_id, installer.native(dest / skill_id))
+        managed[skill_id] = {"name": skill_id, "tree": trees[skill_id], "source_ids": [skill_id], "origins": []}
+    if "@library" in selection:
+        put(dest / installer.ROUTER / "SKILL.md", f"---\nname: {installer.ROUTER}\ndescription: v1\n---\nv1 router\n")
+        tree = installer.tree_id(installer.local_listing(installer.native(dest / installer.ROUTER)))
+        managed[installer.ROUTER] = {"name": installer.ROUTER, "tree": tree, "source_ids": ["@library"], "origins": []}
+    for entry, record in managed.items():
+        record["sha256"] = installer.fingerprint(installer.native(dest / entry))
+    value = {"schema": 1, "client": client, "destination": str(installer.native(dest)), "selection": selection}
+    put(data_dir(home) / f"{client}.json", json.dumps(dict(value, managed=managed)))
+
+
+def test_a_default_v1_host_migrates_in_one_transaction_that_keeps_no_copies(remote, capsys):
+    """Claude's @all and Codex's @library (v1's router alone): one transaction migrates both and
+    replaces the v1 router, which git never held, yet its backup is dropped: the installer writes
+    the router itself. A --restore of it names the printed undos."""
+    home, upstream = remote
+    v1_install(home, upstream, "claude", ["@all"])
+    v1_install(home, upstream, "codex", ["@library"])
+    capsys.readouterr()
+    assert run() == 0
+    assert "Recovery backup" not in capsys.readouterr().out
+    [backup] = backups(home)
+    record = journal(backup)
+    assert record["migration"] == installer.MIGRATION and all(c["migrated"] for c in record["clients"])
+    [codex] = [c for c in record["clients"] if c["client"] == "codex"]
+    [router] = [a for a in codex["actions"] if a["entry"] == installer.ROUTER]
+    assert router["before"] is not None, "the v1 router was replaced"
+    assert record["dropped"] and copied_bytes(home) == 0
+    with pytest.raises(installer.InstallError, match="keeps no copies") as refused:
+        run("--restore", str(backup))
+    assert "--claude-only --selection @all" in str(refused.value)
+    assert "--codex-only --manual ''" in str(refused.value)
+
+
+def test_a_dropped_migration_backup_refuses_with_the_command_that_undoes_it(remote, monkeypatch, capsys):
+    """4cc8390e printed `--claude-only --restore BACKUP` as the undo of a long v1 Claude list. This
+    version drops that backup, and the refusal gives the selection command instead, made from the
+    v1 list its journal keeps."""
+    home, upstream = remote
+    for i in range(100):
+        upstream.skill(f"extra-{i:03d}")
+    upstream.commit("a library of 102")
+    run("--codex-only")
+    kept = sorted(i for i in upstream.trees() if i != "beta")
+    v1_install(home, upstream, "claude", kept)
+    with monkeypatch.context() as patched:
+        without_dropping(patched)  # as 4cc8390e ran
+        assert run("--claude-only") == 0
+    [*_, backup] = backups(home)
+    capsys.readouterr()
+    assert run() == 0 and capsys.readouterr().out == "Already current; selection preserved.\n"
+    assert journal(backup)["dropped"] and copied_bytes(home) == 0
+    undo = "--claude-only --selection @all --disable beta"
+    for args in (["--claude-only"], [], ["--claude-only", "--dry-run"]):
+        with pytest.raises(installer.InstallError, match=f"keeps no copies.*: {re.escape(undo)}$"):
+            run(*args, "--restore", str(backup))
+    assert run(*undo.split()) == 0
+    claude = home / ".claude/skills"
+    assert sorted(p.name for p in claude.iterdir() if not hidden_from_claude(p)) == kept, "the v1 visible set"
+
+
 def test_a_restore_cut_short_while_putting_removed_copies_back_keeps_its_backup(remote, monkeypatch, capsys):
     """Removals leave nothing at their targets, so their restore moves nothing aside first: the
     copies it already put back show that it has begun, and running it again finishes it."""
@@ -923,6 +991,31 @@ def test_a_part_restored_keeps_the_backup_while_the_rest_can_still_be_restored(r
     assert journal(backup)["dropped"] and copied_bytes(home) == 0
     with pytest.raises(installer.InstallError, match="keeps no copies"):
         run("--codex-only", "--restore", str(backup))
+
+
+def test_a_kept_backup_behind_a_dropped_one_names_the_selection_flags(remote, monkeypatch):
+    """Restoring a backup that keeps its copies needs every later transaction of its client undone
+    first; once one of those keeps none, the refusal names the way back."""
+    home, upstream = remote
+    run()
+    with monkeypatch.context() as patched:
+        without_dropping(patched)
+        revise(upstream)
+        assert run("--claude-only") == 0
+    [*_, kept] = backups(home)
+    value = journal(kept)
+    del value["clients"][0]["old_state"]["managed"]["alpha"]["tree"]  # unproven, as a tarball record
+    (kept / "restore.json").write_text(json.dumps(value), encoding="utf-8")
+    revise(upstream, "revised again")
+    assert run("--claude-only") == 0
+    [*_, later] = backups(home)
+    assert journal(later)["dropped"] and not journal(kept).get("dropped")
+    with pytest.raises(installer.InstallError) as refused:
+        run("--claude-only", "--restore", str(kept))
+    message = str(refused.value)
+    assert message.startswith("Client selection changed after this transaction: claude; ")
+    assert f"a later update keeps no copies ({installer.display(later)})" in message
+    assert message.endswith("--claude-only with --selection, --manual, --enable or --disable")
 
 
 def test_a_later_run_finishes_deleting_the_copies_of_removed_skills(remote):

@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -1006,6 +1007,12 @@ def test_the_printed_undo_of_a_long_claude_list_is_the_shorter_selection_command
     assert shorter == (left_out == 3) and "gone-upstream" not in line
     assert run(source, *args) == 0
     assert visible(home, "claude") == sorted([ROUTER, *every[left_out:]]), "the v1 visible set"
+
+
+def test_the_printed_undo_keeps_a_v1_id_the_library_now_skips():
+    """A skipped entry is frozen, not gone: --selection accepts it, so the undo names it."""
+    library = SimpleNamespace(skills={"alpha": {}, "beta": {}, "gamma": {}}, skipped={"frozen": "invalid on Windows"})
+    assert installer.migration_undo(["alpha", "frozen", "gone"], library) == "--selection alpha,frozen"
 
 
 def test_the_printed_claude_undo_leaves_the_codex_migration_of_the_same_run(sandbox, monkeypatch, capsys):
