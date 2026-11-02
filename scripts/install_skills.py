@@ -2384,26 +2384,24 @@ def prune_backups(state: Path, keep: int):
             rmtree(saved)
 
 
-def held_trees(journal: dict) -> set | None:
+def held_trees(journal: dict, made: bool) -> set | None:
     """The library trees of the copies a finished transaction's backup can hold, or None when one is
     not traced to a tree: what it moved aside (the old record's, or an adopted folder's, which matched
-    the new copy) and, once restored, what it made. The installer writes the router itself. None too
-    for one a person restores part by part: the rest still needs its copies."""
-    restored, trees = journal.get("status") == "restored", set()
+    the new copy) and, once a --restore has begun on it (`made`), what it made. The installer writes
+    the router itself."""
+    trees = set()
     try:
-        if not restored and any(client.get("restored") for client in journal["clients"]):
-            return None
         for client in journal["clients"]:
             managed = (client["old_state"] or {}).get("managed", {})
             for action in client["actions"]:
-                made = {"source_ids": [action.get("source")], "tree": action.get("tree")}
+                new = {"source_ids": [action.get("source")], "tree": action.get("tree")}
                 makes = action.get("source") is not None or action.get("after") is not None
-                copies = [made] if makes and restored else []
+                copies = [new] if makes and made else []
                 if action["before"] is not None:
                     old = managed.get(action["entry"])
                     if old is not None and old.get("sha256") != action["before"]:
                         return None
-                    copies.append(old or made)
+                    copies.append(old or new)
                 for copy in copies:
                     if copy.get("source_ids") == ["@library"]:
                         continue
@@ -2415,6 +2413,30 @@ def held_trees(journal: dict) -> set | None:
     return trees
 
 
+def restore_begun(backup: Path, journal: dict) -> bool:
+    """Whether a --restore has begun on a finished transaction: one client's part restored, or a run
+    cut short, whose first move either put a live copy aside (replaced-on-restore) or a saved copy
+    back (a removal leaves nothing to put aside), so a part not restored misses a saved copy."""
+    if journal["status"] == "restored" or os.path.lexists(backup / "replaced-on-restore"):
+        return True
+    left = [client for client in journal["clients"] if not client.get("restored")]
+    return len(left) < len(journal["clients"]) or any(
+        action["before"] is not None and not os.path.lexists(backup / slot(client["client"], action) / action["entry"])
+        for client in left
+        for action in client["actions"]
+    )
+
+
+def restorable(journal: dict, state: Path) -> bool:
+    """Whether a part not restored yet still matches its client's state, as restore_operations asks."""
+    return journal["status"] == "complete" and any(
+        client["client"] in ("claude", "codex")
+        and read_json(state / f"{client['client']}.json", {}) in (client["new_state"], client["old_state"] or {})
+        for client in journal["clients"]
+        if not client.get("restored")
+    )
+
+
 def holds_copies(backup: Path) -> bool:
     """A folder in one of the backup's folders (in prepared/, one level deeper)."""
     for child in (c for c in backup.iterdir() if plain_dir(c)):
@@ -2424,11 +2446,11 @@ def holds_copies(backup: Path) -> bool:
     return False
 
 
-def drop_copies(state: Path, library: Library) -> list[Path]:
+def drop_copies(state: Path, library: Library):
     """Lock held: empty each finished backup whose copies the library can make again (see held_trees),
-    keeping its journal as a small record; the emptied ones. A failure only warns: the update is done,
-    and a later run tries again."""
-    cache, dropped = {}, []
+    keeping its journal as a small record, and what a run that died before moving anything left. A
+    failure only warns: the update is done, and a later run tries again."""
+    cache = {}
 
     def known() -> set:  # listed once, and only when a backup needs it
         if "trees" not in cache:
@@ -2437,28 +2459,36 @@ def drop_copies(state: Path, library: Library) -> list[Path]:
 
     for backup in backup_dirs(state):
         try:
-            if empty_backup(backup, known):
-                dropped.append(backup)
+            empty_backup(backup, state, known)
         except (InstallError, OSError, ValueError) as exc:
             warn(f"{display(backup)} keeps its copies for a later run: {exc}")
-    return dropped
 
 
-def empty_backup(backup: Path, known) -> bool:
+def empty_backup(backup: Path, state: Path, known):
     """Mark the journal dropped (first: --restore then refuses it, and a later run finishes an
-    interrupted deletion), then delete the rest. Never one still preparing or applying."""
+    interrupted deletion), then delete the rest. Never one still applying, nor one a --restore has
+    begun on while it can still finish. Lock held, a backup still preparing, or with no journal yet,
+    is a dead run's, which moved nothing live: what it prepared goes."""
     payload = [p for p in backup.iterdir() if p.name != "restore.json"]
     if not payload:
-        return False
+        return
+    if not os.path.lexists(backup / "restore.json"):
+        if all(re.fullmatch(r"restore\.json\.tmp-[0-9a-f]{32}", p.name) for p in payload):
+            rmtree(backup)  # killed before its journal's first write was in place
+        return
     journal = read_json(backup / "restore.json", {})
-    if journal.get("schema") != SCHEMA or journal.get("status") not in ("complete", "restored"):
-        return False
-    if not journal.get("dropped"):
-        # A restore begun on it (cut short, which running it again finishes) still needs its copies.
-        begun = journal["status"] == "complete" and os.path.lexists(backup / "replaced-on-restore")
-        trees = held_trees(journal) if holds_copies(backup) and not begun else None
+    if journal.get("schema") != SCHEMA or journal.get("status") not in ("complete", "restored", "preparing"):
+        return
+    if journal["status"] != "preparing" and not journal.get("dropped"):
+        try:
+            begun = restore_begun(backup, journal)
+            if begun and restorable(journal, state):
+                return  # a --restore a person began, cut short or one client's part, still needs them
+            trees = held_trees(journal, begun) if holds_copies(backup) else None
+        except (KeyError, TypeError, AttributeError):
+            return
         if trees is None or trees and not trees <= known():
-            return False
+            return
         for client in journal["clients"]:
             for key in ("old_state", "new_state"):
                 if isinstance(client.get(key), dict):
@@ -2470,7 +2500,6 @@ def empty_backup(backup: Path, known) -> bool:
             rmtree(path)
         else:
             path.unlink()
-    return True
 
 
 def preflight(plans: list, state: Path):
@@ -3146,7 +3175,8 @@ def run_update(args, git, home, state, data, legacy_cache, source, url, branch, 
         if backup:
             record_migrations(state, plans, backup)
             prune_backups(state, keep)
-        dropped = drop_copies(state, library)  # this transaction's, and any finished one left
+        drop_copies(state, library)  # this transaction's, and any finished one left
+        kept = backup is not None and not read_json(backup / "restore.json", {}).get("dropped")
         write_launchers(data, state, library)
         removed = remove_legacy_caches(legacy_cache) if migrated(state) else []
     failures = [dict(f, client=p["client"]) for p in plans for f in p["failed"]]
@@ -3154,7 +3184,7 @@ def run_update(args, git, home, state, data, legacy_cache, source, url, branch, 
         print("\n".join(summary(p) for p in plans))
     elif backup:
         emit(report(False, library, plans, removed))
-    if backup and backup not in dropped:
+    if kept:  # only a backup --restore can still use
         print(f"Recovery backup: {display(backup)}")
     elif not backup and not failures and not held:
         print("Already current; selection preserved.")
